@@ -1,5 +1,40 @@
 {
   "VEMOBILE": {
+    "Panels": {
+      "ActionUnavailable": "This game action is no longer available.",
+      "InvalidAction": "Invalid game action request.",
+      "EditionChanged": "The game edition changed. Reopen the action.",
+      "SkillChanged": "The selected Skill changed while the test was open.",
+      "WeaponChanged": "The selected Weapon changed while the test was open.",
+      "ActorChanged": "The selected actor changed while the action was open.",
+      "SessionChanged": "The Foundry session changed.",
+      "ActionInactive": "This actor action is no longer active.",
+      "Cancelled": "Action cancelled.",
+      "ResultInChat": "See the result in Chat.",
+      "NativeFinished": "Native workflow finished.",
+      "NativeChatResults": "Use native Chat for action results.",
+      "LostSpells": "Lost Spells",
+      "Failed": "The game action failed.",
+      "Active": "Active",
+      "Inactive": "Inactive",
+      "Edit": "Edit",
+      "Save": "Save",
+      "Cancel": "Cancel",
+      "Saved": "Saved.",
+      "UpdateRequested": "Update requested.",
+      "ResourceChanged": "This resource changed. Reopen the editor and try again.",
+      "InvalidResource": "Invalid resource edit.",
+      "InvalidResourceValue": "Enter a valid value within this resource's limits.",
+      "ResourceFailed": "The resource could not be saved.",
+      "NativeHint": "Use the character sheet for edits and additional game actions."
+    },
+    "NativeSheet": {
+      "Open": "Open Character Sheet",
+      "Opening": "Opening character sheet…",
+      "Failed": "The character sheet could not be opened.",
+      "Hint": "Use the character sheet for inventory and game actions.",
+      "UseSheet": "Use the character sheet for this operation."
+    },
     "Navigation": {
       "Character": "Character",
       "Chat": "Chat",
@@ -104,6 +139,7 @@
       },
       "ColourScheme": {
         "Name": "Color Scheme",
+        "PlainHint": "Choose the accent colors used by the mobile interface.",
         "Hint": "Choose the colors used in VE Mobile. Based on class uses a character's class; Neutral is used for player-owned NPCs, and Bestiary for other NPCs.",
         "Class": "Based on class",
         "Red": "VE Red",
@@ -595,6 +631,7 @@
         }
       },
       "Errors": {
+        "GamePreferenceUnavailable": "This preference is unavailable for the current game.",
         "FoundrySettingsUnavailable": "Foundry settings are unavailable.",
         "CollectionPreferenceUnsupported": "That character collection preference is not supported.",
         "DefaultsRestoring": "Defaults are already being restored.",
@@ -1283,6 +1320,13 @@
         "Joystick": "Select a token, then push the joystick in a direction. Keep holding to repeat movement; release to stop. A short tap on its center releases token control. Use the movement selector for available tokens and movement options.",
         "NoCanvas": "The live map is disabled in this browser. Character, chat, journals and Help remain available; map gestures and placement need the game canvas.",
         "Portrait": "Tap the portrait to view its image.",
+        "NativeHold": "Hold a supported control still to reveal its available actions. Moving early usually scrolls or pans.",
+        "NativeChooser": "Select an available Actor from the list below the character view. Scroll the list to find another Actor.",
+        "NativeSheet": "Open Character Sheet opens the Actor's native sheet for available game actions and inventory controls.",
+        "ProfileActions": "Use the labeled action buttons to open the game's native workflows. Native dialogs and Chat handle game results.",
+        "ProfileResources": "Choose Edit on an available resource, then Save or Cancel. Save before changing tabs or Actors.",
+        "ChooserPlace": "Hold an eligible chooser row still and release to choose Place on Scene. In Tablet Split, you can also drag the row onto the Scene pane when the placement preview appears.",
+        "TabletSplitChooser": "Tablet Split shows content beside the Scene in landscape. Use the side control to move the dock. Eligible chooser rows can be dragged onto the Scene to place tokens.",
         "Chooser": "Tap the character name to open the Actor chooser, then tap an available row to select it. Scroll the list to find another Actor.",
         "Rows": "Tap item, spell and feature rows to view their details. Hold a row for its available action menu. Choose Use or a roll explicitly; available menu actions vary.",
         "Members": "Tap an available Group member to open their character. Back returns to the Group and restores the previous tab and scroll position.",

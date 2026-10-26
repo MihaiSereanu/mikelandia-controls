@@ -1,3 +1,4 @@
+import { resolveSystemIntegration } from "../systems/registry.mjs";
 import { localizeFoundry } from "./localization.mjs";
 import { cameraTargetForToken, tokenCenter, toggleTokenTarget } from "./token-movement-gateway.mjs";
 
@@ -12,6 +13,7 @@ export class CombatError extends Error {
 /** Permission-safe player combat state and native Foundry combat actions. */
 export function createFoundryCombatGateway({
   getGame = () => globalThis.game,
+  getSystemIntegration = () => resolveSystemIntegration(getGame()?.system?.id),
   getCanvas = () => globalThis.canvas,
   getEndCombatDialog = () => globalThis.foundry?.applications?.api?.DialogV2,
   isMobileActive = () => false,
@@ -66,7 +68,7 @@ export function createFoundryCombatGateway({
       round: Math.max(0, Number(combat.round) || 0),
       turn: Number.isInteger(Number(combat.turn)) ? Number(combat.turn) : null,
       currentCombatantId: currentId,
-      initiativeDecimals: initiativeDecimals(game),
+      initiativeDecimals: getSystemIntegration().initiativeDecimals(game),
       canEndTurn: canAdvanceCombatTurn(combat, game?.user),
       combatants: Object.freeze(combatants)
     });
@@ -459,13 +461,6 @@ export function canAdvanceCombatTurn(combat, user) {
   }
 }
 
-function initiativeDecimals(game) {
-  try {
-    return game?.settings?.get?.("dnd5e", "initiativeDexTiebreaker") === true ? 2 : 0;
-  } catch {
-    return 0;
-  }
-}
 
 function combatantOwned(combatant, user) {
   if (!combatant || !user) return false;

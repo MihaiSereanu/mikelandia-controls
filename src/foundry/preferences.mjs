@@ -1,3 +1,5 @@
+import { resolveSystemIntegration } from "../systems/registry.mjs";
+import { supportsPreference, effectiveColorScheme, characterPresentation } from "../systems/presentation-policy.mjs";
 import { COLOR_SCHEME_CHOICES } from "../kernel/character-theme.mjs";
 import { localizeFoundry } from "./localization.mjs";
 
@@ -107,8 +109,10 @@ export function registerPreferences({
   onVisualIsolationChange,
   isMobilePresentation = () => true,
   openMobileAssetOptimizer,
-  openControlsGuide
+  openControlsGuide,
+  getSystemIntegration = () => resolveSystemIntegration(globalThis.game?.system?.id)
 } = {}) {
+  const features = getSystemIntegration().features;
   const changed = (key, notify) => (value) => {
     syncBootstrapPreferences();
     notify?.(Object.freeze({ key, value }));
@@ -146,9 +150,9 @@ export function registerPreferences({
 
   game.settings.register(MODULE_ID, KEYS.COLOR_SCHEME, {
     name: "VEMOBILE.Settings.ColourScheme.Name",
-    hint: "VEMOBILE.Settings.ColourScheme.Hint",
+    hint: features.legacyCharacterSheet ? "VEMOBILE.Settings.ColourScheme.Hint" : "VEMOBILE.Settings.ColourScheme.PlainHint",
     scope: "client",
-    config: true,
+    config: features.legacyCharacterSheet === true,
     type: String,
     choices: {
       class: "VEMOBILE.Settings.ColourScheme.Class",
@@ -164,7 +168,7 @@ export function registerPreferences({
     name: "VEMOBILE.Settings.HeaderArtwork.Name",
     hint: "VEMOBILE.Settings.HeaderArtwork.Hint",
     scope: "client",
-    config: true,
+    config: supportsPreference(KEYS.HEADER_ARTWORK, features),
     type: String,
     choices: Object.fromEntries(CHOICES[KEYS.HEADER_ARTWORK].map(value => [value, "VEMOBILE.Settings.HeaderArtwork." + value[0].toUpperCase() + value.slice(1)])),
     default: DEFAULTS.headerArtwork,
@@ -175,7 +179,7 @@ export function registerPreferences({
     name: "VEMOBILE.Settings.HeaderArtworkOpacity.Name",
     hint: "VEMOBILE.Settings.HeaderArtworkOpacity.Hint",
     scope: "client",
-    config: true,
+    config: supportsPreference(KEYS.HEADER_ARTWORK_OPACITY, features),
     type: Number,
     range: { min: 0, max: 1, step: 0.05 },
     default: 1,
@@ -210,7 +214,7 @@ export function registerPreferences({
     name: "VEMOBILE.Settings.QuickbarSource.Name",
     hint: "VEMOBILE.Settings.QuickbarSource.Hint",
     scope: "client",
-    config: true,
+    config: supportsPreference(KEYS.QUICKBAR_SOURCE, features),
     type: String,
     choices: { character: "VEMOBILE.Settings.QuickbarSource.Character", foundry: "VEMOBILE.Settings.QuickbarSource.Foundry" },
     default: "character",
@@ -221,7 +225,7 @@ export function registerPreferences({
     name: "VEMOBILE.Settings.ShowActionSummaries.Name",
     hint: "VEMOBILE.Settings.ShowActionSummaries.Hint",
     scope: "client",
-    config: true,
+    config: supportsPreference(KEYS.SHOW_ACTION_SUMMARIES, features),
     type: Boolean,
     default: DEFAULTS.showActionSummaries,
     onChange: changed(KEYS.SHOW_ACTION_SUMMARIES, onApplicationChange)
@@ -231,7 +235,7 @@ export function registerPreferences({
     name: "VEMOBILE.Settings.CompactActionSummaries.Name",
     hint: "VEMOBILE.Settings.CompactActionSummaries.Hint",
     scope: "client",
-    config: true,
+    config: supportsPreference(KEYS.COMPACT_ACTION_SUMMARIES, features),
     type: Boolean,
     default: DEFAULTS.compactActionSummaries,
     onChange: changed(KEYS.COMPACT_ACTION_SUMMARIES, onApplicationChange)
@@ -564,7 +568,7 @@ export function registerPreferences({
     name: "VEMOBILE.Settings.CharacterFavouritesSource.Name",
     hint: "VEMOBILE.Settings.CharacterFavouritesSource.Hint",
     scope: "client",
-    config: true,
+    config: supportsPreference(KEYS.CHARACTER_FAVOURITES_SOURCE, features),
     type: String,
     choices: {
       core: "VEMOBILE.Settings.CharacterFavouritesSource.Core",
@@ -630,7 +634,7 @@ export function registerPreferences({
   }
   syncBootstrapPreferences();
   const storedArtwork = readSetting(KEYS.HEADER_ARTWORK, DEFAULTS.headerArtwork);
-  if (isMobilePresentation() && typeof storedArtwork === "string" && !CHOICES[KEYS.HEADER_ARTWORK].includes(storedArtwork)) {
+  if (features.legacyCharacterSheet && isMobilePresentation() && typeof storedArtwork === "string" && !CHOICES[KEYS.HEADER_ARTWORK].includes(storedArtwork)) {
     // One client-setting migration at registration; snapshots never write.
     void Promise.resolve(game.settings.set(MODULE_ID, KEYS.HEADER_ARTWORK, DEFAULTS.headerArtwork)).catch((error) => {
       console.warn("VE Mobile | Could not migrate obsolete Header Artwork setting", error);
@@ -733,6 +737,7 @@ export function syncBootstrapPreferences(getGame = () => globalThis.game, { getS
 /** Permission-safe access to VE Mobile's finite set of client preferences. */
 export function createFoundryPreferencesGateway({
   getGame = () => globalThis.game,
+  getSystemIntegration = () => resolveSystemIntegration(getGame()?.system?.id),
   getNavigator = () => globalThis.navigator,
   setMobileNoCanvas = null
 } = {}) {
@@ -742,14 +747,15 @@ export function createFoundryPreferencesGateway({
   const readers = {
     mode: () => normalizedModePreference(setting(KEYS.MODE)),
     movementRepeatDelayMs: () => normalizedDelay(setting(KEYS.MOVEMENT_REPEAT_DELAY)) * 1000,
-    colorScheme: () => normalizedColorScheme(setting(KEYS.COLOR_SCHEME)),
-    headerArtwork: () => normalizedChoice(KEYS.HEADER_ARTWORK, setting(KEYS.HEADER_ARTWORK), DEFAULTS.headerArtwork),
+    colorScheme: () => effectiveColorScheme(normalizedColorScheme(setting(KEYS.COLOR_SCHEME)), getSystemIntegration().features),
+    headerArtwork: () => getSystemIntegration().features.legacyCharacterSheet ? normalizedChoice(KEYS.HEADER_ARTWORK, setting(KEYS.HEADER_ARTWORK), DEFAULTS.headerArtwork) : "off",
     headerArtworkOpacity: () => normalizedOpacity(setting(KEYS.HEADER_ARTWORK_OPACITY)),
     quickbarEnabled: () => setting(KEYS.QUICKBAR_ENABLED) !== false,
-    quickbarSource: () => normalizedChoice(KEYS.QUICKBAR_SOURCE, setting(KEYS.QUICKBAR_SOURCE), "character"),
+    quickbarSource: () => getSystemIntegration().features.quickbar
+      ? normalizedChoice(KEYS.QUICKBAR_SOURCE, setting(KEYS.QUICKBAR_SOURCE), "character") : "foundry",
     quickbarRows: () => Number(CHOICES[KEYS.QUICKBAR_ROWS].includes(String(setting(KEYS.QUICKBAR_ROWS))) ? setting(KEYS.QUICKBAR_ROWS) : DEFAULTS.quickbarRows),
-    showActionSummaries: () => setting(KEYS.SHOW_ACTION_SUMMARIES) !== false,
-    compactActionSummaries: () => setting(KEYS.COMPACT_ACTION_SUMMARIES) === true,
+    showActionSummaries: () => getSystemIntegration().features.actionSummaries && setting(KEYS.SHOW_ACTION_SUMMARIES) !== false,
+    compactActionSummaries: () => getSystemIntegration().features.actionSummaries && setting(KEYS.COMPACT_ACTION_SUMMARIES) === true,
     graphicsSafety: () => normalizedChoice(KEYS.GRAPHICS_SAFETY, setting(KEYS.GRAPHICS_SAFETY), DEFAULTS.graphicsSafety),
     diceRendering: () => normalizedChoice(KEYS.DICE_RENDERING, setting(KEYS.DICE_RENDERING), DEFAULTS.diceRendering),
     mobileOptimizedAssets: () => normalizedChoice(KEYS.MOBILE_OPTIMIZED_ASSETS, setting(KEYS.MOBILE_OPTIMIZED_ASSETS), DEFAULTS.mobileOptimizedAssets),
@@ -766,14 +772,14 @@ export function createFoundryPreferencesGateway({
     combatCarousel: () => setting(KEYS.COMBAT_CAROUSEL) !== false,
     keepScreenAwake: () => Boolean(setting(KEYS.KEEP_SCREEN_AWAKE)),
     protectVeStyling: () => setting(KEYS.PROTECT_VE_STYLING) !== false,
-    characterCollections: () => Object.freeze({
+    characterCollections: () => getSystemIntegration().features.legacyCharacterSheet ? Object.freeze({
         inventorySort: normalizedChoice(KEYS.CHARACTER_INVENTORY_SORT, setting(KEYS.CHARACTER_INVENTORY_SORT), DEFAULTS.characterInventorySort),
         spellSort: normalizedChoice(KEYS.CHARACTER_SPELL_SORT, setting(KEYS.CHARACTER_SPELL_SORT), DEFAULTS.characterSpellSort),
         spellFilter: normalizedChoice(KEYS.CHARACTER_SPELL_FILTER, setting(KEYS.CHARACTER_SPELL_FILTER), DEFAULTS.characterSpellFilter),
         featureSort: normalizedChoice(KEYS.CHARACTER_FEATURE_SORT, setting(KEYS.CHARACTER_FEATURE_SORT), DEFAULTS.characterFeatureSort),
         favouritesSort: normalizedChoice(KEYS.CHARACTER_FAVOURITES_SORT, setting(KEYS.CHARACTER_FAVOURITES_SORT), DEFAULTS.characterFavouritesSort),
         effectsSort: normalizedChoice(KEYS.CHARACTER_EFFECTS_SORT, setting(KEYS.CHARACTER_EFFECTS_SORT), DEFAULTS.characterEffectsSort)
-      }),
+      }) : Object.freeze({}),
     characterFavouritesSource: favourites => favourites().effective,
     characterFavouritesConfiguredSource: favourites => favourites().configured,
     characterFavouritesEnabled: favourites => favourites().enabled,
@@ -782,7 +788,9 @@ export function createFoundryPreferencesGateway({
   };
   const pick = keys => {
     let favouriteRecord;
-    const favourites = () => favouriteRecord ??= resolveCharacterFavouritesSource(setting(KEYS.CHARACTER_FAVOURITES_SOURCE), getGame());
+    const favourites = () => favouriteRecord ??= getSystemIntegration().features.legacyCharacterSheet
+      ? resolveCharacterFavouritesSource(setting(KEYS.CHARACTER_FAVOURITES_SOURCE), getGame())
+      : Object.freeze({ configured: "off", effective: "off", enabled: false, stale: false, tidyDetected: false });
     return Object.freeze(Object.fromEntries((keys ?? Object.keys(readers)).map(key => [key, readers[key](favourites)])));
   };
   const presentation = () => pick();
@@ -792,6 +800,7 @@ export function createFoundryPreferencesGateway({
       return localize(key, data);
     },
     readLocale: () => readLocale(getGame()),
+    controls: () => Object.freeze({ characterPresentation: characterPresentation(getSystemIntegration().features) }),
     presentation,
     layout: () => pick(["mode", "joystickSide"]),
     frame: () => pick(["colorScheme", "headerArtworkOpacity", "protectVeStyling", "joystickSide", "movementControl", "movementRepeatDelayMs", "quickbarEnabled", "quickbarSource", "combatCarousel"]),
@@ -801,7 +810,7 @@ export function createFoundryPreferencesGateway({
     actionNavigation: () => pick(["actionSceneReturn"]),
     actionSummaries: () => pick(["showActionSummaries", "compactActionSummaries"]),
     snapshot() {
-      const fields = preferenceFields(setting, localize, getNavigator, getGame);
+      const fields = preferenceFields(setting, localize, getNavigator, getGame, getSystemIntegration().features);
       return Object.freeze({
         ...presentation(),
         loggingLevel: normalizedLoggingLevel(setting(KEYS.LOGGING_LEVEL)),
@@ -817,8 +826,15 @@ export function createFoundryPreferencesGateway({
     async set({ namespace = MODULE_ID, key, value }) {
       const game = getGame();
       if (!game?.settings?.set) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.FoundrySettingsUnavailable", "Foundry settings are unavailable."));
+      if (namespace === MODULE_ID && (!supportsPreference(key, getSystemIntegration().features)
+        || (key === KEYS.COLOR_SCHEME && value === "class" && !getSystemIntegration().features.legacyCharacterSheet))) {
+        throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.GamePreferenceUnavailable", "This preference is unavailable for the current game."));
+      }
       const registered = findRegisteredSetting(game, namespace, key);
-      assertSettingAuthority(game, registered, namespace, key);
+      // The shared mobile color picker remains available without exposing
+      // D&D's class option in Foundry's native settings form.
+      assertSettingAuthority(game, namespace === MODULE_ID && key === KEYS.COLOR_SCHEME && !getSystemIntegration().features.legacyCharacterSheet && registered
+        ? { ...registered, config: true } : registered, namespace, key);
       const normalized = namespace === MODULE_ID
         ? normalizeSetting(key, value)
         : normalizeRegisteredSetting(registered, value);
@@ -838,6 +854,7 @@ export function createFoundryPreferencesGateway({
     async setCharacterCollectionPreference({ key, value }) {
       const settingKey = CHARACTER_COLLECTION_SETTING_KEYS[key];
       if (!settingKey) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.CollectionPreferenceUnsupported", "That character collection preference is not supported."));
+      if (!supportsPreference(settingKey, getSystemIntegration().features)) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.GamePreferenceUnavailable", "This preference is unavailable for the current game."));
       const game = getGame();
       if (!game?.settings?.set) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.FoundrySettingsUnavailable", "Foundry settings are unavailable."));
       const normalized = normalizeSetting(settingKey, value);
@@ -850,7 +867,7 @@ export function createFoundryPreferencesGateway({
       restoring = true;
       try {
         const session = getGame();
-        const fields = preferenceFields(setting, localize, getNavigator, getGame);
+        const fields = preferenceFields(setting, localize, getNavigator, getGame, getSystemIntegration().features);
         let requiresReload = false;
         const overlayVisibility = sanitizeBooleanRecord(setting(KEYS.MODULE_OVERLAY_VISIBILITY));
         if (Object.keys(overlayVisibility).length) {
@@ -861,9 +878,9 @@ export function createFoundryPreferencesGateway({
         const overlayScale = sanitizeScaleRecord(setting(KEYS.MODULE_OVERLAY_SCALE));
         if (Object.keys(overlayScale).length) await session.settings.set(MODULE_ID, KEYS.MODULE_OVERLAY_SCALE, {});
         for (const settingKey of Object.values(CHARACTER_COLLECTION_SETTING_KEYS)) {
-          if (setting(settingKey) !== DEFAULTS[settingKey]) await session.settings.set(MODULE_ID, settingKey, DEFAULTS[settingKey]);
+          if (supportsPreference(settingKey, getSystemIntegration().features) && setting(settingKey) !== DEFAULTS[settingKey]) await session.settings.set(MODULE_ID, settingKey, DEFAULTS[settingKey]);
         }
-        if (setting(KEYS.CHARACTER_FAVOURITES_SOURCE) !== DEFAULTS.characterFavouritesSource) {
+        if (supportsPreference(KEYS.CHARACTER_FAVOURITES_SOURCE, getSystemIntegration().features) && setting(KEYS.CHARACTER_FAVOURITES_SOURCE) !== DEFAULTS.characterFavouritesSource) {
           await session.settings.set(MODULE_ID, KEYS.CHARACTER_FAVOURITES_SOURCE, DEFAULTS.characterFavouritesSource);
         }
         if (setting(KEYS.MEMORY_PROTECTION_BEHAVIOR) !== DEFAULTS.memoryProtectionBehavior) {
@@ -932,7 +949,7 @@ export function performanceModeField(game = globalThis.game, localize = (key) =>
   });
 }
 
-function preferenceFields(setting, localize, getNavigator, getGame) {
+function preferenceFields(setting, localize, getNavigator, getGame, features) {
   return Object.freeze([
     choiceField(KEYS.MODE, "Mode", normalizedModePreference(setting(KEYS.MODE)), localize),
     choiceField(KEYS.THEME, "Theme", setting(KEYS.THEME), localize),
@@ -987,7 +1004,16 @@ function preferenceFields(setting, localize, getNavigator, getGame) {
       wakeLock: true,
       failure: localize("VEMOBILE.Settings.KeepScreenAwake.Failure")
     })
-  ].map(field => Object.freeze({ ...field, defaultValue: field.namespace === MODULE_ID ? DEFAULTS[field.key] : (findRegisteredSetting(getGame(), field.namespace, field.key)?.default ?? false) })));
+  ].filter(field => field.namespace !== MODULE_ID || supportsPreference(field.key, features)).map(field => Object.freeze({
+    ...field,
+    ...(field.key === KEYS.COLOR_SCHEME && !features.legacyCharacterSheet ? {
+      value: effectiveColorScheme(normalizedColorScheme(field.value), features),
+      choices: field.choices.filter(choice => choice.value !== "class"),
+      hint: localize("VEMOBILE.Settings.ColourScheme.PlainHint")
+    } : {}),
+    defaultValue: field.namespace === MODULE_ID ? (field.key === KEYS.COLOR_SCHEME ? effectiveColorScheme(DEFAULTS[field.key], features) : DEFAULTS[field.key])
+      : (findRegisteredSetting(getGame(), field.namespace, field.key)?.default ?? false)
+  })));
 }
 
 function settingControlType(registered, choices, range) {

@@ -1,4 +1,5 @@
 import { localizeFoundry } from "./localization.mjs";
+import { resolveSystemIntegration } from "../systems/registry.mjs";
 import { resolveActorSource, speakerMatchesActor } from "./character-source.mjs";
 import { readDnd5eMessageActivity, readDnd5eMessageItem, readDnd5eMessageOriginId as originatingMessageId } from "./dnd5e-message-reference.mjs";
 
@@ -9,10 +10,13 @@ const EXPECTED_NATIVE_ROLL_MS = 120_000;
 export function createFoundryActionSessionGateway({
   getGame = () => globalThis.game,
   getDocument = () => globalThis.document,
-  getUi = () => globalThis.ui
+  getUi = () => globalThis.ui,
+  getSystemIntegration = () => resolveSystemIntegration(getGame()?.system?.id)
 } = {}) {
   return Object.freeze({
     async mount(host, session, scope, { onCompactVisibility = () => {} } = {}) {
+      if (!getSystemIntegration().features.actionSummaries) return Object.freeze({ ok: false,
+        reason: localizeFoundry("VEMOBILE.Panels.NativeChatResults", "Use native Chat for action results.") });
       const rootMessageId = identifier(session?.rootMessageId);
       if (!host?.replaceChildren || !rootMessageId || !scope?.hook) {
         return Object.freeze({ ok: false, reason: localizeFoundry("VEMOBILE.Interface.ActionSessionGateway.ThatActionMessageIsUnavailable", "That action message is unavailable.") });

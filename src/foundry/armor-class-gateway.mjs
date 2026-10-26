@@ -1,9 +1,11 @@
+import { resolveSystemIntegration } from "../systems/registry.mjs";
 import { localizeFoundry } from "./localization.mjs";
 import { resolveActorSource, validSourceUuid } from "./character-source.mjs";
 
 /** Open D&D5e 5.3.3's own ArmorClassConfig for the exact represented Actor. */
 export function createArmorClassGateway({
   getGame = () => globalThis.game,
+  getSystemIntegration = () => resolveSystemIntegration(getGame()?.system?.id),
   getConfigClass = () => globalThis.dnd5e?.applications?.actor?.ArmorClassConfig,
   getConnectionGeneration = () => 0,
   getMode = () => "desktop",
@@ -14,6 +16,7 @@ export function createArmorClassGateway({
     async open({ actorSourceUuid, worldId, userId, connectionGeneration } = {}) {
       const uuid = validSourceUuid(actorSourceUuid);
       const game = getGame();
+      if (!getSystemIntegration().features.armorClassEditor) throw new Error(localizeFoundry("VEMOBILE.NativeSheet.UseSheet", "Use the character sheet for this operation."));
       const currentSession = () => getGame() === game && game?.user?.id === userId && game?.world?.id === worldId
         && getConnectionGeneration() === connectionGeneration && ["phone", "tablet"].includes(getMode());
       if (!currentSession()) {

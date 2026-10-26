@@ -13,6 +13,7 @@ import { renderRollResultOverlay } from "../../ui/roll-result-overlay.mjs";
 import { resolveHeaderBanner } from "../../kernel/header-banner.mjs";
 import { bindActorPlacementHold } from "./portrait-token-gesture.mjs";
 import { actorSheetTabs, actorOriginBack, collectiveHeaderContent, renderCollectivePanel } from "./collective-sheet.mjs";
+import { renderNativeCharacter } from "./native-sheet.mjs";
 
 const SHEET_TABS = Object.freeze([
   ["favourites", "favourites", "Favourites"],
@@ -32,6 +33,9 @@ export function renderCharacters({ state, commands, scope, overlayHost = null, r
   const actor = Object.hasOwn(state.snapshot ?? {}, "selectedActor")
     ? state.snapshot.selectedActor
     : actors.find((entry) => entry.id === state.selectedActorId) ?? null;
+  if (["native", "profile"].includes(actor?.presentation)) {
+    return renderNativeCharacter({ state, commands, scope, createChooser: createCharacterMenuController, retained });
+  }
   if (!actor) {
     const chooser = createCharacterMenuController({ actors, selectedActor: null, commands, onClose: () => {}, scope, embedded: true });
     chooser.mount();
@@ -451,7 +455,7 @@ export function createCharacterMenuController({ actors, selectedActor, commands,
     ] });
     element.replaceChildren(...(embedded ? [] : [heading]), ...renderCharacterMenuBranch(root, context, owner));
     afterCharacterMenuLayout(owner, () => {
-      if (bodyScope !== owner) return;
+      if (bodyScope !== owner || embedded) return;
       const current = element.querySelector('[aria-current="true"]');
       if (!current) return;
       if (typeof current.scrollIntoView === "function") current.scrollIntoView({ block: "center", inline: "nearest" });
@@ -565,6 +569,7 @@ export function characterFolderCount(branch) {
 }
 
 export function characterIdentityLine(actor, commands = null) {
+  if (["native", "profile"].includes(actor.presentation)) return actor.typeLabel ?? "";
   if (actor.type === "group") return commands?.localize?.("VEMOBILE.Collective.Group", "Group") ?? "Group";
   if (actor.type === "vehicle") return commands?.localize?.("VEMOBILE.Collective.Vehicle", "Vehicle") ?? "Vehicle";
   if (actor.type === "npc") {

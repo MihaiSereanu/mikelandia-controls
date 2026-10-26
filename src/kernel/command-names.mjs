@@ -1,4 +1,6 @@
 export const ACTOR_COMMANDS = Object.freeze({
+  EXECUTE_PROFILE_ACTION: "actor.execute-profile-action",
+  EDIT_PROFILE_RESOURCE: "actor.edit-profile-resource",
   ROLL_ABILITY: "actor.roll-ability",
   ROLL_SAVE: "actor.roll-save",
   ROLL_SKILL: "actor.roll-skill",

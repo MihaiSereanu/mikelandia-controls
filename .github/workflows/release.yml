@@ -1,15 +1,18 @@
-name: Validate and release
+name: Deploy Latest Build
 
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: latest-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   package:
@@ -18,18 +21,42 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test system integration boundaries
+        run: node --test tests/*.test.mjs
+      - name: Check responsive browser layouts
+        run: node scripts/check_browser.mjs
       - name: Build and validate package
-        env:
-          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
         run: |
-          if [ -n "$RELEASE_TAG" ]; then
-            python3 scripts/build_release.py --version "${RELEASE_TAG#v}"
-          else
-            python3 scripts/build_release.py --version "$(python3 -c 'import json; print(json.load(open("module.json"))["version"])')"
-          fi
-      - name: Create release
-        if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+          VERSION="$(python3 -c 'import json,os; m=json.load(open("module.json")); print(".".join(m["version"].split(".")[:2])+"."+os.environ["GITHUB_RUN_NUMBER"])')"
+          RELEASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/latest"
+          python3 scripts/build_release.py --version "$VERSION" --manifest-url "$RELEASE/module.json" --download-url "$RELEASE/ve-mobile.zip"
+          python3 scripts/build_release.py --version "$VERSION" --experimental-fallback --manifest-url "$RELEASE/module-experimental.json" --download-url "$RELEASE/ve-mobile-experimental.zip"
+          cp dist/experimental/module.json dist/module-experimental.json
+          cp dist/experimental/ve-mobile.zip dist/ve-mobile-experimental.zip
+          echo "RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Publish rolling latest release
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: gh release create "$RELEASE_TAG" dist/module.json dist/ve-mobile.zip --verify-tag --title "VE Mobile $RELEASE_TAG" --generate-notes
+        run: |
+          git tag --force latest "$GITHUB_SHA"
+          git push --force origin refs/tags/latest
+          cat > dist/release-notes.md <<EOF
+          Built from main at $GITHUB_SHA. Version $RELEASE_VERSION.
+
+          Install module.json for the D&D-only channel.
+          Install module-experimental.json for Warhammer 4e/5e, Shadowdark, and native-sheet fallback.
+          Both channels use the same module ID; install one channel per Foundry instance.
+
+          Warhammer and Shadowdark PC workflows have initial isolated Foundry 14 live evidence.
+          Full compatibility, real devices, D&D regression, ammo, Group Advantage, and timer/reconnect coverage remain pending.
+          EOF
+          if gh release view latest >/dev/null 2>&1; then
+            gh release edit latest --title "Latest Build" --notes-file dist/release-notes.md --latest
+          else
+            gh release create latest --verify-tag --title "Latest Build" --notes-file dist/release-notes.md --latest
+          fi
+          gh release upload latest dist/module.json dist/ve-mobile.zip dist/module-experimental.json dist/ve-mobile-experimental.zip --clobber

@@ -1,3 +1,4 @@
+import { resolveSystemIntegration } from "../systems/registry.mjs";
 import { localizeFoundry } from "./localization.mjs";
 import { resolveActorSource, validSourceUuid } from "./character-source.mjs";
 
@@ -8,6 +9,7 @@ const ENCODED_MARKUP = /&lt;\/?(?:p|div|br|ul|ol|li|h[1-6]|blockquote|strong|b|e
 export function createFoundryBiographyGateway({
   getGame = () => globalThis.game,
   getConnectionGeneration = () => 0,
+  getSystemIntegration = () => resolveSystemIntegration(getGame()?.system?.id),
   getTextEditor = () => globalThis.CONFIG?.ux?.TextEditor
     ?? globalThis.TextEditor?.implementation
     ?? globalThis.foundry?.applications?.ux?.TextEditor?.implementation,
@@ -21,6 +23,7 @@ export function createFoundryBiographyGateway({
     async read({ actorSourceUuid }, expectedSession = {}) {
       const game = getGame();
       assertSession(game, expectedSession, getConnectionGeneration);
+      if (!getSystemIntegration().features.biography) throw new Error(localizeFoundry("VEMOBILE.NativeSheet.UseSheet", "Use the character sheet for this operation."));
       const sourceUuid = exactSourceUuid(actorSourceUuid);
       const actor = requireReadableActor(sourceUuid, game);
       const owner = canOwn(actor, game.user);
@@ -44,6 +47,7 @@ export function createFoundryBiographyGateway({
         rollData
       }));
       assertSession(game, expectedSession, getConnectionGeneration);
+      if (!getSystemIntegration().features.biography) throw new Error(localizeFoundry("VEMOBILE.NativeSheet.UseSheet", "Use the character sheet for this operation."));
       const current = resolveActorSource(sourceUuid, { game });
       if (!current || current !== actor || !canRead(current, game.user)) throw new Error(localizeFoundry("VEMOBILE.Character.BiographyGateway.TheSelectedActorIsNoLongerAvailable", "The selected actor is no longer available."));
       const currentOwner = canOwn(current, game.user);
@@ -66,6 +70,7 @@ export function createFoundryBiographyGateway({
     async roll({ actorSourceUuid, formula, mode = "roll", flavor = "" }, expectedSession = {}) {
       const game = getGame();
       assertSession(game, expectedSession, getConnectionGeneration);
+      if (!getSystemIntegration().features.biography) throw new Error(localizeFoundry("VEMOBILE.NativeSheet.UseSheet", "Use the character sheet for this operation."));
       const sourceUuid = exactSourceUuid(actorSourceUuid);
       const actor = resolveActorSource(sourceUuid, { game });
       if (!actor) throw new Error(localizeFoundry("VEMOBILE.Character.BiographyGateway.TheSelectedActorIsNoLongerAvailable", "The selected actor is no longer available."));
@@ -83,6 +88,7 @@ export function createFoundryBiographyGateway({
       const roll = RollClass.create(expression, typeof actor.getRollData === "function" ? actor.getRollData() : {});
       const output = await roll.toMessage({ flavor: String(flavor ?? "").slice(0, 500), speaker }, { rollMode });
       assertSession(game, expectedSession, getConnectionGeneration);
+      if (!getSystemIntegration().features.biography) throw new Error(localizeFoundry("VEMOBILE.NativeSheet.UseSheet", "Use the character sheet for this operation."));
       const current = resolveActorSource(sourceUuid, { game });
       if (!current) throw new Error(localizeFoundry("VEMOBILE.Character.BiographyGateway.TheSelectedActorIsNoLongerAvailable", "The selected actor is no longer available."));
       if (!canOwn(current, game.user)) throw new Error(localizeFoundry("VEMOBILE.Character.BiographyGateway.YouNoLongerHavePermissionToRollForThis", "You no longer have permission to roll for this actor."));

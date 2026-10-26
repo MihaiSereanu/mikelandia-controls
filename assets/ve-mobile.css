@@ -4318,6 +4318,234 @@ body.ve-mobile-running.ve-mobile-scene-active.ve-mobile-native-measurement-activ
   backdrop-filter: blur(22px);
 }
 
+.ve-native-sheet-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.ve-native-sheet-identity img {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.ve-native-sheet-identity h2 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ve-native-character-screen > p:empty {
+  display: none;
+}
+
+.ve-native-sheet-open {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  border: 1px solid var(--ve-border);
+  border-radius: 12px;
+  background: var(--ve-surface-up);
+  color: var(--ve-text);
+  font: inherit;
+  font-weight: 600;
+}
+
+.ve-profile-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ve-profile-tabs button {
+  flex: 1 1 auto;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--ve-border);
+  border-radius: 10px;
+  color: var(--ve-text);
+  background: var(--ve-surface-up);
+  font: inherit;
+}
+
+.ve-profile-tabs button[aria-selected="true"] {
+  border-color: var(--ve-character-accent);
+  background: color-mix(in srgb, var(--ve-character-accent) 20%, var(--ve-surface-up));
+}
+
+.ve-profile-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ve-profile-section {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--ve-border);
+  border-radius: 12px;
+  background: var(--ve-surface);
+}
+
+.ve-profile-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ve-profile-summary > .ve-profile-section {
+  flex: 1 1 150px;
+}
+
+.ve-profile-section h3 {
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+}
+
+.ve-profile-section dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.ve-profile-items dl {
+  grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+}
+
+.ve-profile-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--ve-surface-up);
+}
+
+.ve-profile-row dt {
+  flex: 1 1 7ch;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--ve-subtle);
+}
+
+.ve-profile-row dd {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  margin-inline-start: auto;
+  text-align: end;
+  font-size: 1.15em;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.ve-profile-value-label {
+  font-size: 0.85em;
+  font-weight: 400;
+  color: var(--ve-subtle);
+}
+
+.ve-profile-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ve-text);
+  font: inherit;
+  text-align: start;
+}
+
+.ve-profile-action span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ve-profile-action-status:empty {
+  display: none;
+}
+
+.ve-profile-action-status {
+  flex: 1 0 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ve-profile-resource-editor {
+  flex: 1 0 100%;
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.ve-profile-resource-editor > div {
+  width: 100%;
+  min-width: 0;
+}
+
+.ve-profile-resource-editor > div:empty {
+  display: none;
+}
+
+.ve-profile-resource-editor button,
+.ve-profile-resource-editor input {
+  min-height: 44px;
+  max-width: 100%;
+}
+
+.ve-profile-resource-editor button {
+  padding: 8px 12px;
+  border: 1px solid var(--ve-border);
+  border-radius: 8px;
+  background: var(--ve-surface);
+  color: var(--ve-text);
+  font: inherit;
+}
+
+.ve-profile-resource-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ve-profile-resource-form input[type="number"] {
+  flex: 1 1 80px;
+  width: 80px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.ve-profile-resource-form input[type="checkbox"] {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  justify-self: start;
+}
+
+.ve-profile-resource-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .ve-character-screen.ve-character-unselected {
   align-content: start;
   gap: 12px;

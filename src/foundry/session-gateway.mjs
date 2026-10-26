@@ -1,7 +1,6 @@
 import { localizeFoundry } from "./localization.mjs";
-import { createActorDirectoryRecord, createActorViewRecord } from "./actor-view.mjs";
+import { resolveSystemIntegration } from "../systems/registry.mjs";
 import { actorSourceRecord, actorSourceUuid, resolveActorSource, validSourceUuid } from "./character-source.mjs";
-import { collectiveReferenceUuids } from "./collective-actor-view.mjs";
 
 const TOKEN_GEOMETRY_FIELDS = new Set(["x", "y", "elevation", "rotation", "sort"]);
 
@@ -54,6 +53,7 @@ export const SESSION_INVALIDATION_MAP = Object.freeze({
  * serializable records from this module.
  */
 export function createFoundrySessionGateway({
+  getSystemIntegration = () => resolveSystemIntegration(globalThis.game?.system?.id),
   capabilitiesForActor = () => null,
   quickbarForActor = () => Object.freeze(Array.from({ length: 13 }, () => null)),
   hotbarForSnapshot = () => null,
@@ -63,6 +63,7 @@ export function createFoundrySessionGateway({
   targetCountForSnapshot = () => Number(game?.user?.targets?.size ?? 0) || 0,
   performanceObserver = null
 } = {}) {
+  const actorEligible = (actor, user) => isActorEligible(actor, user, getSystemIntegration());
   let refreshQueued = false;
   let targetPublicationDeferred = false;
   let targetRefreshPending = false;
@@ -94,13 +95,13 @@ export function createFoundrySessionGateway({
   };
 
   const projectSelectedActor = (actor, user) => {
-    selectedReferenceSources = new Set(collectiveReferenceUuids(actor));
+    selectedReferenceSources = new Set(getSystemIntegration().referenceSources(actor));
     count("authoritative.actor.projected");
     count("authoritative.actor.detail.projected");
     const finish = performanceObserver?.start?.("authoritative.actor.detail.project") ?? (() => {});
     try {
       return Object.freeze({
-        ...createActorViewRecord(actor, user, capabilitiesForActor, game.users),
+        ...getSystemIntegration().createActorViewRecord(actor, user, capabilitiesForActor, game.users),
         source: actorSourceRecord(actor),
         sourceUuid: actorSourceUuid(actor),
         quickbar: quickbarForActor(actor, user)
@@ -113,12 +114,12 @@ export function createFoundrySessionGateway({
   const projectDirectoryActor = (actor) => {
     count("authoritative.actor.directory.projected");
     const finish = performanceObserver?.start?.("authoritative.actor.directory.project") ?? (() => {});
-    try { return createActorDirectoryRecord(actor); } finally { finish(); }
+    try { return getSystemIntegration().createActorDirectoryRecord(actor); } finally { finish(); }
   };
 
   const readActors = () => readDomain("actors.directory", () => {
     const user = game.user;
-    return Object.freeze(visibleActors(user).map(projectDirectoryActor));
+    return Object.freeze(visibleActors(user, getSystemIntegration()).map(projectDirectoryActor));
   });
 
   const patchActors = (previous, actorIds) => readDomain("actors.incremental", () => {
@@ -126,7 +127,7 @@ export function createFoundrySessionGateway({
     const records = new Map((previous ?? []).map((actor) => [String(actor.id), actor]));
     for (const actorId of actorIds) {
       const actor = game.actors?.get?.(actorId) ?? Array.from(game.actors ?? []).find((entry) => String(entry?.id ?? "") === actorId);
-      if (isActorEligible(actor, user)) records.set(actorId, projectDirectoryActor(actor));
+      if (actorEligible(actor, user)) records.set(actorId, projectDirectoryActor(actor));
       else records.delete(actorId);
     }
     return Object.freeze([...records.values()].sort((left, right) => Number(right.id === user?.character?.id) - Number(left.id === user?.character?.id) || left.name.localeCompare(right.name)));
@@ -148,11 +149,11 @@ export function createFoundrySessionGateway({
 
   const resolveSelectedActor = (actors, user) => {
     let actor = selectedActorSourceUuid ? resolveActorSource(selectedActorSourceUuid) : null;
-    if (!isActorEligible(actor, user)) {
+    if (!actorEligible(actor, user)) {
       selectedActorSourceUuid = preferredActorSourceUuid(actors);
       actor = selectedActorSourceUuid ? resolveActorSource(selectedActorSourceUuid) : null;
     }
-    return actor && isActorEligible(actor, user) ? projectSelectedActor(actor, user) : null;
+    return actor && actorEligible(actor, user) ? projectSelectedActor(actor, user) : null;
   };
 
   const readScene = () => readDomain("scene", () => {
@@ -164,7 +165,7 @@ export function createFoundrySessionGateway({
       ...scene,
       hotbar: hotbarForSnapshot(),
       quickbarActorSourceUuid: sourceUuid,
-      quickbar: actor && isActorEligible(actor, game.user) ? quickbarForActor(actor, game.user) : null
+      quickbar: actor && actorEligible(actor, game.user) ? quickbarForActor(actor, game.user) : null
     });
   });
 
@@ -267,7 +268,7 @@ export function createFoundrySessionGateway({
       assertSession(expectedSession);
       const uuid = validSourceUuid(sourceUuid);
       const actor = resolveActorSource(uuid);
-      if (!actor || !isActorEligible(actor, game.user)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisActorIsNoLongerAvailable", "This actor is no longer available."));
+      if (!actor || !actorEligible(actor, game.user)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisActorIsNoLongerAvailable", "This actor is no longer available."));
       selectedActorSourceUuid = uuid;
       if (!latestSnapshot) return read();
       const snapshot = Object.freeze({
@@ -284,8 +285,8 @@ export function createFoundrySessionGateway({
       assertSession(expectedSession);
       const origin = resolveActorSource(validSourceUuid(originSourceUuid));
       const target = validSourceUuid(targetSourceUuid);
-      if (selectedActorSourceUuid !== originSourceUuid || !origin || !isActorEligible(origin, game.user)
-        || !collectiveReferenceUuids(origin).includes(target)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisReferenceIsNoLongerAvailable", "This reference is no longer available."));
+      if (selectedActorSourceUuid !== originSourceUuid || !origin || !actorEligible(origin, game.user)
+        || !getSystemIntegration().referenceSources(origin).includes(target)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisReferenceIsNoLongerAvailable", "This reference is no longer available."));
       return this.selectCharacterSource(target, expectedSession);
     },
     holdCharacterSource(sourceUuid) {
@@ -319,7 +320,7 @@ export function createFoundrySessionGateway({
               ? actorSourceUuid(replacement?.parent?.id === invalidation.sceneId ? replacement.actor : null)
               : invalidation.sourceUuid;
             const nextActor = nextSourceUuid ? resolveActorSource(nextSourceUuid) : null;
-            if (nextSourceUuid !== selectedActorSourceUuid && isActorEligible(nextActor, game.user)) {
+            if (nextSourceUuid !== selectedActorSourceUuid && actorEligible(nextActor, game.user)) {
               pendingTokenActorSourceUuid = nextSourceUuid;
               pendingControlledSelection = true;
             }
@@ -440,7 +441,7 @@ export function createFoundrySessionGateway({
             queueTargetRefresh();
             return;
           }
-          const invalidation = sessionInvalidationForHook(hook, ...args);
+          const invalidation = sessionInvalidationForHook(hook, args[0], args[1], getSystemIntegration());
           if (!invalidation.domains.length) {
             count("hook.ignored");
             return;
@@ -514,14 +515,14 @@ export function createFoundrySessionGateway({
       const text = String(content ?? "").trim();
       if (!text || text.length > 5000) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ChatMessagesMustContainBetweenAndCharacters", "Chat messages must contain between 1 and 5,000 characters."));
       const actor = sourceUuid ? resolveActorSource(sourceUuid) : null;
-      if (sourceUuid && (!actor || !isActorEligible(actor, game.user))) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisActorIsNoLongerAvailable", "This actor is no longer available."));
+      if (sourceUuid && (!actor || !actorEligible(actor, game.user))) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisActorIsNoLongerAvailable", "This actor is no longer available."));
       const speaker = actor ? ChatMessage.getSpeaker({ actor }) : ChatMessage.getSpeaker({ user: game.user });
       return ChatMessage.create({ content: text, speaker, user: game.user.id });
     }
   });
 }
 
-export function sessionInvalidationForHook(hook, document, changes = {}) {
+export function sessionInvalidationForHook(hook, document, changes = {}, integration = resolveSystemIntegration(globalThis.game?.system?.id)) {
   if (hook === "updateUser") return Object.freeze({ hook, domains: SESSION_INVALIDATION_MAP.updateUser, fullDirectoryRead: true, refreshSelectedActor: true });
   if (hook === "updateActor") {
     const fields = changedPaths(changes);
@@ -551,30 +552,33 @@ export function sessionInvalidationForHook(hook, document, changes = {}) {
     const key = String(document?.key ?? document?.id ?? "");
     const namespace = String(document?.namespace ?? "");
     const fullKey = key.includes(".") ? key : namespace && key ? `${namespace}.${key}` : key;
-    if (["dnd5e.levelingMode", "dnd5e.metricLengthUnits", "dnd5e.metricWeightUnits", "dnd5e.metricTravelUnits"].includes(fullKey)) return Object.freeze({ hook, domains: Object.freeze(["actors"]), refreshSelectedActor: true });
+    const contribution = integration.settingInvalidation?.(fullKey);
+    if (contribution) return Object.freeze({ hook, ...contribution, domains: Object.freeze([...contribution.domains]) });
     const domains = ["core.hotbarLock", "core.macroScript"].includes(fullKey) ? Object.freeze(["scene"])
-      : fullKey === "dnd5e.initiativeDexTiebreaker" ? Object.freeze(["combat"]) : Object.freeze([]);
+      : Object.freeze([]);
     return Object.freeze({ hook, domains });
   }
   const configuredDomains = SESSION_INVALIDATION_MAP[hook] ?? Object.freeze([]);
+  const refreshSelectedActor = integration.refreshSelectedActorForHook?.(hook) === true;
   const actor = hook === "deleteToken" ? document?.actor : actorForHook(hook, document);
   const sourceUuid = actorSourceUuid(actor);
   const worldActor = actor && !actor.isToken;
-  const classItemChanged = ["createItem", "updateItem", "deleteItem"].includes(hook) && document?.type === "class";
-  const directoryActorId = worldActor && (["createActor", "deleteActor"].includes(hook) || classItemChanged) ? String(actor.id ?? "") : "";
+  const directoryItemChanged = ["createItem", "updateItem", "deleteItem"].includes(hook) && integration.itemChangesDirectory?.(document) === true;
+  const directoryActorId = worldActor && (["createActor", "deleteActor"].includes(hook) || directoryItemChanged) ? String(actor.id ?? "") : "";
   const controlledSelection = hook === "controlToken";
   const validatesSelectedSource = ["canvasReady", "canvasTearDown", "deleteScene", "deleteToken"].includes(hook);
   const sceneSelectionReset = ["canvasReady", "canvasTearDown", "deleteScene"].includes(hook);
   const replacementTokenUuid = hook === "deleteToken" ? String(changes?.replacements?.[document?.id] ?? "") : "";
   const domains = Object.freeze([...new Set([
     ...configuredDomains,
-    ...(sourceUuid || controlledSelection || validatesSelectedSource ? ["actors"] : [])
+    ...(sourceUuid || controlledSelection || validatesSelectedSource || refreshSelectedActor ? ["actors"] : [])
   ])]);
   const fullDirectoryRead = hook === "createActor" || hook === "deleteActor" ? false : configuredDomains.includes("actors") && !sourceUuid && !controlledSelection && !validatesSelectedSource;
   return Object.freeze({
     hook,
     domains,
     sourceUuid,
+    ...(refreshSelectedActor ? { refreshSelectedActor: true } : {}),
     ...(worldActor ? { relatedActorId: String(actor.id ?? "") } : {}),
     ...(directoryActorId ? { directoryActorId } : {}),
     ...(fullDirectoryRead ? { fullDirectoryRead: true } : {}),
@@ -650,17 +654,15 @@ export function snapshotPresentationSignature(snapshot) {
   return JSON.stringify(presentation);
 }
 
-function visibleActors(user) {
+function visibleActors(user, integration) {
   return Array.from(game.actors ?? [])
-    .filter((actor) => isActorEligible(actor, user))
+    .filter((actor) => isActorEligible(actor, user, integration))
     .sort((a, b) => Number(b.id === user?.character?.id) - Number(a.id === user?.character?.id) || a.name.localeCompare(b.name));
 }
 
 /** The one eligibility policy shared by full and incremental Actor discovery. */
-export function isActorEligible(actor, user) {
-  if (["character", "group", "vehicle"].includes(actor?.type)) return canObserve(actor, user);
-  if (actor?.type === "npc") return Boolean(user?.isGM) || canOwn(actor, user);
-  return false;
+export function isActorEligible(actor, user, integration = resolveSystemIntegration(globalThis.game?.system?.id)) {
+  return integration.isActorEligible(actor, user);
 }
 
 function visibleJournals(user) {

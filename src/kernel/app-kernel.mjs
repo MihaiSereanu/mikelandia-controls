@@ -485,6 +485,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       return Object.freeze({ presentation: state.formFactor, canvasAvailable: state.canvasAvailable !== false,
         split: state.formFactor === "tablet" && state.splitScreen && state.orientation === "landscape",
         collective: Boolean(state.snapshot?.selectedActor?.collective),
+        characterPresentation: state.snapshot?.selectedActor?.presentation ?? preferencesGateway.controls?.().characterPresentation ?? "legacy",
         canPlaceActor: actorTokenEligible(state.selectedActorSourceUuid),
         actionBarSource: (preferencesGateway.actionMenu?.() ?? {}).quickbarSource ?? "character" });
     },
@@ -597,7 +598,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
         : store.state.route === "scene" ? store.state.snapshot?.scene?.quickbarActorSourceUuid || store.state.selectedActorSourceUuid : "";
       if (sourceUuid && sourceUuid !== visibleSource) return Promise.reject(new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.TheSelectedActorSourceChangedBeforeThisActionCould", "The selected Actor source changed before this action could run.")));
       if ([ACTOR_COMMANDS.ADD_EXPERIENCE, ACTOR_COMMANDS.UPDATE_CURRENCY, ACTOR_COMMANDS.SET_SPELL_SLOT_VALUE, ACTOR_COMMANDS.SET_ITEM_EQUIPPED, ACTOR_COMMANDS.SET_ITEM_ATTUNED, ACTOR_COMMANDS.SET_ITEM_FAVORITE, ACTOR_COMMANDS.SET_SPELL_PREPARED, ACTOR_COMMANDS.OPEN_ITEM_SHEET].includes(name)
-        || name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION || name === ACTOR_COMMANDS.SET_EXHAUSTION_LEVEL) {
+        || name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION || name === ACTOR_COMMANDS.SET_EXHAUSTION_LEVEL || [ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE].includes(name)) {
         const sourceUuid = String(payload?.actorSourceUuid ?? "");
         if (store.state.route !== "characters" || store.state.selectedActorSourceUuid !== sourceUuid
           || (name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION && store.state.characterTab !== "biography")) {
@@ -615,7 +616,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       }
       const owner = runtimeScope;
       const executionKey = JSON.stringify([name, sourceUuid, payload?.itemId, payload?.activityId,
-        payload?.ability, payload?.skill, payload?.tool]);
+        payload?.ability, payload?.skill, payload?.tool, payload?.actionId, payload?.resourceId]);
       let executionSequence;
       const generation = connectionGeneration?.current ?? 0;
       const worldId = store.state.snapshot?.world?.id, userId = store.state.snapshot?.user?.id;
@@ -640,7 +641,11 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       executionSequence = activeActionExecutions.get(executionKey);
       const summaryExecution = { roots: new Set(), dismissed: false };
       activeSummaryExecutions.add(summaryExecution);
-      return guardConnection((expected) => commandGateway.execute(name, payload, expected, {
+      return guardConnection((expected) => commandGateway.execute(name, payload, [ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE].includes(name) ? {
+        ...expected, isCurrent: () => owner === runtimeScope && !owner.disposed && activationCommitted && readPolicy().active
+          && !store.state.reconnect && !store.state.modeTransition && store.state.route === "characters"
+          && store.state.selectedActorSourceUuid === sourceUuid
+      } : expected, {
         ...observer,
         onActionSession: (session) => {
           if (summaryExecution.dismissed || owner !== runtimeScope || owner.disposed) return;

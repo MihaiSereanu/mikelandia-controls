@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fallback browser checks</title>
+<link rel="stylesheet" href="/assets/ve-mobile.css">
+<link rel="stylesheet" href="/assets/ve-style-authority.css">
+<style>
+  body { margin: 0; background: #16191f; color: #f0eee6; font: 16px system-ui; }
+  /* Test host only; the renderer and native application CSS are unchanged. */
+  .ve-mobile-app { position: relative !important; display: block !important; padding: 16px; overflow: auto !important; min-height: 100dvh; }
+  #results { display: none; }
+  .application { background: #262a33; color: #f0eee6; padding: 12px; width: 600px; }
+</style>
+<body class="ve-mobile-running">
+<main class="ve-mobile-app" data-ve-style-authority data-form-factor="phone" data-theme="dark"></main>
+<pre id="results">Running browser checks…</pre>
+<script type="module">
+import { createActorEditorGateway } from "/src/foundry/actor-editor-gateway.mjs";
+import { createFoundrySessionGateway } from "/src/foundry/session-gateway.mjs";
+import { enableMobileApplications } from "/src/foundry/mobile-presentation.mjs";
+import { renderCharacters } from "/src/features/characters/presenter.mjs";
+import { createTaskScope } from "/src/kernel/task-scope.mjs";
+import { createActor, createGame, createHooks } from "/tests/helpers/foundry.mjs";
+
+const checks = [];
+const check = (name, condition) => { if (!condition) throw new Error(name); checks.push(name); };
+const tick = () => new Promise(resolve => setTimeout(resolve, 30));
+const scope = createTaskScope("browser-fallback");
+try {
+  globalThis.Hooks = createHooks();
+  document.querySelector("main").dataset.formFactor = new URLSearchParams(location.search).get("layout") ?? "phone";
+  const v1 = new URLSearchParams(location.search).get("application") === "v1";
+  const portrait = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="#38434f"/><circle cx="40" cy="27" r="15" fill="#b3bdc4"/><path d="M12 80V66a28 28 0 0 1 56 0v14" fill="#b3bdc4"/></svg>');
+  const actor = createActor({ type: "Player", name: "Aldren the Watcher", img: portrait });
+  const other = createActor({ id: "other", uuid: "Actor.other", type: "Player", name: "Bryn", img: portrait });
+  const hidden = createActor({ id: "hidden", uuid: "Actor.hidden", name: "Secret NPC", testUserPermission: () => false });
+  globalThis.game = createGame([actor, other, hidden], "shadowdark");
+  game.ready = true;
+  game.user.character = actor;
+  game.i18n = { localize: key => key === "TYPES.Actor.Player" ? "Player Character" : key };
+  class NativeSheet {
+    static MODES = { PLAY: "play" };
+    constructor(first, options) {
+      this.document = v1 ? first : first.document;
+      this.id = v1 ? options?.id : first.id;
+      this.isV2 = !v1;
+    }
+    async render() {
+      this.element = document.createElement("section");
+      this.element.className = "application";
+      this.element.innerHTML = '<header class="window-header">Character Sheet</header><form class="window-content"><label>Luck <input name="luck" value="1"></label><button type="button">Native action</button></form>';
+      document.body.append(this.element);
+      Hooks.emit(v1 ? "renderApplication" : "renderApplicationV2", this, this.element);
+      opened = this;
+    }
+    close() { this.element?.remove(); Hooks.emit(v1 ? "closeApplication" : "closeApplicationV2", this); }
+  }
+  let opened;
+  actor.sheet = v1 ? new NativeSheet(actor, {}) : new NativeSheet({ document: actor });
+  other.sheet = v1 ? new NativeSheet(other, {}) : new NativeSheet({ document: other });
+  globalThis.foundry = v1 ? { appv1: { sheets: { ActorSheet: NativeSheet } } }
+    : { applications: { sheets: { ActorSheetV2: NativeSheet } } };
+  for (const key of ["system", "items", "effects"]) {
+    Object.defineProperty(actor, key, { get() { throw new Error(`unsafe fallback read: ${key}`); } });
+  }
+  const gateway = createActorEditorGateway({ isActive: () => true });
+  const apps = enableMobileApplications(scope, { isActorEditor: gateway.ownsApplication, getExistingApplications: () => [] });
+  const session = createFoundrySessionGateway();
+  let state = { snapshot: session.read() };
+  let screen;
+  const commands = {
+    localize: (key, fallback) => game.i18n.localize(key) === key ? fallback : game.i18n.localize(key),
+    openNativeActorEditor: request => gateway.open(request, {}, scope),
+    selectActor: uuid => { state = { snapshot: session.selectCharacterSource(uuid) }; screen.__veUpdateCharacter({ state, commands }); }
+  };
+  screen = renderCharacters({ state, commands, scope });
+  document.querySelector("main").append(screen);
+  await tick();
+  const label = "Open Character Sheet";
+  const button = () => [...screen.querySelectorAll("button")].find(button => button.textContent === label);
+  check("fallback render uses native access", !!button());
+  check("system actor type label is preserved", screen.textContent.includes("Player Character"));
+  check("unowned actor is omitted", !screen.textContent.includes("Secret NPC"));
+  check("D&D controls are absent", !/Death Saves|Spell Slots|Attunement|Level —/.test(screen.textContent));
+  check("fallback fits viewport", screen.getBoundingClientRect().right <= window.innerWidth + 1);
+  button().click();
+  await tick();
+  check("deliberate sheet is admitted", opened?.element.classList.contains("ve-mobile-admitted-app"));
+  check("native input remains editable", !!opened.element.querySelector("input"));
+  const input = opened.element.querySelector("input");
+  input.focus(); input.value = "2"; input.dispatchEvent(new Event("input", { bubbles: true }));
+  check("native input retains focus and value", document.activeElement === input && input.value === "2");
+  const nativeBounds = opened.element.getBoundingClientRect();
+  check("native window fits viewport", nativeBounds.left >= -1 && nativeBounds.right <= innerWidth + 1);
+  const nested = { options: { modal: true }, element: document.createElement("div"),
+    close() { this.element.remove(); Hooks.emit("closeApplicationV2", this); } };
+  nested.element.className = "application dialog";
+  nested.element.textContent = "Native roll dialog";
+  document.body.append(nested.element);
+  Hooks.emit("renderApplicationV2", nested, nested.element);
+  check("nested native dialog takes precedence", apps.admissions.topmost().application === nested);
+  apps.admissions.closeTopmost();
+  await tick();
+  check("closing nested dialog retains sheet", apps.admissions.topmost().application === opened);
+  apps.admissions.closeTopmost();
+  await tick();
+  check("native close restores fallback", apps.admissions.size === 0 && button() && !button().disabled);
+  const bryn = screen.querySelector('[data-actor-source="Actor.other"]');
+  bryn.click();
+  await tick();
+  check("chooser changes the selected actor", screen.querySelector("h2").textContent === "Bryn");
+  button().click();
+  await tick();
+  check("rerendered button opens the selected actor", opened.document === other);
+  scope.dispose();
+  check("teardown closes owned sheets", !opened.element.isConnected && apps.admissions.size === 0);
+  const previewScope = createTaskScope("browser-preview");
+  screen = renderCharacters({ state, commands, scope: previewScope });
+  document.querySelector("main").replaceChildren(screen);
+  document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks }, null, 2);
+} catch (error) {
+  scope.dispose();
+  document.querySelector("#results").textContent = JSON.stringify({ status: "failed", checks, error: error.stack }, null, 2);
+}
+</script>
+</body>
+</html>

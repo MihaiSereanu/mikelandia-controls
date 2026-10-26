@@ -1,3 +1,4 @@
+import { createSystemIntegrationResolver } from "./systems/registry.mjs";
 import { localizeFoundry } from "./foundry/localization.mjs";
 import { createControlsGuideGateway } from "./foundry/controls-guide-gateway.mjs";
 import { createControlsGuide } from "./ui/controls-guide.mjs";
@@ -76,6 +77,7 @@ import { createActorEditorGateway } from "./foundry/actor-editor-gateway.mjs";
 const isGamePage = /\/game\/?$/.test(window.location.pathname);
 
 if (isGamePage) {
+  const getSystemIntegration = createSystemIntegrationResolver();
   const fullLoadStartedAt = navigationStartAt();
   const loadTimingGateway = createClientLoadTimingGateway();
   // This page-lifetime physical classification is deliberately independent of
@@ -92,7 +94,7 @@ if (isGamePage) {
       canvasAvailable: !readNoCanvas(), sessionReady: globalThis.game?.ready === true && !startupBlocked };
   };
   const mobilePerformanceAuthority = createMobilePerformanceAuthority(readPolicy, () => mobileMutationReady && !startupBlocked);
-  const preferencesGateway = createFoundryPreferencesGateway({ setMobileNoCanvas: value => lowMemoryGateway.setNoCanvas(value) });
+  const preferencesGateway = createFoundryPreferencesGateway({ getSystemIntegration, setMobileNoCanvas: value => lowMemoryGateway.setNoCanvas(value) });
   const settingsCompatibilityGateway = createFoundrySettingsCompatibilityGateway();
   const controlsGuideGateway = createControlsGuideGateway();
   const desktopSettingsVisibility = createFoundryDesktopSettingsVisibilityGateway({ readPolicy });
@@ -373,10 +375,10 @@ if (isGamePage) {
   const cameraIntents = createSceneCameraIntentCoordinator({
     trace: (entry) => diagnostics.record("debug", `Scene camera intent ${JSON.stringify(entry)}`)
   });
-  const commandGateway = createFoundryCommandGateway({ getConnectionGeneration: () => connectionGeneration.current });
-  const actorEditorGateway = createActorEditorGateway({ isActive: () => readPolicy().active && mobileMutationReady,
+  const commandGateway = createFoundryCommandGateway({ getSystemIntegration, getConnectionGeneration: () => connectionGeneration.current });
+  const actorEditorGateway = createActorEditorGateway({ getSystemIntegration, isActive: () => readPolicy().active && mobileMutationReady,
     getConnectionGeneration: () => connectionGeneration.current });
-  const biographyGateway = createFoundryBiographyGateway({ getConnectionGeneration: () => connectionGeneration.current });
+  const biographyGateway = createFoundryBiographyGateway({ getSystemIntegration, getConnectionGeneration: () => connectionGeneration.current });
   lowMemoryGateway = createLowMemoryCanvasGateway({ getGraphicsPolicy: baseGraphicsPolicy, mobileAuthority: mobilePerformanceAuthority, diagnostics });
   durableProfileHandoff = createDurableProfileHandoff({ gateway: lowMemoryGateway, mobileAuthority: mobilePerformanceAuthority, diagnostics });
   mobileAssetGateway = createFoundryMobileAssetGateway({
@@ -414,7 +416,7 @@ if (isGamePage) {
       owner.listen(window, "pagehide", () => owner.dispose(), { once: true });
       const surface = createControlsGuide({ scope: owner,
         localize: key => preferencesGateway.localize(key),
-        readContext: () => ({ presentation: "desktop", canvasAvailable: !readNoCanvas(), canPlaceActor: true, actionBarSource: preferencesGateway.actionMenu().quickbarSource }) });
+        readContext: () => ({ presentation: "desktop", canvasAvailable: !readNoCanvas(), canPlaceActor: true, characterPresentation: preferencesGateway.controls().characterPresentation, actionBarSource: preferencesGateway.actionMenu().quickbarSource }) });
       owner.own(() => { desktopControlsGuide = null; });
       document.body.append(surface.element);
       desktopControlsGuide = { owner, surface };
@@ -490,18 +492,20 @@ if (isGamePage) {
   });
   const nativeChatGateway = createFoundryNativeChatGateway({ chatDomGateway });
   const armorClassGateway = createArmorClassGateway({
+    getSystemIntegration,
     getConnectionGeneration: () => connectionGeneration.current,
     getMode: () => readPolicy().runtimeMode
   });
   const activeEffectContextGateway = createFoundryActiveEffectContextGateway({ diagnostics });
-  const actionSessionGateway = createFoundryActionSessionGateway();
-  const quickbarGateway = createFoundryQuickbarGateway({ isActive: () => kernel?.active === true && readPolicy().active });
+  const actionSessionGateway = createFoundryActionSessionGateway({ getSystemIntegration });
+  const quickbarGateway = createFoundryQuickbarGateway({ getSystemIntegration, isActive: () => kernel?.active === true && readPolicy().active });
   const hotbarGateway = createFoundryHotbarGateway({ isActive: () => kernel?.active === true && readPolicy().active });
   const actionBarPreferences = createActionBarPreferences();
   const metrics = createMobileMetrics();
   const sessionStatusGateway = createFoundrySessionStatusGateway({ metrics });
   const themeGateway = createFoundryThemeGateway();
   const combatGateway = createFoundryCombatGateway({
+    getSystemIntegration,
     isMobileActive: () => Boolean(kernel?.active && readPolicy().active && store.state.route === "combat"),
     getLifecycleToken: () => kernel?.combatControlLifecycleToken?.() ?? null,
     getConnectionGeneration: () => connectionGeneration.current,
@@ -510,6 +514,7 @@ if (isGamePage) {
   const authoritativeGateway = createFoundryAuthoritativeSessionGateway({ diagnostics, performanceObserver });
   const canvasRecoveryGateway = createFoundryCanvasRecoveryGateway();
   const session = createFoundrySessionGateway({
+    getSystemIntegration,
     capabilitiesForActor: commandGateway.capabilitiesForActor,
     quickbarForActor: quickbarGateway.snapshotForActor,
     hotbarForSnapshot: hotbarGateway.snapshot,
@@ -750,6 +755,7 @@ if (isGamePage) {
       void clientCapabilityGateway?.publish("settings");
     };
     registerPreferences({
+      getSystemIntegration,
       onApplicationChange: reconcileApplicationPreference,
       onPresentationChange: ({ key } = {}) => {
         const currentMode = readPolicy().runtimeMode;

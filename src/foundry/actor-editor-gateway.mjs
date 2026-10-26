@@ -1,11 +1,15 @@
 import { localizeFoundry } from "./localization.mjs";
 import { actorSourceUuid, resolveActorSource, validSourceUuid } from "./character-source.mjs";
+import { resolveSystemIntegration } from "../systems/registry.mjs";
+
+let nextNativeSheetId = 0;
 
 /** Explicit native editing sessions are owned by mobile runtime, not by the
  * persistent Desktop sheet. Admission is instance-specific, never a selector
  * or an Actor-backed-application exception. Native systems enforce edits. */
 export function createActorEditorGateway({ getGame = () => globalThis.game, isActive = () => false,
-  getConnectionGeneration = () => 0 } = {}) {
+  getConnectionGeneration = () => 0,
+  getSystemIntegration = () => resolveSystemIntegration(getGame()?.system?.id) } = {}) {
   const sessions = new Map();
   const pending = new Set();
   const owners = new Set();
@@ -18,8 +22,8 @@ export function createActorEditorGateway({ getGame = () => globalThis.game, isAc
       throw new Error(localizeFoundry("VEMOBILE.Character.ActorEditorGateway.ThisNativeEditorSessionIsNoLongerActive", "This native editor session is no longer active."));
     }
     const actor = resolveActorSource(validSourceUuid(sourceUuid), { game });
-    if (!actor || (original && actor !== original) || !["group", "vehicle"].includes(actor.type)
-      || !actor.testUserPermission?.(game.user, "OWNER")) throw new Error(localizeFoundry("VEMOBILE.Character.ActorEditorGateway.ThisActorIsNoLongerEditable", "This actor is no longer editable."));
+    if (!actor || (original && actor !== original)
+      || !getSystemIntegration().canOpenNativeActor(actor, game.user)) throw new Error(localizeFoundry("VEMOBILE.Character.ActorEditorGateway.ThisActorIsNoLongerEditable", "This actor is no longer editable."));
     return actor;
   };
   return Object.freeze({
@@ -46,8 +50,9 @@ export function createActorEditorGateway({ getGame = () => globalThis.game, isAc
       try {
         const assigned = actor.sheet;
         if (!assigned?.constructor || typeof assigned.render !== "function") throw new Error(localizeFoundry("VEMOBILE.Character.ActorEditorGateway.TheNativeActorEditorIsUnavailable", "The native Actor editor is unavailable."));
+        const id = `ve-mobile-native-sheet-${++nextNativeSheetId}`;
         application = assigned.isV2 === false
-          ? new assigned.constructor(actor, { editable: true }) : new assigned.constructor({ document: actor });
+          ? new assigned.constructor(actor, { editable: true, id }) : new assigned.constructor({ document: actor, id });
         sessions.set(application, { sourceUuid: actorSourceUuid(actor) });
         for (const hook of ["closeApplication", "closeApplicationV2"]) scope.hook(hook, app => {
           if (app !== application) return;

@@ -1,0 +1,24 @@
+import { fallbackIntegration } from "../fallback/integration.mjs";
+import { createProfilePanels } from "../profile-view.mjs";
+import { isShadowdarkPlayer, shadowdarkContext } from "./context.mjs";
+import { shadowdarkPlayerProfile } from "./profile.mjs";
+import { createShadowdarkCommands } from "./commands.mjs";
+
+export const shadowdarkIntegration = Object.freeze({
+  ...fallbackIntegration,
+  id: "shadowdark",
+  features: Object.freeze({ ...fallbackIntegration.features, profilePanels: true }),
+  createCommands: createShadowdarkCommands,
+  settingInvalidation(key) {
+    return key.startsWith("shadowdark.") ? { domains: ["actors"], refreshSelectedActor: true } : null;
+  },
+  createActorViewRecord(actor, user, capabilitiesForActor = () => ({})) {
+    const identity = fallbackIntegration.createActorViewRecord(actor, user);
+    if (!isShadowdarkPlayer(actor, user)) return identity;
+    const context = shadowdarkContext(globalThis.game);
+    if (!context) return identity;
+    const capabilities = capabilitiesForActor(actor, user);
+    const panels = createProfilePanels(actor, shadowdarkPlayerProfile(context), { actions: capabilities?.profileActions, edits: capabilities?.profileEdits });
+    return panels.length ? Object.freeze({ ...identity, presentation: "profile", profileId: "shadowdark-player", panels }) : identity;
+  }
+});

@@ -1,5 +1,7 @@
 # Implementation direction
 
+See [the phased implementation plan](implementation-plan.md) for the proposed change sequence, acceptance checks, and first implementation batch.
+
 ## Goal
 
 Extend the mobile interface to additional systems, initially Warhammer 4e/5e and Shadowdark. Share most implementation code while preserving each game's terminology and native rules workflows.

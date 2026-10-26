@@ -25,6 +25,8 @@ def main():
     parser.add_argument("--version", required=True)
     parser.add_argument("--manifest-url")
     parser.add_argument("--download-url")
+    parser.add_argument("--experimental-fallback", action="store_true",
+                        help="Allow other systems in this development package for profile and native-sheet testing")
     args = parser.parse_args()
     if not re.fullmatch(r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)", args.version):
         parser.error("Version must be MAJOR.MINOR.PATCH with no leading zeroes")
@@ -33,11 +35,20 @@ def main():
     manifest.update(
         version=args.version,
         url=REPOSITORY,
-        manifest=download_url(args.manifest_url or f"{REPOSITORY}/releases/latest/download/module.json"),
-        download=download_url(args.download_url or f"{REPOSITORY}/releases/download/v{args.version}/ve-mobile.zip"),
+        manifest=download_url(args.manifest_url or f"{REPOSITORY}/releases/download/latest/{'module-experimental.json' if args.experimental_fallback else 'module.json'}"),
+        download=download_url(args.download_url or f"{REPOSITORY}/releases/download/latest/{'ve-mobile-experimental.zip' if args.experimental_fallback else 've-mobile.zip'}"),
     )
     if manifest["id"] != "ve-mobile":
         raise ValueError("Unexpected module ID")
+    if args.experimental_fallback:
+        relationships = manifest.get("relationships", {})
+        relationships.pop("systems", None)
+        if not relationships:
+            manifest.pop("relationships", None)
+        manifest["description"] = (
+            "Experimental VE Mobile development build: D&D5e mobile sheets, Warhammer character "
+            "panels/actions/resources, Shadowdark PC panels/actions/light controls, and native-sheet fallback. Cross-system compatibility is unverified."
+        )
 
     files = []
     for entry in RUNTIME_ENTRIES:
@@ -56,6 +67,8 @@ def main():
             json.loads(path.read_text(encoding="utf-8"))
 
     output = ROOT / "dist"
+    if args.experimental_fallback:
+        output = output / "experimental"
     output.mkdir(exist_ok=True)
     manifest_text = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
     (output / "module.json").write_text(manifest_text, encoding="utf-8")

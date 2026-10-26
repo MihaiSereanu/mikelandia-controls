@@ -1,0 +1,388 @@
+import { createFoundrySessionGateway } from "/src/foundry/session-gateway.mjs";
+import { createFoundryCommandGateway } from "/src/foundry/command-gateway.mjs";
+import { enableMobileApplications } from "/src/foundry/mobile-presentation.mjs";
+import { renderCharacters } from "/src/features/characters/presenter.mjs";
+import { createTaskScope } from "/src/kernel/task-scope.mjs";
+import { createHooks } from "/tests/helpers/foundry.mjs";
+import { createWarhammerActor, createWarhammerGame, addWarhammerMagic } from "/tests/helpers/warhammer.mjs";
+
+const checks = [];
+const check = (name, condition) => { if (!condition) throw new Error(name); checks.push(name); };
+const tick = () => new Promise(resolve => setTimeout(resolve, 30));
+const scope = createTaskScope("browser-warhammer");
+try {
+  const params = new URLSearchParams(location.search);
+  const initial5e = params.get("edition") === "5e";
+  let use5e = initial5e;
+  document.querySelector("main").dataset.formFactor = params.get("layout") ?? "phone";
+  globalThis.Hooks = createHooks();
+  const portrait = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="#38434f"/><circle cx="40" cy="27" r="15" fill="#b3bdc4"/><path d="M12 80V66a28 28 0 0 1 56 0v14" fill="#b3bdc4"/></svg>');
+  const actor = createWarhammerActor({ img: portrait });
+  actor.system.status.advantage.max = 10;
+  actor.advantageGroup = "players";
+  const nativeWrites = [], nativeResourceEffects = [];
+  let nativeWoundCalls = 0, nativeAdvantageCalls = 0, groupAdvantage = false;
+  const groupAdvantageValues = { players: 4, enemies: 2 };
+  actor.update = async (...args) => {
+    nativeWrites.push(args);
+    for (const [path, value] of Object.entries(args[0])) {
+      if (!/^system\.status\.(?:(?:wounds|fortune|fate|resolve|resilience|corruption|advantage)\.value|momentum)$/u.test(path)) throw new Error(`unexpected resource path ${path}`);
+      const keys = path.split(".");
+      keys.slice(0, -1).reduce((record, key) => record[key], actor)[keys.at(-1)] = value;
+      if (path === "system.status.corruption.value") nativeResourceEffects.push("corruption");
+      if (path === "system.status.momentum") nativeResourceEffects.push("momentum");
+      if (path === "system.status.advantage.value" && groupAdvantage) {
+        groupAdvantageValues.players = value;
+        nativeResourceEffects.push("group-advantage");
+        Hooks.emit("updateSetting", { key: "wfrp4e.groupAdvantageValues" }, {});
+      }
+    }
+    Hooks.emit("updateActor", actor, args[0]);
+    return actor;
+  };
+  actor.setWounds = value => { nativeWoundCalls++; return actor.update({ "system.status.wounds.value": value }); };
+  actor.setAdvantage = value => { nativeAdvantageCalls++; return actor.update({ "system.status.advantage.value": value }); };
+  addWarhammerMagic(actor, use5e);
+  const npc = createWarhammerActor({ id: "npc", uuid: "Actor.npc", name: "Guard Captain", type: "npc", img: portrait });
+  for (const key of ["system", "items"]) Object.defineProperty(npc, key, { get() { throw new Error("unmapped NPC data read"); } });
+  actor.items.push({ id: "injection", type: "skill", name: '<img id="profile-injection" src=x onerror="window.profileInjected=true">',
+    system: { total: { value: 10 }, advanced: { value: "bsc" }, grouped: { value: "noSpec" } } });
+  globalThis.game = createWarhammerGame([actor, npc]);
+  game.user.character = actor;
+  game.settings.get = (namespace, key) => namespace === "wfrp4e" ? key === "editionSettings" ? { use5e }
+    : key === "useGroupAdvantage" ? groupAdvantage : key === "groupAdvantageValues" ? groupAdvantageValues : key === "advantagemax" ? 10 : false : undefined;
+  game.combat = { id: "combat", getCombatantByActor: source => source === actor ? { id: "combatant", actor } : null };
+  game.i18n = { localize: key => key === "TYPES.Actor.character" ? "Player Character" : key === "TYPES.Actor.npc" ? "Non-Player Character" : key };
+  const applications = enableMobileApplications(scope, { getExistingApplications: () => [] });
+  let nativeDialog;
+  const nativeRolls = [];
+  const nativeSetups = [];
+  let nativeAmmo = 4;
+  const setupTest = (kind, target) => new Promise(resolve => {
+    nativeSetups.push({ kind, target, use5e });
+    let settled = false;
+    const dialog = { options: { modal: true }, element: document.createElement("section"), close() {
+      this.element.remove(); Hooks.emit("closeApplicationV2", this);
+      if (!settled) { settled = true; resolve(undefined); }
+    } };
+    const finish = test => { settled = true; dialog.close(); resolve(test); };
+    dialog.element.className = "application dialog";
+    dialog.element.innerHTML = '<header class="window-header">Native Test</header><form class="window-content"><label>Modifier <input name="modifier" type="number" value="0"></label><button type="button" data-native-roll>Roll</button><button type="button" data-native-cancel>Cancel</button></form>';
+    dialog.element.querySelector("[data-native-roll]").onclick = () => {
+      const modifier = Number(dialog.element.querySelector("input").value);
+      finish({ actor, roll: async () => {
+        nativeRolls.push({ kind, target, use5e, modifier });
+        if (kind === "weapon" && target.system.isRanged) nativeAmmo--;
+        if (kind === "channel-spell") target.system.cn.SL = (target.system.cn.SL ?? 0) + 2;
+        if (kind === "channel-wind") actor.system.status.channelling.value += 2;
+        game.messages.push({ id: `test-${nativeRolls.length}`, content: "Native test result" });
+      } });
+    };
+    dialog.element.querySelector("[data-native-cancel]").onclick = () => dialog.close();
+    document.body.append(dialog.element);
+    Hooks.emit("renderApplicationV2", dialog, dialog.element);
+    nativeDialog = dialog;
+  });
+  actor.setupCharacteristic = key => setupTest("characteristic", key);
+  actor.setupSkill = skill => setupTest("skill", skill);
+  actor.setupWeapon = weapon => setupTest("weapon", weapon);
+  actor.setupCast = spell => setupTest("cast", spell);
+  actor.setupChannell = spell => setupTest("channel-spell", spell);
+  actor.setupChannelling = wind => setupTest("channel-wind", wind);
+  actor.sheet = { actor, castOrChannelPrompt(spell) {
+    if (spell.system.lore.value == "petty") return actor.setupCast(spell);
+    return new Promise(resolve => {
+      let settled = false;
+      const dialog = { options: { modal: true }, element: document.createElement("section"), close() {
+        this.element.remove(); Hooks.emit("closeApplicationV2", this);
+        if (!settled) { settled = true; resolve(undefined); }
+      } };
+      dialog.element.className = "application dialog";
+      dialog.element.innerHTML = '<header class="window-header">Cast or Channel</header><div class="window-content"><button data-choice="cast">Cast</button><button data-choice="channel">Channel</button><button data-choice="cancel">Cancel</button></div>';
+      for (const button of dialog.element.querySelectorAll("button")) button.onclick = () => {
+        if (button.dataset.choice === "cancel") { dialog.close(); return; }
+        settled = true;
+        dialog.close();
+        resolve(button.dataset.choice === "cast" ? actor.setupCast(spell) : actor.setupChannell(spell));
+      };
+      document.body.append(dialog.element);
+      Hooks.emit("renderApplicationV2", dialog, dialog.element);
+      nativeDialog = dialog;
+    });
+  } };
+  const commandGateway = createFoundryCommandGateway({ getHooks: () => { throw new Error("D&D orchestration used by a Warhammer action"); } });
+  const session = createFoundrySessionGateway({ capabilitiesForActor: commandGateway.capabilitiesForActor });
+  let state;
+  let screen;
+  let openedSource = "";
+  let watchError;
+  const commands = {
+    localize: (key, fallback) => game.i18n.localize(key) === key ? fallback : game.i18n.localize(key),
+    openNativeActorEditor: async request => { openedSource = request.actorSourceUuid; },
+    execute: (name, payload) => commandGateway.execute(name, payload, {
+      isCurrent: () => !scope.disposed && state.snapshot.selectedActorSourceUuid === payload.actorSourceUuid
+    }),
+    selectCharacterTab: tab => { state = { ...state, characterTab: tab }; screen.__veUpdateCharacter({ state, commands }); },
+    selectActor: uuid => { state = { ...state, snapshot: session.selectCharacterSource(uuid) }; screen.__veUpdateCharacter({ state, commands }); }
+  };
+  state = { characterTab: "overview", snapshot: session.watch(scope, snapshot => {
+    state = { ...state, snapshot };
+    screen.__veUpdateCharacter({ state, commands });
+  }, error => { watchError = error; }) };
+  screen = renderCharacters({ state, commands, scope });
+  document.querySelector("main").append(screen);
+  await tick();
+  const clickTab = async id => { screen.querySelector(`[data-profile-tab="${id}"]`).click(); await tick(); };
+  const field = id => {
+    const copy = screen.querySelector(`[data-profile-field="${id}"]`)?.cloneNode(true);
+    copy?.querySelectorAll("[data-profile-resource]").forEach(editor => editor.remove());
+    return copy;
+  };
+  check("profile provides native Main/Combat/Skills tabs", ["Main", "Combat", "Skills"].every(label => [...screen.querySelectorAll('[role="tab"]')].some(tab => tab.textContent === label)));
+  check("initial shared tab defaults to Main", screen.querySelector('[role="tab"][aria-selected="true"]').textContent === "Main");
+  check("native Wounds label and current/max are retained", field("wounds")?.textContent === "Wounds9 / 13");
+  check("prepared characteristic totals are used", field("ws")?.textContent === "Weapon Skill41");
+  check("zero Fortune remains visible", field("fortune")?.textContent === "Fortune0");
+  check("edition-specific Resolve visibility matches native sheet", !!field("resolve") === !use5e);
+  check("resource inputs open only on deliberate Edit", !screen.querySelector('.ve-profile-content input, .ve-profile-content textarea, .ve-profile-content [contenteditable]'));
+  check("D&D terminology is absent", !/Hit Points|Death Saves|Spell Slots|Attunement|Long Rest/.test(screen.textContent));
+  check("Main fits the emulated viewport", screen.getBoundingClientRect().right <= innerWidth + 1);
+  check("embedded chooser does not scroll the profile on mount", window.scrollY === 0);
+  const characteristicButton = screen.querySelector('[data-profile-action="characteristic:ws"]');
+  characteristicButton.click();
+  await tick();
+  check("Characteristic button opens an admitted native test dialog", nativeDialog?.element.classList.contains("ve-mobile-admitted-app") && nativeSetups.at(-1).target === "ws");
+  check("pending test prevents duplicate taps", characteristicButton.disabled && characteristicButton.getAttribute("aria-busy") === "true");
+  check("native test dialog fits the viewport", nativeDialog.element.getBoundingClientRect().left >= -1 && nativeDialog.element.getBoundingClientRect().right <= innerWidth + 1);
+  nativeDialog.element.querySelector("input").focus();
+  nativeDialog.element.querySelector("input").value = "7";
+  nativeDialog.element.querySelector("[data-native-roll]").click();
+  await tick();
+  check("native dialog input reaches the native roll", nativeRolls.length === 1 && nativeRolls[0].modifier === 7 && nativeRolls[0].use5e === use5e);
+  check("native result stays in Chat", game.messages.length === 1 && !screen.querySelector(".ve-roll-result"));
+  characteristicButton.click();
+  await tick();
+  nativeDialog.element.querySelector("[data-native-cancel]").click();
+  await tick();
+  check("native cancellation releases the button without rolling", !characteristicButton.disabled && nativeRolls.length === 1 && applications.admissions.size === 0);
+  await clickTab("combat");
+  check("combat resource follows the edition", use5e ? field("momentum")?.textContent === "MomentumActive" : field("advantage")?.textContent === "Advantage4");
+  use5e = !use5e;
+  Hooks.emit("updateSetting", { key: "wfrp4e.editionSettings" }, {}, {}, "player");
+  await tick();
+  check("edition switch refreshes the retained panel", use5e ? !!field("momentum") && !field("advantage") : !!field("advantage") && !field("momentum"));
+  await clickTab("skills");
+  check("skill totals are read from native prepared data", field("athletics")?.textContent === "Athletics54" && field("language")?.textContent === "Language (Magick)62");
+  screen.querySelector('[data-profile-action="skill:athletics"]').click();
+  await tick();
+  check("Skill action uses its exact native item", nativeSetups.at(-1).target === actor.items.find(item => item.id === "athletics"));
+  nativeDialog.element.querySelector("[data-native-roll]").click();
+  await tick();
+  check("Skill action rolls once through the shared gateway", nativeRolls.length === 2 && nativeRolls[1].kind === "skill");
+  check("unidentified items and hidden skills are omitted", !/Unidentified Weapon|Hidden Skill/.test(screen.textContent));
+  check("skill names render as text rather than HTML", !document.querySelector("#profile-injection") && !globalThis.profileInjected && screen.textContent.includes('<img id="profile-injection"'));
+  check("Skills fits the emulated viewport", screen.getBoundingClientRect().right <= innerWidth + 1 && document.documentElement.scrollWidth <= innerWidth + 1);
+  await clickTab("combat");
+  check("native weapon groups appear on Combat", screen.textContent.includes("Melee Weapon(s)") && screen.textContent.includes("Ranged Weapon(s)"));
+  check("native DamageString values retain their Damage labels", field("sword")?.textContent === "SwordDamage +7" && field("handgun")?.textContent === "HandgunDamage +8+ 1d10");
+  const sword = actor.items.find(item => item.id === "sword");
+  const handgun = actor.items.find(item => item.id === "handgun");
+  screen.querySelector('[data-profile-action="weapon:sword"]').click();
+  await tick();
+  check("weapon attack opens a native dialog for the exact equipped Item", nativeSetups.at(-1).kind === "weapon" && nativeSetups.at(-1).target === sword);
+  nativeDialog.element.querySelector("[data-native-roll]").click();
+  await tick();
+  check("melee attack rolls once through the native callback", nativeRolls.length === 3 && nativeRolls[2].target === sword && nativeAmmo === 4);
+  screen.querySelector('[data-profile-action="weapon:handgun"]').click();
+  await tick();
+  nativeDialog.element.querySelector("[data-native-cancel]").click();
+  await tick();
+  check("cancelled ranged attacks do not consume ammunition", nativeAmmo === 4 && nativeRolls.length === 3);
+  screen.querySelector('[data-profile-action="weapon:handgun"]').click();
+  await tick();
+  check("ranged setup receives the exact equipped Item", nativeSetups.at(-1).target === handgun);
+  nativeDialog.element.querySelector("[data-native-roll]").click();
+  await tick();
+  check("ranged attack consumption belongs to the native callback", nativeAmmo === 3 && nativeRolls.length === 4 && nativeRolls[3].target === handgun);
+  screen.querySelector('[data-profile-action="weapon:sword"]').click();
+  await tick();
+  sword.system.isEquipped = false;
+  Hooks.emit("updateItem", sword, { "system.equipped.value": false });
+  await tick();
+  check("equipment changes remove stale mobile attack controls", !screen.querySelector('[data-profile-action="weapon:sword"]'));
+  nativeDialog.element.querySelector("[data-native-roll]").click();
+  await tick();
+  check("a stale native attack confirmation does not roll", nativeRolls.length === 4 && applications.admissions.size === 0);
+  sword.system.isEquipped = true;
+  Hooks.emit("updateItem", sword, { "system.equipped.value": true });
+  await tick();
+  check("re-equipping refreshes the current attack descriptor", !!screen.querySelector('[data-profile-action="weapon:sword"]'));
+  check("Combat weapon panels fit the emulated viewport", screen.getBoundingClientRect().right <= innerWidth + 1 && document.documentElement.scrollWidth <= innerWidth + 1);
+  use5e = initial5e;
+  Hooks.emit("updateSetting", { key: "wfrp4e.editionSettings" }, {}, {}, "player");
+  await tick();
+  await clickTab("magic");
+  check("Magic uses native Petty Spell and Lore Spell groups", screen.textContent.includes("Petty Spell") && screen.textContent.includes("Lore Spell"));
+  check("Lore spells display native CN while Petty spells show names", field("lore")?.textContent === "BoltCN 4" && field("petty")?.textContent === "Light");
+  check("Wind channelling follows the edition", !!screen.querySelector('[data-profile-action="wind:aqshy"]') === use5e);
+  check("Magic fits the emulated viewport", screen.getBoundingClientRect().right <= innerWidth + 1 && document.documentElement.scrollWidth <= innerWidth + 1);
+  const magicRolls = nativeRolls.length;
+  screen.querySelector('[data-profile-action="spell:lore"]').click();
+  await tick();
+  if (!use5e) {
+    check("4e opens an admitted native Cast/Channel choice", !!nativeDialog.element.querySelector('[data-choice="channel"]') && nativeDialog.element.classList.contains("ve-mobile-admitted-app"));
+    nativeDialog.element.querySelector('[data-choice="channel"]').click();
+    await tick();
+  }
+  check("magic setup receives the exact spell and correct workflow", nativeSetups.at(-1).target === actor.items.find(item => item.id === "lore") && nativeSetups.at(-1).kind === (use5e ? "cast" : "channel-spell"));
+  nativeDialog.element.querySelector('[data-native-roll]').click();
+  await tick();
+  check("magic confirmation rolls once and retains native chat", nativeRolls.length === magicRolls + 1 && game.messages.length === nativeRolls.length);
+  check("4e channelled SL belongs to the native callback", use5e || actor.items.find(item => item.id === "lore").system.cn.SL === 2);
+  screen.querySelector('[data-profile-action="spell:petty"]').click();
+  await tick();
+  check("Petty spells go directly to native casting setup", nativeSetups.at(-1).kind === "cast" && nativeSetups.at(-1).target.id === "petty");
+  nativeDialog.element.querySelector('[data-native-cancel]').click();
+  await tick();
+  check("cancelled magic preserves native resources", nativeRolls.length === magicRolls + 1 && actor.system.status.channelling.value === 3 && applications.admissions.size === 0);
+  if (use5e) {
+    screen.querySelector('[data-profile-action="wind:aqshy"]').click();
+    await tick();
+    check("5e Wind setup receives a key rather than a spell", nativeSetups.at(-1).target === "aqshy" && nativeSetups.at(-1).kind === "channel-wind");
+    nativeDialog.element.querySelector('[data-native-roll]').click();
+    await tick();
+    check("5e native Wind confirmation rolls once", nativeRolls.length === magicRolls + 2);
+    check("5e channelled power belongs to the native callback", actor.system.status.channelling.value === 5);
+  } else {
+    screen.querySelector('[data-profile-action="spell:lore"]').click();
+    await tick();
+    nativeDialog.element.querySelector('[data-choice="cancel"]').click();
+    await tick();
+    check("4e choice cancellation creates no setup or roll", nativeRolls.length === magicRolls + 1 && applications.admissions.size === 0);
+  }
+  const beforeStaleMagic = nativeRolls.length;
+  screen.querySelector('[data-profile-action="spell:lore"]').click();
+  await tick();
+  if (!use5e) { nativeDialog.element.querySelector('[data-choice="cast"]').click(); await tick(); }
+  const loreSpell = actor.items.find(item => item.id === "lore");
+  loreSpell.visible = false;
+  Hooks.emit("updateItem", loreSpell, {});
+  await tick();
+  check("hidden spells remove mobile magic controls", !screen.querySelector('[data-profile-action="spell:lore"]'));
+  nativeDialog.element.querySelector('[data-native-roll]').click();
+  await tick();
+  check("stale spell confirmation cannot roll", nativeRolls.length === beforeStaleMagic && applications.admissions.size === 0);
+  loreSpell.visible = true;
+  Hooks.emit("updateItem", loreSpell, {});
+  await tick();
+  await clickTab("main");
+  const edit = async id => { screen.querySelector(`[data-profile-edit="${id}"]`).click(); await tick(); return screen.querySelector(`[data-profile-resource-input="${id}"]`); };
+  const saveResource = async input => { input.closest("form").querySelector("[data-profile-resource-save]").click(); await tick(); };
+  check("native rolls did not cause VE resource writes", nativeWrites.length === 0);
+  let resourceInput = await edit("wounds");
+  check("Wounds editor receives native maximum and keyboard focus", resourceInput.max === "13" && resourceInput.min === "0" && document.activeElement === resourceInput);
+  resourceInput.value = "0";
+  resourceInput.closest("form").querySelector("[data-profile-resource-cancel]").click();
+  await tick();
+  check("cancelling a resource editor performs no update", nativeWrites.length === 0 && !screen.querySelector("[data-profile-resource-input]"));
+  resourceInput = await edit("wounds");
+  resourceInput.value = "14";
+  await saveResource(resourceInput);
+  check("resource form rejects values over the native maximum", nativeWrites.length === 0 && resourceInput.validity.rangeOverflow);
+  resourceInput.value = "";
+  await saveResource(resourceInput);
+  check("empty input cannot become zero", nativeWrites.length === 0 && resourceInput.validity.valueMissing);
+  resourceInput.value = "0";
+  await saveResource(resourceInput);
+  check("saving zero Wounds invokes the native setter and refreshes", nativeWoundCalls === 1 && nativeWrites.length === 1 && field("wounds").textContent === "Wounds0 / 13");
+  check("resource save does not create a roll or extra chat", nativeRolls.length === beforeStaleMagic && game.messages.length === nativeRolls.length);
+  resourceInput = await edit("fortune");
+  resourceInput.value = "5";
+  await saveResource(resourceInput);
+  check("Fortune may exceed Fate as on the native sheet", field("fortune").textContent === "Fortune5" && nativeWrites.at(-1).length === 1);
+  resourceInput = await edit("corruption");
+  resourceInput.value = "8";
+  await saveResource(resourceInput);
+  check("Corruption may exceed its threshold and retains native side effects", field("corruption").textContent === "Corruption8 / 7" && nativeResourceEffects.includes("corruption"));
+  const beforeStaleSave = nativeWrites.length;
+  resourceInput = await edit("wounds");
+  resourceInput.value = "2";
+  actor.system.status.wounds.value = 1;
+  await saveResource(resourceInput);
+  check("a changed resource cannot be overwritten by a stale editor", nativeWrites.length === beforeStaleSave && screen.textContent.includes("This resource changed"));
+  resourceInput.closest("form").querySelector("[data-profile-resource-cancel]").click();
+  Hooks.emit("updateActor", actor, {});
+  await tick();
+  resourceInput = await edit("wounds");
+  use5e = !use5e;
+  resourceInput.value = "2";
+  await saveResource(resourceInput);
+  check("a changed edition invalidates an open resource editor", nativeWrites.length === beforeStaleSave && screen.textContent.includes("This resource changed"));
+  use5e = initial5e;
+  Hooks.emit("updateSetting", { key: "wfrp4e.editionSettings" }, {});
+  await tick();
+  resourceInput = await edit("wounds");
+  const staleForm = resourceInput.closest("form");
+  commands.selectActor(npc.uuid);
+  await tick();
+  staleForm.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  await tick();
+  check("actor selection disposes a draft resource editor without saving", nativeWrites.length === beforeStaleSave);
+  commands.selectActor(actor.uuid);
+  await tick();
+  await clickTab("combat");
+  if (use5e) {
+    resourceInput = await edit("momentum");
+    check("Momentum uses a labeled checkbox", resourceInput.type === "checkbox" && resourceInput.getAttribute("aria-label") === "Momentum");
+    resourceInput.checked = false;
+    await saveResource(resourceInput);
+    check("Momentum updates natively and refreshes", field("momentum").textContent === "MomentumInactive" && nativeResourceEffects.includes("momentum"));
+  } else {
+    resourceInput = await edit("advantage");
+    resourceInput.value = "7";
+    await saveResource(resourceInput);
+    check("Advantage uses its native setter and cap", nativeAdvantageCalls === 1 && field("advantage").textContent === "Advantage7");
+    groupAdvantage = true;
+    actor.system.status.advantage.value = groupAdvantageValues.players;
+    Hooks.emit("updateSetting", { key: "wfrp4e.useGroupAdvantage" }, {});
+    await tick();
+    resourceInput = await edit("advantage");
+    check("Group Advantage has its native label and no personal cap", resourceInput.getAttribute("aria-label") === "Group Advantage" && !resourceInput.hasAttribute("max"));
+    resourceInput.value = "12";
+    await saveResource(resourceInput);
+    check("Group Advantage synchronization belongs to the native update", nativeAdvantageCalls === 2 && groupAdvantageValues.players === 12 && nativeResourceEffects.includes("group-advantage"));
+    game.combat = null;
+    Hooks.emit("deleteCombat", { id: "combat" });
+    await tick();
+    check("leaving combat removes the Group Advantage editor", !screen.querySelector('[data-profile-edit="advantage"]'));
+    groupAdvantage = false;
+    Hooks.emit("updateSetting", { key: "wfrp4e.useGroupAdvantage" }, {});
+    await tick();
+  }
+  check("resource editors fit the emulated viewport", document.documentElement.scrollWidth <= innerWidth + 1);
+  await clickTab("main");
+  actor.system.status.wounds.value = 0;
+  Hooks.emit("updateActor", actor, { "system.status.wounds.value": 0 });
+  await tick();
+  check("native actor updates refresh zero-valued counters", field("wounds")?.textContent === "Wounds0 / 13");
+  [...screen.querySelectorAll("button")].find(button => button.textContent === "Open Character Sheet").click();
+  await tick();
+  check("native-sheet fallback uses the exact actor source", openedSource === actor.uuid);
+  screen.querySelector('[data-actor-source="Actor.npc"]').click();
+  await tick();
+  check("unmapped NPCs retain safe native access", !screen.querySelector(".ve-profile-content") && screen.querySelector("h2").textContent === "Guard Captain");
+  screen.querySelector('[data-actor-source="Actor.hero"]').click();
+  await tick();
+  use5e = initial5e;
+  actor.system.status.wounds.value = 9;
+  Hooks.emit("updateSetting", { key: "wfrp4e.editionSettings" }, {}, {}, "player");
+  await tick();
+  check("session watcher remains healthy after profile/native transitions", !watchError && state.snapshot.selectedActor.presentation === "profile");
+  check("profile updates do not scroll to the actor chooser", window.scrollY === 0);
+  await clickTab(use5e ? "combat" : "main");
+  await edit(use5e ? "momentum" : "wounds");
+  document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
+} catch (error) {
+  scope.dispose();
+  document.querySelector("#results").textContent = JSON.stringify({ status: "failed", checks, error: error.stack });
+}

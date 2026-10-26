@@ -1,3 +1,4 @@
+import { resolveSystemIntegration } from "../systems/registry.mjs";
 import { localizeFoundry } from "./localization.mjs";
 import { ACTOR_COMMANDS } from "../kernel/command-names.mjs";
 import { MODULE_ID } from "./preferences.mjs";
@@ -19,6 +20,7 @@ export class QuickbarError extends Error {
 /** Actor-flag persistence and live descriptor resolution for the VE Quickbar. */
 export function createFoundryQuickbarGateway({
   getGame = () => globalThis.game,
+  getSystemIntegration = () => resolveSystemIntegration(getGame()?.system?.id),
   getConfig = () => globalThis.CONFIG,
   isActive = () => false,
   moduleId = MODULE_ID
@@ -32,7 +34,7 @@ export function createFoundryQuickbarGateway({
     finally { pendingWrites.delete(key); }
   };
   const snapshotForActor = (actor, user = getGame()?.user) => {
-    if (!actor || !canOwn(actor, user)) return emptyQuickbar();
+    if (!getSystemIntegration().features.quickbar || !actor || !canOwn(actor, user)) return emptyQuickbar();
     const descriptors = readDescriptors(actor, moduleId);
     return Object.freeze(descriptors.map((descriptor) => resolveDescriptor(actor, descriptor, getGame(), getConfig())));
   };
@@ -41,6 +43,7 @@ export function createFoundryQuickbarGateway({
     if (!isActive()) throw new QuickbarError("INACTIVE", localizeFoundry("VEMOBILE.Interface.HotbarGateway.MobileModeIsNotActive", "Mobile mode is not active."));
     const game = getGame();
     assertSession(game, expectedSession);
+    if (!getSystemIntegration().features.quickbar) throw new QuickbarError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.NativeSheet.UseSheet", "Use the character sheet for this operation."));
     let sourceUuid;
     try { sourceUuid = validSourceUuid(actorSourceUuid); }
     catch (error) { throw new QuickbarError("INVALID_INPUT", error.message, { cause: error }); }
