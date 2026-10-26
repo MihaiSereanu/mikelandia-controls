@@ -45,4 +45,3 @@ export function addWarhammerMagic(actor, use5e) {
   actor.system.status.channelling = { wind: "aqshy", value: 3, winds: { aqshy: { label: "Aqshy" } },
     getWinds(spells) { return spells.some(spell => spell.system.lore.value.includes("fire")) ? { aqshy: { label: "Aqshy" } } : {}; } };
 }
-
