@@ -1104,6 +1104,30 @@ body.ve-mobile-running .ve-mobile-transient-app :is(.window-content, .applicatio
   -webkit-overflow-scrolling: touch;
 }
 
+/* Deliberately opened character editors use the available viewport. Keep
+ * overflow reachable in both axes when a native system retains wide fields. */
+body.ve-mobile-running .ve-mobile-native-editor {
+  width: calc(100vw - max(16px, var(--ve-safe-left)) - max(16px, var(--ve-safe-right))) !important;
+  max-width: min(1100px, calc(100vw - max(16px, var(--ve-safe-left)) - max(16px, var(--ve-safe-right)))) !important;
+  height: calc(var(--ve-mobile-viewport-height, 100dvh) - max(16px, var(--ve-safe-top)) - max(16px, var(--ve-safe-bottom)) - var(--ve-native-bottom-space)) !important;
+}
+
+body.ve-mobile-running .ve-mobile-native-editor :is(.window-content, .application-content) {
+  overflow: auto !important;
+  overscroll-behavior: contain;
+}
+
+body.ve-mobile-running .ve-mobile-native-editor :is(nav.tabs, .sheet-tabs) {
+  flex-wrap: wrap;
+  height: auto;
+}
+
+/* Warhammer's characteristic table and identity fields need their native
+ * working width. Pan the content instead of compressing or clipping inputs. */
+body.ve-mobile-running .ve-mobile-native-editor[data-ve-native-system="wfrp4e"] .window-content > :is(.sheet-header, .tab) {
+  min-width: 560px;
+}
+
 body.ve-mobile-running .ve-mobile-transient-app :is(input, select, textarea) {
   max-width: 100%;
   font-size: max(16px, 1em);
@@ -4407,6 +4431,21 @@ body.ve-mobile-running.ve-mobile-scene-active.ve-mobile-native-measurement-activ
   margin: 0 0 10px;
   overflow-wrap: anywhere;
 }
+
+.ve-profile-section-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.ve-profile-section-heading h3 { margin-bottom: 0; }
+.ve-profile-section-metric { color: var(--ve-subtle); overflow-wrap: anywhere; }
+.ve-profile-description { flex: 1 0 100%; min-width: 0; }
+.ve-profile-description summary { min-height: 44px; align-content: center; cursor: pointer; }
+.ve-profile-description p { margin: 8px 0 0; white-space: pre-line; overflow-wrap: anywhere; }
 
 .ve-profile-section dl {
   display: grid;

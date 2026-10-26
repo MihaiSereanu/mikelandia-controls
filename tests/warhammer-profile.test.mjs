@@ -124,3 +124,16 @@ test("edition changes refresh the selected profile through the real session watc
   assert.equal(snapshots.at(-1).selectedActor.edition, "5e");
   assert.equal(fields(snapshots.at(-1).selectedActor).some(row => row.id === "resolve"), false);
 });
+
+test("nonempty Trappings and Talents tabs retain exact owned item data", t => {
+  const actor = createWarhammerActor();
+  const add = (id, type, system) => actor.items.push({ id, type, name: id, parent: actor, system });
+  add("rope", "trapping", { quantity: { value: 2 }, description: { value: "<p>A rope</p>" } });
+  add("talent", "talent", { description: { value: "<p>A talent</p>" } });
+  installGlobals(t, { game: createWarhammerGame([actor]) });
+  const view = () => integration.createActorViewRecord(actor, game.user);
+  assert.equal(view().panels.find(p => p.id === "trappings").sections[0].rows[0].value, 2);
+  assert.equal(view().panels.find(p => p.id === "talents").sections[0].rows[0].description, "<p>A talent</p>");
+  for (const item of actor.items.filter(i => ["rope", "talent"].includes(i.id))) item.visible = false;
+  assert.equal(view().panels.some(p => ["trappings", "talents"].includes(p.id)), false);
+});

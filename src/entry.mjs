@@ -635,6 +635,7 @@ if (isGamePage) {
       const nativeApplications = enableMobilePresentation(scope, {
         isPersistentOverlay: moduleOverlayGateway.isPersistentRoot,
         isActorEditor: actorEditorGateway.ownsApplication,
+        isNativeDialog: application => getSystemIntegration().isNativeDialog?.(application) === true,
         isSettingsApplication: (application, element) => settingsCompatibilityGateway.ownsApplication(application, element),
         trace: (event) => diagnostics.record("debug", `Application admission ${JSON.stringify(event)}`)
       });

@@ -9,6 +9,10 @@ export const shadowdarkIntegration = Object.freeze({
   id: "shadowdark",
   features: Object.freeze({ ...fallbackIntegration.features, profilePanels: true }),
   createCommands: createShadowdarkCommands,
+  isNativeDialog(application) {
+    const RollDialog = globalThis.shadowdark?.apps?.RollDialogSD;
+    return typeof RollDialog === "function" && application instanceof RollDialog;
+  },
   settingInvalidation(key) {
     return key.startsWith("shadowdark.") ? { domains: ["actors"], refreshSelectedActor: true } : null;
   },

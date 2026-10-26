@@ -199,3 +199,35 @@ test("different light toggles share one actor lock while native setup is pending
   await assert.rejects(f.gateway.execute(action, f.request("light:lantern")), { code: "COMMAND_BUSY" });
   finish(); await pending;
 });
+
+test("inventory uses native slot totals, coins, stashed gear, and nonempty talent tabs", t => {
+  const f = setup(t);
+  f.actor.system.slots = 12;
+  f.actor.system.coins = { gp: 40, sp: 5, cp: 0 };
+  f.actor.system.getSlotUsage = () => ({ total: 9, coins: 2 });
+  const item = (id, type, system) => ({ id, type, name: id, parent: f.actor, uuid: `${f.actor.uuid}.Item.${id}`, system });
+  f.actor.items.push(item("stash", "Basic", { isPhysical: true, isIdentified: true, stashed: true, quantity: 3 }));
+  f.actor.items.push(item("talent", "Talent", { talentClass: "class", description: "<p>Native talent text</p>" }));
+  const view = f.view(), inventory = view.panels.find(p => p.id === "inventory");
+  assert.deepEqual(inventory.sections.find(s => s.id === "gear").summary[0], { id: "slots", label: "Slots", value: 9, max: 12, format: "number" });
+  assert.equal(inventory.sections.find(s => s.id === "coins").summary[0].value, 2);
+  assert.equal(inventory.sections.find(s => s.id === "coins").rows.find(r => r.id === "gp").value, 40);
+  assert.deepEqual(inventory.sections.find(s => s.id === "stashed").rows.map(r => r.id), ["stash"]);
+  assert.equal(inventory.sections.find(s => s.id === "gear").rows.some(r => r.id === "stash"), false);
+  assert.equal(view.panels.find(p => p.id === "talents").sections[0].rows[0].description, "<p>Native talent text</p>");
+  f.actor.items.get("stash").system.isIdentified = false;
+  f.actor.items.get("talent").visible = false;
+  assert.equal(f.view().panels.some(p => p.id === "talents"), false);
+  assert.equal(f.view().panels.find(p => p.id === "inventory").sections.some(s => s.id === "stashed"), false);
+});
+
+test("native Shadowdark rolls share the fixed-ID dialog lock across roll types", async t => {
+  const f = setup(t); let release;
+  f.prompt = () => new Promise(resolve => { release = resolve; });
+  const pending = f.gateway.execute(action, f.request("stat:str"));
+  await assert.rejects(f.gateway.execute(action, f.request("attack-melee:sword")), { code: "COMMAND_BUSY" });
+  release(false); await pending;
+  f.prompt = async () => true;
+  await f.gateway.execute(action, f.request("attack-melee:sword"));
+  assert.equal(f.rolls.length, 1);
+});

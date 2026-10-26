@@ -1,4 +1,4 @@
-import { abilities, carriedItem, physicalTypes, knownSpell, weaponMode } from "./context.mjs";
+import { abilities, carriedItem, stashedItem, ownedItem, physicalTypes, knownSpell, weaponMode } from "./context.mjs";
 
 const field = (id, key, label, path, extra = {}) => ({ id, labelKey: key, label, path, ...extra });
 export function shadowdarkPlayerProfile(context) {
@@ -30,10 +30,23 @@ export function shadowdarkPlayerProfile(context) {
     ] },
     { id: "inventory", labelKey: "SHADOWDARK.sheet.player.tab.inventory", label: "Inventory", sections: [
       { id: "gear", kind: "items", labelKey: "SHADOWDARK.inventory.gear", label: "Gear", collectionPath: "items", itemTypes: physicalTypes,
+        summary: [field("slots", "SHADOWDARK.inventory.slots", "Slots", null, { read: actor => actor.system.getSlotUsage?.().total, maxPath: "system.slots" })],
         valuePath: "system.quantity", include: (item, _context, actor) => carriedItem(item, actor) },
+      { id: "coins", kind: "values", labelKey: "SHADOWDARK.inventory.coins", label: "Coins",
+        summary: [field("coin-slots", "SHADOWDARK.inventory.slots", "Slots", null, { read: actor => actor.system.getSlotUsage?.().coins })],
+        fields: ["gp", "sp", "cp"].map(id =>
+        field(id, `SHADOWDARK.coins.${id}`, id.toUpperCase(), `system.coins.${id}`)) },
+      { id: "stashed", kind: "items", labelKey: "SHADOWDARK.inventory.stashed_gear", label: "Stashed Gear", collectionPath: "items", itemTypes: physicalTypes,
+        valuePath: "system.quantity", include: (item, _context, actor) => stashedItem(item, actor) },
       { id: "lights", kind: "items", labelKey: "SHADOWDARK.inventory.tooltip.toggle_light_source", label: "Toggle Light Source", collectionPath: "items", itemTypes: ["Basic", "Effect"],
         actionIdPrefix: "light", valuePath: "system.light.active", format: "boolean",
         include: (item, _context, actor) => carriedItem(item, actor) && item.system.light?.isSource === true }
+    ] },
+    { id: "talents", labelKey: "SHADOWDARK.sheet.player.tab.talents", label: "Talents", sections: [
+      ...["ancestry", "class", "level"].map(group => ({ id: `talents-${group}`, kind: "items", labelKey: `SHADOWDARK.talent.class.${group}`, label: group[0].toUpperCase() + group.slice(1),
+        collectionPath: "items", itemTypes: ["Talent"], descriptionPath: "system.description",
+        include: (item, _context, actor) => ownedItem(actor, String(item.id), "Talent") === item
+          && (group === "level" ? ["level", "patronBoon"].includes(item.system.talentClass) : item.system.talentClass === group) }))
     ] }
   ] };
 }

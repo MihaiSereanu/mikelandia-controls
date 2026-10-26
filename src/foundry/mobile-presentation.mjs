@@ -37,9 +37,9 @@ const APPLICATION_ORIGIN_SELECTOR = [
  * irrelevant here because this renderer is deliberately designed for a
  * narrow viewport.
  */
-export function enableMobilePresentation(scope, { isPersistentOverlay = () => false, isSettingsApplication = () => false, isActorEditor = () => false, now = () => Date.now(), trace = () => {} } = {}) {
+export function enableMobilePresentation(scope, { isPersistentOverlay = () => false, isSettingsApplication = () => false, isActorEditor = () => false, isNativeDialog = () => false, now = () => Date.now(), trace = () => {} } = {}) {
   suppressFutureResolutionWarnings(scope);
-  const applications = enableMobileApplications(scope, { isPersistentOverlay, isSettingsApplication, isActorEditor, now, trace });
+  const applications = enableMobileApplications(scope, { isPersistentOverlay, isSettingsApplication, isActorEditor, isNativeDialog, now, trace });
 
   const removeResolutionWarnings = () => {
     for (const notification of document.querySelectorAll("#notifications .notification")) {
@@ -95,6 +95,7 @@ export function enableMobileApplications(scope, {
   isPersistentOverlay = () => false,
   isSettingsApplication = () => false,
   isActorEditor = () => false,
+  isNativeDialog = () => false,
   now = () => Date.now(),
   trace = () => {},
   document = globalThis.document,
@@ -133,7 +134,8 @@ export function enableMobileApplications(scope, {
         && element?.contains?.(document?.activeElement) && document?.activeElement !== document?.body,
       isPersistentOverlay,
       isSettingsApplication,
-      isActorEditor
+      isActorEditor,
+      isNativeDialog
     });
     if (!classification.admitted) {
       admissions.release(key, element);
@@ -157,8 +159,12 @@ export function enableMobileApplications(scope, {
   scope.listen(document, "click", beginLineage, { capture: true, passive: true });
   scope.listen(document, "keydown", beginLineage, { capture: true });
   scope.hook?.("renderApplication", admit);
+  scope.hook?.("renderApplicationV1", admit);
+  scope.hook?.("renderActorSheet", admit);
   scope.hook?.("renderApplicationV2", admit);
   scope.hook?.("closeApplication", release);
+  scope.hook?.("closeApplicationV1", release);
+  scope.hook?.("closeActorSheet", release);
   scope.hook?.("closeApplicationV2", release);
   for (const application of existingApplications) admit(application, null, { preExisting: true });
   for (const element of mobileDialogElements(document.body)) {
@@ -220,7 +226,7 @@ export function enableMobileApplications(scope, {
     }
   });
   const reconcileApplications = () => admissions.reconcile(record => classifyMobileApplication(record.element, record.application, {
-    retained: true, isPersistentOverlay, isSettingsApplication, isActorEditor
+    retained: true, isPersistentOverlay, isSettingsApplication, isActorEditor, isNativeDialog
   }).admitted);
   return Object.freeze({ admissions, lineage, reconcileApplications });
 }
@@ -360,7 +366,7 @@ export function mobileDialogElements(root) {
 }
 
 /** New lifecycle-known windows are admitted unless a concrete desktop owner replaces them. */
-export function classifyMobileApplication(element, application = null, { preExisting = false, retained = false, activeBaseline = false, isPersistentOverlay = () => false, isSettingsApplication = () => false, isActorEditor = () => false } = {}) {
+export function classifyMobileApplication(element, application = null, { preExisting = false, retained = false, activeBaseline = false, isPersistentOverlay = () => false, isSettingsApplication = () => false, isActorEditor = () => false, isNativeDialog = () => false } = {}) {
   if (!element?.matches || element.closest?.(".ve-mobile-app, .ve-mobile-bootstrap")) return Object.freeze({ admitted: false, modal: false, reason: "VE-owned" });
   if (element.isConnected === false) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.DisconnectedApplicationRoot", "disconnected application root") });
   if (isSettingsApplication(application, element) || element.matches(".ve-mobile-settings-app")) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.NativeSettingsSessionOwnsApplication", "native Settings session owns application") });
@@ -368,7 +374,7 @@ export function classifyMobileApplication(element, application = null, { preExis
     return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.PersistentShellOrOverlay", "persistent shell or overlay") });
   }
   const modal = element.matches("dialog, [role='dialog'], .dialog, .activity-choice, .activity-usage, .roll-configuration, .midi-targeting, #midi-qol-targetConfirmation")
-    || application?.options?.modal === true;
+    || application?.options?.modal === true || isNativeDialog(application);
   // A persistent overlay may render a child surface through its own
   // Application lifecycle. Admitting that child as a native window would
   // stretch it across the viewport and make its transparent area eat taps.

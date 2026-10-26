@@ -27,6 +27,11 @@ export function carriedItem(item, actor) {
     && item.system.isPhysical === true && item.system.isIdentified === true && item.system.stashed === false; }
   catch { return false; }
 }
+export function stashedItem(item, actor) {
+  try { return physicalTypes.includes(item.type) && ownedItem(actor, String(item.id)) === item
+    && item.system.isPhysical === true && item.system.isIdentified === true && item.system.stashed === true; }
+  catch { return false; }
+}
 export function weaponMode(item, actor, mode) {
   try { return carriedItem(item, actor) && item.type === "Weapon" && item.system.isWeapon === true && item.system.equipped === true
     && ["melee", "ranged"].includes(item.system.type)

@@ -51,10 +51,24 @@ export function createActorEditorGateway({ getGame = () => globalThis.game, isAc
         const assigned = actor.sheet;
         if (!assigned?.constructor || typeof assigned.render !== "function") throw new Error(localizeFoundry("VEMOBILE.Character.ActorEditorGateway.TheNativeActorEditorIsUnavailable", "The native Actor editor is unavailable."));
         const id = `ve-mobile-native-sheet-${++nextNativeSheetId}`;
-        application = assigned.isV2 === false
+        const ApplicationV1 = globalThis.foundry?.appv1?.sheets?.ActorSheet;
+        const legacy = assigned.isV2 === false || (typeof ApplicationV1 === "function" && assigned instanceof ApplicationV1);
+        application = legacy
           ? new assigned.constructor(actor, { editable: true, id }) : new assigned.constructor({ document: actor, id });
+        // Legacy DocumentSheet IDs are derived from the document, ignoring
+        // options.id. Keep this editor separate from the assigned desktop sheet.
+        if (legacy && application.id !== id) Object.defineProperty(application, "id", { value: id, configurable: true });
         sessions.set(application, { sourceUuid: actorSourceUuid(actor) });
-        for (const hook of ["closeApplication", "closeApplicationV2"]) scope.hook(hook, app => {
+        const markEditor = (app, html) => {
+          if (app !== application) return;
+          const candidates = [app.element, html, app.element?.[0], html?.[0]];
+          // HTMLFormElement[0] is its first control, not a jQuery root.
+          const element = candidates.find(candidate => candidate?.nodeType === 1) ?? candidates.find(candidate => candidate?.classList);
+          element?.classList?.add("ve-mobile-native-editor");
+          if (element?.dataset) element.dataset.veNativeSystem = getGame()?.system?.id ?? "";
+        };
+        for (const hook of ["renderApplication", "renderApplicationV1", "renderApplicationV2", "renderActorSheet"]) scope.hook(hook, markEditor);
+        for (const hook of ["closeApplication", "closeApplicationV1", "closeApplicationV2", "closeActorSheet"]) scope.hook(hook, app => {
           if (app !== application) return;
           closed = true;
           sessions.delete(application);
@@ -70,7 +84,7 @@ export function createActorEditorGateway({ getGame = () => globalThis.game, isAc
         // can deliberately enter Edit using the native sheet's own control.
         const viewMode = application.constructor.MODES?.PLAY ?? application.constructor.MODES?.VIEW;
         try {
-          if (assigned.isV2 === false) await Promise.resolve(application.render(true));
+          if (legacy) await Promise.resolve(application.render(true));
           else await Promise.resolve(application.render({ force: true, ...(viewMode === undefined ? {} : { mode: viewMode }) }));
         } finally {
           // Native rendering can finish after teardown closed the provisional

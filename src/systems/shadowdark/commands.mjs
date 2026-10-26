@@ -34,8 +34,10 @@ function binding(actor, item) {
 }
 export function createShadowdarkCommands({ getGame = () => globalThis.game, getHooks = () => globalThis.Hooks } = {}) {
   return Object.freeze({
-    commandKey: (name, source, payload) => name === ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION && typeof payload.actionId === "string" && payload.actionId.startsWith("light:")
-      ? JSON.stringify([name, source, "light"]) : undefined,
+    // Native RollDialogSD uses one fixed DOM ID across actors and roll types.
+    // Opening a second workflow would replace the first unresolved prompt.
+    commandKey: (name, source, payload) => name === ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION
+      ? JSON.stringify(typeof payload.actionId === "string" && payload.actionId.startsWith("light:") ? [name, source, "light"] : [name, "shadowdark-native-roll"]) : undefined,
     supportsCommand: name => [ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE].includes(name),
     capabilitiesForActor(actor, user) {
       const profileActions = actionsFor(actor, getGame(), getHooks(), user), profileEdits = shadowdarkResourceEdits(actor, getGame(), user);

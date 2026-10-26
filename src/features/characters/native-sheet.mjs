@@ -37,11 +37,11 @@ export function renderNativeCharacter({ state, commands, scope, createChooser, r
       node("div", { children: [node("h2", { text: actor.name }), node("p", { text: actor.typeLabel })] })
     ] }),
     button,
+    status,
     node("p", { text: actor.presentation === "profile"
       ? localizedText(commands.localize, "VEMOBILE.Panels.NativeHint", "Use the character sheet for edits and additional game actions.")
       : text("Hint", "Use the character sheet for inventory and game actions.") }),
     ...renderProfilePanels(actor, state, commands, scope),
-    status,
     chooser.element
   );
   shell.element.__veUpdateCharacter = next => renderNativeCharacter({ ...next, scope: owner, createChooser, retained: shell });

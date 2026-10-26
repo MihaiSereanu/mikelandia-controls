@@ -47,3 +47,9 @@ The Shadowdark spell-failure check used the native dialog's editable formula `1d
 | Real devices | Phone/tablet portrait and landscape, keyboard input, scrolling, nested dialogs, Back/close, desktop restoration | Readable labels, usable controls/focus, no horizontal overflow, no lost native windows, and clean restoration. |
 
 Keep normal compatibility restrictions until the relevant live rows pass. Validate Foundry 13 separately before extending new integration compatibility claims to it. A built archive or simulated browser pass does not satisfy an installation or device row.
+
+## PC follow-up run
+
+After the initial run, a disposable `ve-test-gotfn` world used a read-only copy of Gods of the Forbidden North actor/item/settings databases with Argos and an owner-player stand-in for GamingTable. Native STR and Stromdinn melee prompts were visible and each produced one Chat; the legacy native sheet opened and closed; Gear displayed native Slots 11 / 16 and Coins displayed native denominations and Slots 0. Other original modules were disabled in the copied world, so the actual GamingTable client remains user validation. Evidence: `dist/live-test/evidence/argos-regression.json`, `argos-stat-dialog-phone.png`, `argos-native-sheet-fixed-phone.png`, and `argos-inventory-phone.png`.
+
+Disposable WFRP native testing confirmed nonempty Trappings/Talents tabs and the explicit editor. Its tab navigation wraps; header/table content retains readable width and can be panned horizontally within the viewport. The desktop native layout remains a native layout. Existing campaigns were not edited during this run.

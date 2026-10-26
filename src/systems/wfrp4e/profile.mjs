@@ -1,4 +1,4 @@
-import { warhammerWeaponMode } from "./items.mjs";
+import { warhammerWeaponMode, ownedWarhammerItem } from "./items.mjs";
 import { spellForActor, magicWinds } from "./magic.mjs";
 
 const field = (id, labelKey, path, extra = {}) => ({ id, labelKey, label: labelKey, path, editId: id, ...extra });
@@ -67,7 +67,23 @@ export function createWarhammerCharacterProfile(actor, context) {
     include: (item, _context, owner) => spellForActor(owner, String(item.id), context) === item
       && (item.system.lore.value == "petty") === petty
   });
-  return { tabs: [...warhammerCharacterProfile.tabs, {
+  const inventory = (id, labelKey, label, types) => ({ id, kind: "items", labelKey, label, collectionPath: "items", itemTypes: types,
+    valuePath: "system.quantity.value", descriptionPath: "system.description.value",
+    include: (item, _context, owner) => ownedWarhammerItem(owner, String(item.id), item.type) === item });
+  return { tabs: [...warhammerCharacterProfile.tabs,
+  { id: "trappings", labelKey: "Trappings", label: "Trappings", sections: [
+    inventory("money", "Money", "Money", ["money"]),
+    inventory("weapons", "Weapons", "Weapons", ["weapon"]),
+    inventory("armour", "Armour", "Armour", ["armour"]),
+    inventory("ammunition", "Ammunition", "Ammunition", ["ammunition"]),
+    inventory("trappings", "Trappings", "Trappings", ["trapping"]),
+    inventory("containers", "Containers", "Containers", ["container"])
+  ] },
+  { id: "talents", labelKey: "Talents", label: "Talents", sections: [
+    ...[["talent", "Talents"], ["trait", "Traits"]].map(([type, label]) => ({ id: `${type}s`, kind: "items", labelKey: label, label,
+      collectionPath: "items", itemTypes: [type], descriptionPath: "system.description.value",
+      include: (item, _context, owner) => ownedWarhammerItem(owner, String(item.id), type) === item }))
+  ] }, {
     id: "magic", labelKey: "Magic", label: "Magic", sections: [
       { id: "channelling", kind: "values", labelKey: "NAME.Channelling", label: "Channelling", fields: winds.map(({ key, label }, index) => ({
         id: `wind-${index}`, labelKey: label, label, actionId: `wind:${key}`,

@@ -18,6 +18,19 @@ export function renderProfilePanels(actor, state, commands, scope) {
     return row.max === undefined ? value : `${value} / ${localizedNumber(row.max, locale)}`;
   };
   const renderRow = row => {
+    let description;
+    if (row.description) {
+      // Parse in an inert template and append text only, never native markup.
+      const template = document.createElement("template");
+      template.innerHTML = row.description;
+      template.content.querySelectorAll("script, style, iframe, object, embed, .secret").forEach(element => element.remove());
+      template.content.querySelectorAll("p, div, li, br, h1, h2, h3, h4").forEach(element => element.append("\n"));
+      const text = template.content.textContent.trim();
+      if (text) description = node("details", { className: "ve-profile-description", children: [
+        node("summary", { text: localizedText(commands.localize, "VEMOBILE.Panels.Details", "Details") }),
+        node("p", { text })
+      ] });
+    }
     const status = node("p", { className: "ve-profile-action-status", attrs: { role: "status", "aria-live": "polite" } });
     const label = row.action ? node("button", {
       className: "ve-profile-action", attrs: { type: "button", "data-profile-action": row.action.id },
@@ -47,7 +60,7 @@ export function renderProfilePanels(actor, state, commands, scope) {
       node("dt", { children: [label] }), row.value === undefined ? null : node("dd", { children: [
         row.valueLabel ? node("span", { className: "ve-profile-value-label", text: `${row.valueLabel} ` }) : null,
         node("span", { text: `${row.valuePrefix ?? ""}${valueText(row)}` })
-      ] }), row.action ? status : null, row.edit ? renderProfileResourceEditor(row, actor, commands, scope) : null
+      ] }), description, row.action ? status : null, row.edit ? renderProfileResourceEditor(row, actor, commands, scope) : null
     ] });
   };
   // Keep related small sections together, with the last card using spare width.
@@ -58,7 +71,12 @@ export function renderProfilePanels(actor, state, commands, scope) {
     const compact = ["values", "counters"].includes(section.kind) && section.rows.length === 1;
     const element = node("section", {
       className: `ve-profile-section ve-profile-${section.kind}`, dataset: { profileSection: section.id },
-      children: [node("h3", { text: section.label }), section.kind === "text" ? node("p", { text: section.text }) : node("dl", {
+      children: [node("header", { className: "ve-profile-section-heading", children: [
+        node("h3", { text: section.label }), ...(section.summary ?? []).map(row => node("span", {
+          className: "ve-profile-section-metric", dataset: { profileMetric: row.id },
+          text: `${row.label} ${valueText(row)}`
+        }))
+      ] }), section.kind === "text" ? node("p", { text: section.text }) : node("dl", {
         children: section.rows.map(renderRow)
       })]
     });

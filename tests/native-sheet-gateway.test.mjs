@@ -146,3 +146,31 @@ test("nested modal back/close retains the sheet and restoration clears admission
   assert.equal(sheetElement.classList.contains("ve-mobile-admitted-app"), false);
   assert.equal(sheetElement.style.getPropertyValue("--ve-mobile-native-app-layer"), "");
 });
+
+test("legacy sheets without an isV2 flag use the legacy constructor", async t => {
+  const f = fixture(t, { v1: true });
+  const NativeSheet = f.assigned.constructor;
+  delete f.assigned.isV2;
+  globalThis.foundry.appv1 = { sheets: { ActorSheet: NativeSheet } };
+  await f.open();
+  assert.equal(f.instances.at(-1).document, f.actor);
+  assert.deepEqual(f.instances.at(-1).renderArguments, [true]);
+});
+
+test("integration-owned non-dialog roll forms receive modal admission", () => {
+  const app = {};
+  const result = classifyMobileApplication(element(), app, { isNativeDialog: candidate => candidate === app });
+  assert.equal(result.admitted, true);
+  assert.equal(result.modal, true);
+});
+
+test("Foundry 14 legacy actor base hooks mark and release the exact editor", async t => {
+  const f = fixture(t, { v1: true }); await f.open();
+  const app = f.instances.at(-1), root = element(); root.dataset = {};
+  f.hooks.emit("renderActorSheet", app, root);
+  assert.equal(root.classList.contains("ve-mobile-native-editor"), true);
+  assert.equal(root.dataset.veNativeSystem, "shadowdark");
+  f.hooks.emit("closeActorSheet", app);
+  assert.equal(f.gateway.ownsApplication(app), false);
+  assert.equal((await f.open()).opened, true);
+});

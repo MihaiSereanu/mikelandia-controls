@@ -58,7 +58,7 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
     if (!entry || !validId(entry.id) || !enabled(entry) || !label(entry)) return null;
     if (["values", "counters"].includes(entry.kind)) {
       const projected = rows(entry.fields);
-      return projected.length ? Object.freeze({ id: entry.id, label: label(entry), kind: entry.kind, rows: projected }) : null;
+      return projected.length ? Object.freeze({ id: entry.id, label: label(entry), kind: entry.kind, rows: projected, summary: rows(entry.summary) }) : null;
     }
     if (entry.kind === "text") {
       const value = readProfilePath(actor, entry.path);
@@ -80,13 +80,14 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
           if (!id || seen.has(id) || !scalar(name, "text") || (entry.valuePath !== undefined && !scalar(value, entry.format))) continue;
           seen.add(id);
           projected.push(Object.freeze({ id, label: name, value, format: entry.format ?? "number",
+            ...(typeof readProfilePath(item, entry.descriptionPath) === "string" ? { description: readProfilePath(item, entry.descriptionPath) } : {}),
             ...(typeof entry.valueLabel === "string" && entry.valueLabel.trim() ? { valueLabel: localizedText(localize, entry.valueLabelKey ?? entry.valueLabel, entry.valueLabel) } : {}),
             ...(typeof entry.valuePrefix === "string" ? { valuePrefix: entry.valuePrefix } : {}),
             ...actionFor(validId(entry.actionIdPrefix) ? `${entry.actionIdPrefix}:${id}` : undefined) }));
         } catch { /* A malformed item cannot expose extra fields or break a section. */ }
       }
       projected.sort((a, b) => a.label.localeCompare(b.label));
-      return projected.length ? Object.freeze({ id: entry.id, label: label(entry), kind: "items", rows: Object.freeze(projected) }) : null;
+      return projected.length ? Object.freeze({ id: entry.id, label: label(entry), kind: "items", rows: Object.freeze(projected), summary: rows(entry.summary) }) : null;
     }
     return null;
   };

@@ -14,7 +14,7 @@
 </style>
 <body class="ve-mobile-running">
 <main class="ve-mobile-app" data-ve-style-authority data-form-factor="phone" data-theme="dark"></main>
-<pre id="results">Running browser checks…</pre>
+<pre id="results">Running browser checksâ€¦</pre>
 <script type="module">
 import { createActorEditorGateway } from "/src/foundry/actor-editor-gateway.mjs";
 import { createFoundrySessionGateway } from "/src/foundry/session-gateway.mjs";
@@ -44,17 +44,17 @@ try {
     constructor(first, options) {
       this.document = v1 ? first : first.document;
       this.id = v1 ? options?.id : first.id;
-      this.isV2 = !v1;
+      if (!v1) this.isV2 = true;
     }
     async render() {
-      this.element = document.createElement("section");
+      this.element = document.createElement(v1 ? "section" : "form");
       this.element.className = "application";
-      this.element.innerHTML = '<header class="window-header">Character Sheet</header><form class="window-content"><label>Luck <input name="luck" value="1"></label><button type="button">Native action</button></form>';
+      this.element.innerHTML = '<header class="window-header">Character Sheet</header><div class="window-content"><label>Luck <input name="luck" value="1"></label><button type="button">Native action</button></div>';
       document.body.append(this.element);
-      Hooks.emit(v1 ? "renderApplication" : "renderApplicationV2", this, this.element);
+      Hooks.emit(v1 ? "renderActorSheet" : "renderApplicationV2", this, this.element);
       opened = this;
     }
-    close() { this.element?.remove(); Hooks.emit(v1 ? "closeApplication" : "closeApplicationV2", this); }
+    close() { this.element?.remove(); Hooks.emit(v1 ? "closeActorSheet" : "closeApplicationV2", this); }
   }
   let opened;
   actor.sheet = v1 ? new NativeSheet(actor, {}) : new NativeSheet({ document: actor });
@@ -82,11 +82,12 @@ try {
   check("fallback render uses native access", !!button());
   check("system actor type label is preserved", screen.textContent.includes("Player Character"));
   check("unowned actor is omitted", !screen.textContent.includes("Secret NPC"));
-  check("D&D controls are absent", !/Death Saves|Spell Slots|Attunement|Level —/.test(screen.textContent));
+  check("D&D controls are absent", !/Death Saves|Spell Slots|Attunement|Level â€”/.test(screen.textContent));
   check("fallback fits viewport", screen.getBoundingClientRect().right <= window.innerWidth + 1);
   button().click();
   await tick();
   check("deliberate sheet is admitted", opened?.element.classList.contains("ve-mobile-admitted-app"));
+  check("native editor geometry belongs to its root, including form roots", opened.element.classList.contains("ve-mobile-native-editor") && !opened.element.querySelector(".ve-mobile-native-editor"));
   check("native input remains editable", !!opened.element.querySelector("input"));
   const input = opened.element.querySelector("input");
   input.focus(); input.value = "2"; input.dispatchEvent(new Event("input", { bubbles: true }));

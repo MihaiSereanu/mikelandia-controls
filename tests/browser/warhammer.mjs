@@ -379,6 +379,17 @@ try {
   await tick();
   check("session watcher remains healthy after profile/native transitions", !watchError && state.snapshot.selectedActor.presentation === "profile");
   check("profile updates do not scroll to the actor chooser", window.scrollY === 0);
+  for (const [id, type, system] of [
+    ["rope", "trapping", { quantity: { value: 2 }, description: { value: "<p>A sturdy rope</p>" } }],
+    ["talent", "talent", { description: { value: "<p>A native talent</p>" } }]
+  ]) { const item = { id, name: id, type, system, parent: actor, uuid: `${actor.uuid}.Item.${id}` }; actor.items.push(item); Hooks.emit("createItem", item, {}); }
+  await tick(); await clickTab("trappings");
+  check("Trappings has a mobile tab with native quantity", screen.querySelector('[data-profile-field="rope"]').textContent.includes("2"));
+  screen.querySelector("details").open = true;
+  check("Trappings descriptions are readable on mobile", screen.querySelector("details").textContent.includes("A sturdy rope"));
+  await clickTab("talents");
+  check("Talents has its own nonempty mobile tab", screen.querySelector('[data-profile-field="talent"]').textContent.includes("A native talent"));
+  check("new tabs fit the phone and tablet widths", document.documentElement.scrollWidth <= innerWidth + 1);
   await clickTab(use5e ? "combat" : "main");
   await edit(use5e ? "momentum" : "wounds");
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
