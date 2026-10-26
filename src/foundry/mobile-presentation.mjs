@@ -1,4 +1,5 @@
 import { localizeFoundry } from "./localization.mjs";
+import { promoteNativeWindow } from "./native-window-layer.mjs";
 const RESOLUTION_MESSAGE_KEYS = new Set([
   "ERROR.RESOLUTION.Screen",
   "ERROR.RESOLUTION.Scale",
@@ -109,6 +110,18 @@ export function enableMobileApplications(scope, {
   cancel = (id) => clearTimeout(id)
 } = {}) {
   const admissions = createMobileApplicationAdmissions(document?.body);
+  const controls = new Map();
+  const reconcileControls = () => {
+    for (const [element, layer] of controls) if (!element.isConnected || !admissions.size) {
+      layer.restore(); controls.delete(element);
+    }
+    if (!admissions.size) return;
+    for (const element of document?.querySelectorAll?.("#context-menu, #prosemirror-dropdown") ?? []) {
+      if (controls.has(element) || element.closest(".ve-mobile-admitted-app")) continue;
+      const layer = promoteNativeWindow(element);
+      if (layer) controls.set(element, layer);
+    }
+  };
   const pendingApplications = new Map();
   const existingApplications = new Set(getExistingApplications().filter(application => applicationElement(application)?.isConnected !== false && applicationElement(application)));
   const baselineElements = new WeakSet();
@@ -188,6 +201,7 @@ export function enableMobileApplications(scope, {
         if (!admissions.hasElement(element) && !element.closest?.(".ve-mobile-admitted-app, .ve-mobile-settings-app")) admit(null, element);
       }
     }
+    reconcileControls();
     if (pruneQueued || !admissions.size) return;
     pruneQueued = true;
     queueMicrotask(() => {
@@ -202,6 +216,10 @@ export function enableMobileApplications(scope, {
     const top = event?.target?.closest?.(".ve-mobile-admitted-app");
     if (top) admissions.raise(top);
   }, { capture: true, passive: true });
+  scope.listen(document, "ve-mobile-reveal-native", event => {
+    const element = event.target?.closest?.(".ve-mobile-admitted-app");
+    if (element) admissions.raise(element, true);
+  });
 
   const visualViewport = browser?.visualViewport;
   const viewportProperties = ["--ve-mobile-viewport-height", "--ve-mobile-viewport-width", "--ve-mobile-viewport-top", "--ve-mobile-viewport-left"];
@@ -220,6 +238,8 @@ export function enableMobileApplications(scope, {
     lineage.dispose();
     pendingApplications.clear();
     admissions.clear();
+    for (const layer of controls.values()) layer.restore();
+    controls.clear();
     for (const [name, value, priority] of previousViewport) {
       if (value) document.body.style.setProperty(name, value, priority);
       else document.body.style.removeProperty(name);
@@ -239,6 +259,7 @@ export function createMobileApplicationAdmissions(body) {
   const listeners = new Set();
   const publish = () => { for (const listener of listeners) listener(); };
   const clearClasses = (element, record) => {
+    record?.topLayer?.restore();
     element?.classList?.remove?.("ve-mobile-admitted-app", "ve-mobile-dialog", "ve-mobile-transient-app");
     if (!element?.style || !record) return;
     if (record.priorLayer) element.style.setProperty(NATIVE_APPLICATION_LAYER_PROPERTY, record.priorLayer, record.priorLayerPriority);
@@ -294,11 +315,13 @@ export function createMobileApplicationAdmissions(body) {
       }
       return true;
     },
-    raise(element) {
+    raise(element, force = false) {
       const entry = [...records].find(([, record]) => record.element === element);
       if (!entry) return false;
+      if (!force && [...records.keys()].at(-1) === entry[0]) return true;
       records.delete(entry[0]);
       records.set(entry[0], entry[1]);
+      entry[1].topLayer?.raise();
       refreshLayers();
       return true;
     },
@@ -320,7 +343,8 @@ export function createMobileApplicationAdmissions(body) {
       element.classList.add("ve-mobile-admitted-app");
       element.classList.remove("ve-mobile-dialog", "ve-mobile-transient-app");
       element.classList.add(modal ? "ve-mobile-dialog" : "ve-mobile-transient-app");
-      records.set(key, Object.freeze({ element, application, modal: Boolean(modal), lineage, priorLayer, priorLayerPriority }));
+      const topLayer = previous?.element === element ? previous.topLayer : promoteNativeWindow(element);
+      records.set(key, Object.freeze({ element, application, modal: Boolean(modal), lineage, priorLayer, priorLayerPriority, topLayer }));
       reconcileBackdrop(true);
       return true;
     },
@@ -562,11 +586,21 @@ export function applicationIdentity(application, element = applicationElement(ap
 }
 
 function traceApplication(trace, result, application, element, lineage, classification, timestamp, body, baseline = false) {
+  let paint = null;
+  try {
+    const rect = element.getBoundingClientRect();
+    const view = element.ownerDocument.defaultView, style = view.getComputedStyle(element);
+    const hit = element.ownerDocument.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+    paint = { x: Math.round(rect.x), y: Math.round(rect.y), width: Math.round(rect.width), height: Math.round(rect.height),
+      display: style.display, visibility: style.visibility, opacity: style.opacity,
+      topLayer: element.matches(":popover-open, :modal"), hitInside: Boolean(hit && element.contains(hit)) };
+  } catch { /* Non-DOM diagnostics and closed roots. */ }
   trace({
     type: "application-render",
     ...applicationIdentity(application, element),
     owner: String(application?.constructor?.metadata?.module ?? element?.dataset?.moduleId ?? "unknown").slice(0, 80),
     baseline,
+    paint,
     renderedAt: timestamp,
     mode: body?.dataset?.veMobileFormFactor ?? (body?.classList?.contains?.("ve-mobile-split-screen") ? "tablet-split" : "mobile"),
     lineage: lineage?.generation ?? null,

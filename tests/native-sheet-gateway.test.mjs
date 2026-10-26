@@ -72,10 +72,11 @@ test("only the deliberately opened actor sheet is admitted", async t => {
   assert.equal(classifyMobileApplication(element(), instances.at(-1), options).admitted, true);
 });
 
-test("duplicate native opens are rejected and the close hook permits reopening", async t => {
+test("an existing native editor is revealed and closing permits a new instance", async t => {
   const { open, instances, gateway } = fixture(t);
   await open();
-  await assert.rejects(open(), /already open/);
+  assert.equal((await open()).existing, true);
+  assert.equal(instances.length, 2);
   instances.at(-1).close();
   assert.equal(gateway.ownsApplication(instances.at(-1)), false);
   assert.equal((await open()).opened, true);

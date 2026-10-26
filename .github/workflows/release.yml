@@ -60,3 +60,6 @@ jobs:
             gh release create latest --verify-tag --title "Latest Build" --notes-file dist/release-notes.md --latest
           fi
           gh release upload latest dist/module.json dist/ve-mobile.zip dist/module-experimental.json dist/ve-mobile-experimental.zip --clobber
+      - name: Verify public Foundry installation files
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: python3 scripts/check_release.py --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/latest" --version "$RELEASE_VERSION" --build "$GITHUB_SHA"

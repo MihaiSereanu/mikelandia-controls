@@ -1042,16 +1042,30 @@ body.ve-mobile-running .ve-mobile-transient-app {
  * auto-height forms. Keep the native preferred width and original DOM host. */
 body.ve-mobile-running .ve-mobile-admitted-app {
   --ve-native-bottom-space: 0px;
-  left: calc((100vw + max(16px, var(--ve-safe-left)) - max(16px, var(--ve-safe-right))) / 2) !important;
-  top: calc((var(--ve-mobile-viewport-height, 100dvh) + max(16px, var(--ve-safe-top)) - max(16px, var(--ve-safe-bottom)) - var(--ve-native-bottom-space)) / 2) !important;
+  left: calc(var(--ve-mobile-viewport-left, 0px) + (var(--ve-mobile-viewport-width, 100vw) + max(16px, var(--ve-safe-left)) - max(16px, var(--ve-safe-right))) / 2) !important;
+  top: calc(var(--ve-mobile-viewport-top, 0px) + (var(--ve-mobile-viewport-height, 100dvh) + max(16px, var(--ve-safe-top)) - max(16px, var(--ve-safe-bottom)) - var(--ve-native-bottom-space)) / 2) !important;
   right: auto !important;
   bottom: auto !important;
   margin: 0 !important;
   translate: -50% -50% !important;
   min-height: 0 !important;
-  max-width: min(540px, calc(100vw - max(16px, var(--ve-safe-left)) - max(16px, var(--ve-safe-right)))) !important;
+  max-width: min(540px, calc(var(--ve-mobile-viewport-width, 100vw) - max(16px, var(--ve-safe-left)) - max(16px, var(--ve-safe-right)))) !important;
   max-height: calc(var(--ve-mobile-viewport-height, 100dvh) - max(16px, var(--ve-safe-top)) - max(16px, var(--ve-safe-bottom)) - var(--ve-native-bottom-space)) !important;
   z-index: var(--ve-mobile-native-app-layer, 5100) !important;
+}
+
+/* A manual popover puts the native window in the browser top layer. Android
+ * must not composite it beneath VE's blur or a transformed/hidden module host. */
+body.ve-mobile-running .ve-mobile-admitted-app:popover-open {
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+body.ve-mobile-running .ve-mobile-admitted-app::backdrop {
+  background: transparent;
+  pointer-events: none;
 }
 
 body.ve-mobile-running:not([data-ve-mobile-form-factor="tablet"]) .ve-mobile-admitted-app {
@@ -1107,8 +1121,8 @@ body.ve-mobile-running .ve-mobile-transient-app :is(.window-content, .applicatio
 /* Deliberately opened character editors use the available viewport. Keep
  * overflow reachable in both axes when a native system retains wide fields. */
 body.ve-mobile-running .ve-mobile-native-editor {
-  width: calc(100vw - max(16px, var(--ve-safe-left)) - max(16px, var(--ve-safe-right))) !important;
-  max-width: min(1100px, calc(100vw - max(16px, var(--ve-safe-left)) - max(16px, var(--ve-safe-right)))) !important;
+  width: calc(var(--ve-mobile-viewport-width, 100vw) - max(16px, var(--ve-safe-left)) - max(16px, var(--ve-safe-right))) !important;
+  max-width: min(1100px, calc(var(--ve-mobile-viewport-width, 100vw) - max(16px, var(--ve-safe-left)) - max(16px, var(--ve-safe-right)))) !important;
   height: calc(var(--ve-mobile-viewport-height, 100dvh) - max(16px, var(--ve-safe-top)) - max(16px, var(--ve-safe-bottom)) - var(--ve-native-bottom-space)) !important;
 }
 

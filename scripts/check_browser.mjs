@@ -59,9 +59,13 @@ const send = (method, params = {}, sessionId) => new Promise((resolve, reject) =
   child.stdio[3].write(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) }) + "\0");
 });
 try {
+  const browserVersion = await send("Browser.getVersion");
+  const chromiumVersion = browserVersion.product.split("/").at(-1);
   for (const [name, width, height, fixture, query] of [
     ["fallback-phone-v1", 390, 844, "fallback", "layout=phone&application=v1"],
     ["fallback-phone-v2", 390, 844, "fallback", "layout=phone&application=v2"],
+    ["fallback-android-v1", 393, 851, "fallback", "layout=phone&application=v1&host=clipped"],
+    ["fallback-android-v2", 393, 851, "fallback", "layout=phone&application=v2&host=clipped"],
     ["fallback-tablet-v1", 1024, 768, "fallback", "layout=tablet&application=v1"],
     ["fallback-tablet-v2", 1024, 768, "fallback", "layout=tablet&application=v2"],
     ["warhammer-4e-phone", 390, 844, "warhammer", "layout=phone&edition=4e"],
@@ -83,6 +87,10 @@ try {
     const { targetId } = await send("Target.createTarget", { url: "about:blank" });
     const { sessionId } = await send("Target.attachToTarget", { targetId, flatten: true });
     await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width < 720 }, sessionId);
+    if (name.includes("android")) {
+      await send("Emulation.setUserAgentOverride", { userAgent: `Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromiumVersion} Mobile Safari/537.36`, platform: "Linux armv8l" }, sessionId);
+      await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 }, sessionId);
+    }
     await send("Page.navigate", { url: `http://127.0.0.1:${server.address().port}/tests/browser/${fixture}.html?${query}` }, sessionId);
     let report;
     for (let attempt = 0; attempt < 100; attempt++) {

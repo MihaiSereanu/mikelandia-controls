@@ -1,5 +1,3 @@
-const PHONE_MAX_CSS_PIXELS = 720;
-
 /**
  * Resolve the user's preference and the page-lifetime device class separately.
  * Auto detection is intentionally sticky: browser chrome, orientation changes,
@@ -66,29 +64,18 @@ export function evaluateActivation(preferences) {
 }
 
 export function classifyRuntimeMode({ window = globalThis.window, navigator = globalThis.navigator } = {}) {
-  const width = Math.max(1, window.visualViewport?.width ?? window.innerWidth);
-  const height = Math.max(1, window.visualViewport?.height ?? window.innerHeight);
-  const screenWidth = Number(window.screen?.width);
-  const screenHeight = Number(window.screen?.height);
-  const hasStableScreenSize = Number.isFinite(screenWidth) && screenWidth > 0
-    && Number.isFinite(screenHeight) && screenHeight > 0;
-  const deviceCompactDimension = hasStableScreenSize
-    ? Math.min(screenWidth, screenHeight)
-    : Math.min(width, height);
-  const coarse = Boolean(window.matchMedia?.("(pointer: coarse)")?.matches);
-  const touch = (navigator.maxTouchPoints ?? 0) > 0;
   const userAgent = String(navigator.userAgent ?? "");
   const platform = String(navigator.userAgentData?.platform ?? navigator.platform ?? "");
   const reportsMobile = navigator.userAgentData?.mobile;
 
   if (reportsMobile === true || /iPhone|iPod|Mobile.+Android|Android.+Mobile/iu.test(userAgent)) return "phone";
   if (/iPad|Tablet|Silk|Kindle|PlayBook/iu.test(userAgent)) return "tablet";
-  if (/Android/iu.test(userAgent)) return /Mobile/iu.test(userAgent) ? "phone" : "tablet";
+  if (/Android/iu.test(userAgent) || /^Android$/iu.test(platform)) return /Mobile/iu.test(userAgent) ? "phone" : "tablet";
   // iPadOS desktop-site mode identifies itself as Macintosh with touch.
-  if (/Mac/iu.test(platform || userAgent) && touch && (navigator.maxTouchPoints ?? 0) > 1) return "tablet";
-  // A positive desktop platform signal should not turn a touch-screen PC into a tablet.
-  if (/Win|Linux|Mac/iu.test(platform || userAgent)) return "desktop";
-  if (coarse || touch) return deviceCompactDimension <= PHONE_MAX_CSS_PIXELS ? "phone" : "tablet";
+  if (/^MacIntel$/iu.test(navigator.platform ?? "") && /Macintosh/iu.test(userAgent)
+    && !navigator.userAgentData?.platform && (navigator.maxTouchPoints ?? 0) > 1) return "tablet";
+  // Touch, coarse pointers, small windows and display zoom are not evidence of
+  // a mobile device. Unknown devices and laptops stay in Foundry's desktop UI.
   return "desktop";
 }
 

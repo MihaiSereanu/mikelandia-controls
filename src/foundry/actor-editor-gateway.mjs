@@ -31,8 +31,30 @@ export function createActorEditorGateway({ getGame = () => globalThis.game, isAc
     closeAll: () => { for (const owner of [...owners]) owner.dispose(); },
     async open({ actorSourceUuid: sourceUuid }, expected = {}, owner) {
       const actor = requireActor(sourceUuid, expected, owner);
-      if (pending.has(sourceUuid) || [...sessions.values()].some(session => session.sourceUuid === sourceUuid)) {
+      if (pending.has(sourceUuid)) {
         throw new Error(localizeFoundry("VEMOBILE.Character.ActorEditorGateway.ThisNativeEditorIsAlreadyOpen", "This native editor is already open."));
+      }
+      const existing = [...sessions].find(([, session]) => session.sourceUuid === sourceUuid);
+      if (existing) {
+        const [application] = existing;
+        requireActor(sourceUuid, expected, owner, application.actor ?? application.document ?? actor);
+        await application.maximize?.();
+        requireActor(sourceUuid, expected, owner, application.actor ?? application.document ?? actor);
+        const legacyType = globalThis.foundry?.appv1?.sheets?.ActorSheet;
+        const legacy = application.isV2 === false || (typeof legacyType === "function" && application instanceof legacyType);
+        const currentRoot = [application.element, application.element?.[0]].find(candidate => candidate?.nodeType === 1);
+        if (application.rendered === false || currentRoot?.isConnected === false) {
+          const viewMode = application.constructor.MODES?.PLAY ?? application.constructor.MODES?.VIEW;
+          await application.render(legacy ? true : { force: true, ...(viewMode === undefined ? {} : { mode: viewMode }) });
+          requireActor(sourceUuid, expected, owner, application.actor ?? application.document ?? actor);
+        }
+        application.bringToFront?.();
+        application.bringToTop?.();
+        const candidates = [application.element, application.element?.[0]];
+        const element = candidates.find(candidate => candidate?.nodeType === 1);
+        const EventType = element?.ownerDocument?.defaultView?.Event;
+        if (EventType) element.dispatchEvent(new EventType("ve-mobile-reveal-native", { bubbles: true }));
+        return Object.freeze({ actorSourceUuid: sourceUuid, opened: true, existing: true });
       }
       pending.add(sourceUuid);
       const scope = owner.child("native-actor-editor");

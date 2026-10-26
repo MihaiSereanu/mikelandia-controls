@@ -23,6 +23,7 @@ import { createFoundryCommandGateway } from "./foundry/command-gateway.mjs";
 import { createFoundrySceneGateway } from "./foundry/scene-gateway.mjs";
 import { enableMobileMediaGuard } from "./foundry/mobile-media-guard.mjs";
 import { enableMobileDiceGuard } from "./foundry/mobile-dice-guard.mjs";
+import { enableMobileAudio } from "./foundry/mobile-audio.mjs";
 import { createGraphicsSafetyJournal, resolveMobileGraphicsPolicy } from "./foundry/mobile-graphics-policy.mjs";
 import { createTaskScope } from "./kernel/task-scope.mjs";
 import { createFoundryTokenMovementGateway } from "./foundry/token-movement-gateway.mjs";
@@ -630,6 +631,7 @@ if (isGamePage) {
     },
     disable: () => preferencesGateway.set({ key: KEYS.MODE, value: "desktop" }),
     preparePresentation: (scope) => {
+      enableMobileAudio(scope);
       diagnostics.watch(scope);
       lowMemoryGateway.applyPresentationClass(scope);
       const nativeApplications = enableMobilePresentation(scope, {

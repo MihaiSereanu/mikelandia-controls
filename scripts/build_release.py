@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 import re
+import posixpath
 from urllib.parse import urlsplit
 from zipfile import ZIP_DEFLATED, ZipFile
 
@@ -84,6 +85,14 @@ def main():
             raise ValueError("Archive has unexpected contents")
         if json.loads(archive.read("module.json")) != manifest:
             raise ValueError("Archive manifest differs from release manifest")
+        for name in archive.namelist():
+            if not name.endswith((".mjs", ".js")):
+                continue
+            source = archive.read(name).decode("utf-8")
+            for reference in re.findall(r'''(?:from\s*|import\s*\(\s*|import\s*)["'](\.{1,2}/[^"']+)''', source):
+                target = posixpath.normpath(posixpath.join(posixpath.dirname(name), reference))
+                if target not in included:
+                    raise ValueError(f"Missing packaged import: {name} -> {reference}")
     print(f"Built {archive_path} ({len(files) + 1} files), version {args.version}")
 
 
