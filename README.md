@@ -4,7 +4,7 @@ A phone and tablet interface for Foundry VTT, with D&D5e sheets and experimental
 
 ## Install
 
-In Foundry Setup, open **Add-on Modules ? Install Module**, paste the appropriate Manifest URL, and click **Install**:
+In Foundry Setup, open **Add-on Modules**, choose **Install Module**, paste the appropriate Manifest URL, and click **Install**:
 
 - **Warhammer / Shadowdark / other systems:** `https://github.com/MihaiSereanu/ve-mobile/releases/download/latest/module-experimental.json`
 - **D&D5e:** `https://github.com/MihaiSereanu/ve-mobile/releases/download/latest/module.json`

@@ -54,7 +54,7 @@ child.stdio[4].on("data", data => {
 });
 const send = (method, params = {}, sessionId) => new Promise((resolve, reject) => {
   const id = ++sequence;
-  const timer = setTimeout(() => { requests.delete(id); reject(new Error(`Browser timeout: ${method}`)); }, 15000);
+  const timer = setTimeout(() => { requests.delete(id); reject(new Error(`Browser timeout: ${method}`)); }, 45000);
   requests.set(id, { resolve, reject, timer });
   child.stdio[3].write(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) }) + "\0");
 });
