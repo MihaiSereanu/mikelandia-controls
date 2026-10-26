@@ -4410,7 +4410,7 @@ body.ve-mobile-running.ve-mobile-scene-active.ve-mobile-native-measurement-activ
 
 .ve-profile-section dl {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(160px, 100%), 1fr));
   gap: 8px;
   margin: 0;
 }
