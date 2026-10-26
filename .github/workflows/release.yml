@@ -1,0 +1,35 @@
+name: Validate and release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and validate package
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: |
+          if [ -n "$RELEASE_TAG" ]; then
+            python3 scripts/build_release.py --version "${RELEASE_TAG#v}"
+          else
+            python3 scripts/build_release.py --version "$(python3 -c 'import json; print(json.load(open("module.json"))["version"])')"
+          fi
+      - name: Create release
+        if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" dist/module.json dist/ve-mobile.zip --verify-tag --title "VE Mobile $RELEASE_TAG" --generate-notes
