@@ -58,16 +58,18 @@ try {
   const nativeRolls = [];
   const nativeSetups = [];
   let nativeAmmo = 4;
-  const setupTest = (kind, target) => new Promise(resolve => {
+  class WarhammerRollDialogV2 {}
+  globalThis.warhammer = { apps: { WarhammerRollDialogV2 } };
+  const setupTest = (kind, target, options = {}) => new Promise(resolve => {
     nativeSetups.push({ kind, target, use5e });
     let settled = false;
-    const dialog = { fixtureNativeRoll: true, options: { modal: true }, element: document.createElement("section"), close() {
+    const dialog = Object.assign(new WarhammerRollDialogV2(), { actor, fixtureNativeRoll: true, options: { modal: true, ...options }, element: document.createElement("section"), close() {
       this.element.remove(); Hooks.emit("closeApplicationV2", this);
-      if (!settled) { settled = true; resolve(undefined); }
-    } };
+      if (!settled && this.options.resolveClose) { settled = true; resolve(undefined); }
+    } });
     const finish = test => { settled = true; dialog.close(); resolve(test); };
     dialog.element.className = "application dialog";
-    dialog.element.innerHTML = '<header class="window-header">Native Test</header><form class="window-content"><label>Modifier <input name="modifier" type="number" value="0"></label><button type="button" data-native-roll>Roll</button><button type="button" data-native-cancel>Cancel</button></form>';
+    dialog.element.innerHTML = '<header class="window-header">Native Test<button type="button" data-action="close" aria-label="Close">X</button></header><form class="window-content"><label>Modifier <input name="modifier" type="number" value="0"></label><button type="button" data-native-roll>Roll</button><button type="button" data-native-cancel>Cancel</button></form>';
     dialog.element.querySelector("[data-native-roll]").onclick = () => {
       const modifier = Number(dialog.element.querySelector("input").value);
       finish({ actor, roll: async () => {
@@ -79,16 +81,17 @@ try {
       } });
     };
     dialog.element.querySelector("[data-native-cancel]").onclick = () => dialog.close();
+    dialog.element.querySelector('[data-action="close"]').onclick = () => dialog.close();
     document.body.append(dialog.element);
     Hooks.emit("renderApplicationV2", dialog, dialog.element);
     nativeDialog = dialog;
   });
-  actor.setupCharacteristic = key => setupTest("characteristic", key);
-  actor.setupSkill = skill => setupTest("skill", skill);
-  actor.setupWeapon = weapon => setupTest("weapon", weapon);
-  actor.setupCast = spell => setupTest("cast", spell);
-  actor.setupChannell = spell => setupTest("channel-spell", spell);
-  actor.setupChannelling = wind => setupTest("channel-wind", wind);
+  actor.setupCharacteristic = (key, context, options) => setupTest("characteristic", key, options);
+  actor.setupSkill = (skill, context, options) => setupTest("skill", skill, options);
+  actor.setupWeapon = (weapon, context, options) => setupTest("weapon", weapon, options);
+  actor.setupCast = (spell, context, options) => setupTest("cast", spell, options);
+  actor.setupChannell = (spell, context, options) => setupTest("channel-spell", spell, options);
+  actor.setupChannelling = (wind, context, options) => setupTest("channel-wind", wind, options);
   actor.sheet = { actor, castOrChannelPrompt(spell) {
     if (spell.system.lore.value == "petty") return actor.setupCast(spell);
     return new Promise(resolve => {
@@ -176,6 +179,15 @@ try {
   nativeDialog.element.querySelector("[data-native-cancel]").click();
   await tick();
   check("native cancellation releases the button without rolling", !characteristicButton.disabled && nativeRolls.length === 1 && applications.admissions.size === 0);
+  for (const dismiss of ["header", "mobile"]) {
+    characteristicButton.click(); await tick();
+    const reopened = nativeDialog;
+    check(`${dismiss} dismissal can reopen the same action`, characteristicButton.disabled && reopened.element.isConnected);
+    if (dismiss === "header") reopened.element.querySelector('[data-action="close"]').click();
+    else applications.admissions.closeTopmost();
+    await tick();
+    check(`${dismiss} dismissal releases the action silently`, !characteristicButton.disabled && nativeRolls.length === 1 && notices.length === 0);
+  }
   await clickTab("combat");
   check("combat resource follows the edition", use5e ? field("momentum")?.textContent === "MomentumActive" : field("advantage")?.textContent === "Advantage4");
   check("Combat starts with native Encumbrance current/max", screen.querySelector('.ve-profile-content [data-profile-section]').dataset.profileSection === "encumbrance"
@@ -360,6 +372,12 @@ try {
   if (use5e) {
     resourceInput = screen.querySelector('[data-profile-resource-input="momentum"]');
     check("Momentum uses a labeled checkbox", resourceInput.type === "checkbox" && resourceInput.getAttribute("aria-label") === "Momentum");
+    const momentumAligned = () => {
+      const input = screen.querySelector('[data-profile-resource-input="momentum"]').getBoundingClientRect();
+      const value = screen.querySelector('[data-profile-field="momentum"] dd').getBoundingClientRect();
+      return Math.abs(input.top + input.height / 2 - value.top - value.height / 2) <= 1;
+    };
+    check("Active Momentum checkbox is centered beside its value", momentumAligned());
     check("Momentum has no pencil or save form", !screen.querySelector('[data-profile-edit="momentum"]') && !resourceInput.closest("form"));
     const execute = commands.execute;
     let complete;
@@ -376,6 +394,7 @@ try {
     check("Momentum updates natively and refreshes", field("momentum").textContent === "MomentumInactive" && nativeResourceEffects.includes("momentum"));
     resourceInput = screen.querySelector('[data-profile-resource-input="momentum"]');
     check("Momentum checkbox refreshes off", !resourceInput.checked);
+    check("Inactive Momentum checkbox is centered beside its value", momentumAligned());
     resourceInput.click(); await tick();
     check("Momentum toggles back on immediately", screen.querySelector('[data-profile-resource-input="momentum"]').checked && field("momentum").textContent === "MomentumActive");
   } else {

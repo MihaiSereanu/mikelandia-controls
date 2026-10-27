@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createFoundryCommandGateway, ACTOR_COMMANDS } from "../src/foundry/command-gateway.mjs";
 import { resolveSystemIntegration } from "../src/systems/registry.mjs";
-import { collection, createActor, createGame, installGlobals } from "./helpers/foundry.mjs";
-import { createWarhammerActor, createWarhammerGame } from "./helpers/warhammer.mjs";
+import { collection, createActor, createGame, installGlobals, createHooks } from "./helpers/foundry.mjs";
+import { createWarhammerActor, createWarhammerGame, addWarhammerMagic } from "./helpers/warhammer.mjs";
 
 const command = ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION;
 const payload = (id = "characteristic:ws", revision = "4e") => ({ actorSourceUuid: "Actor.hero", actionId: id, actionRevision: revision });
@@ -156,4 +156,59 @@ test("D&D native item use remains routed through the preserved engine", async t 
   assert.equal((await gateway.execute(ACTOR_COMMANDS.USE_ITEM, { actorSourceUuid: actor.uuid, itemId: "weapon" })).ok, true);
   assert.equal(uses, 1);
   await assert.rejects(gateway.execute(command, payload()), { code: "CAPABILITY_UNAVAILABLE" });
+});
+
+// Model the library contract: an unsubmitted close settles only with resolveClose.
+for (const use5e of [false, true]) for (const [id, method] of [
+  ["characteristic:ws", "setupCharacteristic"], ["skill:athletics", "setupSkill"],
+  ["weapon:sword", "setupWeapon"], ["spell:petty", "setupCast"],
+  ["spell:lore", "setupCast"], ...(!use5e ? [["spell:lore", "setupChannell"]] : [["wind:aqshy", "setupChannelling"]])
+]) test(`${use5e ? "5e" : "4e"} ${method} ${id} closes and immediately retries`, { timeout: 2000 }, async t => {
+  const { actor, gateway } = setup(t, { use5e });
+  addWarhammerMagic(actor, use5e);
+  const hooks = createHooks();
+  class Dialog {
+    constructor(actor, options, resolve) { Object.assign(this, { actor, options, resolve }); }
+    close() { if (this.options.resolveClose) this.resolve(); }
+    submit() { this.resolve({ actor, roll: async () => { rolls++; } }); this.close(); }
+  }
+  installGlobals(t, { Hooks: hooks, warhammer: { apps: { WarhammerRollDialogV2: Dialog } } });
+  let dialog, rolls = 0;
+  const native = (target, context, options = {}) => new Promise(resolve => {
+    dialog = new Dialog(actor, options, resolve);
+    // A scoped listener must not change another actor or unrelated application.
+    const other = new Dialog({}, {}, () => {}), unrelated = { actor, options: {} };
+    hooks.emit("renderApplicationV2", other); hooks.emit("renderApplicationV2", unrelated);
+    assert.equal(other.options.resolveClose, undefined); assert.equal(unrelated.options.resolveClose, undefined);
+    hooks.emit("renderApplicationV2", dialog);
+  });
+  actor.setupCast = native;
+  actor.setupChannell = native;
+  actor[method] = native;
+  actor.sheet = { actor, castOrChannelPrompt: spell => actor[method](spell) };
+  const request = payload(id, use5e ? "5e" : "4e");
+  const pending = gateway.execute(command, request);
+  await assert.rejects(gateway.execute(command, request), { code: "COMMAND_BUSY" });
+  assert.equal(dialog.options.resolveClose, true);
+  dialog.close();
+  assert.equal((await pending).cancelled, true);
+  assert.equal(rolls, 0);
+  assert.equal(hooks.count("renderApplicationV2"), 0);
+  const retry = gateway.execute(command, request);
+  dialog.submit();
+  assert.equal((await retry).ok, true);
+  assert.equal(rolls, 1);
+  assert.equal(hooks.count("renderApplicationV2"), 0);
+});
+
+test("4e chooser failure removes its cancellation listener", async t => {
+  const { actor, gateway } = setup(t);
+  addWarhammerMagic(actor, false);
+  actor.setupCast = async () => {};
+  actor.setupChannell = async () => {};
+  actor.sheet = { actor, castOrChannelPrompt() { throw new Error("choice failed"); } };
+  const hooks = createHooks();
+  installGlobals(t, { Hooks: hooks, warhammer: { apps: { WarhammerRollDialogV2: class {} } } });
+  await assert.rejects(gateway.execute(command, payload("spell:lore")), { code: "COMMAND_FAILED" });
+  assert.equal(hooks.count("renderApplicationV2"), 0);
 });

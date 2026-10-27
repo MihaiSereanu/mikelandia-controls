@@ -30,3 +30,14 @@ export function magicWinds(actor, context) {
       .map(([key, wind]) => ({ key, label: wind.label }));
   } catch { return []; }
 }
+
+/** The native 4e chooser forwards context, but not application options. */
+export async function cancellableCastOrChannel(actor, spell) {
+  const hooks = globalThis.Hooks;
+  const Dialog = globalThis.warhammer?.apps?.WarhammerRollDialogV2;
+  const listener = hooks && typeof Dialog === "function" ? hooks.on("renderApplicationV2", app => {
+    if (app instanceof Dialog && app.actor === actor) app.options.resolveClose = true;
+  }) : null;
+  try { return await castChannelSheet(actor).castOrChannelPrompt(spell); }
+  finally { if (listener !== null) hooks.off("renderApplicationV2", listener); }
+}

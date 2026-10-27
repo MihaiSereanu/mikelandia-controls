@@ -38,7 +38,7 @@ for (const use5e of [false, true]) {
       calls.length = 0;
       const outcome = await gateway.execute(command, request(use5e, `spell:${id}`));
       const spell = actor.items.find(item => item.id === id);
-      assert.deepEqual(calls, [...(!use5e ? [["prompt", spell]] : []), ["cast", spell], ["roll"]]);
+      assert.deepEqual(calls, [...(!use5e ? [["prompt", spell]] : []), ["cast", spell, ...(use5e ? [{}, { resolveClose: true }] : [])], ["roll"]]);
       assert.equal(outcome.ok, true);
       assert.equal(outcome.rollResult, undefined);
     }
@@ -142,7 +142,7 @@ test("5e channels the Wind key with no spell argument or VE resource writes", as
   const { actor, gateway, calls } = setup(t, true);
   const before = actor.system.status.channelling.value;
   await gateway.execute(command, request(true, "wind:aqshy"));
-  assert.deepEqual(calls, [["channel-wind", "aqshy"], ["roll"]]);
+  assert.deepEqual(calls, [["channel-wind", "aqshy", {}, { resolveClose: true }], ["roll"]]);
   assert.equal(actor.system.status.channelling.value, before);
   await assert.rejects(gateway.execute(command, request(true, "wind:constructor")), { code: "CAPABILITY_UNAVAILABLE" });
 });

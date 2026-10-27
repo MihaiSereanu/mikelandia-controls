@@ -55,12 +55,13 @@ try {
     } };
     application.element.className = "application";
     application.element.id = "sd-roll-dialog";
-    application.element.innerHTML = '<header class="window-header"><h1 class="window-title">check</h1></header><div class="application-content"><label>Bonus <input type="number" value="0"></label><button type="button" data-native-confirm>Roll</button><button type="button" data-native-cancel>Cancel</button></div>';
+    application.element.innerHTML = '<header class="window-header"><h1 class="window-title">check</h1><button type="button" data-action="close" aria-label="Close">X</button></header><div class="application-content"><label>Bonus <input type="number" value="0"></label><button type="button" data-native-confirm>Roll</button><button type="button" data-native-cancel>Cancel</button></div>';
     application.element.querySelector("[data-native-confirm]").onclick = () => {
       config.nativeInput = Number(application.element.querySelector("input").value);
       settled = true; application.close(); resolve(true);
     };
     application.element.querySelector("[data-native-cancel]").onclick = () => application.close();
+    application.element.querySelector('[data-action="close"]').onclick = () => application.close();
     document.body.append(application.element);
     if (!omitRenderHook) Hooks.emit("renderApplicationV2", application, application.element);
     dialog = application;
@@ -112,6 +113,14 @@ try {
     && document.body.classList.contains("ve-mobile-dialog-open"));
   await cancel();
   check("cancelled native dialogs cause no extra roll", f.rolls.length === 1 && admissions.admissions.size === 0);
+  for (const dismiss of ["header", "mobile"]) {
+    await begin("stat:str");
+    check(`${dismiss} dismissal permits reopening the same stat`, dialog.element.isConnected && screen.querySelector('[data-profile-action="stat:str"]').disabled);
+    if (dismiss === "header") dialog.element.querySelector('[data-action="close"]').click();
+    else admissions.admissions.closeTopmost();
+    await tick();
+    check(`${dismiss} dismissal silently releases the stat`, !screen.querySelector('[data-profile-action="stat:str"]').disabled && f.rolls.length === 1 && notices.length === 0);
+  }
   await begin("attack-ranged:dagger"); await confirm();
   check("thrown ranged attacks use native UUID and attack type", f.calls.at(-1).target === f.actor.items.get("dagger").uuid && f.calls.at(-1).config.attack.type === "ranged" && f.rolls.length === 2);
   await begin("attack-melee:sword");

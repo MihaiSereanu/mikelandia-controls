@@ -28,7 +28,8 @@ for (const use5e of [false, true]) {
       const weapon = actor.items.find(item => item.id === id);
       const outcome = await gateway.execute(command, request(id, use5e ? "5e" : "4e"));
       assert.equal(calls[0][0], "setup");
-      assert.equal(calls[0].length, 2, "pass only the exact native Item, without bypass options");
+      assert.equal(calls[0].length, 4);
+      assert.deepEqual(calls[0].slice(2), [{}, { resolveClose: true }], "enable cancellation without bypassing native roll setup");
       assert.equal(calls[0][1], weapon);
       assert.deepEqual(calls[1], ["roll"]);
       assert.equal(outcome.ok, true);

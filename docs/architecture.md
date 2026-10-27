@@ -28,7 +28,7 @@ Shadowdark 4.0.6 `PlayerSheetSD` is Application V1. Warhammer sheets use V2. Sha
 
 Mobile CSS suppresses the normal maximum-height transition. Admitted V2 closing uses supported `{animate: false}` to avoid waiting for a nonexistent transition. V1 closing remains native.
 
-Warhammer uses the native edition manager and setup workflows followed by the returned test's `.roll()`. Preserve native casting/channelling.
+Warhammer uses the native edition manager and setup workflows followed by the returned test's `.roll()`. Pass application options `{resolveClose: true}` as the third setup argument so unsubmitted native dialogs resolve cancellation and release the command lock. The native 4e Cast/Channel chooser omits application options; while awaiting it, a temporary render listener enables the same option only on that actor's `WarhammerRollDialogV2` instances, then removes itself in `finally`. Preserve native casting/channelling and duplicate-submission protection.
 
 Shadowdark `rollStatCheck`, `rollAttack`, and `castSpell` already roll internally. Do not roll again. Preserve native chat and scoped pre-roll hooks that distinguish cancellation from failure.
 
@@ -36,7 +36,7 @@ Shadowdark `rollStatCheck`, `rollAttack`, and `castSpell` already roll internall
 
 Combat and Trappings begin with the same read-only Encumbrance current/max card. Read native `system.status.encumbrance.current` and `.max`; current can be a numeric string from native `toFixed(2)`, so normalize finite numeric strings without recomputing weight. Missing or malformed values remain omitted.
 
-Encumbrance reserves enough card width to keep its label and value on one line; adjacent combat resources stack below it on phones. Momentum opts into the profile's `editControl: "checkbox"` presentation, saving on change through the validated resource command. Disable it during saves; failed or cancelled writes restore its value. Other boolean resources retain their existing editors.
+Encumbrance reserves enough card width to keep its label and value on one line; adjacent combat resources stack below it on phones. Momentum opts into the profile's `editControl: "checkbox"` presentation, saving on change through the validated resource command. Keep its checkbox in the resource row, vertically centered beside Active/Inactive. Disable it during saves; failed or cancelled writes restore its value. Other boolean resources retain their existing editors.
 
 Installed WFRP 10.1.2 / Warhammer Library 3.5.1 has a native missing-ammo cancellation bug: 5e weapon setup reports No Ammo and returns undefined; library `_setupTest` passes that to `awaitSubmit`, whose default empty data causes `data.scripts.concat` in the constructor to throw. Isolated extracted-native-method reproduction and results: `dist/diagnosis/20261027-wfrp-ammo/`. Turning off the native weapon Details setting Consumes Ammo avoids that path; loading checks remain separate. VE does not bypass ammo or patch the native library.
 

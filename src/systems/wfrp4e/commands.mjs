@@ -5,7 +5,7 @@ import { createProfilePanels } from "../profile-view.mjs";
 import { fallbackIntegration } from "../fallback/integration.mjs";
 import { readWarhammerContext } from "./context.mjs";
 import { createWarhammerCharacterProfile } from "./profile.mjs";
-import { spellForActor, castChannelSheet, magicWinds } from "./magic.mjs";
+import { spellForActor, castChannelSheet, cancellableCastOrChannel, magicWinds } from "./magic.mjs";
 import { ownedWarhammerItem, weaponForActor, warhammerWeaponMode } from "./items.mjs";
 import { warhammerResourceEdits, editWarhammerResource } from "./resources.mjs";
 
@@ -78,11 +78,11 @@ export function createWarhammerCommands({ getGame = () => globalThis.game } = {}
       if (kind === "skill" && !skill) throw new CommandError("TARGET_MISSING", localizeFoundry("VEMOBILE.Panels.SkillChanged", "The selected Skill changed while the test was open."));
       if (kind === "weapon" && !weapon) throw new CommandError("TARGET_MISSING", localizeFoundry("VEMOBILE.Panels.WeaponChanged", "The selected Weapon changed while the test was open."));
       assertCurrent();
-      const test = kind === "characteristic" ? await actor.setupCharacteristic(id)
-        : kind === "skill" ? await actor.setupSkill(skill)
-          : kind === "weapon" ? await actor.setupWeapon(weapon)
-            : kind === "wind" ? await actor.setupChannelling(id)
-              : magicContext.use5e ? await actor.setupCast(spell) : await castChannelSheet(actor).castOrChannelPrompt(spell);
+      const test = kind === "characteristic" ? await actor.setupCharacteristic(id, {}, { resolveClose: true })
+        : kind === "skill" ? await actor.setupSkill(skill, {}, { resolveClose: true })
+          : kind === "weapon" ? await actor.setupWeapon(weapon, {}, { resolveClose: true })
+            : kind === "wind" ? await actor.setupChannelling(id, {}, { resolveClose: true })
+              : magicContext.use5e ? await actor.setupCast(spell, {}, { resolveClose: true }) : await cancellableCastOrChannel(actor, spell);
       if (test === null || test === undefined || test === false) return Object.freeze({ ok: true, command: name,
         actorId: String(actor.id), actorSourceUuid: sourceUuid, cancelled: true });
       assertCurrent();

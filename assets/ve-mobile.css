@@ -3138,6 +3138,13 @@ body.ve-mobile-running #pause {
   justify-items: end;
 }
 
+/* Boolean controls share the value's row and vertical center. */
+.ve-profile-row:has(> .ve-profile-boolean) { padding-right: 8px; }
+.ve-profile-row:has(> .ve-profile-boolean) > .ve-profile-boolean {
+  position: static;
+  align-self: center;
+}
+
 .ve-profile-summary-paired .ve-profile-row:has(> .ve-profile-resource-editor) { padding-right: 8px; }
 
 .ve-profile-summary-paired .ve-profile-row:has(> .ve-profile-resource-editor) > .ve-profile-resource-editor {
