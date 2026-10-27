@@ -1,3 +1,5 @@
+import { isJournalVisible, isJournalPageVisible } from "./journal-visibility.mjs";
+
 /** Route ordinary Foundry Journal sheet reads into VE while mobile owns the UI.
  * Foundry and modules still resolve the document and execute their own action;
  * only the final sheet presentation is substituted. */
@@ -39,9 +41,9 @@ export function journalReadTarget(application, options = {}, game = globalThis.g
   if (options?.veNativeEdit || options?.edit || options?.configure || options?.tempOwnership) return null;
   // A specialised Journal application may provide workflows beyond reading.
   if (application?.constructor?.name?.includes("EnhancedJournal")) return null;
-  if (!entry.testUserPermission?.(game.user, "OBSERVER")) return null;
-  const visiblePages = [...(entry.pages?.values?.() ?? entry.pages ?? [])].filter((page) => page.testUserPermission?.(game.user, "OBSERVER")
-    && (application?.document?.documentName === "JournalEntry" ? application.isPageVisible?.(page) ?? true : true))
+  if (!isJournalVisible(entry, game.user, game)) return null;
+  const visiblePages = [...(entry.pages?.values?.() ?? entry.pages ?? [])].filter((page) => isJournalPageVisible(page, entry, game.user,
+    application?.document?.documentName === "JournalEntry" ? application : entry.sheet))
     .sort((left, right) => Number(left.sort ?? 0) - Number(right.sort ?? 0));
   const requestedPage = String(options?.pageId ?? (document?.documentName === "JournalEntryPage" ? document.id : ""));
   let pageId = requestedPage;
@@ -62,7 +64,7 @@ export function journalReadTarget(application, options = {}, game = globalThis.g
     pageId = String(page.id);
   }
   if (pageId && !page) return null;
-  if (page && !page.testUserPermission?.(game.user, "OBSERVER")) return null;
+  if (page && !visiblePages.includes(page)) return null;
   if (page && ["pdf", "video"].includes(String(page.type))) return null;
   return Object.freeze({
     entryId: String(entry.id),

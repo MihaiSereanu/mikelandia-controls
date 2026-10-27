@@ -1,3 +1,4 @@
+import { isJournalVisible, isJournalPageVisible } from "./journal-visibility.mjs";
 import { localizeFoundry } from "./localization.mjs";
 import { ownMobileApplication } from "./mobile-ui-isolation.mjs";
 import { resolveSystemIntegration } from "../systems/registry.mjs";
@@ -7,7 +8,7 @@ const TOKEN_GEOMETRY_FIELDS = new Set(["x", "y", "elevation", "rotation", "sort"
 
 export const SESSION_INVALIDATION_MAP = Object.freeze({
 
-  updateUser: Object.freeze(["actors", "combat", "user"]),
+  updateUser: Object.freeze(["actors", "combat", "journals", "user"]),
 
   createActor: Object.freeze(["actors"]),
   updateActor: Object.freeze(["actors"]),
@@ -18,6 +19,9 @@ export const SESSION_INVALIDATION_MAP = Object.freeze({
   createActiveEffect: Object.freeze(["actors", "combat"]),
   updateActiveEffect: Object.freeze(["actors", "combat"]),
   deleteActiveEffect: Object.freeze(["actors", "combat"]),
+  createFolder: Object.freeze(["journals"]),
+  updateFolder: Object.freeze(["journals"]),
+  deleteFolder: Object.freeze(["journals"]),
   createJournalEntry: Object.freeze(["journals"]),
   updateJournalEntry: Object.freeze(["journals"]),
   deleteJournalEntry: Object.freeze(["journals"]),
@@ -343,9 +347,9 @@ export function createFoundrySessionGateway({
       assertSession(expectedSession);
       const id = identifier(journalId, "journalId");
       const journal = game.journal?.get?.(id) ?? Array.from(game.journal ?? []).find((entry) => String(entry.id ?? "") === id);
-      if (!journal || !canObserve(journal, game.user)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisJournalIsNoLongerAvailable", "This journal is no longer available."));
+      if (!isJournalVisible(journal, game.user)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisJournalIsNoLongerAvailable", "This journal is no longer available."));
       const pages = [];
-      for (const page of Array.from(journal.pages ?? []).filter((entry) => canObserve(entry, game.user) && (journal.sheet?.isPageVisible?.(entry) ?? true))) {
+      for (const page of Array.from(journal.pages ?? []).filter((entry) => isJournalPageVisible(entry, journal, game.user))) {
         const type = String(page.type ?? "text");
         const record = {
           id: String(page.id ?? ""),
@@ -365,10 +369,10 @@ export function createFoundrySessionGateway({
         pages.push(Object.freeze(record));
       }
       assertSession(expectedSession);
-      if (game.journal?.get?.(id) !== journal || !canObserve(journal, game.user)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisJournalIsNoLongerAvailable", "This journal is no longer available."));
+      if (game.journal?.get?.(id) !== journal || !isJournalVisible(journal, game.user)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisJournalIsNoLongerAvailable", "This journal is no longer available."));
       const currentPages = pages.filter((record) => {
         const current = journal.pages?.get?.(record.id) ?? Array.from(journal.pages ?? []).find((entry) => entry.id === record.id);
-        return current && canObserve(current, game.user) && (journal.sheet?.isPageVisible?.(current) ?? true);
+        return current && isJournalPageVisible(current, journal, game.user);
       });
       currentPages.sort((left, right) => left.sort - right.sort || left.name.localeCompare(right.name));
       return Object.freeze({ id, name: String(journal.name ?? "Journal"), img: String(journal.img ?? ""),
@@ -378,9 +382,9 @@ export function createFoundrySessionGateway({
       assertSession(expectedSession);
       const id = identifier(journalId, "journalId");
       const journal = game.journal?.get?.(id);
-      if (!journal || !canOwn(journal, game.user)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.YouCannotEditThisJournal", "You cannot edit this Journal."));
+      if (!isJournalVisible(journal, game.user) || !canOwn(journal, game.user)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.YouCannotEditThisJournal", "You cannot edit this Journal."));
       const page = pageId ? journal.pages?.get?.(identifier(pageId, "pageId")) : null;
-      if (pageId && (!page || !canOwn(page, game.user))) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.YouCannotEditThisJournalPage", "You cannot edit this Journal page."));
+      if (pageId && (!isJournalPageVisible(page, journal, game.user) || !canOwn(page, game.user))) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.YouCannotEditThisJournalPage", "You cannot edit this Journal page."));
       // Foundry v13's own JournalEntrySheet opens text and image editors from
       // page.sheet. Other page types use the native parent at the current page.
       const sheet = page && ["text", "image"].includes(String(page.type)) && typeof page.sheet?.render === "function"
@@ -436,6 +440,7 @@ export function sessionInvalidationForHook(hook, document, changes = {}, integra
     const key = String(document?.key ?? document?.id ?? "");
     const namespace = String(document?.namespace ?? "");
     const fullKey = key.includes(".") ? key : namespace && key ? `${namespace}.${key}` : key;
+    if (fullKey === "calendaria.devMode") return Object.freeze({ hook, domains: Object.freeze(["journals"]) });
     const contribution = integration.settingInvalidation?.(fullKey);
     if (contribution) return Object.freeze({ hook, ...contribution, domains: Object.freeze([...contribution.domains]) });
     const domains = [].includes(fullKey) ? Object.freeze([])
@@ -527,20 +532,12 @@ export function isActorEligible(actor, user, integration = resolveSystemIntegrat
 
 function visibleJournals(user) {
   return Array.from(game.journal ?? [])
-    .filter((journal) => canObserve(journal, user))
+    .filter((journal) => isJournalVisible(journal, user))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function visibleMessages() {
   return Array.from(game.messages ?? []).filter((message) => message.visible !== false);
-}
-
-function canObserve(document, user) {
-  try {
-    return document.testUserPermission?.(user, "OBSERVER") ?? document.visible ?? false;
-  } catch {
-    return false;
-  }
 }
 
 function canOwn(document, user) {
@@ -560,7 +557,7 @@ function journalRecord(journal) {
     rootSorting: sortingMode(game.journal?.sortingMode),
     folderPath: journalFolderPath(journal),
     pages: Array.from(journal.pages ?? [])
-      .filter((page) => canObserve(page, game.user))
+      .filter((page) => isJournalPageVisible(page, journal, game.user))
       .map((page) => ({ id: page.id, name: page.name, type: page.type }))
   };
 }

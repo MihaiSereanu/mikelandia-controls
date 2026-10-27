@@ -1,5 +1,5 @@
 import { createShadowdarkFixture } from "/tests/helpers/shadowdark.mjs";
-import { createActor, createGame, createHooks } from "/tests/helpers/foundry.mjs";
+import { createActor, createGame, createHooks, collection } from "/tests/helpers/foundry.mjs";
 import { createAppKernel } from "/src/kernel/app-kernel.mjs";
 import { createSignalStore } from "/src/kernel/signal-store.mjs";
 import { initialAppState, reduceAppState } from "/src/kernel/app-state.mjs";
@@ -44,6 +44,14 @@ try {
     async endCombat() {},
     async delete() { nativeCalls.push(["end"]); }
   };
+  const handoutPage = (id, allowed = true) => ({ id, name: id, type: "text", text: { content: "A shared handout." }, testUserPermission: () => allowed });
+  const handout = { id: "handout", documentName: "JournalEntry", name: "Shared Handout", pages: collection([handoutPage("Public page"), handoutPage("Private page", false), handoutPage("Hidden page")]), testUserPermission: () => true, sheet: { isPageVisible: page => page.id !== "Hidden page" } };
+  const storage = (id, extra) => ({ ...handout, id, name: id, ...extra });
+  game.modules.set("sequencer", { active: true }); game.modules.set("calendaria", { active: true });
+  game.journal = collection([handout,
+    storage("sequencerDatabase"),
+    storage("Calendar Notes", { flags: { calendaria: { isCalendarNote: true } } }),
+    storage("Private Journal", { testUserPermission: () => false })]);
   // No map or token API is available to this complete kernel/frame fixture.
   globalThis.canvas = undefined;
   const layout = params.get("layout") ?? "phone";
@@ -77,6 +85,12 @@ try {
   check("character renders without token selection", !!root.querySelector(legacy ? ".ve-character-selector" : ".ve-profile-section"));
   check("no map or split viewport mounts", !root.querySelector(".ve-scene-screen, .ve-split-scene-viewport, .ve-tablet-split-toggle"));
   check("no light or token placement controls mount", !root.querySelector('[data-profile-action^="light:"], .ve-portrait-action-menu, .ve-portrait-token-ghost'));
+  root.querySelector('[data-route="journals"]').click(); await tick();
+  check("journal library hides module storage and denied documents", root.querySelectorAll(".ve-journal-entry").length === 1 && root.querySelector(".ve-journal-entry")?.textContent.includes("Shared Handout"));
+  check("journal summary excludes hidden page names", !/Private page|Hidden page/.test(root.querySelector(".ve-journal-library")?.textContent));
+  root.querySelector(".ve-journal-entry").click(); await tick();
+  check("permitted journal opens in mobile reader", root.querySelector(".ve-journal-rich-text")?.textContent.includes("A shared handout."));
+  check("reader excludes private and sheet-hidden pages", !/Private page|Hidden page/.test(root.querySelector(".ve-journal-reader")?.textContent));
   root.querySelector('[data-route="combat"]').click(); await tick();
   check("Combat lists initiative without a canvas", root.querySelector(".ve-combat-name")?.textContent === "Fighter");
   check("Combat has no focus or targeting controls", !root.querySelector(".fa-bullseye, .fa-arrows-to-eye"));

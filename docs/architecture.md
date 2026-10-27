@@ -18,6 +18,10 @@ Resolve fresh actor/item state from the source UUID, including synthetic actors.
 
 Unsupported systems get identity and the native sheet. D&D-specific handlers remain isolated. Shared components must preserve native terminology and grouping.
 
+## Journal visibility
+
+`src/foundry/journal-visibility.mjs` supplies the shared list/read policy: native effective OBSERVER permission, plus active-module storage exclusions. Sequencer hides `sequencerDatabase`; Calendaria hides its `isCalendarNote`/`isCalendarJournal` entries and descendants of `isCalendarNotesFolder`/`isCalendarFolder` folders, with the native GM `devMode` exception. Ordinary journal names and default player access remain valid. List summaries, reads, and native read targets also enforce native sheet page visibility. Recheck eligibility after asynchronous enrichment; refresh journal snapshots on document, folder, user, and Calendaria developer-setting changes. These filters never delete storage or alter ownership.
+
 ## Native application versions
 
 Shadowdark 4.0.6 `PlayerSheetSD` is Application V1. Warhammer sheets use V2. Shadowdark `RollDialogSD` inherits the general ApplicationV2 class: do not infer all applications' versions from their system or an optional `isV2` property. Inspect actual ancestry.
@@ -63,6 +67,8 @@ YouTube mute commands must be idempotent per player, including while the iframe 
 Roll timing is opt-in and stays in memory. The module API exposes `setRollTimingEnabled`, `rollTimingSnapshot`, and `resetRollTiming`. Observations distinguish native invocation, dialog rendering/visibility, user submission, message creation/rendering/visibility, and native return. Keep user thinking and time spent outside the Chat screen separate from processing latency. Retain at most 20 observations and dispose listeners after 30 seconds or cancelled workflows.
 
 ## Checks and packaging
+
+The standalone `mobile-login/` page is served by Caddy at `/mobile/`, independently of world-module loading. It uses native Foundry prelogin/session/authentication endpoints and stores only a per-world selected player ID. It does not select the module's runtime mode. See `docs/mobile-login.md` for the protocol, deployment, and fallback boundary. Build its separate static archive with `py scripts/build_mobile_login.py`; it is not part of the normal module ZIP.
 
 Node tests: `node --test --test-reporter=dot tests/*.test.mjs`. Browser fixtures: `node scripts/check_browser.mjs --list`, then `--filter "shadowdark|profile-layout"`. Default runs all scenarios; add `--screenshots` for passing captures. Failures save screenshots in ignored `dist/`.
 

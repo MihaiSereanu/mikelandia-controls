@@ -7,6 +7,11 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ["mobile-login-narrow", 320, 844, "mobile-login", ""],
+  ["mobile-login-android", 393, 851, "mobile-login", ""],
+  ["mobile-login-keyboard", 393, 430, "mobile-login", ""],
+  ["mobile-login-tablet", 1024, 768, "mobile-login", ""],
+  ["mobile-login-large-text", 390, 844, "mobile-login", "large=true"],
   ["ui-isolation-phone", 390, 844, "ui-isolation", "layout=phone"],
   ["ui-isolation-tablet", 1024, 768, "ui-isolation", "layout=tablet"],
   ["ui-isolation-common-display-phone", 390, 844, "ui-isolation", "layout=phone&common-display=true"],
