@@ -21,12 +21,12 @@ export function createMobileDiagnostics({
     const entry = Object.freeze({
       at: safeTimestamp(now),
       level: normalizedLevel,
-      message: String(message ?? localizeFoundry("VEMOBILE.Interface.MobileDiagnostics.VEMobileEvent", "VE Mobile event")).slice(0, 500),
+      message: String(message ?? localizeFoundry("VEMOBILE.Interface.MobileDiagnostics.VEMobileEvent", "Mikelandia Controls event")).slice(0, 500),
       ...(error ? { error: errorText(error).slice(0, 1600) } : {})
     });
     entries.push(entry);
     if (entries.length > MAX_ENTRIES) entries.splice(0, entries.length - MAX_ENTRIES);
-    if (["error", "warn"].includes(normalizedLevel)) console[normalizedLevel](`VE Mobile | ${entry.message}`, ...(error ? [error] : []));
+    if (["error", "warn"].includes(normalizedLevel)) console[normalizedLevel](`Mikelandia Controls | ${entry.message}`, ...(error ? [error] : []));
     return entry;
   };
 

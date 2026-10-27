@@ -134,7 +134,7 @@ try {
   menu.append(menuButton); document.body.append(menu); await tick();
   check("native context menu remains reachable above the sheet", reachable(menuButton));
   menuButton.click(); await tick(); check("native context menu retains its own action", menuAction);
-  const nested = { options: { modal: true }, element: document.createElement("div"),
+  const nested = { parent: opened, options: { modal: true }, element: document.createElement("div"),
     close() { this.element.remove(); Hooks.emit("closeApplicationV2", this); } };
   nested.element.className = "application dialog";
   nested.element.textContent = "Native roll dialog";

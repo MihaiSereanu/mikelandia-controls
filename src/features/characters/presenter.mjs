@@ -5,13 +5,12 @@ import { countInventoryContents, favouriteItemMetadata, filterSpellsByAvailabili
 import { sheetTabIcon } from "./sheet-icons.mjs";
 import { resolveCharacterTheme } from "../../kernel/character-theme.mjs";
 import { bindLongPress } from "../../ui/long-press.mjs";
-import { actionResultsDeferred, renderActionSessionModal } from "../../ui/action-session-modal.mjs";
+import { renderActionSessionModal } from "../../ui/action-session-modal.mjs";
 import { bindDetailsDisclosure } from "../../ui/disclosure.mjs";
 import { hasCharacterDisclosure } from "../../kernel/app-state.mjs";
 import { renderImageViewer } from "../../ui/image-viewer.mjs";
 import { renderRollResultOverlay } from "../../ui/roll-result-overlay.mjs";
 import { resolveHeaderBanner } from "../../kernel/header-banner.mjs";
-import { bindActorPlacementHold } from "./portrait-token-gesture.mjs";
 import { actorSheetTabs, actorOriginBack, collectiveHeaderContent, renderCollectivePanel } from "./collective-sheet.mjs";
 import { renderNativeCharacter } from "./native-sheet.mjs";
 
@@ -71,14 +70,13 @@ export function renderCharacters({ state, commands, scope, overlayHost = null, r
   const status = shell.status ??= node("p", { className: "ve-action-status", attrs: { role: "status", "aria-live": "polite" } });
   const selectedItem = actorItemById(actor, state.characterItemId);
   const openItem = (item) => commands.openCharacterItem(item.id);
-  const resultsDeferred = actionResultsDeferred(state);
-  const itemModal = resultsDeferred ? null : itemDetailModal(selectedItem, commands.closeCharacterItem, shell.overlayScope, commands);
-  const actionModal = state.actionSessionOrigin === "scene" || resultsDeferred ? null : renderActionSessionModal(state.actionSession, commands, shell.overlayScope);
-  const hpModal = resultsDeferred ? null : hitPointEditor(actor, state.hitPointEditor, commands, shell.overlayScope);
-  const restModal = resultsDeferred ? null : hitDiceRestEditor(actor, state.restEditor, commands, shell.overlayScope);
-  const spellSlotModal = resultsDeferred ? null : spellSlotEditor(actor, state.spellSlotEditor, commands, shell.overlayScope);
-  const xpModal = resultsDeferred ? null : experienceEditor(actor, state.xpEditor, commands, shell.overlayScope);
-  const portraitModal = resultsDeferred ? null : renderImageViewer(state.portraitImage, commands.closeCharacterPortrait, shell.overlayScope, { localize: commands.localize });
+  const itemModal = itemDetailModal(selectedItem, commands.closeCharacterItem, shell.overlayScope, commands);
+  const actionModal = renderActionSessionModal(state.actionSession, commands, shell.overlayScope);
+  const hpModal = hitPointEditor(actor, state.hitPointEditor, commands, shell.overlayScope);
+  const restModal = hitDiceRestEditor(actor, state.restEditor, commands, shell.overlayScope);
+  const spellSlotModal = spellSlotEditor(actor, state.spellSlotEditor, commands, shell.overlayScope);
+  const xpModal = experienceEditor(actor, state.xpEditor, commands, shell.overlayScope);
+  const portraitModal = renderImageViewer(state.portraitImage, commands.closeCharacterPortrait, shell.overlayScope, { localize: commands.localize });
   const settings = commands.readCharacterPreferences();
   const collectiveTabs = actorSheetTabs(actor.type);
   const favouritesEnabled = !collectiveTabs && settings.characterFavouritesEnabled !== false && settings.characterFavouritesSource !== "off";
@@ -86,7 +84,7 @@ export function renderCharacters({ state, commands, scope, overlayHost = null, r
   const activePage = (collectiveTabs ? collectiveTabs.some(([key]) => key === state.characterTab) : SHEET_PAGES.has(state.characterTab) && (state.characterTab !== "favourites" || favouritesEnabled)) ? state.characterTab : "overview";
   const activeTab = ["abilities", "effects"].includes(activePage) ? "overview" : activePage;
   const characterTheme = resolveCharacterTheme(actor.themeClassKey, settings.colorScheme);
-  const overlays = resultsDeferred ? [] : [itemModal, hpModal, restModal, spellSlotModal, xpModal, portraitModal, actionModal, renderRollResultOverlay(state.rollResult, commands, shell.overlayScope)].filter(Boolean);
+  const overlays = [itemModal, hpModal, restModal, spellSlotModal, xpModal, portraitModal, actionModal, renderRollResultOverlay(state.rollResult, commands, shell.overlayScope)].filter(Boolean);
   shell.overlayScope.own(() => overlays.forEach(element => element.remove()));
   if (overlayHost) overlayHost.append(...overlays);
 
@@ -139,7 +137,7 @@ export function renderCharacters({ state, commands, scope, overlayHost = null, r
       node("div", { className: "ve-character-content-scroller", attrs: { tabindex: "0" } })]
   });
   screen.classList.toggle("has-roll-result", Boolean(state.rollResult));
-  screen.classList.toggle("has-action-session", Boolean(state.actionSession) && !resultsDeferred);
+  screen.classList.toggle("has-action-session", Boolean(state.actionSession));
   screen.dataset.characterTheme = characterTheme;
   screen.dataset.actorType = actor.type;
   const contentHost = screen.querySelector(".ve-character-content-scroller");
@@ -156,7 +154,7 @@ export function renderCharacters({ state, commands, scope, overlayHost = null, r
   screen.__veUpdateCharacter = next => renderCharacters({ ...next, scope: ownerScope, overlayHost, retained: shell });
 
   screen.__veCharacterOverlayHost = overlayHost;
-  if (settings.quickbarEnabled && settings.quickbarSource !== "foundry") bindQuickbarCandidates(screen, actor, commands, scope);
+
   return screen;
 }
 
@@ -187,7 +185,6 @@ function updateCharacterSharedHeader(shell, { actors, actor, state, commands, st
 
 function characterSelector(actors, actor, state, commands, status, scope, settings, overlayHost = null) {
   let open = false;
-  let placementHold = null;
   const arrow = icon("fa-chevron-down");
   const bannerResolution = resolveHeaderBanner(actor, settings.headerArtwork);
   const menuController = createCharacterMenuController({ actors, selectedActor: actor, commands, onClose: () => setOpen(false), scope });
@@ -235,14 +232,8 @@ function characterSelector(actors, actor, state, commands, status, scope, settin
   loadBannerArtwork(header, bannerResolution.candidates, scope);
   if (overlayHost) { overlayHost.append(menu); scope.own(() => menu.remove()); }
   const selector = node("div", { className: "ve-character-selector", children: [header, ...(overlayHost ? [] : [menu])] });
-  placementHold = actor.collective ? null : bindActorPlacementHold({
-    portrait: portraitButton, actor, actors, chooser: menu, menuHost: overlayHost ?? selector,
-    state, commands, scope, closeChooser: () => setOpen(false)
-  });
-
   function setOpen(next) {
     open = Boolean(next);
-    if (!open) placementHold?.cancel();
     selector.classList.toggle("is-open", open);
     trigger.setAttribute("aria-expanded", String(open));
     arrow.classList.toggle("fa-chevron-down", !open);
@@ -1503,7 +1494,7 @@ function skillsPanel(actor, commands, status, scope, compact = false) {
     const proficiency = skillProficiencyLabel(skill.proficiency, commands.localize);
     return node("button", {
           className: `ve-skill-row is-${proficiency.key}`,
-      attrs: { type: "button", disabled: !enabled, title: proficiency.label, "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Roll", "Roll {label} {modifier}; {proficiency}", { label: skill.label, modifier: formatModifier(skill.modifier), proficiency: proficiency.label }), ...quickbarSkillAttrs(skill) },
+      attrs: { type: "button", disabled: !enabled, title: proficiency.label, "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Roll", "Roll {label} {modifier}; {proficiency}", { label: skill.label, modifier: formatModifier(skill.modifier), proficiency: proficiency.label }),  },
       on: { click: (event) => runActorCommand(event.currentTarget, ACTOR_COMMANDS.ROLL_SKILL, actor, { skill: skill.key }, commands, status, localizedText(commands.localize, "VEMOBILE.Character.Presenter.RollingSkill", "Rolling {label}…", { label: skill.label }), skill.label) },
       children: [node("span", { className: "ve-proficiency-mark" }), compact ? node("span", { text: skill.label }) : node("span", { children: [node("strong", { text: skill.label }), node("small", { text: [skill.ability, skill.passive === null ? "" : localizedText(commands.localize, "VEMOBILE.Character.Presenter.Passive", "Passive {passive}", { passive: (skill.passive) })].filter(Boolean).join(" · ") })] }), node("b", { text: formatModifier(skill.modifier) }), icon("fa-dice-d20")]
     }, scope);
@@ -1910,7 +1901,7 @@ function openBiographyEditor(anchor, config, commands, pageStatus, scope) {
     className: "ve-modal-button is-secondary",
     attrs: { type: "button" },
     on: { click: () => { if (!pending) close(); } },
-    children: [icon("fa-xmark"), node("span", { text: localizedText(commands.localize, "VEMOBILE.Scene.Template.Cancel", "Cancel") })]
+    children: [icon("fa-xmark"), node("span", { text: localizedText(commands.localize, "VEMOBILE.Action.Cancel", "Cancel") })]
   }, editorScope);
   const save = node("button", {
     className: "ve-modal-button is-primary",
@@ -2268,14 +2259,13 @@ function statusIcon(iconName, label, active, extraClass = "", inactiveStyle = "r
   });
 }
 
-export function characterItemActions(item, { canAddToQuickbar = false, canAddToHotbar = false, localize = null } = {}) {
+export function characterItemActions(item, {   localize = null } = {}) {
   const actions = [];
   if (item.type === "spell" && item.canPrepare) actions.push({ id: "prepare", label: item.preparationState === 0 ? localizedText(localize, "VEMOBILE.Character.Labels.Prepare", "Prepare") : localizedText(localize, "VEMOBILE.Character.Labels.Unprepare", "Unprepare"), icon: "fa-book", command: ACTOR_COMMANDS.SET_SPELL_PREPARED, valueKey: "prepared", value: item.preparationState === 0 ? 1 : 0 });
   if (item.type !== "spell" && item.canEquip) actions.push({ id: "equip", label: item.equipped ? localizedText(localize, "VEMOBILE.Character.Labels.Unequip", "Unequip") : localizedText(localize, "VEMOBILE.Character.Labels.Equip", "Equip"), icon: "fa-shield-halved", command: ACTOR_COMMANDS.SET_ITEM_EQUIPPED, valueKey: "equipped", value: !item.equipped });
   if (item.type !== "spell" && item.canAttune) actions.push({ id: "attune", label: item.attuned ? localizedText(localize, "VEMOBILE.Character.Labels.EndAttunement", "End Attunement") : localizedText(localize, "VEMOBILE.Character.Labels.Attune", "Attune"), icon: "fa-sun", command: ACTOR_COMMANDS.SET_ITEM_ATTUNED, valueKey: "attuned", value: !item.attuned });
   if (item.favoriteApplicable) actions.push({ id: "favorite", label: item.favorite ? localizedText(localize, "VEMOBILE.Character.Labels.Unfavorite", "Unfavorite") : localizedText(localize, "VEMOBILE.Character.Labels.Favorite", "Favorite"), icon: "fa-bookmark", command: ACTOR_COMMANDS.SET_ITEM_FAVORITE, valueKey: "favorite", value: !item.favorite });
-  if (canAddToQuickbar) actions.push({ id: "quickbar", label: localizedText(localize, "VEMOBILE.Character.Labels.AddtoQuickbar", "Add to Quickbar"), icon: "fa-plus" });
-  if (canAddToHotbar) actions.push({ id: "hotbar", label: localizedText(localize, "VEMOBILE.Character.Labels.AddtoHotbar", "Add to Hotbar"), icon: "fa-plus" });
+
   if (item.canEdit) actions.push({ id: "edit", label: localizedText(localize, "VEMOBILE.Character.Labels.EditinFoundry", "Edit in Foundry"), icon: "fa-pen-to-square", command: ACTOR_COMMANDS.OPEN_ITEM_SHEET });
   return Object.freeze(actions.map((action) => Object.freeze(action)));
 }
@@ -2283,11 +2273,8 @@ export function characterItemActions(item, { canAddToQuickbar = false, canAddToH
 export function resolveCharacterItemMenu(item, actor, commands) {
   const record = commands.readCharacterItemMenu({ actorSourceUuid: characterRecordSourceUuid(actor), itemId: item.id,
     ...(item.activityId ? { activityId: item.activityId } : {}), favouriteContext: Array.isArray(item.favouriteIds) });
-  const settings = record.preferences;
   const actions = characterItemActions(record.item, {
-    localize: commands.localize,
-    canAddToQuickbar: Boolean(settings.quickbarEnabled && settings.quickbarSource !== "foundry" && record.canUse),
-    canAddToHotbar: Boolean(settings.quickbarEnabled && settings.quickbarSource === "foundry" && record.canUse)
+    localize: commands.localize
   });
   return { item: record.item, actions };
 }
@@ -2334,20 +2321,7 @@ function showCharacterItemActionMenu(anchor, event, item, actor, commands, statu
         if (action.id === "favorite" && action.value === false && item.favouriteIds?.length) payload.favouriteIds = [...item.favouriteIds];
         close();
         try {
-          if (action.id === "quickbar") {
-            await commands.addQuickbarAction(characterRecordSourceUuid(actor), {
-              kind: "item", itemId: item.id, label: item.name, img: item.img ?? "",
-              ...(item.activityId ? { activityId: item.activityId } : {})
-            });
-            status.classList.remove("is-error");
-            status.textContent = "";
-            globalThis.navigator?.vibrate?.(5);
-          } else if (action.id === "hotbar") {
-            await commands.addHotbarItem({ ...payload, ...(item.activityId ? { activityId: item.activityId } : {}) });
-            status.classList.remove("is-error");
-            status.textContent = "";
-            globalThis.navigator?.vibrate?.(5);
-          } else await commands.execute(action.command, payload);
+          await commands.execute(action.command, payload);
         } catch (error) {
           status.classList.add("is-error");
           status.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Character.Presenter.FailedFor", "{label} failed for {name}.", { label: (action.label), name: (item.name) });
@@ -2534,7 +2508,7 @@ function itemInlineSummary(item, actor, commands, status, openItem, scope) {
     node("div", { className: "ve-sheet-item-inline-actions", children: [
       node("button", {
         className: "is-primary",
-        attrs: { type: "button", disabled: !enabled, title: enabled ? `${actionLabel} ${item.name}` : localizedText(commands.localize, "VEMOBILE.Character.Presenter.YouDoNotHavePermissionToUse", "You do not have permission to use {name}", { name: (item.name) }), ...quickbarItemAttrs(item) },
+        attrs: { type: "button", disabled: !enabled, title: enabled ? `${actionLabel} ${item.name}` : localizedText(commands.localize, "VEMOBILE.Character.Presenter.YouDoNotHavePermissionToUse", "You do not have permission to use {name}", { name: (item.name) }),  },
         on: { click: (event) => runItemAction(event.currentTarget, item, actor, commands, status) },
         children: [icon(item.type === "spell" ? "fa-wand-magic-sparkles" : "fa-play"), node("span", { text: actionLabel })]
       }, scope),
@@ -2733,7 +2707,7 @@ function itemActionButton(item, actor, commands, status, scope) {
       disabled: !enabled,
       title: enabled ? actionLabel : localizedText(commands.localize, "VEMOBILE.Character.Presenter.YouDoNotHavePermissionToUse", "You do not have permission to use {name}", { name: (item.name) }),
       "aria-label": enabled ? actionLabel : localizedText(commands.localize, "VEMOBILE.Character.Presenter.Unavailable", "{actionLabel}; unavailable", { actionLabel: (actionLabel) }),
-      ...quickbarItemAttrs(item)
+
     },
     on: { click: (event) => {
       event.preventDefault();
@@ -2862,7 +2836,7 @@ function abilitiesSavesPreview(actor, onViewAll, commands, status, scope) {
         const proficiency = skillProficiencyLabel(skill.proficiency, commands.localize);
         return node("button", {
           className: `ve-trained-skill is-${proficiency.key}`,
-          attrs: { type: "button", disabled: !enabled, title: `${proficiency.label} · ${skill.ability}`, "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Roll", "Roll {label} {modifier}; {proficiency}", { label: skill.label, modifier: formatModifier(skill.modifier), proficiency: proficiency.label }), ...quickbarSkillAttrs(skill) },
+          attrs: { type: "button", disabled: !enabled, title: `${proficiency.label} · ${skill.ability}`, "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Roll", "Roll {label} {modifier}; {proficiency}", { label: skill.label, modifier: formatModifier(skill.modifier), proficiency: proficiency.label }),  },
           on: { click: (event) => runActorCommand(event.currentTarget, ACTOR_COMMANDS.ROLL_SKILL, actor, { skill: skill.key }, commands, status, localizedText(commands.localize, "VEMOBILE.Character.Presenter.RollingSkill", "Rolling {label}…", { label: skill.label }), skill.label) },
           children: [node("span", { text: skill.label }), node("b", { text: formatModifier(skill.modifier) }), icon("fa-dice-d20")]
         }, scope);
@@ -3120,108 +3094,6 @@ function formatModifier(value) {
   if (value === null || value === undefined || !Number.isFinite(Number(value))) return "—";
   const numeric = Number(value);
   return numeric >= 0 ? `+${numeric}` : String(numeric);
-}
-
-function quickbarItemAttrs(item) {
-  return {
-    "data-ve-quickbar-candidate": true,
-    "data-ve-quickbar-kind": "item",
-    "data-ve-quickbar-item-id": item.id,
-    ...(item.activityId ? { "data-ve-quickbar-activity-id": item.activityId } : {}),
-    "data-ve-quickbar-label": item.name,
-    "data-ve-quickbar-img": item.img ?? ""
-  };
-}
-
-function quickbarSkillAttrs(skill) {
-  return {
-    "data-ve-quickbar-candidate": true,
-    "data-ve-quickbar-kind": "skill",
-    "data-ve-quickbar-skill": skill.key,
-    "data-ve-quickbar-label": skill.label
-  };
-}
-
-function bindQuickbarCandidates(screen, actor, commands, scope) {
-  let prompt = null;
-  let anchor = null;
-  const visibleSlotCount = 50;
-  let slots = Array.from({ length: 50 }, (_, index) => actor.quickbar?.[index] ?? null);
-
-  const dismiss = () => {
-    prompt?.remove();
-    prompt = null;
-    anchor = null;
-  };
-  const show = (candidate) => {
-    dismiss();
-    const full = slots.slice(0, visibleSlotCount).every(Boolean);
-    anchor = candidate;
-    prompt = node("button", {
-      className: `ve-quickbar-add-prompt${full ? " is-full" : ""}`,
-      attrs: {
-        type: "button",
-        disabled: full,
-        "aria-label": full ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.QuickbarFull", "Quickbar full") : localizedText(commands.localize, "VEMOBILE.Character.Presenter.AddToQuickbar", "Add {veQuickbarLabel} to Quickbar", { veQuickbarLabel: (candidate.dataset.veQuickbarLabel) })
-      },
-      on: full ? undefined : { click: async () => {
-        const currentPrompt = prompt;
-        if (!currentPrompt || currentPrompt.disabled) return;
-        currentPrompt.disabled = true;
-        currentPrompt.setAttribute("aria-busy", "true");
-        try {
-          const result = await commands.addQuickbarAction(characterRecordSourceUuid(actor), candidateDescriptor(candidate));
-          slots = [...result.slots];
-          globalThis.navigator?.vibrate?.(5);
-          if (prompt === currentPrompt) dismiss();
-        } catch (error) {
-          if (prompt !== currentPrompt) return;
-          currentPrompt.disabled = false;
-          currentPrompt.removeAttribute("aria-busy");
-          currentPrompt.replaceChildren(icon("fa-triangle-exclamation"), node("span", { text: error?.code === "QUICKBAR_FULL" ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.QuickbarFull", "Quickbar full") : (error?.message ?? localizedText(commands.localize, "VEMOBILE.Character.Presenter.CouldNotAdd", "Could not add")) }));
-          currentPrompt.classList.toggle("is-full", error?.code === "QUICKBAR_FULL");
-        }
-      } },
-      children: [icon(full ? "fa-lock" : "fa-plus"), node("span", { text: full ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.QuickbarFull", "Quickbar full") : localizedText(commands.localize, "VEMOBILE.Character.Presenter.AddToQuickbar2", "Add to Quickbar?") })]
-    }, scope);
-    screen.append(prompt);
-    positionQuickbarPrompt(screen, candidate, prompt);
-  };
-
-  for (const candidate of screen.querySelectorAll("[data-ve-quickbar-candidate]")) {
-    if (candidate.closest("[data-ve-item-actions]")) continue;
-    bindLongPress(candidate, scope, () => show(candidate));
-  }
-  scope.listen(document, "pointerdown", (event) => {
-    if (!prompt || prompt.contains(event.target) || anchor?.contains(event.target)) return;
-    dismiss();
-  }, { capture: true, passive: true });
-  scope.listen(document, "scroll", dismiss, { capture: true, passive: true });
-  scope.own(dismiss);
-}
-
-function candidateDescriptor(candidate) {
-  const common = {
-    kind: candidate.dataset.veQuickbarKind,
-    label: candidate.dataset.veQuickbarLabel,
-    img: candidate.dataset.veQuickbarImg ?? ""
-  };
-  return common.kind === "item"
-    ? { ...common, itemId: candidate.dataset.veQuickbarItemId,
-      ...(candidate.dataset.veQuickbarActivityId ? { activityId: candidate.dataset.veQuickbarActivityId } : {}) }
-    : { ...common, skill: candidate.dataset.veQuickbarSkill };
-}
-
-function positionQuickbarPrompt(screen, candidate, prompt) {
-  const screenRect = screen.getBoundingClientRect();
-  const anchorRect = candidate.getBoundingClientRect();
-  const promptRect = prompt.getBoundingClientRect();
-  const desiredLeft = anchorRect.left - screenRect.left + anchorRect.width / 2;
-  const halfWidth = promptRect.width / 2;
-  const left = Math.max(halfWidth + 6, Math.min(screenRect.width - halfWidth - 6, desiredLeft));
-  const above = anchorRect.top - screenRect.top - promptRect.height - 8;
-  prompt.style.left = `${left}px`;
-  prompt.style.top = `${above >= 4 ? above : anchorRect.bottom - screenRect.top + 8}px`;
 }
 
 function ordinal(value) {

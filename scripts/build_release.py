@@ -8,18 +8,15 @@ import posixpath
 from urllib.parse import urlsplit
 from zipfile import ZIP_DEFLATED, ZipFile
 
-
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = "https://github.com/MihaiSereanu/ve-mobile"
-RUNTIME_ENTRIES = ("src", "assets", "locales", "Icon.png", "LICENSE")
-
+RUNTIME_ENTRIES = ("src", "assets", "locales", "Icon.svg", "LICENSE")
 
 def download_url(value):
     parsed = urlsplit(value)
     if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password:
         raise ValueError("Release URLs must be HTTPS addresses without embedded credentials")
     return value
-
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -47,8 +44,8 @@ def main():
         if not relationships:
             manifest.pop("relationships", None)
         manifest["description"] = (
-            "Experimental VE Mobile development build: D&D5e mobile sheets, Warhammer character "
-            "panels/actions/resources, Shadowdark PC panels/actions/light controls, and native-sheet fallback. Cross-system compatibility is unverified."
+            "Experimental Mikelandia Controls development build: D&D5e mobile sheets, Warhammer character "
+            "panels/actions/resources, Shadowdark PC panels/actions/inventory, and native-sheet fallback. Cross-system compatibility is unverified."
         )
     files = []
     for entry in RUNTIME_ENTRIES:
@@ -93,7 +90,6 @@ def main():
                 if target not in included:
                     raise ValueError(f"Missing packaged import: {name} -> {reference}")
     print(f"Built {archive_path} ({len(files) + 1} files), version {args.version}")
-
 
 if __name__ == "__main__":
     main()

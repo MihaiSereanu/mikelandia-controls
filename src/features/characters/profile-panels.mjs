@@ -52,22 +52,8 @@ export function renderProfilePanels(actor, state, commands, scope) {
         }
       } }
     }, scope) : node("span", { text: row.label });
-    const light = row.secondaryAction ? node("button", {
-      className: "ve-profile-light", attrs: { type: "button", "data-profile-action": row.secondaryAction.id,
-        "aria-pressed": String(row.secondaryAction.active),
-        "aria-label": `${localizedText(commands.localize, row.secondaryAction.active ? "VEMOBILE.Inventory.Extinguish" : "VEMOBILE.Inventory.Ignite", row.secondaryAction.active ? "Extinguish" : "Light")}: ${row.label}` },
-      children: [icon("fa-lightbulb")], on: { click: async event => {
-        const button = event.currentTarget;
-        if (scope.disposed || button.disabled) return;
-        button.disabled = true;
-        try { await commands.execute(ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, { actorSourceUuid: actor.sourceUuid,
-          actionId: row.secondaryAction.id, actionRevision: row.secondaryAction.revision }); }
-        catch (error) { if (!scope.disposed) commands.reportCharacterMutationError?.(error); }
-        finally { if (!scope.disposed) button.disabled = false; }
-      } }
-    }, scope) : null;
     return node("div", { className: "ve-profile-row", dataset: { profileField: row.id }, children: [
-      node("dt", { className: "ve-profile-item-name", children: [label, light] }), row.value === undefined || row.edit?.id.startsWith("quantity:") || row.edit?.id.startsWith("coin-") ? null : node("dd", { children: [
+      node("dt", { className: "ve-profile-item-name", children: [label] }), row.value === undefined || row.edit?.id.startsWith("quantity:") || row.edit?.id.startsWith("coin-") ? null : node("dd", { children: [
         row.valueLabel ? node("span", { className: "ve-profile-value-label", text: `${row.valueLabel} ` }) : null,
         node("span", { text: `${row.valuePrefix ?? ""}${valueText(row)}` })
       ] }), description, row.edit ? renderProfileResourceEditor(row, actor, commands, scope) : null

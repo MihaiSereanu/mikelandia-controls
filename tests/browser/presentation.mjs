@@ -27,7 +27,7 @@ try {
     registerPreferences();
     const preferences = createFoundryPreferencesGateway({ getGame: () => game, getNavigator: () => ({}) });
     const guide = createControlsGuide({ scope: currentScope, localize, readContext: () => ({
-      presentation: layout, split: layout === "tablet", canPlaceActor: true, actionBarSource: preferences.actionMenu().quickbarSource,
+      presentation: layout,
       ...preferences.controls()
     }) });
     const commands = {
@@ -42,7 +42,7 @@ try {
     const field = key => settings.querySelector(`#ve-setting-ve-mobile-${key}`);
     check(`${system}: class color availability follows the integration`, !!field("colorScheme").querySelector('option[value="class"]') === legacy);
     check(`${system}: effective color keeps stored class choice separate`, field("colorScheme").value === (legacy ? "class" : "neutral") && values.get("ve-mobile.colorScheme") === "class");
-    for (const key of ["headerArtwork", "headerArtworkOpacity", "quickbarSource", "showActionSummaries", "compactActionSummaries"]) {
+    for (const key of ["headerArtwork", "headerArtworkOpacity", "showActionSummaries", "compactActionSummaries"]) {
       check(`${system}: ${key} control follows capability`, !!field(key) === legacy);
     }
     check(`${system}: rendering performs no preference writes`, writes.length === 0);
@@ -53,14 +53,14 @@ try {
     const text = guide.element.textContent;
     check(`${system}: help matches actual character interactions`, legacy ? text.includes("Tap the portrait") && text.includes("Hold a row") : text.includes("Open Character Sheet opens") && !text.includes("Tap the portrait") && !text.includes("Hold a row"));
     check(`${system}: native action/resource instructions follow mapped panels`, text.includes("Choose Edit on an available resource") === ["wfrp4e", "shadowdark"].includes(system));
-    check(`${system}: action-bar help matches the effective source`, text.includes(legacy ? "Character Quickbar slot" : "Foundry Hotbar slot"));
+    check(`${system}: help contains no Scene or token-control instructions`, !/joystick|target a token|Character Quickbar slot|Foundry Hotbar slot/i.test(text));
     check(`${system}: guide fits the emulated viewport`, guide.element.querySelector(".ve-controls-guide-card").getBoundingClientRect().right <= innerWidth + 1 && document.documentElement.scrollWidth <= innerWidth + 1);
     guide.hide(); await tick();
     check(`${system}: guide closes without rebuilding Settings`, guide.element.hidden && settings.dataset.veSettingsContentBuilds === "1");
     if (system === "wfrp4e") {
       guide.show(field("colorScheme"));
       const body = guide.element.querySelector(".ve-controls-guide-body");
-      const character = body.querySelectorAll(":scope > section")[2];
+      const character = body.querySelectorAll(":scope > section")[1];
       body.scrollTop = character.offsetTop - body.offsetTop;
     }
   }

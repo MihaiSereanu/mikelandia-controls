@@ -28,11 +28,11 @@ for (const system of ["wfrp4e", "shadowdark", "custom"]) {
     const f = setup(t, system, initial);
     const snapshot = f.gateway.snapshot();
     assert.equal(snapshot.colorScheme, "neutral"); assert.equal(snapshot.headerArtwork, "off");
-    assert.equal(snapshot.quickbarSource, "foundry"); assert.equal(snapshot.showActionSummaries, false); assert.equal(snapshot.compactActionSummaries, false);
+    assert.equal(snapshot.showActionSummaries, false); assert.equal(snapshot.compactActionSummaries, false);
     assert.equal(snapshot.characterFavouritesSource, "off"); assert.deepEqual(snapshot.characterCollections, {});
     const color = snapshot.fields.find(field => field.key === "colorScheme");
     assert.equal(color.value, "neutral"); assert.equal(color.choices.some(choice => choice.value === "class"), false);
-    for (const key of ["headerArtwork", "headerArtworkOpacity", "quickbarSource", "showActionSummaries", "compactActionSummaries", "characterFavouritesSource"]) {
+    for (const key of ["headerArtwork", "headerArtworkOpacity", "showActionSummaries", "compactActionSummaries", "characterFavouritesSource"]) {
       assert.equal(snapshot.fields.some(field => field.key === key), false);
       assert.equal(f.registered.get(`ve-mobile.${key}`).config, false);
     }
@@ -41,7 +41,7 @@ for (const system of ["wfrp4e", "shadowdark", "custom"]) {
   });
   test(`${system} direct preference writes cannot enable D&D-only features`, async t => {
     const f = setup(t, system);
-    for (const [key, value] of [["quickbarSource", "character"], ["headerArtwork", "race"], ["showActionSummaries", true], ["characterFavouritesSource", "core"], ["colorScheme", "class"]]) {
+    for (const [key, value] of [["headerArtwork", "race"], ["showActionSummaries", true], ["characterFavouritesSource", "core"], ["colorScheme", "class"]]) {
       await assert.rejects(f.gateway.set({ key, value }), /unavailable for the current game/);
     }
     await assert.rejects(f.gateway.setCharacterCollectionPreference({ key: "spellFilter", value: "prepared" }), /unavailable for the current game/);
@@ -58,12 +58,12 @@ for (const system of ["wfrp4e", "shadowdark", "custom"]) {
     assert.equal(f.writes.some(([_namespace, key]) => ["characterFavouritesSource", "characterSpellFilter", "headerArtwork", "quickbarSource", "showActionSummaries"].includes(key)), false);
   });
 }
-test("D&D keeps its native appearance, quickbar, and summary settings", async t => {
+test("D&D keeps its native appearance and summary settings", async t => {
   const f = setup(t, "dnd5e");
   const snapshot = f.gateway.snapshot();
   assert.equal(snapshot.colorScheme, "class"); assert.equal(snapshot.headerArtwork, "automatic");
-  assert.equal(snapshot.quickbarSource, "character"); assert.equal(snapshot.showActionSummaries, true);
-  for (const key of ["headerArtwork", "headerArtworkOpacity", "quickbarSource", "showActionSummaries", "compactActionSummaries"]) {
+  assert.equal(snapshot.showActionSummaries, true);
+  for (const key of ["headerArtwork", "headerArtworkOpacity", "showActionSummaries", "compactActionSummaries"]) {
     assert.equal(snapshot.fields.some(field => field.key === key), true); assert.equal(f.registered.get(`ve-mobile.${key}`).config, true);
   }
   await f.gateway.set({ key: "headerArtwork", value: "race" });
@@ -74,13 +74,13 @@ for (const presentation of ["profile", "native"]) {
     const sections = controlsGuideSections({ characterPresentation: presentation, actionBarSource: "foundry", canPlaceActor: true, split: true, presentation: "tablet" });
     const keys = sections.flatMap(section => section.entries);
     for (const key of ["Portrait", "Chooser", "Rows", "Quickbar", "Members", "ActorPlace", "SplitDrop", "TabletSplit"]) assert.equal(keys.includes(key), false);
-    for (const key of ["NativeChooser", "NativeSheet", "Hotbar", "ChooserPlace", "TabletSplitChooser"]) assert.equal(keys.includes(key), true);
+    for (const key of ["NativeChooser", "NativeSheet", "Tablet"]) assert.equal(keys.includes(key), true);
     assert.equal(keys.includes("ProfileActions"), presentation === "profile");
   });
 }
 test("D&D guide retains its existing character gestures", () => {
   const keys = controlsGuideSections({ collective: true, canPlaceActor: true }).flatMap(section => section.entries);
-  for (const key of ["Portrait", "Chooser", "Rows", "Quickbar", "Members"]) assert.equal(keys.includes(key), true);
+  for (const key of ["Portrait", "Chooser", "Rows", "Members"]) assert.equal(keys.includes(key), true);
 });
 test("integration contributions own item-specific directory refreshes", () => {
   const item = { type: "class", parent: createActor() };

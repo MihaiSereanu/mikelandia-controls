@@ -96,7 +96,7 @@ export function createFoundryActionSessionGateway({
               elements.push(element);
             }
           } catch (error) {
-            console.warn(`VE Mobile | Could not render action message ${messageIdentifier(message)}`, error);
+            console.warn(`Mikelandia Controls | Could not render action message ${messageIdentifier(message)}`, error);
           }
         }
         if (disposed || scope.disposed) return false;
@@ -764,7 +764,7 @@ function bindActionDescriptionToggles(host, scope) {
  * ChatLog. Re-rendering a ChatMessage is useful for presentation, but invoking
  * an action on that extra rendering can detach the workflow from the document
  * that ChatLog broadcasts to other clients. The live card remains mounted in
- * Foundry's sidebar while VE Mobile is on the character route, so let it own
+ * Foundry's sidebar while Mikelandia Controls is on the character route, so let it own
  * the action and keep the modal as a view of that shared document.
  */
 export function bindNativeChatCardActions(host, rootMessageId, getUi, scope, onNativeRollRequested = () => {}) {
@@ -942,7 +942,7 @@ function identifier(value) {
 
 export function actionSessionTheme(host, document) {
   // This is a freshly-rendered native chat card. Its theme must match Foundry,
-  // rather than VE Mobile's optional shell theme, so system/module styles keep
+  // rather than Mikelandia Controls's optional shell theme, so system/module styles keep
   // their normal palette and contrast rules.
   const interfaceElement = document?.getElementById?.("interface");
   const body = document?.body;

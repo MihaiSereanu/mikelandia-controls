@@ -26,57 +26,24 @@ test("quantity edits include stashed gear, enforce safe integers and delete at z
   assert.equal(f.actor.items.get("torch"), undefined);
 });
 
-test("zero quantity extinguishes an active light before native embedded deletion", async t => {
-  const f = setup(t), torch = f.actor.items.get("torch"), remove = f.actor.deleteEmbeddedDocuments;
-  torch.system.light.active = true;
-  f.actor.deleteEmbeddedDocuments = async (...args) => {
-    assert.equal(torch.system.light.active, false);
-    assert.equal(f.lights.length, 1);
-    return remove(...args);
-  };
-  await f.run(C.EDIT_PROFILE_RESOURCE, f.quantity(0));
-  assert.equal(f.actor.items.get("torch"), undefined);
-});
-
-test("pending light extinction blocks conflicting light actions and revalidates item quantity", async t => {
+test("zero quantity deletes gear without changing token lights", async t => {
   const f = setup(t), torch = f.actor.items.get("torch");
   torch.system.light.active = true;
-  let finish;
-  f.actor.sheet._toggleLightSource = () => new Promise(resolve => { finish = () => { torch.system.light.active = false; resolve(); }; });
-  const pending = f.run(C.EDIT_PROFILE_RESOURCE, f.quantity(0));
-  const light = f.gateway.capabilitiesForActor(f.actor).profileActions.find(a => a.id === "light:torch");
-  await assert.rejects(f.run(C.EXECUTE_PROFILE_ACTION, { actionId: light.id, actionRevision: light.revision }), { code: "COMMAND_BUSY" });
-  torch.system.quantity = 2;
-  finish();
-  await assert.rejects(pending, { code: "STALE_STATE" });
-  assert.equal(f.actor.items.get("torch"), torch);
+  f.actor.sheet._toggleLightSource = () => { throw new Error("Token lights must not be changed"); };
+  await f.run(C.EDIT_PROFILE_RESOURCE, f.quantity(0));
+  assert.equal(f.actor.items.get("torch"), undefined);
+  assert.equal(torch.system.light.active, true);
+  assert.deepEqual(f.lights, []);
 });
 
-test("failed native extinction or deletion preserves the item and releases the command lock", async t => {
-  const f = setup(t), torch = f.actor.items.get("torch"), toggle = f.actor.sheet._toggleLightSource, remove = f.actor.deleteEmbeddedDocuments;
-  torch.system.light.active = true;
-  f.actor.sheet._toggleLightSource = async () => { throw new Error("light failure"); };
-  await assert.rejects(f.run(C.EDIT_PROFILE_RESOURCE, f.quantity(0)), { code: "COMMAND_FAILED" });
-  assert.equal(f.actor.items.get("torch"), torch);
-  f.actor.sheet._toggleLightSource = toggle;
+test("native deletion failure preserves the item and releases its command lock", async t => {
+  const f = setup(t), torch = f.actor.items.get("torch"), remove = f.actor.deleteEmbeddedDocuments;
   f.actor.deleteEmbeddedDocuments = async () => { throw new Error("delete failure"); };
   await assert.rejects(f.run(C.EDIT_PROFILE_RESOURCE, f.quantity(0)), { code: "COMMAND_FAILED" });
   assert.equal(f.actor.items.get("torch"), torch);
   f.actor.deleteEmbeddedDocuments = remove;
   await f.run(C.EDIT_PROFILE_RESOURCE, f.quantity(0));
   assert.equal(f.actor.items.get("torch"), undefined);
-});
-
-test("deletion rechecks ownership after awaiting native light extinction", async t => {
-  const f = setup(t), torch = f.actor.items.get("torch");
-  torch.system.light.active = true;
-  let finish;
-  f.actor.sheet._toggleLightSource = () => new Promise(resolve => { finish = resolve; });
-  const pending = f.run(C.EDIT_PROFILE_RESOURCE, f.quantity(0));
-  f.actor.testUserPermission = () => false;
-  finish();
-  await assert.rejects(pending, { code: "FORBIDDEN" });
-  assert.equal(f.actor.items.get("torch"), torch);
 });
 
 test("saving an existing zero stack removes it without changing other stacks", async t => {
@@ -146,6 +113,43 @@ test("quantity saves reject stale weight configuration", async t => {
   const f = setup(t), request = f.quantity(3);
   f.actor.items.get("torch").system.slots.slots_used = 2;
   await assert.rejects(f.run(C.EDIT_PROFILE_RESOURCE, request), { code: "STALE_STATE" });
+});
+
+test("catalog light acquisition preserves native item creation without token-light activation", async t => {
+  const f = setup(t);
+  const source = { id: "new-torch", uuid: "Item.new-torch", name: "Torch", type: "Basic", system: { isPhysical: true } };
+  f.game.items = collection([source]);
+  let inherited = 0;
+  class BaseSheet {
+    async _onDropItem() {
+      inherited++;
+      return this.actor.createEmbeddedDocuments("Item", [{ name: "Torch", type: "Basic", system: { quantity: 1 } }]);
+    }
+  }
+  class PlayerSheetSD extends BaseSheet {
+    constructor() { super(); this.actor = f.actor; }
+    _effectDropNotAllowed() { return false; }
+    _toggleLightSource() { throw new Error("must not toggle lights"); }
+    _dropActivateLightSource() { throw new Error("must not activate lights"); }
+    _onDropItemSD() { throw new Error("must await inherited acquisition"); }
+  }
+  f.actor.sheet = new PlayerSheetSD();
+  installGlobals(t, {
+    fromUuid: async () => source,
+    CONFIG: { SHADOWDARK: { LIGHT_SOURCE_ITEM_IDS: [source.id] } },
+    shadowdark: { sheets: { PlayerSheetSD }, effects: {
+      createItemWithEffect: async () => ({ name: "Enchanted Torch", type: "Basic", system: { quantity: 1 }, effects: [{ changes: [{ key: "system.light.template", value: "torch" }] }] })
+    } }
+  });
+  const before = f.actor.items.length;
+  await f.run(C.ADD_PROFILE_ITEM, { itemUuid: source.uuid });
+  assert.equal(inherited, 1);
+  assert.equal(f.actor.items.length, before + 1);
+  source.effects = { size: 1 };
+  await f.run(C.ADD_PROFILE_ITEM, { itemUuid: source.uuid });
+  assert.equal(f.actor.items.length, before + 2);
+  assert.equal(inherited, 1);
+  assert.deepEqual(f.lights, []);
 });
 test("catalog uses visible world and compendium items; native acquisition cannot copy actor items", async t => {
   const f = setup(t);

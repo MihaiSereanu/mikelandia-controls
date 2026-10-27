@@ -1,7 +1,6 @@
-const ROUTES = new Set(["characters", "chat", "journals", "scene", "combat", "settings"]);
+const ROUTES = new Set(["characters", "chat", "journals", "combat", "settings"]);
 const NAVIGATION_INTENTS = new Set(["navigate", "navigate-back", "return-to-character", "select-actor", "select-character-tab",
-  "open-scene-chooser", "open-split-scene-chooser", "close-scene-chooser", "toggle-scene-chooser", "toggle-split-screen",
-  "open-full-scene", "return-to-scene-after-action", "mode-transition-started", "reconnect-started", "action-navigation-invalidated"]);
+  "mode-transition-started", "reconnect-started", "action-navigation-invalidated"]);
 
 export const initialAppState = Object.freeze({
   route: "characters",
@@ -33,19 +32,13 @@ export const initialAppState = Object.freeze({
   journalHeading: "",
   journalMenuOpen: false,
   journalImage: null,
-  quickbarCollapsed: false,
-  sceneChooserOpen: false,
-  sceneChooserRevision: 0,
-  splitScreen: false,
-  splitScreenPreferred: true,
-  canvasAvailable: true,
-  splitSecondaryRoute: "characters",
+
+  canvasAvailable: false,
+
   tabletNavSide: "right",
   formFactor: "phone",
   orientation: "portrait",
-  templatePlacement: null,
-  nativeTokenPlacement: null,
-  actorTokenPlacement: null,
+
   reconnect: null,
   modeTransition: null,
   viewRevision: 0
@@ -53,11 +46,9 @@ export const initialAppState = Object.freeze({
 
 export function reduceAppState(state, event) {
   const next = reduceState(state, event);
-  const layoutChanged = event.type === "layout-policy-changed" && ["formFactor", "orientation", "splitScreen", "canvasAvailable"]
+  const layoutChanged = event.type === "layout-policy-changed" && ["formFactor", "orientation"]
     .some(key => state[key] !== next[key]);
-  const sceneChanged = event.type === "session-loaded" && ["id", "levelId", "canvasReady", "canvasDisabled"]
-    .some(key => state.snapshot?.scene?.[key] !== next.snapshot?.scene?.[key]);
-  return next !== state && (NAVIGATION_INTENTS.has(event.type) || layoutChanged || sceneChanged)
+  return next !== state && (NAVIGATION_INTENTS.has(event.type) || layoutChanged)
     ? { ...next, navigationRevision: (state.navigationRevision ?? 0) + 1 } : next;
 }
 
@@ -71,9 +62,7 @@ function reduceState(state, event) {
         : event.snapshot?.preferredActorId ?? legacyActors[0]?.id ?? "";
       const authoritativeSelection = Object.hasOwn(event.snapshot ?? {}, "selectedActor");
       const selectedActor = authoritativeSelection ? event.snapshot.selectedActor : legacyActors.find((actor) => actor.id === legacySelectedId) ?? null;
-      const controlledActorId = authoritativeSelection ? "" : event.snapshot?.scene?.movement?.tokens
-        ?.find((token) => token.controlled && legacyActors.some((actor) => actor.id === token.actorId))?.actorId ?? "";
-      const effectiveSelectedActor = controlledActorId ? legacyActors.find((actor) => actor.id === controlledActorId) ?? selectedActor : selectedActor;
+      const effectiveSelectedActor = selectedActor;
       const selectedActorSourceUuid = String(event.snapshot?.selectedActorSourceUuid ?? effectiveSelectedActor?.sourceUuid ?? (effectiveSelectedActor?.id ? `Actor.${effectiveSelectedActor.id}` : ""));
       const selectedActorId = String(effectiveSelectedActor?.id ?? "");
       const hadSelectedActor = Boolean(state.selectedActorSourceUuid || state.selectedActorId);
@@ -121,16 +110,9 @@ function reduceState(state, event) {
       return { ...state, status: "error", error: String(event.error?.message ?? event.error ?? "VEMOBILE.Errors.Unknown") };
     case "navigate": {
       const route = ROUTES.has(event.route) ? event.route : "characters";
-      if ((state.templatePlacement || state.nativeTokenPlacement) && route !== "scene") return state;
-      return state.route === route ? state : { ...state, route, routeHistory: pushRouteHistory(state.routeHistory, state.route), sceneChooserOpen: false, splitSecondaryRoute: route === "scene" ? state.splitSecondaryRoute : route, rollResult: route === "characters" ? state.rollResult : null, characterItemId: route === "characters" ? state.characterItemId : "", expandedCharacterItemId: route === "characters" ? state.expandedCharacterItemId : "", characterOpenSections: route === "characters" ? disclosureSections(state.characterDisclosureByContext, activeActorSource(state), state.characterTab) : [], hitPointEditor: route === "characters" ? state.hitPointEditor : "", restEditor: route === "characters" ? state.restEditor : false, spellSlotEditor: route === "characters" ? state.spellSlotEditor : null, xpEditor: route === "characters" ? state.xpEditor : false, portraitImage: route === "characters" ? state.portraitImage : null };
+      return state.route === route ? state : { ...state, route, routeHistory: pushRouteHistory(state.routeHistory, state.route),   rollResult: route === "characters" ? state.rollResult : null, characterItemId: route === "characters" ? state.characterItemId : "", expandedCharacterItemId: route === "characters" ? state.expandedCharacterItemId : "", characterOpenSections: route === "characters" ? disclosureSections(state.characterDisclosureByContext, activeActorSource(state), state.characterTab) : [], hitPointEditor: route === "characters" ? state.hitPointEditor : "", restEditor: route === "characters" ? state.restEditor : false, spellSlotEditor: route === "characters" ? state.spellSlotEditor : null, xpEditor: route === "characters" ? state.xpEditor : false, portraitImage: route === "characters" ? state.portraitImage : null };
     }
-    case "return-to-scene-after-action": {
-      const next = reduceState(state, { type: "navigate", route: "scene" });
-      if (next === state) return state;
-      const result = state.rollResult;
-      return result && event.preserveRollResultId === result.id
-        ? { ...next, rollResult: Object.freeze({ ...result, sceneReturn: true }) } : next;
-    }
+
     case "return-to-character": {
       if (state.route === "characters") return state;
       const next = reduceAppState(state, { type: "navigate", route: "characters" });
@@ -139,10 +121,10 @@ function reduceState(state, event) {
     case "navigate-back": {
       const prior = popRouteHistory(state.routeHistory);
       if (!prior.route || !ROUTES.has(prior.route)) return state;
-      return { ...state, route: prior.route, routeHistory: prior.history, sceneChooserOpen: false, journal: prior.route === "journals" ? state.journal : null, journalPageId: prior.route === "journals" ? state.journalPageId : "", journalImage: null, characterItemId: "", expandedCharacterItemId: "", hitPointEditor: "", restEditor: false, spellSlotEditor: null, xpEditor: false, portraitImage: null };
+      return { ...state, route: prior.route, routeHistory: prior.history,  journal: prior.route === "journals" ? state.journal : null, journalPageId: prior.route === "journals" ? state.journalPageId : "", journalImage: null, characterItemId: "", expandedCharacterItemId: "", hitPointEditor: "", restEditor: false, spellSlotEditor: null, xpEditor: false, portraitImage: null };
     }
     case "select-actor":
-      return { ...state, characterNavigation: Object.freeze([]), selectedActorId: event.actorId ?? state.selectedActorId, selectedActorSourceUuid: event.sourceUuid ?? state.selectedActorSourceUuid, characterTab: "overview", route: "characters", sceneChooserOpen: false, splitSecondaryRoute: "characters", rollResult: null, characterItemId: "", expandedCharacterItemId: "", characterOpenSections: disclosureSections(state.characterDisclosureByContext, event.sourceUuid ?? state.selectedActorSourceUuid, "overview"), hitPointEditor: "", restEditor: false, spellSlotEditor: null, xpEditor: false, portraitImage: null };
+      return { ...state, characterNavigation: Object.freeze([]), selectedActorId: event.actorId ?? state.selectedActorId, selectedActorSourceUuid: event.sourceUuid ?? state.selectedActorSourceUuid, characterTab: "overview", route: "characters",   rollResult: null, characterItemId: "", expandedCharacterItemId: "", characterOpenSections: disclosureSections(state.characterDisclosureByContext, event.sourceUuid ?? state.selectedActorSourceUuid, "overview"), hitPointEditor: "", restEditor: false, spellSlotEditor: null, xpEditor: false, portraitImage: null };
     case "select-character-tab":
       return state.characterTab === event.tab ? state : { ...state, characterTab: event.tab, rollResult: null, expandedCharacterItemId: "", characterOpenSections: disclosureSections(state.characterDisclosureByContext, activeActorSource(state), event.tab), hitPointEditor: "", restEditor: false, spellSlotEditor: null, xpEditor: false, portraitImage: null };
     case "discard-character-origin":
@@ -154,7 +136,7 @@ function reduceState(state, event) {
     case "dismiss-roll-result":
       return state.rollResult?.id !== event.id ? state : { ...state, rollResult: null };
     case "show-action-session":
-      return { ...state, actionSession: event.session, actionSessionOrigin: event.origin === "scene" ? "scene" : "character", rollResult: null };
+      return { ...state, actionSession: event.session, actionSessionOrigin: "character", rollResult: null };
     case "dismiss-action-session":
       return state.actionSession ? { ...state, actionSession: null, actionSessionOrigin: "" } : state;
     case "open-character-item":
@@ -244,80 +226,15 @@ function reduceState(state, event) {
       return event.image?.src ? { ...state, journalImage: Object.freeze({ src: String(event.image.src), name: String(event.image.name ?? "") }) } : state;
     case "close-journal-image":
       return state.journalImage ? { ...state, journalImage: null } : state;
-    case "set-quickbar-collapsed":
-      return state.quickbarCollapsed === Boolean(event.collapsed) ? state : { ...state, quickbarCollapsed: Boolean(event.collapsed) };
-    case "open-scene-chooser":
-      return state.route === "scene" && !state.sceneChooserOpen ? { ...state, sceneChooserOpen: true } : state;
-    case "open-split-scene-chooser":
-      return state.route === "scene" && state.sceneChooserOpen ? state : {
-        ...state,
-        route: "scene",
-        sceneChooserOpen: true,
-        splitSecondaryRoute: state.route === "scene" ? state.splitSecondaryRoute : state.route,
-        rollResult: null,
-        characterItemId: "",
-        expandedCharacterItemId: "",
-        characterOpenSections: [],
-        hitPointEditor: "",
-        restEditor: false,
-        spellSlotEditor: null,
-        xpEditor: false,
-        portraitImage: null
-      };
-    case "close-scene-chooser":
-      return state.sceneChooserOpen ? { ...state, sceneChooserOpen: false } : state;
-    case "toggle-scene-chooser":
-      return state.route === "scene" ? { ...state, sceneChooserOpen: !state.sceneChooserOpen } : state;
-    case "scene-navigation-invalidated":
-      return state.sceneChooserOpen ? { ...state, sceneChooserRevision: state.sceneChooserRevision + 1 } : state;
-    case "toggle-split-screen":
-      if (state.templatePlacement || state.nativeTokenPlacement) return state;
-      return state.formFactor === "tablet" && state.orientation === "landscape" && state.canvasAvailable !== false
-        ? { ...state, splitScreen: !state.splitScreen, splitScreenPreferred: !state.splitScreen }
-        : state.splitScreen ? { ...state, splitScreen: false } : state;
+
     case "layout-policy-changed": {
       const formFactor = event.formFactor === "tablet" ? "tablet" : "phone";
       const orientation = event.orientation === "landscape" ? "landscape" : "portrait";
-      const canvasAvailable = event.canvasAvailable !== false;
-      return {
-        ...state,
-        formFactor,
-        orientation,
-        canvasAvailable,
-        splitScreen: formFactor === "tablet" && orientation === "landscape" && canvasAvailable
-          ? Boolean(state.splitScreenPreferred || state.splitScreen)
-          : false
-      };
+      return { ...state, formFactor, orientation };
     }
-    case "open-full-scene":
-      return {
-        ...state,
-        route: "scene",
-        sceneChooserOpen: false,
-        splitSecondaryRoute: state.route === "scene" ? state.splitSecondaryRoute : state.route,
-        rollResult: null,
-        characterItemId: "",
-        expandedCharacterItemId: "",
-        characterOpenSections: [],
-        hitPointEditor: "",
-        restEditor: false,
-        spellSlotEditor: null,
-        xpEditor: false,
-        portraitImage: null
-      };
     case "toggle-tablet-nav-side":
-      if (state.templatePlacement || state.nativeTokenPlacement) return state;
       return { ...state, tabletNavSide: state.tabletNavSide === "left" ? "right" : "left" };
-    case "template-placement-changed":
-      return { ...state, templatePlacement: event.placement ?? null, sceneChooserOpen: event.placement ? false : state.sceneChooserOpen };
-    case "native-token-placement-changed":
-      return { ...state, nativeTokenPlacement: event.placement ?? null, sceneChooserOpen: event.placement ? false : state.sceneChooserOpen };
-    case "actor-token-placement-changed":
-      return { ...state, actorTokenPlacement: event.placement ?? null, sceneChooserOpen: event.placement ? false : state.sceneChooserOpen };
-    case "template-placement-ended":
-      return state.templatePlacement && (!event.id || state.templatePlacement.id === event.id)
-        ? { ...state, templatePlacement: null }
-        : state;
+
     case "mode-transition-started":
       return {
         ...state,
@@ -332,9 +249,7 @@ function reduceState(state, event) {
         xpEditor: false,
         portraitImage: null,
         journalImage: null,
-        templatePlacement: null,
-        nativeTokenPlacement: null,
-        actorTokenPlacement: null,
+
         modeTransition: Object.freeze({
           generation: Number(event.generation) || 0,
           phase: "applying",

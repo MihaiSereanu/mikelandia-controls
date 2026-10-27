@@ -10,7 +10,6 @@ export function createVeBackDispatcher({
   commands,
   nativeApplications = null,
   getRoot = () => null,
-  isSplitActive = () => false
 }) {
   const next = () => {
     const state = getState?.() ?? {};
@@ -22,9 +21,7 @@ export function createVeBackDispatcher({
       else if (typeof admitted.application?.close === "function") void Promise.resolve(admitted.application.close()).catch(() => {});
       else closeTransient(admitted.element);
     }];
-    if (state.nativeTokenPlacement) return ["native-token-placement", () => commands.cancelNativeTokenPlacement?.()];
-    if (state.actorTokenPlacement) return ["actor-token-placement", () => commands.cancelActorTokenPlacement?.()];
-    if (state.modeTransition || state.reconnect || state.templatePlacement) return ["blocked"];
+
     // A native dialog sits above Character detail and other VE-owned sheets.
     // Dismiss its own close control before navigating or closing an item.
     const nativeDialog = topmostTransient(getRoot?.(), true);
@@ -45,10 +42,9 @@ export function createVeBackDispatcher({
       () => closeTransient(transient)
     ];
 
-    if (state.sceneChooserOpen) return ["scene-chooser", () => commands.closeSceneChooser?.()];
     if (state.route === "journals" && state.journal) return ["journal-detail", () => commands.closeJournal?.()];
     if (state.route === "characters" && state.characterNavigation?.length) return ["actor-origin", () => commands.returnToActorOrigin?.()];
-    if (isSplitActive()) return ["split-pane", () => commands.openFullScene?.()];
+
     if (state.route !== "characters") return ["character-home", () => commands.returnToCharacter?.()];
     return ["root"];
   };

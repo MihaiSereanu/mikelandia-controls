@@ -113,7 +113,7 @@ export function createFoundryMobileBackGateway({
       lastAction = String(onBack?.() ?? "root");
     } catch (error) {
       lastAction = "error";
-      recordError("VE Back action failed", error);
+      recordError("Mikelandia Controls Back action failed", error);
     }
     const history = browser()?.history;
     // Only the base Character view may fall through to Foundry. Its handler

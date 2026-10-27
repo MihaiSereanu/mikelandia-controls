@@ -1,27 +1,14 @@
 import { localizedText } from "../ui/localized-text.mjs";
+import { runMobileApplicationWorkflow } from "../foundry/mobile-ui-isolation.mjs";
 import { createTaskScope } from "./task-scope.mjs";
 import { createAppFrame } from "../ui/app-frame.mjs";
 import { createAuthoritativeResynchronizer } from "./authoritative-resync.mjs";
-import { createSceneInteractionReadiness, sceneInteractionIsReady } from "./scene-interaction-readiness.mjs";
-import { createCombatSceneActions } from "./combat-scene-actions.mjs";
-import { createTemplatePlacementController } from "./template-placement-session.mjs";
-import { createNativeTokenPlacementController } from "./native-token-placement-session.mjs";
+
 import { ACTOR_COMMANDS } from "./command-names.mjs";
-import { createActionSceneReturn } from "./action-scene-return.mjs";
+
 import { createModeTransitionCoordinator, presentationLabel } from "./mode-transition.mjs";
 
-export function actorTokenSourceKnown(snapshot, sourceUuid) {
-  return Boolean(sourceUuid && (snapshot?.selectedActor?.sourceUuid === sourceUuid
-    || snapshot?.actors?.some((actor) => String(actor.sourceUuid ?? (actor.id ? `Actor.${actor.id}` : "")) === sourceUuid)));
-}
-
-export function nativeSceneTileTapAllowed({ active, state, presentation }) {
-  return Boolean(active && !state?.reconnect && !state?.modeTransition
-    && !state?.templatePlacement && !state?.nativeTokenPlacement && !state?.actorTokenPlacement
-    && sceneInteractionIsReady(presentation));
-}
-
-export function createAppKernel({ store, session, commandGateway, biographyGateway, actorEditorGateway = null, combatGateway, cameraIntents, authoritativeGateway, canvasRecoveryGateway = null, loadTimingGateway = null, reloadApplication = () => globalThis.window?.location?.reload?.(), connectionGeneration, sceneGateway, templatePlacementGateway, nativeTokenPlacementGateway = null, actorTokenPlacementGateway = null, movementGateway, quickbarGateway, hotbarGateway = null, actionBarPreferences = null, nativeChatGateway, armorClassGateway = null, activeEffectContextGateway, actionSessionGateway, preferencesGateway, settingsCompatibilityGateway, moduleOverlayGateway, sessionStatusGateway, controlsGuideGateway = null, isControlsUiReady = () => false, themeGateway, mobileBackGateway = null, mobileAssetGateway = null, lowMemoryGateway = null, graphicsProfileGateway = lowMemoryGateway, graphicsRecoveryGateway = null, metrics, diagnostics, performanceObserver = null, wakeLockController, readPolicy, readGraphicsPolicy = () => null, watchGraphicsPolicy = () => () => {}, disable, preparePresentation = () => {}, createFrame = createAppFrame }) {
+export function createAppKernel({ store, session, commandGateway, biographyGateway, actorEditorGateway = null, combatGateway, authoritativeGateway, loadTimingGateway = null, reloadApplication = () => globalThis.window?.location?.reload?.(), connectionGeneration, nativeChatGateway, armorClassGateway = null, activeEffectContextGateway, actionSessionGateway, preferencesGateway, settingsCompatibilityGateway, sessionStatusGateway, controlsGuideGateway = null, isControlsUiReady = () => false, themeGateway, mobileBackGateway = null, diagnostics, performanceObserver = null, wakeLockController, readPolicy, readGraphicsPolicy = () => null, watchGraphicsPolicy = () => () => {}, disable, preparePresentation = () => {}, createFrame = createAppFrame }) {
   const localize = (key, fallback, data) => localizedText((id, _fallback, values) => preferencesGateway?.localize?.(id, values), key, fallback, data);
   let runtimeScope = null;
   let activationCommitted = false;
@@ -31,14 +18,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
   let rollResultSequence = 0;
   let journalRequestSequence = 0;
   let resynchronizer = null;
-  let sceneInteractionReadiness = null;
-  let combatSceneActions = null;
-  let templatePlacement = null;
-  let nativeTokenPlacement = null;
-  let tokenPlacementGeneration = 0;
-  let placingActorToken = false;
   let modeTransition = null;
-  const recoveryCaptures = new Map();
   const dismissedActionSessions = new Set();
   const activeActionExecutions = new Map();
   const activeSummaryExecutions = new Set();
@@ -56,20 +36,12 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
   });
   const guardConnection = async (action) => {
     const generation = connectionGeneration?.current ?? 0;
-    const result = await action({ ...expectedSession(), connectionGeneration: generation });
+    const owner = runtimeScope;
+    const result = await runMobileApplicationWorkflow(() => action({ ...expectedSession(), connectionGeneration: generation }),
+      () => activationCommitted && runtimeScope === owner && !owner?.disposed && readPolicy().active);
     if (connectionGeneration && !connectionGeneration.matches(generation)) throw new Error(localizedText(localize, "VEMOBILE.Interface.CombatGateway.TheConnectionChangedWhileThisActionWasRunning", "The connection changed while this action was running."));
     return result;
   };
-  const guardActionBar = (source, action) => guardConnection((expected) => {
-    const state = store.state;
-    const preferences = preferencesGateway.actionMenu?.() ?? preferencesGateway.snapshot();
-    if (!activationCommitted || !runtimeScope || runtimeScope.disposed || !readPolicy().active
-      || state.reconnect || state.modeTransition || state.templatePlacement || state.nativeTokenPlacement || state.actorTokenPlacement
-      || preferences.quickbarEnabled === false || (preferences.quickbarSource ?? "character") !== source) {
-      throw new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.ThisActionBarIsNoLongerActive", "This action bar is no longer active."));
-    }
-    return action(expected);
-  });
   const guardCombatControl = (request, action) => {
     const lifecycleToken = runtimeScope;
     return guardConnection((expected) => {
@@ -82,27 +54,11 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     });
   };
 
-  const cancelActorTokenPlacement = () => {
-    tokenPlacementGeneration += 1;
-    actorTokenPlacementGateway?.cancel();
-    if (store.state.actorTokenPlacement) store.dispatch({ type: "actor-token-placement-changed", placement: null });
-  };
   const requireCharacterView = (sourceUuid = store.state.selectedActorSourceUuid) => {
     if (!activationCommitted || !runtimeScope || runtimeScope.disposed || !readPolicy().active
       || store.state.route !== "characters" || store.state.reconnect || store.state.modeTransition
       || sourceUuid !== store.state.selectedActorSourceUuid) throw new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.ThisActorViewIsNoLongerActive", "This Actor view is no longer active."));
   };
-  const actorTokenEligible = (sourceUuid) => {
-    const state = store.state;
-    const sceneId = String(state.snapshot?.scene?.id ?? "");
-    const knownSource = actorTokenSourceKnown(state.snapshot, sourceUuid);
-    return Boolean(runtimeScope && readPolicy()?.active && sceneId
-      && knownSource
-      && state.snapshot?.scene?.canvasReady && state.canvasAvailable !== false
-      && !state.reconnect && !state.modeTransition && !state.templatePlacement && !state.nativeTokenPlacement
-      && actorTokenPlacementGateway?.eligibility(sourceUuid, sceneId));
-  };
-
   const dispatchNavigation = (event) => {
     store.dispatch({ type: "action-navigation-invalidated" });
     return store.dispatch(event);
@@ -111,61 +67,17 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     navigate: (route) => dispatchNavigation({ type: "navigate", route }),
     navigateBack: () => dispatchNavigation({ type: "navigate-back" }),
     returnToCharacter: () => dispatchNavigation({ type: "return-to-character" }),
-    openSceneChooser: () => dispatchNavigation({ type: "open-scene-chooser" }),
-    openSplitSceneChooser: () => store.dispatch({ type: "open-split-scene-chooser" }),
-    closeSceneChooser: () => {
-      void sceneGateway.closeSceneContextMenu?.();
-      store.dispatch({ type: "close-scene-chooser" });
-    },
-    toggleSceneChooser: () => dispatchNavigation({ type: "toggle-scene-chooser" }),
-    readSceneNavigation: () => sceneGateway.navigationSnapshot(),
-    viewScene: async (sceneId, { keepSceneChooserOpen = false } = {}) => {
-      void sceneGateway.closeSceneContextMenu?.();
-      const keepOpen = shouldKeepSceneChooserOpen(store.state, keepSceneChooserOpen);
-      const result = await guardConnection((expected) => sceneGateway.viewScene(sceneId, expected));
-      if (!keepOpen && result?.viewed) store.dispatch({ type: "close-scene-chooser" });
-      return result;
-    },
-    viewSceneLevel: async (payload, { keepSceneChooserOpen = false } = {}) => {
-      const owner = runtimeScope;
-      if (!activationCommitted || !owner || owner.disposed || !readPolicy()?.active || store.state.reconnect || store.state.modeTransition) {
-        throw new Error(localizedText(localize, "VEMOBILE.Scene.Levels.Inactive", "This Scene level control is no longer active."));
-      }
-      void sceneGateway.closeSceneContextMenu?.();
-      const keepOpen = shouldKeepSceneChooserOpen(store.state, keepSceneChooserOpen);
-      const result = await guardConnection(expected => sceneGateway.viewSceneLevel(payload, { ...expected,
-        isCurrent: () => runtimeScope === owner && !owner.disposed && activationCommitted && readPolicy()?.active
-          && !store.state.reconnect && !store.state.modeTransition }));
-      if (runtimeScope === owner && !owner.disposed && result?.viewed) {
-        if (!keepOpen) store.dispatch({ type: "close-scene-chooser" });
-        else store.dispatch({ type: "scene-navigation-invalidated" });
-      }
-      return result;
-    },
-    openSceneContextMenu: (payload) => guardConnection((expected) => sceneGateway.openSceneContextMenu(payload, expected)),
-    selectSceneContextOption: (payload) => guardConnection((expected) => sceneGateway.selectSceneContextOption(payload, expected)),
-    closeSceneContextMenu: (payload) => sceneGateway.closeSceneContextMenu(payload),
-    reportSceneNavigationError: (error) => {
-      diagnostics?.record?.("warn", "Scene navigation was rejected", error);
-      sceneGateway.notifyError?.(error);
-    },
+
     reportCharacterMutationError: (error) => {
       diagnostics?.record?.("warn", "Character mutation was rejected", error);
       commandGateway.notifyError?.(error);
     },
-    traceScenePickerEvent: (entry) => diagnostics?.record?.("debug", `Scene picker ${JSON.stringify(entry)}`),
+
     selectActor: (sourceUuid) => {
       const snapshot = session.selectCharacterSource(sourceUuid, expectedSession());
       session.adopt?.(snapshot);
       store.dispatch({ type: "session-loaded", snapshot, characterNavigation: Object.freeze([]) });
-      const actorId = snapshot.selectedActor?.id ?? "";
-      const sceneId = store.state.snapshot?.scene?.id;
-      if (!sceneId) return Promise.resolve(Object.freeze({ ok: true, action: "none", reason: "no-current-scene" }));
-      const releaseCharacterSource = session.holdCharacterSource?.(sourceUuid) ?? (() => {});
-      return guardConnection((expected) => movementGateway.controlActor({ sceneId, actorId }, expected)).catch((error) => {
-        diagnostics?.record?.("warn", "The selected Actor has no controllable token on the current Scene", error);
-        return Object.freeze({ ok: false, action: "none", reason: error?.message ?? "Token selection failed." });
-      }).finally(releaseCharacterSource);
+      return Promise.resolve(Object.freeze({ ok: true }));
     },
     openReferencedActor: ({ originSourceUuid, targetSourceUuid }) => {
       requireCharacterView(originSourceUuid);
@@ -225,7 +137,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     },
     updateRollResult: (id, payload) => {
       if (!activationCommitted || !runtimeScope || runtimeScope.disposed || !readPolicy().active || store.state.rollResult?.id !== id
-        || (store.state.route !== "characters" && !(store.state.route === "scene" && store.state.rollResult.sceneReturn))
+        || store.state.route !== "characters"
         || (store.state.rollResult.actorSourceUuid && store.state.rollResult.actorSourceUuid !== store.state.selectedActorSourceUuid)) return;
       const label = String(payload?.label ?? store.state.rollResult.label).trim().slice(0, 100);
       const total = Number(payload?.total);
@@ -311,139 +223,18 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     closeJournalImage: () => store.dispatch({ type: "close-journal-image" }),
     localize,
     readLocale: () => preferencesGateway?.readLocale?.() ?? "en",
-    toggleSplitScreen: () => dispatchNavigation({ type: "toggle-split-screen" }),
-    setQuickbarCollapsed: (collapsed) => { actionBarPreferences?.setCollapsed(collapsed); store.dispatch({ type: "set-quickbar-collapsed", collapsed }); },
-    readActionBarPreferences: (source, actorSourceUuid) => actionBarPreferences?.read(source, actorSourceUuid) ?? {},
-    setActionBarPage: (source, actorSourceUuid, page) => actionBarPreferences?.setPage(source, actorSourceUuid, page),
-    openFullScene: () => dispatchNavigation({ type: "open-full-scene" }),
+
     toggleTabletNavSide: () => store.dispatch({ type: "toggle-tablet-nav-side" }),
-    watchMetrics: (owner, onUpdate) => metrics?.watch(owner, onUpdate),
+
     syncFoundryTheme: (theme) => themeGateway?.sync(theme, runtimeScope),
-    syncModuleOverlays: (context) => moduleOverlayGateway?.reconcile(context),
-    refreshScenePresentation: (owner) => sceneGateway.refreshPresentation(owner),
-    captureSceneViewportAnchor: (bounds) => sceneGateway.captureViewportAnchor(bounds),
-    restoreSceneViewportAnchor: (anchor, bounds) => sceneGateway.restoreViewportAnchor(anchor, bounds),
-    captureFixedSceneAnchor: (bounds) => sceneGateway.captureFixedViewportAnchor(bounds),
-    restoreFixedSceneAnchor: (anchor, bounds) => sceneGateway.restoreFixedViewportAnchor(anchor, bounds),
-    acknowledgeSceneCameraPresentation: (details) => cameraIntents?.acknowledgePresentation(details),
-    readSceneInteractionState: () => sceneGateway.interactionState(),
-    bindSceneGestures: (surface, owner, onTap, onLongPress, onMovementAbort, options) => sceneGateway.bindGestures(surface, owner, onTap, onLongPress, onMovementAbort, options),
-    zoomScene: (factor) => sceneGateway.zoom(factor),
-    recenterScene: () => sceneGateway.recenter(),
-    bindTemplatePlacement: (surface, owner, onOverlay) => templatePlacement?.bindGestures(surface, owner, onOverlay),
-    setInitialTemplatePosition: (clientPoint) => Promise.resolve(templatePlacement?.setInitialPosition(clientPoint) ?? false),
-    placeTemplate: () => templatePlacement?.place() ?? Promise.resolve(false),
-    cancelTemplatePlacement: () => templatePlacement?.cancel() ?? Promise.resolve(false),
-    positionNativeToken: (point) => nativeTokenPlacement?.position(point) ?? false,
-    placeNativeToken: () => nativeTokenPlacement?.place() ?? false,
-    cancelNativeTokenPlacement: () => nativeTokenPlacement?.cancel() ?? false,
-    canPlaceActorToken: (sourceUuid) => actorTokenEligible(sourceUuid),
-    dropActorToken: (sourceUuid, point, expectedSelectedSource = store.state.snapshot?.selectedActor?.sourceUuid) => {
-      const state = store.state;
-      if (!actorTokenEligible(sourceUuid) || state.formFactor !== "tablet" || !state.splitScreen
-        || state.route !== "characters" || state.actorTokenPlacement
-        || state.snapshot?.selectedActor?.sourceUuid !== expectedSelectedSource) return Promise.resolve(false);
-      const sceneId = state.snapshot.scene.id;
-      return guardConnection(() => actorTokenPlacementGateway.drop(sourceUuid, sceneId, point, () =>
-        actorTokenEligible(sourceUuid) && store.state.route === "characters"
-        && store.state.formFactor === "tablet" && store.state.splitScreen
-        && store.state.snapshot?.selectedActor?.sourceUuid === expectedSelectedSource));
-    },
-    beginActorTokenPlacement: async (sourceUuid, expectedSelectedSource = store.state.snapshot?.selectedActor?.sourceUuid) => {
-      if (!actorTokenEligible(sourceUuid) || store.state.actorTokenPlacement || store.state.templatePlacement || store.state.nativeTokenPlacement
-        || store.state.snapshot?.selectedActor?.sourceUuid !== expectedSelectedSource) return false;
-      const id = ++tokenPlacementGeneration;
-      const sceneId = String(store.state.snapshot.scene.id);
-      const selectionCurrent = () => store.state.snapshot?.selectedActor?.sourceUuid === expectedSelectedSource;
-      store.dispatch({ type: "navigate", route: "scene" });
-      try {
-        await sceneInteractionReadiness.ensure();
-        if (id !== tokenPlacementGeneration || store.state.route !== "scene"
-          || String(store.state.snapshot?.scene?.id) !== sceneId || !actorTokenEligible(sourceUuid)
-          || !selectionCurrent()) return false;
-        const appearance = await actorTokenPlacementGateway.prepare(sourceUuid, sceneId, () =>
-          id === tokenPlacementGeneration && store.state.route === "scene" && actorTokenEligible(sourceUuid)
-          && selectionCurrent());
-        if (!appearance || id !== tokenPlacementGeneration || store.state.route !== "scene"
-          || !actorTokenEligible(sourceUuid) || !selectionCurrent()) {
-          if (id === tokenPlacementGeneration) actorTokenPlacementGateway.cancel();
-          return false;
-        }
-        store.dispatch({ type: "actor-token-placement-changed", placement: Object.freeze({
-          id, sourceUuid, sceneId, appearance, selectedSourceUuid: expectedSelectedSource,
-          formFactor: store.state.formFactor, orientation: store.state.orientation,
-          splitScreen: store.state.splitScreen, tabletNavSide: store.state.tabletNavSide
-        }) });
-        return true;
-      } catch (error) {
-        if (id === tokenPlacementGeneration) {
-          actorTokenPlacementGateway?.cancel();
-          diagnostics?.record?.("warn", "Actor Token placement could not start", error);
-        }
-        return false;
-      }
-    },
-    actorTokenPreviewAt: (point) => actorTokenPlacementGateway?.previewAt(point) ?? null,
-    placeActorToken: async () => {
-      const placement = store.state.actorTokenPlacement;
-      if (!placement || placingActorToken) return false;
-      if (!actorTokenEligible(placement.sourceUuid) || store.state.route !== "scene"
-        || String(store.state.snapshot?.scene?.id) !== placement.sceneId
-        || store.state.snapshot?.selectedActor?.sourceUuid !== placement.selectedSourceUuid) {
-        cancelActorTokenPlacement();
-        throw new Error(commands.localize("VEMOBILE.Scene.ActorToken.Unavailable", "Token placement is no longer available."));
-      }
-      placingActorToken = true;
-      try {
-        const result = await guardConnection(() => actorTokenPlacementGateway.commit(placement.sourceUuid, placement.sceneId, () =>
-          store.state.actorTokenPlacement?.id === placement.id && store.state.route === "scene"
-          && actorTokenEligible(placement.sourceUuid)
-          && store.state.snapshot?.selectedActor?.sourceUuid === placement.selectedSourceUuid));
-        if (result) cancelActorTokenPlacement();
-        return Boolean(result);
-      } finally { placingActorToken = false; }
-    },
-    cancelActorTokenPlacement,
-    focusSceneToken: (payload) => guardConnection((expected) => movementGateway.focus({
-      ...payload,
-      cameraReason: "controlled-token-presentation"
-    }, expected)),
-    stepSceneToken: (payload) => guardConnection((expected) => movementGateway.step(payload, expected)),
-    previewSceneMovementHistory: (payload) => movementGateway.previewHistory(payload, {
-      worldId: store.state.snapshot?.world?.id,
-      userId: store.state.snapshot?.user?.id
-    }),
-    tapSceneToken: (payload) => guardConnection((expected) => movementGateway.tap(payload, expected, { deferSelection: true })),
-    nativeSceneTileTap: (payload) => nativeSceneTileTapAllowed({
-      active: activationCommitted && readPolicy().active,
-      state: store.state,
-      presentation: frame?.readSceneInteractionState?.()
-    })
-      ? sceneGateway.nativeTileTap({ ...payload, ...expectedSession() }) : false,
-    bindSceneTokenTouch: (surface, owner, onResult, onError) => movementGateway.bindTouch(surface, owner, onResult, onError, {
-      worldId: store.state.snapshot?.world?.id,
-      userId: store.state.snapshot?.user?.id,
-      connectionGeneration: connectionGeneration?.current
-    }),
-    releaseSceneToken: (payload) => guardConnection((expected) => movementGateway.release(payload, expected)),
-    targetSceneToken: (payload) => guardConnection((expected) => movementGateway.target(payload, expected)),
-    clearSceneTargets: () => guardConnection((expected) => movementGateway.clearTargets(expected)),
+
     endCombatTurn: (combatId) => guardConnection((expected) => combatGateway.endTurn({ combatId, ...expected })),
     startCombat: (request) => guardCombatControl(request, expected => combatGateway.startCombat(expected)),
     endCombat: (request) => guardCombatControl(request, expected => combatGateway.endCombat(expected)),
     previousCombatTurn: (request) => guardCombatControl(request, expected => combatGateway.previousTurn(expected)),
     nextCombatTurn: (request) => guardCombatControl(request, expected => combatGateway.nextTurn(expected)),
     rollCombatInitiative: (combatId, combatantId) => guardConnection((expected) => combatGateway.rollInitiative({ combatId, combatantId }, expected)),
-    focusCombatant: (combatId, combatantId) => combatSceneActions.focus(combatId, combatantId),
-    centerCombatant: (combatId, combatantId, viewport = null) => guardConnection((expected) => combatGateway.centerCombatant({ combatId, combatantId, viewport }, expected)),
-    targetCombatant: (combatId, combatantId) => combatSceneActions.target(combatId, combatantId),
-    addQuickbarAction: (actorSourceUuid, descriptor) => guardActionBar("character", (expected) => quickbarGateway.add({ actorSourceUuid, descriptor }, expected)),
-    saveQuickbar: (actorSourceUuid, slots, expectedSlots) => guardActionBar("character", (expected) => quickbarGateway.save({ actorSourceUuid, slots, expectedSlots }, expected)),
-    executeHotbarMacro: (request) => guardActionBar("foundry", expected => hotbarGateway.execute(request, expected)),
-    assignHotbarMacro: (request) => guardActionBar("foundry", async expected => { const result = await hotbarGateway.assign(request, expected); if (activationCommitted) loadSnapshot(); return result; }),
-    addHotbarItem: (request) => guardActionBar("foundry", async expected => { const result = await hotbarGateway.addItem(request, expected); if (activationCommitted) loadSnapshot(); return result; }),
-    moveHotbarMacro: (request) => guardActionBar("foundry", async expected => { const result = await hotbarGateway.move(request, expected); if (activationCommitted) loadSnapshot(); return result; }),
-    editHotbarMacro: (request) => guardActionBar("foundry", expected => hotbarGateway.edit(request, expected)),
+
     mountNativeChat: (host, owner) => nativeChatGateway.mount(host, owner),
     openActiveEffectContextMenu: (payload) => payload?.actorSourceUuid === store.state.selectedActorSourceUuid
       ? guardConnection((expected) => activeEffectContextGateway.open(payload, expected))
@@ -454,19 +245,12 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     closeActiveEffectContextMenu: () => activeEffectContextGateway.close(),
     traceActiveEffectHold: (entry) => diagnostics?.record?.("debug", `Active Effect hold ${JSON.stringify(entry)}`),
     mountActionSession: (host, actionSession, owner, options) => actionSessionGateway.mount(host, actionSession, owner, options),
-    readFramePreferences: () => {
-      const preferences = preferencesGateway.frame?.() ?? preferencesGateway.snapshot();
-      return Object.freeze({ ...preferences, joystickResolvedSide: resolveJoystickSide(preferences.joystickSide, store.state) });
-    },
+    readFramePreferences: () => preferencesGateway.frame?.() ?? preferencesGateway.snapshot(),
     readCharacterPreferences: () => preferencesGateway.character?.() ?? preferencesGateway.snapshot(),
-    readScenePreferences: () => {
-      const preferences = preferencesGateway.scene?.() ?? preferencesGateway.snapshot();
-      return Object.freeze({ ...preferences, joystickResolvedSide: resolveJoystickSide(preferences.joystickSide, store.state) });
-    },
+
     readPresentationPreferences: () => {
       const preferences = preferencesGateway.presentation?.() ?? preferencesGateway.snapshot();
-      return Object.freeze({ ...preferences, resolvedMode: store.state.formFactor,
-        joystickResolvedSide: resolveJoystickSide(preferences.joystickSide, store.state), graphicsPolicy: readGraphicsPolicy() });
+      return Object.freeze({ ...preferences, resolvedMode: store.state.formFactor, graphicsPolicy: readGraphicsPolicy() });
     },
     readCharacterItemMenu: (request) => {
       if (!activationCommitted || !runtimeScope || runtimeScope.disposed || !readPolicy().active
@@ -482,29 +266,22 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     openControlsGuide: anchor => frame?.openControlsGuide?.(anchor),
     readControlsContext: () => {
       const state = store.state;
-      return Object.freeze({ presentation: state.formFactor, canvasAvailable: state.canvasAvailable !== false,
-        split: state.formFactor === "tablet" && state.splitScreen && state.orientation === "landscape",
+      return Object.freeze({ presentation: state.formFactor, canvasAvailable: false,
+
         collective: Boolean(state.snapshot?.selectedActor?.collective),
         characterPresentation: state.snapshot?.selectedActor?.presentation ?? preferencesGateway.controls?.().characterPresentation ?? "legacy",
-        canPlaceActor: actorTokenEligible(state.selectedActorSourceUuid),
-        actionBarSource: (preferencesGateway.actionMenu?.() ?? {}).quickbarSource ?? "character" });
+
+ });
     },
     readActionSummaryPreferences: () => preferencesGateway.actionSummaries?.() ?? { showActionSummaries: true },
     readSettings: () => {
       performanceObserver?.increment?.("settings.read.broad");
       const preferences = preferencesGateway.snapshot();
-      const sceneId = store.state.snapshot?.scene?.id ?? store.state.snapshot?.sceneId ?? null;
-      const memory = mobileAssetGateway?.diagnosticsForScene?.(sceneId);
-      const profile = graphicsProfileGateway?.snapshot?.() ?? null;
       return Object.freeze({
         ...preferences,
         resolvedMode: store.state.formFactor,
-        joystickResolvedSide: resolveJoystickSide(preferences.joystickSide, store.state),
         graphicsPolicy: readGraphicsPolicy(),
-        mobileMemory: Object.freeze({ lowMemory: profile, profile,
-          assets: memory?.assets ?? mobileAssetGateway?.snapshot?.() ?? null,
-          recovery: graphicsRecoveryGateway?.snapshot?.() ?? null,
-          recommendation: memory?.risk?.recommendation ?? null }),
+
         nativeSettings: settingsCompatibilityGateway?.snapshot?.() ?? Object.freeze({})
       });
     },
@@ -513,9 +290,8 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
         const preferences = preferencesGateway.layout?.() ?? preferencesGateway.snapshot();
         onUpdate(Object.freeze({ mode: preferences.mode,
           resolvedMode: store.state.formFactor, formFactor: store.state.formFactor,
-          orientation: store.state.orientation, splitScreen: store.state.splitScreen,
-          tabletNavSide: store.state.tabletNavSide, joystickSide: preferences.joystickSide,
-          joystickResolvedSide: resolveJoystickSide(preferences.joystickSide, store.state) }));
+          orientation: store.state.orientation,
+          tabletNavSide: store.state.tabletNavSide }));
       };
       const unsubscribe = store.subscribe(publish, { immediate: false });
       owner?.own?.(unsubscribe);
@@ -525,27 +301,8 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     watchGraphicsPolicy: (owner, onUpdate) => watchGraphicsPolicy(owner, onUpdate),
     readSessionStatus: () => sessionStatusGateway?.snapshot?.() ?? Object.freeze({ users: Object.freeze([]) }),
     watchSessionStatus: (owner, onUpdate) => sessionStatusGateway?.watch?.(owner, onUpdate),
-    readModuleOverlays: () => moduleOverlayGateway?.snapshot?.() ?? Object.freeze({ scanned: false, entries: Object.freeze([]) }),
-    scanModuleOverlays: () => guardConnection(() => moduleOverlayGateway.scan()),
-    setModuleOverlayVisible: (id, visible) => guardConnection(() => moduleOverlayGateway.setVisible(id, visible)),
-    setModuleOverlayOrder: (ids) => guardConnection(() => moduleOverlayGateway.setOrder(ids)),
-    setModuleOverlayScale: (id, scale) => guardConnection(() => moduleOverlayGateway.setScale(id, scale)),
-    readMobileAssetOptimizer: () => mobileAssetGateway?.snapshot?.() ?? Object.freeze({ isGm: false, assets: Object.freeze([]), scenes: Object.freeze([]) }),
-    scanMobileAssets: (options) => guardConnection(() => mobileAssetGateway.scan(options)),
-    generateMobileAssetDerivatives: (options) => guardConnection(() => mobileAssetGateway.generate(options)),
-    setMobileAssetMappingEnabled: (source, enabled) => guardConnection(() => mobileAssetGateway.setMappingEnabled(source, enabled)),
-    removeMobileAssetMapping: (source) => guardConnection(() => mobileAssetGateway.removeMapping(source)),
-    previewLowMemoryCanvas: () => lowMemoryGateway?.previewEnable?.() ?? Object.freeze([]),
-    enableLowMemoryCanvas: () => guardConnection(() => graphicsProfileGateway.enable({ source: "settings-legacy-enable" })),
-    disableLowMemoryCanvas: () => guardConnection(() => graphicsProfileGateway.disable({ source: "settings-legacy-disable" })),
-    previewMemoryProtectionProfile: (profile) => lowMemoryGateway?.preview?.(profile) ?? Object.freeze([]),
-    applyMemoryProtectionProfile: (profile) => guardConnection(() => graphicsProfileGateway.apply(profile, { source: "settings" })),
-    restorePreviousGraphicsSettings: () => guardConnection(() => graphicsProfileGateway.restorePrevious({ source: "settings-restore" })),
-    readGraphicsRecovery: () => graphicsRecoveryGateway?.snapshot?.() ?? null,
-    acknowledgeGraphicsRecovery: () => graphicsRecoveryGateway?.acknowledge?.(),
-    prepareGraphicsRecovery: () => graphicsRecoveryGateway?.prepareLowMemory?.(),
+
     restoreSettingsDefaults: () => restoreVeSettingsDefaults({
-      lowMemoryGateway,
       preferencesGateway,
       guardConnection,
       invalidate: () => store.dispatch({ type: "view-invalidated" })
@@ -556,7 +313,6 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       const result = await guardConnection(() => preferencesGateway.set(payload));
       if (result.namespace === "ve-mobile" && ((result.key === "showActionSummaries" && result.value === false) || result.key === "compactActionSummaries")) {
         store.dispatch({ type: "dismiss-action-session" });
-        if (store.state.rollResult?.sceneReturn) store.dispatch({ type: "dismiss-roll-result", id: store.state.rollResult.id });
       }
       if (!result.requiresReload) store.dispatch({ type: "view-invalidated" });
       return result;
@@ -586,8 +342,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       if (!activationCommitted || !runtimeScope || runtimeScope.disposed || !readPolicy().active
         || store.state.reconnect || store.state.modeTransition) return Promise.reject(new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.ThisActorActionIsNoLongerActive", "This Actor action is no longer active.")));
       const sourceUuid = String(payload?.actorSourceUuid ?? "");
-      const visibleSource = store.state.route === "characters" ? store.state.selectedActorSourceUuid
-        : store.state.route === "scene" ? store.state.snapshot?.scene?.quickbarActorSourceUuid || store.state.selectedActorSourceUuid : "";
+      const visibleSource = store.state.route === "characters" ? store.state.selectedActorSourceUuid : "";
       if (sourceUuid && sourceUuid !== visibleSource) return Promise.reject(new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.TheSelectedActorSourceChangedBeforeThisActionCould", "The selected Actor source changed before this action could run.")));
       if ([ACTOR_COMMANDS.ADD_EXPERIENCE, ACTOR_COMMANDS.UPDATE_CURRENCY, ACTOR_COMMANDS.SET_SPELL_SLOT_VALUE, ACTOR_COMMANDS.SET_ITEM_EQUIPPED, ACTOR_COMMANDS.SET_ITEM_ATTUNED, ACTOR_COMMANDS.SET_ITEM_FAVORITE, ACTOR_COMMANDS.SET_SPELL_PREPARED, ACTOR_COMMANDS.OPEN_ITEM_SHEET].includes(name)
         || name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION || name === ACTOR_COMMANDS.SET_EXHAUSTION_LEVEL || [ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name)) {
@@ -612,22 +367,6 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       let executionSequence;
       const generation = connectionGeneration?.current ?? 0;
       const worldId = store.state.snapshot?.world?.id, userId = store.state.snapshot?.user?.id;
-      const sceneRollResultId = name !== ACTOR_COMMANDS.USE_ITEM && store.state.rollResult?.pending
-        && store.state.rollResult.actorSourceUuid === sourceUuid ? store.state.rollResult.id : null;
-      const accepted = createActionSceneReturn({
-        command: name,
-        readState: () => store.state,
-        readPreference: () => (preferencesGateway.actionNavigation?.() ?? preferencesGateway.snapshot()).actionSceneReturn ?? "off",
-        readScene: () => sceneGateway.snapshot(),
-        readCombat: () => combatGateway.controlsSnapshot(),
-        isCurrent: () => activationCommitted && owner === runtimeScope && !owner.disposed && readPolicy().active
-          && executionSequence === actionExecutionSequence
-          && generation === (connectionGeneration?.current ?? 0)
-          && worldId === store.state.snapshot?.world?.id && userId === store.state.snapshot?.user?.id,
-        navigate: () => store.dispatch({ type: "return-to-scene-after-action",
-          preserveRollResultId: (preferencesGateway.actionSummaries?.() ?? preferencesGateway.snapshot()).showActionSummaries !== false
-            ? sceneRollResultId : null })
-      });
       const ownsExecution = !activeActionExecutions.has(executionKey);
       if (ownsExecution) activeActionExecutions.set(executionKey, ++actionExecutionSequence);
       executionSequence = activeActionExecutions.get(executionKey);
@@ -644,7 +383,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
           summaryExecution.roots.add(session.rootMessageId);
           observer?.onActionSession?.(session);
         },
-        onActionAccepted: (record) => { accepted(); observer?.onActionAccepted?.(record); }
+        onActionAccepted: (record) => { observer?.onActionAccepted?.(record); }
       })).then(outcome => {
         const current = owner === runtimeScope && !owner.disposed && activationCommitted
           && generation === (connectionGeneration?.current ?? 0)
@@ -675,7 +414,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
   const start = () => {
     if (runtimeScope || starting || stopping) return;
     starting = true;
-    const cancelled = new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.VEMobileActivationWasCancelled", "VE Mobile activation was canceled."));
+    const cancelled = new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.VEMobileActivationWasCancelled", "Mikelandia Controls activation was canceled."));
     try {
       // Commands need their provisional owner during initial rendering. Public
       // activation and reconnect access remain closed until every stage succeeds.
@@ -699,14 +438,6 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
         actionExecutionSequence += 1;
       });
       const assertCurrent = () => { if (owner.disposed || runtimeScope !== owner) throw cancelled; };
-      sceneGateway.watchSceneNavigation?.(runtimeScope, (change) => {
-        if (change?.viewChanged) store.dispatch({ type: "action-navigation-invalidated" });
-        store.dispatch({ type: "scene-navigation-invalidated" });
-      });
-      assertCurrent();
-      movementGateway.watchTokenTransforms?.(runtimeScope, () => store.state.selectedActorSourceUuid);
-      actorTokenPlacementGateway?.watchCanvas?.(runtimeScope);
-      assertCurrent();
       resynchronizer = createAuthoritativeResynchronizer({
         generation: connectionGeneration,
         fetchSnapshot: async (context) => {
@@ -719,22 +450,6 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
             }
           });
           if (!result.applied || !context.isCurrent()) return null;
-          if (canvasRecoveryGateway) {
-            const before = recoveryCaptures.get(context.generation) ?? canvasRecoveryGateway.capture();
-            const canvasResult = await canvasRecoveryGateway.reconcile({
-              before,
-              isCurrent: context.isCurrent,
-              onProgress: ({ checkpoint, detail }) => {
-                if (!context.isCurrent()) return;
-                loadTimingGateway?.note?.({ checkpoint });
-                store.dispatch({ type: "reconnect-progress", generation: context.generation, checkpoint, detail });
-              }
-            });
-            if (!canvasResult.applied || !context.isCurrent()) return null;
-            loadTimingGateway?.note?.({ canvasDurationMs: canvasResult.skipped ? null : canvasResult.durationMs,
-              canvasSucceeded: canvasResult.skipped ? null : true });
-          }
-          if (!context.isCurrent()) return null;
           loadTimingGateway?.note?.({ checkpoint: "mobile-session" });
           store.dispatch({ type: "reconnect-progress", generation: context.generation, checkpoint: "mobile-session", detail: localizedText(localize, "VEMOBILE.Interface.AppKernel.RestoringYourSession", "Restoring your session…"), timings: result.timings });
           return session.read();
@@ -768,52 +483,9 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       assertCurrent();
       frame = createFrame({ store, commands, policy: readPolicy, scope: runtimeScope, mobileBackGateway, performanceObserver, nativeApplications });
       assertCurrent();
-      sceneInteractionReadiness = createSceneInteractionReadiness({
-        localize,
-        getNavigationState: () => store.state,
-        navigate: (route) => store.dispatch({ type: "navigate", route }),
-        inspect: () => frame?.readSceneInteractionState?.(),
-        subscribe: (listener) => frame?.watchSceneInteraction?.(listener),
-        scope: runtimeScope
-      });
-      templatePlacement = templatePlacementGateway ? createTemplatePlacementController({
-        store,
-        sceneReadiness: sceneInteractionReadiness,
-        sceneGateway,
-        presentation: frame,
-        nativeGateway: templatePlacementGateway,
-        sessionGateway: session,
-        scope: runtimeScope,
-        diagnostics
-      }) : null;
-      nativeTokenPlacement = nativeTokenPlacementGateway ? createNativeTokenPlacementController({
-        store,
-        sceneReadiness: sceneInteractionReadiness,
-        sceneGateway,
-        presentation: frame,
-        nativeGateway: nativeTokenPlacementGateway,
-        scope: runtimeScope,
-        diagnostics
-      }) : null;
-      runtimeScope.own(store.subscribe((state) => {
+      runtimeScope.own(store.subscribe(state => {
         if (state.reconnect || state.modeTransition) actorEditorGateway?.closeAll?.();
-        const placement = state.actorTokenPlacement;
-        if (placement && (state.route !== "scene" || state.templatePlacement || state.reconnect || state.modeTransition
-          || !state.snapshot?.scene?.canvasReady || String(state.snapshot.scene.id) !== placement.sceneId
-          || state.snapshot?.selectedActor?.sourceUuid !== placement.selectedSourceUuid
-          || state.formFactor !== placement.formFactor || state.orientation !== placement.orientation
-          || state.splitScreen !== placement.splitScreen || state.tabletNavSide !== placement.tabletNavSide)) cancelActorTokenPlacement();
       }, { immediate: false }));
-      assertCurrent();
-      combatSceneActions = createCombatSceneActions({
-        localize,
-        getSnapshot: () => store.state.snapshot,
-        getExpectedSession: expectedSession,
-        getConnectionGeneration: () => connectionGeneration?.current ?? 0,
-        sceneReadiness: sceneInteractionReadiness,
-        combatGateway,
-        cameraIntents
-      });
       frame.mount();
       assertCurrent();
       const initialSnapshot = session.watch(runtimeScope, (snapshot) => store.dispatch({ type: "session-loaded", snapshot }), (error) => {
@@ -827,7 +499,6 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
         });
       } });
       assertCurrent();
-      store.dispatch({ type: "set-quickbar-collapsed", collapsed: actionBarPreferences?.read("foundry").collapsed ?? false });
       if (initialSnapshot) store.dispatch({ type: "session-loaded", snapshot: initialSnapshot });
       assertCurrent();
       modeTransition = createModeTransitionCoordinator({
@@ -840,14 +511,10 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
         settle: ({ isCurrent }) => frame?.settleModeTransition?.({ isCurrent }),
         restore: (preserved, bounds, { isCurrent }) => frame?.restoreModeTransitionState?.(preserved, bounds, { isCurrent }),
         onStart: ({ generation, policy, preserved }) => {
-          templatePlacement?.stop();
-          nativeTokenPlacement?.stop();
-          cancelActorTokenPlacement();
           activeEffectContextGateway?.close?.();
-          moduleOverlayGateway?.cancelInteractions?.();
           performanceObserver?.increment?.("mode-transition.run");
           store.dispatch({ type: "mode-transition-started", generation, target: presentationLabel(policy, localize) });
-          diagnostics?.record?.("debug", `MODE TRANSITION ${JSON.stringify({ event: "started", generation, from: preserved?.formFactor ?? "unknown", to: policy.formFactor, requested: policy.preference ?? policy.runtimeMode ?? policy.formFactor, viewportBefore: preserved?.visualViewport ?? preserved?.viewportBounds ?? null, sceneBoundsBefore: preserved?.sceneBounds ?? null, route: preserved?.route ?? store.state.route, splitScreen: Boolean(preserved?.splitScreen) })}`);
+          diagnostics?.record?.("debug", `MODE TRANSITION ${JSON.stringify({ event: "started", generation, from: preserved?.formFactor ?? "unknown", to: policy.formFactor, requested: policy.preference ?? policy.runtimeMode ?? policy.formFactor, viewportBefore: preserved?.visualViewport ?? preserved?.viewportBounds ?? null, route: preserved?.route ?? store.state.route })}`);
         },
         onProgress: ({ generation, phase, detail }) => store.dispatch({ type: "mode-transition-progress", generation, phase, detail }),
         onCheckpoint: ({ generation, checkpoint, state, elapsedMs, details }) => {
@@ -858,7 +525,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
           store.dispatch({ type: "mode-transition-finished", generation });
           const after = frame?.modeTransitionDiagnosticSnapshot?.() ?? null;
           const slowest = Object.entries(timings ?? {}).filter(([name]) => name !== "total").sort((left, right) => right[1] - left[1])[0] ?? [];
-          diagnostics?.record?.("info", `MODE TRANSITION ${JSON.stringify({ event: "completed", generation, to: policy.formFactor, orientation: policy.orientation, timings, slowestCheckpoint: slowest[0] ?? "unknown", totalMs: timings?.total ?? 0, viewportAfter: after?.visualViewport ?? after?.viewportBounds ?? null, sceneBoundsAfter: after?.sceneBounds ?? null, route: after?.route ?? store.state.route, splitScreen: Boolean(after?.splitScreen), rootCount: after?.rootCount ?? null, interactionListeners: after?.interactionListeners ?? null })}`);
+          diagnostics?.record?.("info", `MODE TRANSITION ${JSON.stringify({ event: "completed", generation, to: policy.formFactor, orientation: policy.orientation, timings, slowestCheckpoint: slowest[0] ?? "unknown", totalMs: timings?.total ?? 0, viewportAfter: after?.visualViewport ?? after?.viewportBounds ?? null, route: after?.route ?? store.state.route, rootCount: after?.rootCount ?? null, interactionListeners: after?.interactionListeners ?? null })}`);
         },
         onError: (error, { generation, checkpoint }) => {
           frame?.cancelModeTransitionRestore?.();
@@ -899,17 +566,11 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     if (stopping) return;
     stopping = true;
     activationCommitted = false;
-    const owned = { scope: runtimeScope, frame, templatePlacement, nativeTokenPlacement, combatSceneActions, modeTransition, resynchronizer };
-    cancelActorTokenPlacement();
+    const owned = { scope: runtimeScope, frame, modeTransition, resynchronizer };
     runtimeScope = null;
     frame = null;
-    templatePlacement = null;
-    nativeTokenPlacement = null;
-    combatSceneActions = null;
-    sceneInteractionReadiness = null;
     modeTransition = null;
     resynchronizer = null;
-    recoveryCaptures.clear();
     journalRequestSequence += 1;
     try {
       // Each owner gets its cleanup even if another owner fails. Invalidate
@@ -917,9 +578,6 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       for (const cleanup of [
         () => owned.modeTransition?.dispose(),
         () => owned.resynchronizer?.dispose(),
-        () => owned.templatePlacement?.stop(),
-        () => owned.nativeTokenPlacement?.stop(),
-        () => owned.combatSceneActions?.cancel("VE Mobile stopped."),
         () => owned.frame?.unmount(),
         () => owned.scope?.dispose(),
         () => store.dispatch({ type: "clear-character-presentation" }),
@@ -946,7 +604,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     },
     reconcile() {
       // The bootstrap surface owns startup. Session readers may only run once
-      // Foundry has completed its first Canvas draw (or no-canvas startup).
+      // Foundry has completed startup and the session is ready.
       if (readPolicy().sessionReady === false) return;
       if (stopping) return;
       if (starting) {
@@ -970,13 +628,6 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       if (!activationCommitted) return false;
       const activeGeneration = Math.max(0, Number(generation) || 0);
       if (connectionGeneration && !connectionGeneration.matches(activeGeneration)) connectionGeneration.advance(activeGeneration);
-      recoveryCaptures.clear();
-      if (canvasRecoveryGateway) recoveryCaptures.set(activeGeneration, canvasRecoveryGateway.capture());
-      templatePlacement?.stop();
-      nativeTokenPlacement?.stop();
-      cancelActorTokenPlacement();
-      combatSceneActions?.cancel("Connection interrupted.");
-      moduleOverlayGateway?.cancelInteractions?.();
       store.dispatch({ type: "reconnect-started", generation: activeGeneration });
       diagnostics?.record?.("debug", `Reconnect generation ${activeGeneration} is waiting for transport recovery`);
       return true;
@@ -984,10 +635,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     async resync(generation) {
       if (!activationCommitted || !resynchronizer) return Object.freeze({ applied: false });
       const activeGeneration = Math.max(0, Number(generation) || 0);
-      if (canvasRecoveryGateway && !recoveryCaptures.has(activeGeneration)) {
-        recoveryCaptures.clear();
-        recoveryCaptures.set(activeGeneration, canvasRecoveryGateway.capture());
-      }
+
       if (store.state.reconnect?.generation !== activeGeneration) {
         store.dispatch({ type: "reconnect-started", generation: activeGeneration });
       }
@@ -1001,7 +649,6 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       const result = await resynchronizer.run(activeGeneration);
       finishMeasurement();
       if (!runtimeScope || store.state.reconnect?.generation !== activeGeneration || (connectionGeneration && !connectionGeneration.matches(activeGeneration))) return result;
-      recoveryCaptures.delete(activeGeneration);
       if (result.applied) {
         const elapsed = Math.round((globalThis.performance?.now?.() ?? Date.now()) - startedAt);
         loadTimingGateway?.note?.({ type: "resync", resyncDurationMs: elapsed, checkpoint: "ready" });
@@ -1040,15 +687,6 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
   });
 }
 
-export function shouldKeepSceneChooserOpen(state, requested = false) {
-  return Boolean(requested
-    && state?.sceneChooserOpen
-    && state?.route === "scene"
-    && state?.splitScreen
-    && state?.formFactor === "tablet"
-    && state?.orientation === "landscape");
-}
-
 function nextRenderedFrame() {
   return new Promise((resolve) => {
     if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(() => resolve());
@@ -1056,12 +694,10 @@ function nextRenderedFrame() {
   });
 }
 
-export async function restoreVeSettingsDefaults({ lowMemoryGateway, preferencesGateway, guardConnection = (action) => action(), invalidate = () => {} }) {
-  let memoryResult = null;
-  if (lowMemoryGateway?.snapshot?.().active) memoryResult = await guardConnection(() => lowMemoryGateway.disable());
+export async function restoreVeSettingsDefaults({  preferencesGateway, guardConnection = (action) => action(), invalidate = () => {} }) {
   const result = await guardConnection(() => preferencesGateway.restoreDefaults());
   invalidate();
-  return Object.freeze({ ...result, requiresReload: Boolean(result.requiresReload || memoryResult?.requiresReload) });
+  return Object.freeze({ ...result, requiresReload: Boolean(result.requiresReload) });
 }
 
 /** Avoid destroying an active VE-owned editor when only the software keyboard changes the visual viewport. */
@@ -1071,10 +707,4 @@ export function shouldPreserveEditableSurfaceOnViewportResize({ activeElement, c
   return Boolean(editable
     && nextPolicy?.formFactor === currentFormFactor
     && nextPolicy?.orientation === currentOrientation);
-}
-
-export function resolveJoystickSide(preference, state = {}) {
-  if (preference === "left" || preference === "right") return preference;
-  if (state.formFactor !== "tablet") return "left";
-  return state.tabletNavSide === "left" ? "right" : "left";
 }

@@ -1,7 +1,7 @@
 {
   "id": "ve-mobile",
-  "title": "VE Mobile",
-  "description": "A purpose-built phone and tablet interface for Foundry VTT, with D&D5e, experimental Warhammer and Shadowdark PC support, chat, journals, and touch Scene controls.",
+  "title": "Mikelandia Controls",
+  "description": "An in-person Foundry VTT companion with character sheets, chat, journals, and initiative tracking for D&D5e, Warhammer, and Shadowdark.",
   "version": "1.1.0",
   "url": "https://github.com/MihaiSereanu/ve-mobile",
   "manifest": "https://github.com/MihaiSereanu/ve-mobile/releases/download/latest/module.json",
@@ -17,8 +17,13 @@
       "name": "Silvestrae"
     }
   ],
-  "esmodules": ["src/entry.mjs"],
-  "styles": ["assets/ve-mobile.css", "assets/ve-style-authority.css"],
+  "esmodules": [
+    "src/entry.mjs"
+  ],
+  "styles": [
+    "assets/ve-mobile.css",
+    "assets/ve-style-authority.css"
+  ],
   "languages": [
     {
       "lang": "en",

@@ -45,7 +45,7 @@ export function installVeChatWindowClass({
     return Object.freeze({ installed: false, owner: "none", prune, reason: localizeFoundry("VEMOBILE.Interface.ChatDomGateway.ChatLogClassUnavailable", "ChatLog class unavailable") });
   }
   if (BaseChatLog.veMobileBoundedChat === true) {
-    return Object.freeze({ installed: true, owner: "VE", prune, ChatLogClass: BaseChatLog });
+    return Object.freeze({ installed: true, owner: "Mikelandia Controls", prune, ChatLogClass: BaseChatLog });
   }
 
   const Semaphore = foundry?.utils?.Semaphore;
@@ -198,7 +198,7 @@ export function installVeChatWindowClass({
   }
 
   config.ui.chat = VeMobileBoundedChatLog;
-  return Object.freeze({ installed: true, owner: "VE", prune, ChatLogClass: VeMobileBoundedChatLog });
+  return Object.freeze({ installed: true, owner: "Mikelandia Controls", prune, ChatLogClass: VeMobileBoundedChatLog });
 }
 
 export function createChatDomGateway({
@@ -237,7 +237,7 @@ export function createChatDomGateway({
         nativeRenderedRows: nativeRows,
         veRenderedRows: veRows,
         veWindowLimit: limit(),
-        nativePruningOwner: prune.active ? "ChatLog Prune" : midiLegacy.active ? "Midi-QOL legacy" : (veClass && veActive ? "VE" : "none")
+        nativePruningOwner: prune.active ? "ChatLog Prune" : midiLegacy.active ? "Midi-QOL legacy" : (veClass && veActive ? "Mikelandia Controls" : "none")
       });
     }
   });

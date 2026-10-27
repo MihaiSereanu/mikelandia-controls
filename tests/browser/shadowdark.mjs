@@ -181,10 +181,7 @@ try {
   check("failed quantity writes restore original boundary controls", !quantity().querySelector('[data-profile-quantity-delta="-1"]').disabled && !quantity().querySelector('[data-profile-quantity-delta="1"]').disabled);
   f.actor.updateEmbeddedDocuments = nativeQuantityUpdate;
   check("inventory has no redundant Open sheet button", ![...screen.querySelectorAll('.ve-profile-inventory-tools button')].some(b => b.textContent === "Open sheet"));
-  const lightBox = screen.querySelector('[data-profile-action="light:torch"]').getBoundingClientRect();
-  const quantityBox = quantity().getBoundingClientRect();
-  check("Torch light sits beside its name without overlapping quantities", !!screen.querySelector('[data-profile-field="torch"] dt .ve-profile-light')
-    && (lightBox.right <= quantityBox.left || lightBox.bottom <= quantityBox.top));
+  check("inventory has no token-light buttons", !screen.querySelector('[data-profile-action^="light:"]'));
   check("quantity controls reserve their full width in item flow", getComputedStyle(quantity()).position === "static");
   screen.querySelector('[data-profile-add-item]').click(); await tick();
   const chooser = document.querySelector('.ve-profile-inventory-choice');
@@ -262,16 +259,8 @@ try {
   check("late catalog results cannot reopen a cancelled editor", !screen.querySelector('.ve-profile-catalog-results') && !screen.querySelector('[data-profile-add-item]').hidden);
   pack.getIndex = getIndex;
   check("unidentified names are omitted from inventory", !screen.textContent.includes("Secret Relic"));
-  await begin("light:torch");
-  check("light controls use native sheet/tracker without a roll", f.lights.length === 1 && f.actor.items.get("torch").system.light.active && f.rolls.length === 3);
-  check("active Torch button has no background", getComputedStyle(screen.querySelector('[data-profile-action="light:torch"]')).backgroundColor === "rgba(0, 0, 0, 0)");
-  const torch = f.actor.items.get("torch"); torch.system.light.active = false; Hooks.emit("updateItem", torch, {}); await tick();
-  check("inactive Torch button has no background", getComputedStyle(screen.querySelector('[data-profile-action="light:torch"]')).backgroundColor === "rgba(0, 0, 0, 0)");
-  check("native remote light updates refresh the toggle", screen.querySelector('[data-profile-action="light:torch"]').getAttribute("aria-pressed") === "false");
-  game.user.character = null; Hooks.emit("updateUser", game.user, {}); await tick();
-  check("owned world PCs keep native light controls without character assignment", !!screen.querySelector('[data-profile-action="light:torch"]'));
-  game.user.character = f.actor; Hooks.emit("updateUser", game.user, {}); await tick();
-  check("reassignment restores native light capability", !!screen.querySelector('[data-profile-action="light:torch"]'));
+  const torch = f.actor.items.get("torch");
+  check("token-light actions are absent from capabilities", !screen.querySelector('[data-profile-action^="light:"]'));
   const dangerous = { ...torch, id: "hidden", uuid: `${f.actor.uuid}.Item.hidden`, visible: false, name: '<img id="secret-injection">' }; f.actor.items.push(dangerous); Hooks.emit("createItem", dangerous, {}); await tick();
   check("hidden items cannot inject markup or names", !document.querySelector("#secret-injection") && !screen.textContent.includes("secret-injection"));
   f.actor.system.slots = 12; f.actor.system.coins = { gp: 25, sp: 3, cp: 0 };
@@ -305,10 +294,10 @@ try {
     return rect.left >= row.left && rect.right <= row.right && rect.height >= 44;
   }));
   check("coin editors do not add horizontal scrolling", document.documentElement.scrollWidth <= innerWidth + 1);
-  await begin("light:torch");
+  torch.system.light.active = true;
   const lightsBeforeDeletion = f.lights.length;
   quantity().querySelector('[data-profile-quantity-delta="-1"]').click(); await tick();
-  check("decrementing an active Torch extinguishes and deletes it", !f.actor.items.get("torch") && !quantity() && !torch.system.light.active && f.lights.length === lightsBeforeDeletion + 1);
+  check("decrementing Torch deletes gear without toggling token light", !f.actor.items.get("torch") && !quantity() && torch.system.light.active && f.lights.length === lightsBeforeDeletion);
 
   check("Stashed Gear has a separate section", screen.querySelector('[data-profile-section="stashed"]').textContent.includes("stash") && !screen.querySelector('[data-profile-section="gear"]').textContent.includes("stash"));
   await tab("talents");

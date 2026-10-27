@@ -1,7 +1,7 @@
 import { ACTOR_COMMANDS } from "../../kernel/command-names.mjs";
 import { CommandError } from "../../foundry/command-error.mjs";
 import { localizeFoundry } from "../../foundry/localization.mjs";
-import { isShadowdarkPlayer, shadowdarkContext, ownedItem, carriedItem, stashedItem, physicalTypes, nativeLightSheet } from "./context.mjs";
+import { isShadowdarkPlayer, shadowdarkContext, ownedItem, carriedItem, stashedItem, physicalTypes } from "./context.mjs";
 
 const fail = (code, message) => new CommandError(code, localizeFoundry(`VEMOBILE.Inventory.${code}`, message));
 const values = source => Array.from(source?.contents ?? source ?? []);
@@ -57,17 +57,6 @@ export async function executeInventory(name, payload, context, game) {
     if (!item) throw fail("CAPABILITY_UNAVAILABLE", "This item can no longer be changed.");
     if (payload.value === 0) {
       if (typeof actor.deleteEmbeddedDocuments !== "function") throw fail("CAPABILITY_UNAVAILABLE", "This item cannot be removed.");
-      if (item.system.light?.active) {
-        const sheet = nativeLightSheet(actor, game);
-        if (!sheet) throw fail("CAPABILITY_UNAVAILABLE", "Remove this active light from the native sheet.");
-        await sheet._toggleLightSource(item);
-        assertCurrent();
-        const current = inventoryEdits(actor, game).find(edit => edit.id === payload.resourceId);
-        if (ownedItem(actor, String(item.id)) !== item || nativeLightSheet(actor, game) !== sheet
-          || !current || current.revision !== edit.revision || current.value !== edit.value || item.system.light.active) {
-          throw fail("STALE_STATE", "The item changed before it could be removed. Try again.");
-        }
-      }
       await actor.deleteEmbeddedDocuments("Item", [item.id]);
       return { ok: true, actorSourceUuid: sourceUuid };
     }
@@ -116,11 +105,7 @@ export async function executeInventory(name, payload, context, game) {
           const itemData = await globalThis.shadowdark.effects.createItemWithEffect(item);
           checkpoint();
           if (!itemData) return { ok: true, cancelled: true, actorSourceUuid: sourceUuid };
-          const [added] = await actor.createEmbeddedDocuments("Item", [itemData]);
-          // Native sheet passes an array here; its light helper expects an Item.
-          if (added && itemData.effects?.some(effect => effect.changes?.some(change => change.key === "system.light.template"))) await sheet._toggleLightSource(added);
-        } else if (globalThis.CONFIG?.SHADOWDARK?.LIGHT_SOURCE_ITEM_IDS?.includes(item.id)) {
-          await sheet._dropActivateLightSource(item);
+          await actor.createEmbeddedDocuments("Item", [itemData]);
         } else await inheritedDrop.call(sheet, { preventDefault() {} }, data);
       } else {
         // Alternate sheets must provide an awaitable native acquisition handler.

@@ -1,5 +1,6 @@
 import { resolveSystemIntegration } from "../systems/registry.mjs";
 import { localizeFoundry } from "./localization.mjs";
+import { ownMobileApplication } from "./mobile-ui-isolation.mjs";
 import { resolveActorSource, validSourceUuid } from "./character-source.mjs";
 
 /** Open D&D5e 5.3.3's own ArmorClassConfig for the exact represented Actor. */
@@ -40,7 +41,7 @@ export function createArmorClassGateway({
         existing.app.bringToFront?.();
         return Object.freeze({ ok: true, actorSourceUuid: uuid });
       }
-      const app = new Config({ document: actor });
+      const app = ownMobileApplication(new Config({ document: actor }));
       const record = { app, opening: true };
       openApps.set(uuid, record);
       try { await app.render({ force: true }); record.opening = false; }

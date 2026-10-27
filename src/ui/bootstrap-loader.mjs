@@ -3,10 +3,9 @@ import { createLoadingCheckpoints } from "./loading-checkpoints.mjs";
 import { localizedText, localizedNumber } from "./localized-text.mjs";
 
 export const BOOTSTRAP_STAGES = Object.freeze([
-  Object.freeze({ id: "module", labelKey: "VEMOBILE.Boot.Stage.Module", label: "Starting VE Mobile" }),
+  Object.freeze({ id: "module", labelKey: "VEMOBILE.Boot.Stage.Module", label: "Starting Mikelandia Controls" }),
   Object.freeze({ id: "init", labelKey: "VEMOBILE.Boot.Stage.Init", label: "Reading your settings" }),
   Object.freeze({ id: "world", labelKey: "VEMOBILE.Boot.Stage.World", label: "Loading your game world" }),
-  Object.freeze({ id: "canvas", labelKey: "VEMOBILE.Boot.Stage.Canvas", label: "Preparing the current scene" }),
   Object.freeze({ id: "theme", labelKey: "VEMOBILE.Boot.Stage.Theme", label: "Applying your interface theme" }),
   Object.freeze({ id: "recovery", labelKey: "VEMOBILE.Boot.Stage.Recovery", label: "Checking graphics recovery" }),
   Object.freeze({ id: "session", labelKey: "VEMOBILE.Boot.Stage.Session", label: "Building your mobile session" }),
@@ -51,7 +50,7 @@ export function createMobileBootstrap({
   root.className = "ve-mobile-bootstrap";
   root.setAttribute("role", "status");
   root.setAttribute("aria-live", "polite");
-  root.setAttribute("aria-label", text("VEMOBILE.Boot.LoadingLabel", "VE Mobile is loading"));
+  root.setAttribute("aria-label", text("VEMOBILE.Boot.LoadingLabel", "Mikelandia Controls is loading"));
 
   const content = document.createElement("div");
   content.className = "ve-mobile-bootstrap__content";
@@ -60,7 +59,7 @@ export function createMobileBootstrap({
   const image = document.createElement("img");
   image.className = "ve-mobile-bootstrap__icon";
   image.src = iconUrl;
-  image.alt = "VE Mobile";
+  image.alt = "Mikelandia Controls";
   image.decoding = "async";
   content.append(image);
 
@@ -119,7 +118,7 @@ export function createMobileBootstrap({
   const wakeText = document.createElement("span");
   wakeText.textContent = text("VEMOBILE.Boot.KeepScreenAwake", "KEEP SCREEN AWAKE");
   const wakeWarning = document.createElement("small");
-  wakeWarning.textContent = text("VEMOBILE.Boot.KeepAwakeHint", "Prevents your device from sleeping while VE Mobile is open.");
+  wakeWarning.textContent = text("VEMOBILE.Boot.KeepAwakeHint", "Prevents your device from sleeping while Mikelandia Controls is open.");
   wakeCopy.append(wakeText, wakeWarning);
   wake.append(wakeBox, wakeCopy);
   content.append(wake);
@@ -137,7 +136,7 @@ export function createMobileBootstrap({
   wakePrompt.className = "ve-mobile-bootstrap__wake-prompt";
   wakePrompt.hidden = true;
   const wakePromptMessage = document.createElement("p");
-  wakePromptMessage.textContent = text("VEMOBILE.Boot.WakePrompt", "Keep Awake needs a browser-confirmed tap. Continue to enter VE and activate it.");
+  wakePromptMessage.textContent = text("VEMOBILE.Boot.WakePrompt", "Keep Awake needs a browser-confirmed tap. Continue to enter Mikelandia Controls and activate it.");
   const wakePromptChoice = document.createElement("button");
   wakePromptChoice.type = "button";
   wakePromptChoice.className = "ve-mobile-bootstrap__wake-prompt-choice";
@@ -314,7 +313,7 @@ export function createMobileBootstrap({
       if (!root.isConnected) (document.body ?? document.documentElement).append(root);
       document.body?.classList.add("ve-mobile-booting");
       root.setAttribute("role", "status");
-      root.setAttribute("aria-label", text("VEMOBILE.Boot.LoadingLabel", "VE Mobile is loading"));
+      root.setAttribute("aria-label", text("VEMOBILE.Boot.LoadingLabel", "Mikelandia Controls is loading"));
       root.classList.remove("is-complete", "is-failed");
       headingText.textContent = text("VEMOBILE.Boot.LoadingGame", "Loading your game");
       ellipsis.hidden = false;
@@ -335,11 +334,11 @@ export function createMobileBootstrap({
     },
     updatePolicy,
     refreshLocalization() {
-      root.setAttribute("aria-label", text("VEMOBILE.Boot.LoadingLabel", "VE Mobile is loading"));
+      root.setAttribute("aria-label", text("VEMOBILE.Boot.LoadingLabel", "Mikelandia Controls is loading"));
       activity.setAttribute("aria-label", text("VEMOBILE.Boot.ProgressLabel", "Loading progress"));
       wakeText.textContent = text("VEMOBILE.Boot.KeepScreenAwake", "KEEP SCREEN AWAKE");
-      wakeWarning.textContent = text("VEMOBILE.Boot.KeepAwakeHint", "Prevents your device from sleeping while VE Mobile is open.");
-      wakePromptMessage.textContent = text("VEMOBILE.Boot.WakePrompt", "Keep Awake needs a browser-confirmed tap. Continue to enter VE and activate it.");
+      wakeWarning.textContent = text("VEMOBILE.Boot.KeepAwakeHint", "Prevents your device from sleeping while Mikelandia Controls is open.");
+      wakePromptMessage.textContent = text("VEMOBILE.Boot.WakePrompt", "Keep Awake needs a browser-confirmed tap. Continue to enter Mikelandia Controls and activate it.");
       wakePromptChoiceText.textContent = text("VEMOBILE.Boot.KeepScreenAwake", "KEEP SCREEN AWAKE");
       wakePromptYes.textContent = text("VEMOBILE.Boot.Continue", "Continue");
       checkpoints.refreshLabels();
@@ -390,7 +389,7 @@ export function createMobileBootstrap({
     promptForWakeChoice,
     resolveWakePrompt,
     showRecovery,
-    fail(message = text("VEMOBILE.Boot.LoadFailed", "VE Mobile could not finish loading.")) {
+    fail(message = text("VEMOBILE.Boot.LoadFailed", "Mikelandia Controls could not finish loading.")) {
       showRecovery({ title: message });
     },
     unmount() {

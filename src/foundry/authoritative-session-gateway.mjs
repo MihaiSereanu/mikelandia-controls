@@ -1,12 +1,11 @@
 import { localizeFoundry } from "./localization.mjs";
-const COLLECTIONS = Object.freeze(["User", "Folder", "Actor", "Scene", "Combat", "JournalEntry", "ChatMessage"]);
-const SOURCE_KEYS = Object.freeze({ User: "users", Folder: "folders", Actor: "actors", Scene: "scenes",
+const COLLECTIONS = Object.freeze(["User", "Folder", "Actor", "Combat", "JournalEntry", "ChatMessage"]);
+const SOURCE_KEYS = Object.freeze({ User: "users", Folder: "folders", Actor: "actors",
   Combat: "combats", JournalEntry: "journal", ChatMessage: "messages" });
 const COLLECTION_LABELS = Object.freeze({
   User: "users",
   Folder: "folders",
   Actor: "actors",
-  Scene: "Scenes",
   Combat: "combat encounters",
   JournalEntry: "journals",
   ChatMessage: "chat messages"
@@ -121,7 +120,7 @@ export function createFoundryAuthoritativeSessionGateway({
         finishTotal();
         return Object.freeze({ applied: false, reason: "stale-generation" });
       }
-      progress("foundry-session", localizeFoundry("VEMOBILE.Interface.AppFrame.SynchronisingSceneData2", "Synchronizing scene data…"));
+      progress("foundry-session", localizeFoundry("VEMOBILE.Interface.AppFrame.SynchronisingSessionData2", "Synchronizing session data…"));
       const finishReconcile = performanceObserver?.start?.("reconnect.authoritative.reconcile") ?? (() => {});
       const changedCollections = new Set();
       const work = { prepared: 0, updated: 0, added: 0, deleted: 0 };

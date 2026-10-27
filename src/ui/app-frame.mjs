@@ -3,13 +3,9 @@ import { icon, node } from "./dom.mjs";
 import { renderCharacters } from "../features/characters/presenter.mjs";
 import { renderJournals } from "../features/journals/presenter.mjs";
 import { renderChat } from "../features/chat/presenter.mjs";
-import { renderScene, renderSceneChooser, updateSceneTargetPresentation } from "../features/scene/presenter.mjs";
 import { renderSettings } from "../features/settings/presenter.mjs";
-import { createCombatCarouselUiState, renderCombat, renderGmCombatControls } from "../features/combat/presenter.mjs";
-import { sheetTabIcon } from "../features/characters/sheet-icons.mjs";
+import { renderCombat, renderGmCombatControls } from "../features/combat/presenter.mjs";
 import { resolveCharacterThemeProfile } from "../kernel/character-theme.mjs";
-import { actionResultsDeferred, renderActionSessionModal } from "./action-session-modal.mjs";
-import { createSceneChoiceTransition } from "./scene-choice-transition.mjs";
 import { createVeBackDispatcher } from "./ve-back-dispatcher.mjs";
 import { createVeCloseWatcherBack, veCloseWatcherLayers } from "./ve-close-watcher-back.mjs";
 import { createElapsedWorkerClock } from "./elapsed-worker-clock.mjs";
@@ -22,87 +18,22 @@ const SCREENS = Object.freeze({
   characters: renderCharacters,
   journals: renderJournals,
   chat: renderChat,
-  scene: renderScene,
   combat: renderCombat,
   settings: renderSettings
 });
 export const RECONNECT_BLOCKER_DELAY_MS = 120;
 
 export function createAppFrame({ store, commands, policy, scope, mobileBackGateway = null, performanceObserver = null, nativeApplications = null }) {
-  const root = node("div", { className: "ve-mobile-app", attrs: { role: "application", "aria-label": localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.VEMobile", "VE Mobile") } });
+  const root = node("div", { className: "ve-mobile-app", attrs: { role: "application", "aria-label": localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.VEMobile", "Mikelandia Controls") } });
   const viewport = node("main", { className: "ve-viewport" });
-  const splitSceneViewport = node("main", { className: "ve-split-scene-viewport", attrs: { "aria-label": localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.ScenePanel", "Scene panel") } });
   const panelOverlays = node("div", { className: "ve-panel-overlays", attrs: { "aria-live": "polite" } });
-  const sceneActionOverlays = node("div", { className: "ve-panel-overlays ve-scene-action-overlays", attrs: { "aria-live": "polite" } });
-  const sceneChooserOverlays = node("div", { className: "ve-scene-chooser-overlays", attrs: { id: "ve-scene-chooser-overlay", hidden: true } });
   const nav = node("nav", { className: "ve-bottom-nav", attrs: { "aria-label": localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.Primary", "Primary") } });
   const navSideIcon = icon("fa-arrow-left");
-  let screenScope = null;
-  let combatControlsScope = null;
-  let combatControlsRenderKey = "";
-  let sceneContentOwner = null;
-  let renderedSceneStructureKey = "";
-  let renderedSceneFocusKey = "";
-  let splitSceneScope = null;
-  let splitSceneContentOwner = null;
-  let renderedSplitSceneStructureKey = "";
-  let renderedSplitSceneFocusKey = "";
-  let splitActionSessionScope = null;
-  let sceneChooserScope = null;
-  const expandedSceneFolderIds = new Set();
-  const expandedSceneLevelIds = new Set();
-  let renderedSceneChooserKey = "";
-  let renderedSplitSceneKey = "";
-  let renderedSplitActionSessionId = "";
-  let renderedState = null;
-  let activeSplitScreen = false;
-  let activeTemplatePlacement = false;
-  let sceneFocusTransitioning = false;
-  let sceneFocusRequest = 0;
-  let sceneLayoutAnchorScope = null;
-  let metricsScope = null;
-  let moduleOverlayContext = null;
-  let mounted = true;
-  let externalLayoutTransition = false;
-  let characterScrollRestoreGeneration = 0;
-  let characterScrollRestoreScope = null;
-  let characterHeaderScroll = null;
+  let screenScope = null, combatControlsScope = null, combatControlsRenderKey = "", renderedState = null;
+  let mounted = true, characterScrollRestoreGeneration = 0, characterScrollRestoreScope = null, characterHeaderScroll = null;
   const characterScrollMemory = createCharacterScrollMemory();
-  const sceneInteractionListeners = new Set();
-  // Construction may fail before a frame object can be returned to the kernel.
-  // Own DOM/body restoration before listeners, subscriptions, or first render.
-  scope.own(unmount);
-  const reconnectBlocker = createReconnectBlocker(scope, { localize: commands.localize, locale: commands.readLocale?.() ?? "en", onReload: () => commands.reloadApplication() });
-  const modeTransitionBlocker = createModeTransitionBlocker(scope, { localize: commands.localize });
-  const graphicsRecovery = createGraphicsRecoveryPrompt(commands, scope);
-  const rotateSuggestion = tabletRotateSuggestion(commands.localize);
-  const sceneChoiceTransition = createSceneChoiceTransition({
-    trace: (entry) => commands.traceScenePickerEvent?.({
-      ...entry,
-      route: store.state.route,
-      currentSceneId: store.state.snapshot?.scene?.id ?? "",
-      chooserOpen: Boolean(store.state.sceneChooserOpen),
-      splitPane: activeSplitScreen,
-      reconnectGeneration: store.state.reconnect?.generation ?? null,
-      historyLength: globalThis.history?.length ?? null,
-      historyState: plainHistoryState(globalThis.history?.state)
-    })
-  });
-
-  const authoritativeSceneViewport = () => {
-    const host = activeSplitScreen ? splitSceneViewport : store.state.route === "scene" ? viewport : null;
-    return host ? elementViewport(host) : null;
-  };
   const characterScroller = () => viewport.querySelector(".ve-character-content-scroller") ?? viewport;
   const characterScrollTop = () => characterScroller().scrollTop;
-  const syncSceneViewport = () => {
-    if (!mounted) return;
-    const bounds = authoritativeSceneViewport();
-    if (bounds) applySceneViewportVariables(document.body, bounds);
-    else clearSceneViewportVariables(document.body);
-    if (moduleOverlayContext) commands.syncModuleOverlays?.({ ...moduleOverlayContext, viewport: bounds });
-  };
-
   const restoreCharacterScroll = (state, desiredScrollTop) => {
     characterScrollRestoreScope?.dispose();
     characterScrollRestoreScope = scope.child("character-scroll-restore");
@@ -133,168 +64,49 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     }
   };
 
-  const splitToggle = node("button", {
-    className: "ve-split-screen-toggle",
-    attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.SplitScreen", "Split Screen"), "aria-pressed": "false" },
-    on: { click: () => commands.toggleSplitScreen() },
-    children: [icon("fa-table-columns"), node("span", { text: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.SplitScreen", "Split Screen") })]
-  }, scope);
-
-  const navSideToggle = node("button", {
-    className: "ve-tablet-nav-side-toggle",
-    attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.MoveNavigationToLeftSide", "Move navigation to left side"), title: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.MoveNavigationToLeftSide", "Move navigation to left side") },
-    on: { click: () => commands.toggleTabletNavSide() },
-    children: [navSideIcon]
-  }, scope);
+  const reconnectBlocker = createReconnectBlocker(scope, { localize: commands.localize, locale: commands.readLocale?.() ?? "en", onReload: () => commands.reloadApplication() });
+  const modeTransitionBlocker = createModeTransitionBlocker(scope, { localize: commands.localize });
+  const rotateSuggestion = tabletRotateSuggestion(commands.localize);
+  const navSideToggle = node("button", { className: "ve-tablet-nav-side-toggle", attrs: { type: "button" }, children: [navSideIcon], on: { click: () => commands.toggleTabletNavSide() } }, scope);
   const combatControlsHost = node("div", { className: "ve-gm-combat-control-host", attrs: { hidden: true } });
-
-  const navItems = [
-    ["characters", () => sheetTabIcon("overview"), "Character"],
-    ["chat", "fa-comments", "Chat"],
-    ["journals", () => sheetTabIcon("scroll-quill"), "Journals"],
-    ["scene", "fa-map", "Scene"],
-    ["combat", combatNavIcon, "Combat"],
-    ["settings", "fa-gear", "Settings"]
-  ];
+  const navItems = [["characters", "fa-user", "Character"], ["chat", "fa-comments", "Chat"], ["journals", "fa-book-open", "Journals"], ["combat", combatNavIcon, "Combat"], ["settings", "fa-gear", "Settings"]];
   const navButtons = new Map(navItems.map(([route, createIcon, label]) => {
-    const localizedLabel = commands.localize?.(`VEMOBILE.Navigation.${label}`, label) ?? label;
-    const button = node("button", {
-      className: "ve-main-nav-item",
-      attrs: { type: "button" },
-      dataset: { route },
-      on: {
-        click: () => {
-          if (activeTemplatePlacement) return;
-          if (route === "scene") {
-            const action = sceneNavigationTapAction({ route: store.state.route, splitActive: activeSplitScreen });
-            if (action === "open-full-scene") commands.openFullScene();
-            else if (action === "open-split-scene-chooser") commands.openSplitSceneChooser();
-            else if (action === "navigate-scene") commands.navigate("scene");
-            else commands.toggleSceneChooser();
-          } else if (activeSplitScreen && store.state.route === route) commands.openFullScene();
-          else commands.navigate(route);
-        }
-      },
-      children: [typeof createIcon === "function" ? createIcon() : icon(createIcon), node("span", { text: localizedLabel })]
-    }, scope);
+    const button = node("button", { className: "ve-main-nav-item", attrs: { type: "button" }, dataset: { route }, on: { click: () => commands.navigate(route) }, children: [typeof createIcon === "function" ? createIcon() : icon(createIcon), node("span", { text: commands.localize?.(`VEMOBILE.Navigation.${label}`, label) ?? label })] }, scope);
     return [route, button];
   }));
-  const latencyValue = node("strong", { text: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.Ms", "— ms") });
-  const fpsValue = node("strong", { text: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.FPS", "— FPS") });
-  const metricsInfo = node("div", {
-    className: "ve-tablet-metrics",
-    attrs: { "aria-label": localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.ConnectionAndRenderingStatus", "Connection and rendering status") },
-    children: [
-      node("span", { attrs: { title: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.OneWayConnectionLatency", "Average one-way connection latency") }, children: [latencyValue] }),
-      node("span", { attrs: { title: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.EstimatedDisplayFrameRate", "Estimated display frame rate") }, children: [fpsValue] })
-    ]
-  });
-  const navRoutes = node("div", { className: "ve-nav-routes", children: [...navButtons.values(), metricsInfo] });
-  nav.append(splitToggle, rotateSuggestion, navRoutes, navSideToggle);
-
-  const backDispatcher = createVeBackDispatcher({
-    getState: () => store.state,
-    commands,
-    nativeApplications: {
-      topmost: () => nativeApplications?.settings?.topmost?.() ?? nativeApplications?.admissions?.topmost?.(),
-      closeTopmost: () => nativeApplications?.settings?.topmost?.()
-        ? nativeApplications.settings.closeTopmost() : nativeApplications?.admissions?.closeTopmost?.()
-    },
-    getRoot: () => root.ownerDocument ?? root,
-    isSplitActive: () => activeSplitScreen
-  });
+  nav.append(rotateSuggestion, node("div", { className: "ve-nav-routes", children: [...navButtons.values()] }), navSideToggle);
+  const backDispatcher = createVeBackDispatcher({ getState: () => store.state, commands, nativeApplications: {
+    topmost: () => nativeApplications?.settings?.topmost?.() ?? nativeApplications?.admissions?.topmost?.(),
+    closeTopmost: () => nativeApplications?.settings?.topmost?.() ? nativeApplications.settings.closeTopmost() : nativeApplications?.admissions?.closeTopmost?.()
+  }, getRoot: () => root.ownerDocument ?? root });
   const nativeBackLayers = () => [...(nativeApplications?.admissions?.layers ?? []), ...(nativeApplications?.settings?.layers ?? []), ...(!controlsGuide.element.hidden ? ["controls-guide"] : [])];
-  const closeWatcherBack = createVeCloseWatcherBack({
-    scope,
-    getLayers: () => veCloseWatcherLayers(store.state, { splitActive: activeSplitScreen, nativeLayers: nativeBackLayers() }),
-    onBack: () => backDispatcher.back()
-  });
-  mobileBackGateway?.enable(scope, {
-    onBack: () => backDispatcher.back(),
-    getDiagnosticContext: () => ({
-      route: store.state.route,
-      routeDepth: store.state.routeHistory?.length ?? 0,
-      topmostDismissible: backDispatcher.peek(),
-      closeWatcher: closeWatcherBack.snapshot()
-    })
-  });
-
-  root.append(
-    splitSceneViewport,
-    viewport,
-    panelOverlays,
-    sceneActionOverlays,
-    sceneChooserOverlays,
-    nav
-  );
-  root.append(combatControlsHost);
-  root.append(reconnectBlocker.element);
-  root.append(modeTransitionBlocker.element);
-  root.append(graphicsRecovery.element);
-  const controlsGuide = createControlsGuide({ scope, readContext: () => commands.readControlsContext(),
-    localize: key => commands.localize(key), onVisibility: () => closeWatcherBack.sync() });
-  const controlsInvitation = createControlsInvitation({ root, scope, commands, getState: () => store.state,
-    isReady: () => commands.controlsUiReady?.(),
-    isNativeOpen: () => nativeApplications?.settings?.topmost?.() ?? nativeApplications?.admissions?.topmost?.(),
-    openGuide: anchor => controlsGuide.show(anchor) });
-  root.append(controlsInvitation.element, controlsGuide.element);
-
-  const render = (state) => {
+  const closeWatcherBack = createVeCloseWatcherBack({ scope, getLayers: () => veCloseWatcherLayers(store.state, { nativeLayers: nativeBackLayers() }), onBack: () => backDispatcher.back() });
+  mobileBackGateway?.enable(scope, { onBack: () => backDispatcher.back(), getDiagnosticContext: () => ({ route: store.state.route, routeDepth: store.state.routeHistory?.length ?? 0, topmostDismissible: backDispatcher.peek(), closeWatcher: closeWatcherBack.snapshot() }) });
+  const controlsGuide = createControlsGuide({ scope, readContext: () => commands.readControlsContext(), localize: key => commands.localize(key), onVisibility: () => closeWatcherBack.sync() });
+  const controlsInvitation = createControlsInvitation({ root, scope, commands, getState: () => store.state, isReady: () => commands.controlsUiReady?.(), isNativeOpen: () => nativeApplications?.settings?.topmost?.() ?? nativeApplications?.admissions?.topmost?.(), openGuide: anchor => controlsGuide.show(anchor) });
+  root.append(viewport, panelOverlays, nav, combatControlsHost, reconnectBlocker.element, modeTransitionBlocker.element, controlsInvitation.element, controlsGuide.element);
+  function syncCombatControlGeometry() {
+    const height = combatControlsHost.hidden ? 0 : combatControlsHost.getBoundingClientRect().height;
+    const navBounds = nav.getBoundingClientRect();
+    if (navBounds.width > navBounds.height && navBounds.height > 0) root.style.setProperty("--ve-nav-dock-height", `${navBounds.height}px`);
+    root.style.setProperty("--ve-gm-combat-row-reservation", height > 0 ? `${height + 8}px` : "0px");
+  }
+  const render = state => {
     if (!mounted || scope.disposed) return;
     performanceObserver?.increment?.("render.frame");
     const latestPolicy = policy();
-    const selectedActor = state.snapshot?.selectedActor
-      ?? state.snapshot?.actors?.find((entry) => entry.id === state.selectedActorId)
-      ?? state.snapshot?.actors?.[0]
-      ?? null;
+    const selectedActor = state.snapshot?.selectedActor ?? state.snapshot?.actors?.find(entry => entry.id === state.selectedActorId) ?? state.snapshot?.actors?.[0] ?? null;
     const settings = commands.readFramePreferences();
-    const themeProfile = resolveCharacterThemeProfile(
-      selectedActor?.themeClassKeys ?? [selectedActor?.themeClassKey ?? "neutral"],
-      settings.colorScheme
-    );
+    const themeProfile = resolveCharacterThemeProfile(selectedActor?.themeClassKeys ?? [selectedActor?.themeClassKey ?? "neutral"], settings.colorScheme);
     const characterTheme = themeProfile.theme;
-    const previousSplitActive = activeSplitScreen;
-    const previousSceneHost = previousSplitActive
-      ? splitSceneViewport
-      : renderedState?.route === "scene" ? viewport : null;
-    const previousSceneBounds = elementViewport(previousSceneHost);
-    const splitEnabled = latestPolicy.formFactor === "tablet" && latestPolicy.orientation === "landscape" && state.splitScreen;
-    const splitActive = splitEnabled && (state.route !== "scene" || state.sceneChooserOpen);
-    activeSplitScreen = splitActive;
-    activeTemplatePlacement = Boolean(state.templatePlacement || state.nativeTokenPlacement);
-    const reconnectActive = Boolean(state.reconnect);
-    const modeTransitionActive = Boolean(state.modeTransition);
-    reconnectBlocker.update(state.reconnect);
-    modeTransitionBlocker.update(state.modeTransition);
+    const reconnectActive = Boolean(state.reconnect), modeTransitionActive = Boolean(state.modeTransition);
+    reconnectBlocker.update(state.reconnect); modeTransitionBlocker.update(state.modeTransition);
     root.dataset.reconnectPhase = state.reconnect?.phase ?? "ready";
     root.dataset.modeTransitionPhase = state.modeTransition?.phase ?? "ready";
-    viewport.inert = reconnectActive || modeTransitionActive || root.dataset.sceneFocus === "true";
-    splitSceneViewport.inert = reconnectActive || modeTransitionActive;
-    sceneChooserOverlays.inert = reconnectActive || modeTransitionActive;
-    nav.inert = reconnectActive || modeTransitionActive;
+    viewport.inert = nav.inert = reconnectActive || modeTransitionActive;
     const tabletNavSide = state.tabletNavSide === "left" ? "left" : "right";
-    const layoutKey = `${latestPolicy.formFactor}:${latestPolicy.orientation}:${splitActive ? "split" : "single"}:${tabletNavSide}`;
-    if (renderedState?.layoutKey && renderedState.layoutKey !== layoutKey && previousSceneBounds && !externalLayoutTransition) {
-      const fixedScreenPosition = previousSplitActive !== splitActive;
-      const anchor = fixedScreenPosition
-        ? commands.captureFixedSceneAnchor?.(previousSceneBounds)
-        : commands.captureSceneViewportAnchor?.(previousSceneBounds);
-      const nextSceneHost = splitActive ? splitSceneViewport : state.route === "scene" ? viewport : null;
-      if (anchor && nextSceneHost) restoreSceneAnchorAfterLayout(anchor, nextSceneHost, { fixedScreenPosition });
-    }
+    const layoutKey = `${latestPolicy.formFactor}:${latestPolicy.orientation}:${tabletNavSide}`;
     commands.syncFoundryTheme?.(latestPolicy.theme);
-    if (latestPolicy.formFactor === "tablet" && !metricsScope) {
-      metricsScope = scope.child("tablet-metrics");
-      commands.watchMetrics?.(metricsScope, ({ latency, fps }) => {
-        latencyValue.textContent = localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.Ms2", "{latency} ms", { latency: (latency ?? "—") });
-        fpsValue.textContent = localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.FPS2", "{fps} FPS", { fps: (fps ?? "—") });
-      });
-    } else if (latestPolicy.formFactor !== "tablet" && metricsScope) {
-      metricsScope.dispose();
-      metricsScope = null;
-      latencyValue.textContent = localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.Ms", "— ms");
-      fpsValue.textContent = localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.FPS", "— FPS");
-    }
     root.dataset.theme = latestPolicy.theme;
     // The frame may mount after presentation preparation; each render also
     // reconciles the client preference without observing the whole document.
@@ -302,12 +114,8 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     else root.removeAttribute("data-ve-style-authority");
     root.dataset.formFactor = latestPolicy.formFactor;
     root.dataset.orientation = latestPolicy.orientation;
-    root.dataset.splitScreen = String(splitActive);
     root.dataset.navSide = tabletNavSide;
-    root.dataset.joystickSide = settings.joystickResolvedSide;
     root.dataset.route = state.route;
-    root.dataset.templatePlacement = state.templatePlacement?.phase ?? "inactive";
-    root.dataset.sceneChooser = state.sceneChooserOpen ? "open" : "closed";
     root.dataset.characterTheme = characterTheme;
     root.dataset.characterThemeBlend = themeProfile.multiclass ? "multiclass" : "single";
     const artworkOpacity = Number(settings.headerArtworkOpacity);
@@ -325,32 +133,13 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     document.body.dataset.veMobileCharacterTheme = characterTheme;
     document.body.dataset.veMobileCharacterThemeBlend = themeProfile.multiclass ? "multiclass" : "single";
     applyThemeBlend(document.body, themeProfile);
-    document.body.classList.toggle("ve-mobile-scene-active", state.route === "scene" || splitActive);
-    document.body.classList.toggle("ve-mobile-split-screen", splitActive);
+
     document.body.classList.toggle("ve-mobile-reconnecting", reconnectActive);
     document.body.classList.toggle("ve-mobile-mode-transitioning", modeTransitionActive);
-    document.body.classList.toggle("ve-mobile-scene-chooser-open", Boolean(state.sceneChooserOpen && state.route === "scene"));
-    moduleOverlayContext = {
-      route: state.route,
-      formFactor: latestPolicy.formFactor,
-      splitScreen: splitActive,
-      templatePlacement: Boolean(state.templatePlacement || state.nativeTokenPlacement),
-      sceneChooserOpen: Boolean(state.sceneChooserOpen),
-      reconnecting: reconnectActive
-    };
-    commands.syncModuleOverlays?.({ ...moduleOverlayContext, viewport: authoritativeSceneViewport() });
-    queueMicrotask(syncSceneViewport);
-    splitToggle.classList.toggle("is-active", splitEnabled);
-    splitToggle.setAttribute("aria-pressed", String(splitEnabled));
-    splitToggle.disabled = activeTemplatePlacement || state.canvasAvailable === false;
-    navSideToggle.disabled = activeTemplatePlacement;
     const navSideDestination = tabletNavSide === "right" ? "left" : "right";
     const navSideLabel = navSideDestination === "left" ? localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.MoveNavigationToLeftSide", "Move navigation to left side") : localizedText(commands.localize, "VEMOBILE.Navigation.MoveRight", "Move navigation to right side");
-    navSideToggle.setAttribute("aria-label", navSideLabel);
-    navSideToggle.setAttribute("title", navSideLabel);
-    navSideIcon.classList.toggle("fa-arrow-left", navSideDestination === "left");
-    navSideIcon.classList.toggle("fa-arrow-right", navSideDestination === "right");
-
+    navSideToggle.setAttribute("aria-label", navSideLabel); navSideToggle.title = navSideLabel;
+    navSideIcon.classList.toggle("fa-arrow-left", navSideDestination === "left"); navSideIcon.classList.toggle("fa-arrow-right", navSideDestination === "right");
     const combatControls = state.snapshot?.combatControls;
     const combatControlsHidden = state.route !== "combat" || !combatControls?.isGM || state.status !== "ready";
     root.dataset.gmCombatControls = String(!combatControlsHidden);
@@ -368,25 +157,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
       queueMicrotask(syncCombatControlGeometry);
     }
 
-    for (const [route, button] of navButtons) {
-      const active = state.route === route;
-      button.classList.toggle("is-active", active);
-      if (active) button.setAttribute("aria-current", "page");
-      else button.removeAttribute("aria-current");
-      button.disabled = activeTemplatePlacement;
-      if (route === "scene") {
-        const chooserIntent = active;
-        const chooserOpen = chooserIntent && state.sceneChooserOpen;
-        const label = chooserOpen ? localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.CloseScenes", "Close Scenes") : localizedText(commands.localize, "VEMOBILE.Interface.Presenter.ChooseScene", "Choose Scene");
-        button.setAttribute("aria-label", label);
-        button.setAttribute("title", label);
-        button.setAttribute("aria-expanded", String(Boolean(chooserOpen)));
-        button.setAttribute("aria-controls", splitActive ? "ve-scene-picker-pane" : "ve-scene-chooser-overlay");
-      }
-    }
-
-    reconcileSceneChooser(state, splitActive);
-
+    for (const [route, button] of navButtons) { const active = state.route === route; button.classList.toggle("is-active", active); if (active) button.setAttribute("aria-current", "page"); else button.removeAttribute("aria-current"); }
     let sameScreen = renderedState?.route === state.route
       && renderedState?.status === state.status
       && renderedState?.error === state.error
@@ -396,8 +167,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
       || (state.route === "characters" && state.snapshot?.selectedActor === null && Boolean(viewport.firstElementChild?.__veUpdateCharacter));
     const characterTabChanged = renderedState?.characterTab !== state.characterTab;
     const rollResultChanged = renderedState?.rollResult !== state.rollResult;
-    const actionSessionChanged = renderedState?.actionSession !== state.actionSession
-      || actionResultsDeferred(renderedState) !== actionResultsDeferred(state);
+    const actionSessionChanged = renderedState?.actionSession !== state.actionSession;
     const characterItemChanged = renderedState?.characterItemId !== state.characterItemId;
     const expandedCharacterItemChanged = renderedState?.expandedCharacterItemId !== state.expandedCharacterItemId;
     const hitPointEditorChanged = renderedState?.hitPointEditor !== state.hitPointEditor;
@@ -407,145 +177,10 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     const portraitImageChanged = renderedState?.portraitImage !== state.portraitImage;
     const journalChanged = journalPresentationChanged(renderedState, state);
     const viewChanged = renderedState?.viewRevision !== state.viewRevision;
-    const sceneChooserChanged = renderedState?.sceneChooserOpen !== state.sceneChooserOpen
-      || renderedState?.sceneChooserRevision !== state.sceneChooserRevision;
-    const stableTemplatePresentation = activeTemplatePresentationUnchanged(renderedState, state)
-      && sameScreen && !viewChanged;
-
-    if (splitActive) {
-      const nextSceneKey = `${scenePresentationKey(state.snapshot)}:${settings.movementControl}:${settings.movementRepeatDelayMs}:${settings.quickbarEnabled}:${settings.quickbarSource}:${settings.joystickResolvedSide}:${settings.combatCarousel}:${state.quickbarCollapsed}:${JSON.stringify(state.templatePlacement)}:${JSON.stringify(state.nativeTokenPlacement)}:${JSON.stringify(state.actorTokenPlacement)}`;
-      const nextStructureKey = sceneStructureKey(state.snapshot, layoutKey, true);
-      const nextFocusKey = sceneFocusKey(state.snapshot);
-      let newPresentation = false;
-      if (!splitSceneScope || renderedSplitSceneStructureKey !== nextStructureKey) {
-        splitSceneScope?.dispose();
-        splitSceneScope = scope.child("screen:split-scene");
-        const contentOwner = { current: null, carouselState: createCombatCarouselUiState() };
-        splitSceneContentOwner = contentOwner;
-        splitSceneScope.own(() => contentOwner.current?.dispose());
-        renderedSplitSceneStructureKey = nextStructureKey;
-        newPresentation = true;
-      }
-      if (newPresentation || (!stableTemplatePresentation && renderedSplitSceneKey !== nextSceneKey)) {
-        const targetOnly = !newPresentation && sceneTargetsOnlyChanged(renderedState?.snapshot, state.snapshot);
-        if (targetOnly && updateSceneTargetPresentation(splitSceneViewport.querySelector?.(".ve-scene-screen"), state.snapshot?.scene?.movement?.targetCount, activeTemplatePlacement, commands.localize, commands.readLocale?.() ?? "en")) {
-          performanceObserver?.increment?.("render.patch.scene-targets");
-        } else {
-          splitSceneContentOwner.current?.dispose();
-          splitSceneContentOwner.current = splitSceneScope.child("content");
-          performanceObserver?.increment?.("dom.replace.split-scene-root");
-          splitSceneViewport.replaceChildren(renderScene({
-            state,
-            commands,
-            scope: splitSceneContentOwner.current,
-            presentationScope: newPresentation ? splitSceneScope : null,
-            focusSelectedToken: newPresentation || renderedSplitSceneFocusKey !== nextFocusKey,
-            splitViewport: true,
-            carouselState: splitSceneContentOwner.carouselState,
-            performanceObserver
-          }));
-        }
-        renderedSplitSceneKey = nextSceneKey;
-        renderedSplitSceneFocusKey = nextFocusKey;
-      }
-      if (stableTemplatePresentation) renderedSplitSceneKey = nextSceneKey;
-    } else {
-      splitSceneScope?.dispose();
-      splitSceneScope = null;
-      splitSceneContentOwner = null;
-      renderedSplitSceneKey = "";
-      renderedSplitSceneStructureKey = "";
-      renderedSplitSceneFocusKey = "";
-      splitSceneViewport.replaceChildren();
-      // A retained Settings presenter rehomes its owned surfaces below.
-      if (!(state.route === "settings" && renderedState?.route === "settings")) panelOverlays.replaceChildren();
-    }
-
-    const splitActionSessionId = splitSceneActionSessionId(state, splitActive);
-    if (splitActionSessionId && (!splitActionSessionScope || renderedSplitActionSessionId !== splitActionSessionId)) {
-      splitActionSessionScope?.dispose();
-      splitActionSessionScope = scope.child("screen:split-action-session");
-      sceneActionOverlays.replaceChildren(renderActionSessionModal(state.actionSession, commands, splitActionSessionScope));
-      renderedSplitActionSessionId = splitActionSessionId;
-    } else if (!splitActionSessionId && (splitActionSessionScope || renderedSplitActionSessionId)) {
-      splitActionSessionScope?.dispose();
-      splitActionSessionScope = null;
-      renderedSplitActionSessionId = "";
-      sceneActionOverlays.replaceChildren();
-    }
-
-    // Native template targeting may change several times per second. Keep the
-    // mounted Scene, active handle and hidden companion panel intact while the
-    // placement phase itself is unchanged.
-    if (stableTemplatePresentation) {
-      renderedState = { ...screenState(state, layoutKey), sceneKey: renderedState?.sceneKey };
-      return;
-    }
-
     // Foundry owns and incrementally updates the live ChatLog. Snapshot hooks
     // must never tear it down or replace its focused native textarea.
     if (renderedState?.route === state.route && state.status === "ready" && state.snapshot && ["chat", "settings"].includes(state.route)) {
-      if (state.route === "settings") viewport.firstElementChild?.syncOverlayHost?.(splitActive ? panelOverlays : null);
-      renderedState = screenState(state, layoutKey);
-      return;
-    }
-
-    // Keep one native-canvas presentation owner for the life of the active
-    // Scene. Combat, token-control, Actor-sync and Quickbar snapshots replace
-    // only the VE HUD scope; they neither resize nor repaint Foundry's board.
-    if (state.status === "ready" && state.snapshot && state.route === "scene" && !splitActive) {
-      const settingsKey = `${settings.movementControl}:${settings.movementRepeatDelayMs}:${settings.quickbarEnabled}:${settings.quickbarSource}:${settings.joystickResolvedSide}:${settings.combatCarousel}:${state.quickbarCollapsed}`;
-      const nextSceneKey = `${scenePresentationKey(state.snapshot)}:${settingsKey}:${state.actionSession?.rootMessageId ?? ""}:${JSON.stringify(state.rollResult)}:${JSON.stringify(state.templatePlacement)}:${JSON.stringify(state.nativeTokenPlacement)}:${JSON.stringify(state.actorTokenPlacement)}`;
-      const nextStructureKey = sceneStructureKey(state.snapshot, layoutKey, false);
-      const nextFocusKey = sceneFocusKey(state.snapshot);
-      let newPresentation = false;
-      if (!sameScreen || !screenScope || renderedSceneStructureKey !== nextStructureKey) {
-        screenScope?.dispose();
-        characterHeaderScroll = null;
-        screenScope = scope.child("screen:scene");
-        const contentOwner = { current: null, carouselState: createCombatCarouselUiState() };
-        sceneContentOwner = contentOwner;
-        screenScope.own(() => contentOwner.current?.dispose());
-        renderedSceneStructureKey = nextStructureKey;
-        newPresentation = true;
-      }
-      if (newPresentation || renderedState?.sceneKey !== nextSceneKey) {
-        const targetOnly = !newPresentation && !rollResultChanged && sceneTargetsOnlyChanged(renderedState?.snapshot, state.snapshot);
-        if (targetOnly && updateSceneTargetPresentation(viewport.querySelector?.(".ve-scene-screen"), state.snapshot?.scene?.movement?.targetCount, activeTemplatePlacement)) {
-          performanceObserver?.increment?.("render.patch.scene-targets");
-        } else {
-          sceneContentOwner.current?.dispose();
-          sceneContentOwner.current = screenScope.child("content");
-          panelOverlays.replaceChildren();
-          performanceObserver?.increment?.("dom.replace.scene-root");
-          viewport.replaceChildren(renderScene({
-            state,
-            commands,
-            scope: sceneContentOwner.current,
-            presentationScope: newPresentation ? screenScope : null,
-            focusSelectedToken: newPresentation || renderedSceneFocusKey !== nextFocusKey,
-            carouselState: sceneContentOwner.carouselState,
-            performanceObserver
-          }));
-        }
-        renderedSceneFocusKey = nextFocusKey;
-      }
-      renderedState = { ...screenState(state, layoutKey), sceneKey: nextSceneKey };
-      return;
-    }
-
-    // Unrelated chat and actor hooks must not rebuild the Scene surface while
-    // a finger is holding its joystick.
-    // Scene-owned action sessions also stay mounted while Foundry publishes
-    // each follow-up activity message; dismissing renders the latest Scene.
-    if (sameScreen && state.status === "ready" && state.route === "scene" && !splitActive && state.actionSession && state.actionSessionOrigin === "scene"
-      && !actionSessionChanged && renderedState?.actionSessionOrigin === "scene") {
-      renderedState = screenState(state, layoutKey);
-      return;
-    }
-
-    if (sameScreen && !viewChanged && !actionSessionChanged && !sceneChooserChanged && renderedState?.quickbarCollapsed === state.quickbarCollapsed && state.status === "ready" && state.route === "scene" && !splitActive
-      && scenePresentationKey(renderedState?.snapshot) === scenePresentationKey(state.snapshot)) {
+      if (state.route === "settings") viewport.firstElementChild?.syncOverlayHost?.(null);
       renderedState = screenState(state, layoutKey);
       return;
     }
@@ -564,7 +199,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
           restoreCharacterScroll(state, paneTop);
         }
       } catch (error) {
-        console.error("VE Mobile | Could not refresh Character header", error);
+        console.error("Mikelandia Controls | Could not refresh Character header", error);
         // Bypass preserved-form fast paths and dispose the partial owner in
         // the normal screen fallback below, keeping the presentation retryable.
         sameScreen = false;
@@ -629,7 +264,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     }
 
     // Settings controls reconcile their saved values, device/mode wording,
-    // joystick helper and Session metrics in place. Preserve the presenter so
+    // saved values in place. Preserve the presenter so
     // an ordinary client-setting invalidation cannot collapse open sections.
     if (sameScreen && state.status === "ready" && state.route === "settings"
       && !selectionChanged && !actionSessionChanged && !journalChanged) {
@@ -648,7 +283,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     }
 
     const routeSnapshotChanged = snapshotChanged && snapshotPresentationChangedForRoute(renderedState, state);
-    if (sameScreen && !routeSnapshotChanged && !selectionChanged && !characterTabChanged && !rollResultChanged && !actionSessionChanged && !characterItemChanged && !expandedCharacterItemChanged && !hitPointEditorChanged && !restEditorChanged && !spellSlotEditorChanged && !xpEditorChanged && !portraitImageChanged && !journalChanged && !viewChanged && !sceneChooserChanged) {
+    if (sameScreen && !routeSnapshotChanged && !selectionChanged && !characterTabChanged && !rollResultChanged && !actionSessionChanged && !characterItemChanged && !expandedCharacterItemChanged && !hitPointEditorChanged && !restEditorChanged && !spellSlotEditorChanged && !xpEditorChanged && !portraitImageChanged && !journalChanged && !viewChanged) {
       renderedState = screenState(state, layoutKey);
       return;
     }
@@ -682,20 +317,17 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
         renderedState = screenState(state, layoutKey);
         return;
       } catch (error) {
-        console.error("VE Mobile | Could not update Character pane", error);
+        console.error("Mikelandia Controls | Could not update Character pane", error);
         // Dispose all partial pane/header resources through the normal fallback.
       }
     }
 
     screenScope?.dispose();
     characterHeaderScroll = null;
-    sceneContentOwner = null;
-    renderedSceneStructureKey = "";
-    renderedSceneFocusKey = "";
     screenScope = scope.child(`screen:${state.route}`);
     if (state.status === "error") {
       performanceObserver?.increment?.("dom.replace.viewport");
-      viewport.replaceChildren(node("section", { className: "ve-empty", children: [icon("fa-triangle-exclamation"), node("h2", { text: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.VEMobileCouldNotStart", "VE Mobile could not start") }), node("p", { text: commands.localize?.(state.error, state.error) ?? state.error })] }));
+      viewport.replaceChildren(node("section", { className: "ve-empty", children: [icon("fa-triangle-exclamation"), node("h2", { text: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.VEMobileCouldNotStart", "Mikelandia Controls could not start") }), node("p", { text: commands.localize?.(state.error, state.error) ?? state.error })] }));
       renderedState = screenState(state, layoutKey);
       return;
     }
@@ -705,7 +337,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
       renderedState = screenState(state, layoutKey);
       return;
     }
-    const presenter = splitActive && state.route === "scene" ? renderSplitScenePicker : (SCREENS[state.route] ?? SCREENS.characters);
+    const presenter = SCREENS[state.route] ?? SCREENS.characters;
     try {
       panelOverlays.replaceChildren();
       performanceObserver?.increment?.(`render.presenter.${state.route}`);
@@ -714,15 +346,12 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
         state,
         commands,
         scope: screenScope,
-        overlayHost: splitActive ? panelOverlays : null,
-        expandedFolderIds: expandedSceneFolderIds,
-        expandedLevelSceneIds: expandedSceneLevelIds,
-        sceneChoiceTransition
+        overlayHost: null
       }));
       if (state.route === "characters") characterHeaderScroll = bindCharacterHeaderScroll({ scroller: characterScroller(), screen: viewport.firstElementChild, scope: screenScope, restorePosition: restoreCharacterScrollPosition });
       if (nextCharacterContext) restoreCharacterScroll(state, desiredCharacterScrollTop);
     } catch (error) {
-      console.error(`VE Mobile | Could not render ${state.route}`, error);
+      console.error(`Mikelandia Controls | Could not render ${state.route}`, error);
       screenScope?.dispose();
       characterHeaderScroll = null;
       viewport.replaceChildren(node("section", {
@@ -734,417 +363,25 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
   };
 
   scope.own(store.subscribe(render, { immediate: false }));
-  let controlsContextKey = "";
-  scope.own(store.subscribe(state => {
-    controlsInvitation.reconcile();
-    const key = `${state.formFactor}:${state.orientation}:${state.splitScreen}:${state.canvasAvailable}:${state.selectedActorSourceUuid}`;
-    if (key !== controlsContextKey) { controlsGuide.refresh(); controlsInvitation.refreshLabels?.(); }
-    controlsContextKey = key;
-  }, { immediate: false }));
+  scope.own(store.subscribe(() => { controlsInvitation.reconcile(); controlsGuide.refresh(); closeWatcherBack.sync(); }, { immediate: false }));
   render(store.state);
-  const syncCloseWatchers = (state) => closeWatcherBack.sync(veCloseWatcherLayers(state, { splitActive: activeSplitScreen, nativeLayers: nativeBackLayers() }));
-  scope.own(store.subscribe(syncCloseWatchers, { immediate: false }));
-  syncCloseWatchers(store.state);
-  scope.own(nativeApplications?.admissions?.watch?.(() => closeWatcherBack.sync()) ?? (() => {}));
-  scope.own(nativeApplications?.settings?.watch?.(() => closeWatcherBack.sync()) ?? (() => {}));
-  function syncCombatControlGeometry() {
-    if (!mounted) return;
-    const navBounds = nav.getBoundingClientRect();
-    // Forced Tablet can still use bottom navigation below the rail breakpoint.
-    if (navBounds.width > navBounds.height && navBounds.height > 0) root.style.setProperty("--ve-nav-dock-height", `${navBounds.height}px`);
-    const controlHeight = combatControlsHost.hidden ? 0 : combatControlsHost.getBoundingClientRect().height;
-    root.style.setProperty("--ve-gm-combat-row-reservation", controlHeight > 0 ? `${controlHeight + 8}px` : "0px");
-  }
-  const syncFrameGeometry = () => { syncSceneViewport(); syncCombatControlGeometry(); };
-  const sceneResizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(syncFrameGeometry) : null;
-  let releaseSceneResizeObserver = null;
-  scope.own(() => {
-    try { sceneResizeObserver?.disconnect?.(); }
-    finally { releaseSceneResizeObserver?.(); }
-  });
-  releaseSceneResizeObserver = sceneResizeObserver ? performanceObserver?.track?.("lifecycle.resize-observer") : null;
-  sceneResizeObserver?.observe?.(viewport);
-  sceneResizeObserver?.observe?.(splitSceneViewport);
-  sceneResizeObserver?.observe?.(nav);
-  sceneResizeObserver?.observe?.(combatControlsHost);
-  syncFrameGeometry();
-  if (globalThis.window) {
-    scope.listen(globalThis.window, "resize", syncFrameGeometry, { passive: true });
-    scope.listen(globalThis.window, "orientationchange", syncFrameGeometry, { passive: true });
-  }
-  const readSceneInteractionState = () => {
-    const state = store.state;
-    const latestPolicy = policy();
-    const splitScreen = latestPolicy.formFactor === "tablet"
-      && latestPolicy.orientation === "landscape"
-      && state.splitScreen
-      && (state.route !== "scene" || state.sceneChooserOpen);
-    const sceneExposed = state.route === "scene" || splitScreen;
-    const host = splitScreen ? splitSceneViewport : viewport;
-    const surface = sceneExposed ? host.querySelector?.(".ve-scene-screen") : null;
-    const rect = surface?.getBoundingClientRect?.();
-    const style = surface && globalThis.getComputedStyle ? globalThis.getComputedStyle(surface) : null;
-    const native = commands.readSceneInteractionState?.() ?? {};
-    const rootVisible = Boolean(surface && !surface.hidden && style?.display !== "none" && style?.visibility !== "hidden");
-    return Object.freeze({
-      sceneExposed,
-      splitScreen,
-      rootConnected: Boolean(surface?.isConnected),
-      rootVisible,
-      geometryReady: Boolean(!sceneFocusTransitioning && rect && rect.width > 0 && rect.height > 0),
-      canvasReady: Boolean(native.canvasReady),
-      canvasGeometryReady: Boolean(native.canvasGeometryReady),
-      interactionMounted: Boolean(surface && state.snapshot?.scene?.canvasReady),
-      viewport: splitScreen ? elementViewport(splitSceneViewport) : null
-    });
-  };
-  const publishSceneInteraction = () => {
-    for (const listener of [...sceneInteractionListeners]) listener(readSceneInteractionState());
-  };
-  const watchSceneInteraction = (listener) => {
-    if (!mounted || scope.disposed) return () => {};
-    const owner = scope.child("scene-interaction-watch");
-    try {
-      sceneInteractionListeners.add(listener);
-      owner.own(() => sceneInteractionListeners.delete(listener));
-      let observed = null;
-      const observer = typeof ResizeObserver === "function" ? new ResizeObserver(publishSceneInteraction) : null;
-      let releaseObserver = null;
-      owner.own(() => {
-        try { observer?.disconnect?.(); }
-        finally { releaseObserver?.(); }
-      });
-      releaseObserver = observer ? performanceObserver?.track?.("lifecycle.resize-observer") : null;
-      const reconcile = () => {
-        if (owner.disposed) return;
-        const next = activeSplitScreen
-          ? splitSceneViewport.querySelector?.(".ve-scene-screen")
-          : store.state.route === "scene" ? viewport.querySelector?.(".ve-scene-screen") : null;
-        if (next !== observed) {
-          if (observed) observer?.unobserve?.(observed);
-          observed = next;
-          if (observed) observer?.observe?.(observed);
-        }
-        listener(readSceneInteractionState());
-      };
-      owner.own(store.subscribe(reconcile, { immediate: false }));
-      reconcile();
-      return () => owner.dispose();
-    } catch (error) {
-      owner.dispose();
-      throw error;
-    }
-  };
-  const setSceneFocusOverride = async (focused, { signal, immediate = false } = {}) => {
-    if (!mounted || scope.disposed) return null;
-    const request = ++sceneFocusRequest;
-    const enabled = Boolean(focused && activeSplitScreen);
-    sceneFocusTransitioning = !immediate && root.dataset.sceneFocus !== String(enabled);
-    root.dataset.sceneFocus = String(enabled);
-    document.body.classList.toggle("ve-mobile-template-scene-focus", enabled);
-    viewport.inert = enabled || Boolean(store.state.reconnect);
-    if (enabled) viewport.setAttribute("aria-hidden", "true");
-    else viewport.removeAttribute("aria-hidden");
-    publishSceneInteraction();
-    if (immediate || !root.isConnected) {
-      sceneFocusTransitioning = false;
-      publishSceneInteraction();
-      return elementViewport(splitSceneViewport);
-    }
-    try {
-      const bounds = await waitForStableElementGeometry(splitSceneViewport, { localize: commands.localize, signal });
-      if (request !== sceneFocusRequest) return elementViewport(splitSceneViewport);
-      return bounds;
-    } finally {
-      if (request === sceneFocusRequest) {
-        sceneFocusTransitioning = false;
-        publishSceneInteraction();
-      }
-    }
-  };
+  const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(syncCombatControlGeometry) : null;
+  resizeObserver?.observe(combatControlsHost); scope.own(() => resizeObserver?.disconnect());
   return Object.freeze({
-    mount() {
-      if (!mounted || scope.disposed) return;
-      for (const existing of document.querySelectorAll?.(".ve-mobile-app") ?? []) {
-        if (existing !== root) existing.remove();
-      }
-      document.body.append(root);
-      document.body.classList.add("ve-mobile-running");
-      graphicsRecovery.present();
-      controlsInvitation.reconcile();
-      publishSceneInteraction();
+    mount() { if (!mounted || scope.disposed) return; for (const existing of document.querySelectorAll?.(".ve-mobile-app") ?? []) if (existing !== root) existing.remove(); document.body.append(root); document.body.classList.add("ve-mobile-running"); controlsInvitation.reconcile(); },
+    unmount() {
+      if (!mounted) return; mounted = false; characterScrollRestoreGeneration++; characterScrollMemory.clear(); characterScrollRestoreScope?.dispose(); screenScope?.dispose(); combatControlsScope?.dispose();
+      document.body.classList.remove("ve-mobile-running", "ve-mobile-reconnecting", "ve-mobile-mode-transitioning");
+      for (const key of ["veMobileTheme", "veMobileFormFactor", "veMobileOrientation", "veMobileNavSide", "veMobileCharacterTheme", "veMobileCharacterThemeBlend"]) delete document.body.dataset[key];
+      clearThemeBlend(document.body); root.remove();
     },
-    unmount,
-    openControlsGuide: anchor => controlsGuide.show(anchor),
-    refreshControlsInvitation: () => controlsInvitation.reconcile(),
-    readSceneInteractionState,
-    watchSceneInteraction,
-    setSceneFocusOverride,
-    captureModeTransitionState() {
-      externalLayoutTransition = true;
-      const sceneBounds = elementViewport(authoritativeSceneViewportHost());
-      const viewportBounds = elementViewport(viewport);
-      const visualViewport = globalThis.window?.visualViewport;
-      return Object.freeze({
-        formFactor: store.state.formFactor,
-        orientation: store.state.orientation,
-        route: store.state.route,
-        splitScreen: activeSplitScreen,
-        rootMounted: root.isConnected,
-        rootCount: root.ownerDocument?.querySelectorAll?.(".ve-mobile-app")?.length ?? 0,
-        viewportBounds,
-        sceneBounds,
-        visualViewport: visualViewport ? Object.freeze({ width: visualViewport.width, height: visualViewport.height, scale: visualViewport.scale }) : null,
-        viewportScrollTop: characterScrollTop(),
-        viewportScrollLeft: viewport.scrollLeft,
-        splitScrollTop: splitSceneViewport.scrollTop,
-        splitScrollLeft: splitSceneViewport.scrollLeft,
-        sceneAnchor: sceneBounds ? commands.captureSceneViewportAnchor?.(sceneBounds) ?? null : null
-      });
-    },
-    modeTransitionDiagnosticSnapshot() {
-      const visualViewport = globalThis.window?.visualViewport;
-      return Object.freeze({
-        formFactor: store.state.formFactor,
-        orientation: store.state.orientation,
-        route: store.state.route,
-        splitScreen: activeSplitScreen,
-        rootMounted: root.isConnected,
-        rootCount: root.ownerDocument?.querySelectorAll?.(".ve-mobile-app")?.length ?? 0,
-        viewportBounds: elementViewport(viewport),
-        sceneBounds: elementViewport(authoritativeSceneViewportHost()),
-        visualViewport: visualViewport ? Object.freeze({ width: visualViewport.width, height: visualViewport.height, scale: visualViewport.scale }) : null,
-        interactionListeners: sceneInteractionListeners.size
-      });
-    },
-    async settleModeTransition({ isCurrent = () => true } = {}) {
-      const bounds = await waitForStableElementGeometry(viewport, { localize: commands.localize, isCurrent, maxFrames: 45 });
-      if (!isCurrent()) return null;
-      syncSceneViewport();
-      publishSceneInteraction();
-      return bounds;
-    },
-    async restoreModeTransitionState(preserved, bounds, { isCurrent = () => true } = {}) {
-      if (!isCurrent()) return false;
-      if (store.state.route === "characters") restoreCharacterScrollPosition(characterScroller(), Number(preserved?.viewportScrollTop) || 0, characterHeaderScroll, { clampContent: true });
-      else viewport.scrollTop = Number(preserved?.viewportScrollTop) || 0;
-      viewport.scrollLeft = Number(preserved?.viewportScrollLeft) || 0;
-      characterHeaderScroll?.update(characterScroller().scrollTop);
-      splitSceneViewport.scrollTop = Number(preserved?.splitScrollTop) || 0;
-      splitSceneViewport.scrollLeft = Number(preserved?.splitScrollLeft) || 0;
-      const sceneHost = authoritativeSceneViewportHost();
-      const sceneBounds = elementViewport(sceneHost);
-      if (preserved?.sceneAnchor && sceneBounds) await Promise.resolve(commands.restoreSceneViewportAnchor?.(preserved.sceneAnchor, sceneBounds));
-      externalLayoutTransition = false;
-      syncSceneViewport();
-      publishSceneInteraction();
-      return Boolean(bounds);
-    },
-    cancelModeTransitionRestore() {
-      externalLayoutTransition = false;
-    }
+    openControlsGuide: anchor => controlsGuide.show(anchor), refreshControlsInvitation: () => controlsInvitation.reconcile(),
+    captureModeTransitionState: () => ({ formFactor: store.state.formFactor, orientation: store.state.orientation, route: store.state.route, viewportScrollTop: characterScrollTop(), viewportScrollLeft: viewport.scrollLeft }),
+    modeTransitionDiagnosticSnapshot: () => ({ formFactor: store.state.formFactor, orientation: store.state.orientation, route: store.state.route, rootCount: document.querySelectorAll(".ve-mobile-app").length, viewportBounds: elementViewport(viewport) }),
+    settleModeTransition: ({ isCurrent = () => true } = {}) => waitForStableElementGeometry(viewport, { localize: commands.localize, isCurrent, maxFrames: 45 }),
+    async restoreModeTransitionState(preserved, bounds, { isCurrent = () => true } = {}) { if (!isCurrent()) return false; if (store.state.route === "characters") restoreCharacterScrollPosition(characterScroller(), Number(preserved?.viewportScrollTop) || 0, characterHeaderScroll, { clampContent: true }); else viewport.scrollTop = Number(preserved?.viewportScrollTop) || 0; viewport.scrollLeft = Number(preserved?.viewportScrollLeft) || 0; return Boolean(bounds); },
+    cancelModeTransitionRestore() {}
   });
-
-  function unmount() {
-    characterScrollMemory.clear();
-    characterScrollRestoreScope?.dispose();
-    characterScrollRestoreScope = null;
-    if (!mounted) return;
-    mounted = false;
-    sceneFocusRequest += 1;
-    characterScrollRestoreGeneration += 1;
-    screenScope?.dispose();
-    screenScope = null;
-    characterHeaderScroll = null;
-    splitSceneScope?.dispose();
-    splitSceneScope = null;
-    splitActionSessionScope?.dispose();
-    splitActionSessionScope = null;
-    sceneChooserScope?.dispose();
-    sceneChooserScope = null;
-    sceneLayoutAnchorScope?.dispose();
-    sceneLayoutAnchorScope = null;
-    metricsScope?.dispose();
-    metricsScope = null;
-    sceneInteractionListeners.clear();
-    expandedSceneFolderIds.clear();
-    expandedSceneLevelIds.clear();
-    renderedSceneChooserKey = "";
-    renderedSplitSceneKey = "";
-    renderedSplitActionSessionId = "";
-    document.body.classList.remove("ve-mobile-running");
-    document.body.classList.remove("ve-mobile-scene-active");
-    document.body.classList.remove("ve-mobile-split-screen");
-    document.body.classList.remove("ve-mobile-template-scene-focus");
-    document.body.classList.remove("ve-mobile-reconnecting");
-    document.body.classList.remove("ve-mobile-mode-transitioning");
-    document.body.classList.remove("ve-mobile-scene-chooser-open");
-    clearSceneViewportVariables(document.body);
-    delete document.body.dataset.veMobileTheme;
-    delete document.body.dataset.veMobileFormFactor;
-    delete document.body.dataset.veMobileOrientation;
-    delete document.body.dataset.veMobileNavSide;
-    delete document.body.dataset.veMobileCharacterTheme;
-    delete document.body.dataset.veMobileCharacterThemeBlend;
-    clearThemeBlend(document.body);
-    root.remove();
-  }
-
-  function authoritativeSceneViewportHost() {
-    return activeSplitScreen ? splitSceneViewport : store.state.route === "scene" ? viewport : null;
-  }
-
-  function reconcileSceneChooser(state, splitActive) {
-    if (!state.sceneChooserOpen) expandedSceneLevelIds.clear();
-    const open = Boolean(state.sceneChooserOpen && state.route === "scene" && !state.templatePlacement && !splitActive);
-    if (!open) {
-      sceneChooserScope?.dispose();
-      sceneChooserScope = null;
-      renderedSceneChooserKey = "";
-      sceneChooserOverlays.hidden = true;
-      sceneChooserOverlays.replaceChildren();
-      return;
-    }
-    let scenes = Object.freeze([]);
-    try {
-      scenes = commands.readSceneNavigation();
-    } catch (error) {
-      commands.reportSceneNavigationError?.(error);
-    }
-    const key = JSON.stringify(scenes);
-    if (sceneChooserScope && renderedSceneChooserKey === key) return;
-    sceneChooserScope?.dispose();
-    sceneChooserScope = scope.child("scene-chooser");
-    renderedSceneChooserKey = key;
-    sceneChooserOverlays.hidden = false;
-    sceneChooserOverlays.replaceChildren(renderSceneChooser({ scenes, commands, scope: sceneChooserScope, expandedFolderIds: expandedSceneFolderIds, expandedLevelSceneIds: expandedSceneLevelIds, sceneChoiceTransition }));
-  }
-
-  function restoreSceneAnchorAfterLayout(anchor, host, { fixedScreenPosition = false } = {}) {
-    sceneLayoutAnchorScope?.dispose();
-    sceneLayoutAnchorScope = scope.child("scene-layout-anchor");
-    const owner = sceneLayoutAnchorScope;
-    const controller = new AbortController();
-    owner.own(() => controller.abort());
-    queueMicrotask(() => {
-      void waitForStableElementGeometry(host, { localize: commands.localize, signal: controller.signal })
-        .then((bounds) => {
-          if (!owner.disposed) {
-            if (fixedScreenPosition) commands.restoreFixedSceneAnchor?.(anchor, bounds);
-            else commands.restoreSceneViewportAnchor?.(anchor, bounds);
-          }
-        })
-        .catch((error) => {
-          if (!controller.signal.aborted) console.warn("VE Mobile | Scene layout anchor restoration failed", error);
-        });
-    });
-  }
-}
-
-export function createGraphicsRecoveryPrompt(commands, scope) {
-  const title = node("h2", { text: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.GraphicsRecovery", "Graphics recovery") });
-  const message = node("p");
-  const status = node("p", { attrs: { role: "status", "aria-live": "polite" } });
-  const enable = node("button", { className: "ve-settings-reload-now", attrs: { type: "button" }, text: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.UseBalancedReload", "Use Balanced & Reload") });
-  const settings = node("button", { attrs: { type: "button" }, text: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.GraphicsSettings", "Graphics Settings") });
-  const continueNormally = node("button", { className: "ve-settings-reload-later", attrs: { type: "button" }, text: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.ContinueWithNormal", "Continue with Normal") });
-  const element = node("div", {
-    className: "ve-graphics-recovery",
-    attrs: { hidden: true, role: "dialog", "aria-modal": "true", "aria-labelledby": "ve-graphics-recovery-title" },
-    children: [node("section", { className: "ve-graphics-recovery-card", children: [
-      icon("fa-triangle-exclamation"),
-      title,
-      message,
-      status,
-      node("div", { className: "ve-settings-reload-actions", children: [continueNormally, settings, enable] })
-    ] })]
-  });
-  title.id = "ve-graphics-recovery-title";
-  const dismiss = () => { element.hidden = true; };
-  const lock = (value) => { enable.disabled = settings.disabled = continueNormally.disabled = value; };
-  scope.listen(continueNormally, "click", async () => {
-    lock(true);
-    try { await commands.acknowledgeGraphicsRecovery?.(); dismiss(); }
-    catch (error) { status.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.TheRecoveryChoiceCouldNotBeSaved", "The recovery choice could not be saved."); lock(false); }
-  });
-  scope.listen(settings, "click", async () => {
-    lock(true);
-    try {
-      await commands.acknowledgeGraphicsRecovery?.();
-      dismiss();
-      commands.navigate("settings");
-    } catch (error) {
-      status.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.GraphicsSettingsCouldNotBeOpened", "Graphics settings could not be opened.");
-      lock(false);
-    }
-  });
-  scope.listen(enable, "click", async () => {
-    lock(true);
-    status.textContent = localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.PreparingTheNextMemoryProtectionProfile", "Preparing the next Memory Protection profile…");
-    try {
-      const result = await commands.prepareGraphicsRecovery?.();
-      if (result?.requiresReload) {
-        if (!result.reloadTriggered) {
-          status.textContent = localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.TheRecoveryProfileWasPersistedButTheFullFoundry", "The recovery profile was persisted, but the full Foundry reload could not be started.");
-          lock(false);
-        }
-      } else dismiss();
-    } catch (error) {
-      status.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.TheNextMemoryProtectionProfileCouldNotBePrepared", "The next Memory Protection profile could not be prepared.");
-      lock(false);
-    }
-  });
-  return Object.freeze({
-    element,
-    present() {
-      const state = commands.readGraphicsRecovery?.();
-      if (!state || state.behavior !== "ask" || !state.reliablePending) return false;
-      title.textContent = localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.SceneGraphicsProblem", "Scene graphics problem");
-      const conflictedLowMemory = state.reliablePending && state.lowMemoryActive && !state.lowMemoryEffective;
-      message.textContent = state.currentProfile === "maximum"
-        ? localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.VEMobileDetectedAGraphicsProblemWhileLoadingThis", "VE Mobile detected a graphics problem while loading this scene. Maximum protection is already selected; review the scene images or graphics settings.")
-        : conflictedLowMemory
-        ? localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.VEMobileDetectedAGraphicsProblemMayHelpBut", "VE Mobile detected a graphics problem. {recommendedProfile} may help, but some graphics settings are controlled elsewhere. Review Graphics Settings for details.", { recommendedProfile: (profileName(state.recommendedProfile, commands.localize)) })
-        : localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.VEMobileDetectedAGraphicsProblemWhileLoadingThis2", "VE Mobile detected a graphics problem while loading this scene. {recommendedProfile} may make Foundry more stable on this device. Continuing keeps your current profile and dismisses this warning for this incident.", { recommendedProfile: (profileName(state.recommendedProfile, commands.localize)) });
-      enable.hidden = !state.reliablePending || state.currentProfile === "maximum";
-      enable.textContent = localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.UseReload", "Use {recommendedProfile} & Reload", { recommendedProfile: (profileName(state.recommendedProfile, commands.localize)) });
-      continueNormally.textContent = localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.ContinueWith", "Continue with {currentProfile}", { currentProfile: (profileName(state.currentProfile, commands.localize)) });
-      settings.textContent = conflictedLowMemory ? localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.ReviewGraphicsSettings", "Review Graphics Settings") : localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.GraphicsSettings", "Graphics Settings");
-      element.hidden = false;
-      continueNormally.focus?.({ preventScroll: true });
-      return true;
-    }
-  });
-}
-
-function profileName(value, localize) {
-  const profile = ["normal", "balanced", "strong", "maximum"].includes(value) ? value : "normal";
-  const fallback = { normal: "Normal", balanced: "Balanced", strong: "Strong", maximum: "Maximum" };
-  return localizedText(localize, `VEMOBILE.MemoryProfile.${profile}.Label`, fallback[profile]);
-}
-
-export function sceneNavigationTapAction({ route, splitActive = false } = {}) {
-  if (splitActive) return route === "scene" ? "open-full-scene" : "open-split-scene-chooser";
-  if (route !== "scene") return "navigate-scene";
-  return "toggle-chooser";
-}
-
-export function applySceneViewportVariables(element, bounds) {
-  const values = {
-    "--ve-scene-left": `${bounds.left}px`,
-    "--ve-scene-top": `${bounds.top}px`,
-    "--ve-scene-width": `${bounds.width}px`,
-    "--ve-scene-height": `${bounds.height}px`,
-    "--ve-scene-right": `${bounds.left + bounds.width}px`,
-    "--ve-scene-bottom": `${bounds.top + bounds.height}px`
-  };
-  for (const [property, value] of Object.entries(values)) element?.style?.setProperty?.(property, value);
-}
-
-export function clearSceneViewportVariables(element) {
-  for (const property of ["--ve-scene-left", "--ve-scene-top", "--ve-scene-width", "--ve-scene-height", "--ve-scene-right", "--ve-scene-bottom"]) {
-    element?.style?.removeProperty?.(property);
-  }
 }
 
 export function createReconnectBlocker(scope, {
@@ -1158,8 +395,7 @@ export function createReconnectBlocker(scope, {
   const checkpointDefinitions = Object.freeze([
     Object.freeze({ id: "connection", label: localizedText(localize, "VEMOBILE.Interface.AppFrame.RestoringConnection", "Restoring connection"), message: localizedText(localize, "VEMOBILE.Interface.AppFrame.RestoringConnection2", "Restoring connection…") }),
     Object.freeze({ id: "collections", label: localizedText(localize, "VEMOBILE.Interface.AppFrame.RefreshingWorldData", "Refreshing world data"), message: localizedText(localize, "VEMOBILE.Interface.AppFrame.RefreshingWorldData2", "Refreshing world data…") }),
-    Object.freeze({ id: "foundry-session", label: localizedText(localize, "VEMOBILE.Interface.AppFrame.SynchronisingSceneData", "Synchronizing scene data"), message: localizedText(localize, "VEMOBILE.Interface.AppFrame.SynchronisingSceneData2", "Synchronizing scene data…") }),
-    Object.freeze({ id: "canvas", label: localizedText(localize, "VEMOBILE.Interface.AppFrame.SynchronisingScene", "Synchronizing scene"), message: localizedText(localize, "VEMOBILE.Interface.CanvasRecoveryGateway.SynchronisingScene", "Synchronizing scene…") }),
+    Object.freeze({ id: "foundry-session", label: localizedText(localize, "VEMOBILE.Interface.AppFrame.SynchronisingSessionData", "Synchronizing session data"), message: localizedText(localize, "VEMOBILE.Interface.AppFrame.SynchronisingSessionData2", "Synchronizing session data…") }),
     Object.freeze({ id: "mobile-session", label: localizedText(localize, "VEMOBILE.Interface.AppFrame.RestoringSession", "Restoring session"), message: localizedText(localize, "VEMOBILE.Interface.AppKernel.RestoringYourSession", "Restoring your session…") }),
     Object.freeze({ id: "presentation", label: localizedText(localize, "VEMOBILE.Interface.AppFrame.RestoringInterface", "Restoring interface"), message: localizedText(localize, "VEMOBILE.Interface.AppKernel.RestoringMobileInterface", "Restoring mobile interface…") }),
     Object.freeze({ id: "interactions", label: localizedText(localize, "VEMOBILE.Interface.AppFrame.RestoringControls", "Restoring controls"), message: localizedText(localize, "VEMOBILE.Interface.AppKernel.RestoringControls", "Restoring controls…") })
@@ -1299,7 +535,7 @@ export function createReconnectBlocker(scope, {
         presentationScope?.dispose();
         presentationScope = null;
         title.textContent = localizedText(localize, "VEMOBILE.Interface.AppFrame.ResynchronisationInterrupted", "Resynchronization interrupted");
-        message.textContent = localizedText(localize, "VEMOBILE.Interface.AppFrame.VEMobileCouldNotRestoreTheSessionReloadFoundry", "VE Mobile could not restore the session. Reload Foundry to recover safely.");
+        message.textContent = localizedText(localize, "VEMOBILE.Interface.AppFrame.VEMobileCouldNotRestoreTheSessionReloadFoundry", "Mikelandia Controls could not restore the session. Reload Foundry to recover safely.");
         message.hidden = false;
         reveal();
       } else if (state.phase === "reloading") {
@@ -1384,26 +620,6 @@ function clearThemeBlend(element) {
   ]) element.style.removeProperty(property);
 }
 
-export function scenePresentationKey(snapshot) {
-  return JSON.stringify({ scene: snapshot?.scene ?? null, combat: snapshot?.combat ?? null });
-}
-
-export function sceneTargetsOnlyChanged(previous, current) {
-  const previousCount = Number(previous?.scene?.movement?.targetCount ?? 0);
-  const currentCount = Number(current?.scene?.movement?.targetCount ?? 0);
-  return previousCount !== currentCount
-    && sceneTargetIndependentKey(previous) === sceneTargetIndependentKey(current);
-}
-
-function sceneTargetIndependentKey(snapshot) {
-  const movement = snapshot?.scene?.movement ?? null;
-  const scene = snapshot?.scene ? {
-    ...snapshot.scene,
-    movement: movement ? { ...movement, targetCount: 0 } : movement
-  } : null;
-  return JSON.stringify({ scene, combat: snapshot?.combat ?? null });
-}
-
 export function snapshotPresentationChangedForRoute(previous, current) {
   if (!previous?.snapshot || !current?.snapshot) return previous?.snapshot !== current?.snapshot;
   if (current.route === "characters") {
@@ -1419,7 +635,6 @@ export function snapshotPresentationChangedForRoute(previous, current) {
   }
   if (current.route === "combat") return previous.snapshot.combat !== current.snapshot.combat;
   if (current.route === "journals") return previous.snapshot.journals !== current.snapshot.journals;
-  if (current.route === "scene") return scenePresentationKey(previous.snapshot) !== scenePresentationKey(current.snapshot);
   return false;
 }
 
@@ -1438,24 +653,12 @@ function actorMenuSignature(actors = []) {
   })));
 }
 
-export function activeTemplatePresentationUnchanged(previous, current) {
-  return Boolean(current?.templatePlacement && previous?.templatePlacement === current.templatePlacement);
-}
-
-/** Split Scene results remain deferred while its native template surface owns
- * input. Character-origin results continue to belong to the companion pane. */
-export function splitSceneActionSessionId(state, splitActive) {
-  if (!splitActive || actionResultsDeferred(state) || state?.actionSessionOrigin !== "scene") return "";
-  return String(state?.actionSession?.rootMessageId ?? "");
-}
-
 function elementViewport(element) {
   const rect = element?.getBoundingClientRect?.();
   if (!rect || !(rect.width > 0) || !(rect.height > 0)) return null;
   return Object.freeze({ left: rect.left, top: rect.top, width: rect.width, height: rect.height });
 }
 
-/** Resolve from actual rendered geometry, including reduced-motion layouts. */
 export function waitForStableElementGeometry(element, {
   signal,
   localize = null,
@@ -1465,7 +668,7 @@ export function waitForStableElementGeometry(element, {
   maxFrames = Number.POSITIVE_INFINITY,
   includeScrollHeight = false
 } = {}) {
-  if (signal?.aborted) return Promise.reject(signal.reason ?? new Error(localizedText(localize, "VEMOBILE.Errors.LayoutCanceled", "Scene layout transition was canceled.")));
+  if (signal?.aborted) return Promise.reject(signal.reason ?? new Error(localizedText(localize, "VEMOBILE.Errors.LayoutCanceled", "Layout transition was canceled.")));
   return new Promise((resolve, reject) => {
     let frame = null;
     let previous = null;
@@ -1482,7 +685,7 @@ export function waitForStableElementGeometry(element, {
       cleanup();
       callback(value);
     };
-    const onAbort = () => finish(reject, signal.reason ?? new Error(localizedText(localize, "VEMOBILE.Errors.LayoutCanceled", "Scene layout transition was canceled.")));
+    const onAbort = () => finish(reject, signal.reason ?? new Error(localizedText(localize, "VEMOBILE.Errors.LayoutCanceled", "Layout transition was canceled.")));
     const sample = () => {
       frame = null;
       if (!isCurrent()) return finish(resolve, null);
@@ -1603,20 +806,6 @@ function characterScrollContext(state) {
   return key ? Object.freeze({ key, sourceUuid, tab }) : null;
 }
 
-export function sceneStructureKey(snapshot, layoutKey = "", splitViewport = false) {
-  return JSON.stringify({
-    sceneId: snapshot?.scene?.id ?? "",
-    canvasReady: Boolean(snapshot?.scene?.canvasReady),
-    layoutKey,
-    splitViewport: Boolean(splitViewport)
-  });
-}
-
-export function sceneFocusKey(snapshot) {
-  const token = snapshot?.scene?.movement?.tokens?.find((entry) => entry.controlled);
-  return token ? `${snapshot?.scene?.id ?? ""}:${token.id ?? ""}:${token.actorId ?? ""}` : "";
-}
-
 function screenState(state, layoutKey = "") {
   return {
     route: state.route,
@@ -1631,7 +820,6 @@ function screenState(state, layoutKey = "") {
     rollResult: state.rollResult,
     actionSession: state.actionSession,
     actionSessionOrigin: state.actionSessionOrigin,
-    quickbarCollapsed: state.quickbarCollapsed,
     characterItemId: state.characterItemId,
     expandedCharacterItemId: state.expandedCharacterItemId,
     hitPointEditor: state.hitPointEditor,
@@ -1646,11 +834,6 @@ function screenState(state, layoutKey = "") {
     journalHeading: state.journalHeading,
     journalMenuOpen: state.journalMenuOpen,
     journalImage: state.journalImage,
-    templatePlacement: state.templatePlacement,
-    nativeTokenPlacement: state.nativeTokenPlacement,
-    actorTokenPlacement: state.actorTokenPlacement,
-    sceneChooserOpen: state.sceneChooserOpen,
-    sceneChooserRevision: state.sceneChooserRevision,
     viewRevision: state.viewRevision,
     layoutKey
   };
@@ -1664,36 +847,6 @@ export function journalPresentationChanged(previous, current) {
     || previous?.journalHeading !== current?.journalHeading
     || previous?.journalMenuOpen !== current?.journalMenuOpen
     || previous?.journalImage !== current?.journalImage;
-}
-
-function renderSplitScenePicker({ commands, scope, expandedFolderIds, expandedLevelSceneIds, sceneChoiceTransition }) {
-  let scenes = Object.freeze([]);
-  try {
-    scenes = commands.readSceneNavigation();
-  } catch (error) {
-    commands.reportSceneNavigationError?.(error);
-  }
-  return renderSceneChooser({
-    scenes,
-    commands,
-    scope,
-    expandedFolderIds,
-    expandedLevelSceneIds,
-    host: "pane",
-    sceneChoiceTransition
-  });
-}
-
-function plainHistoryState(state) {
-  if (!state || typeof state !== "object" || Array.isArray(state)) return null;
-  try {
-    return Object.freeze({
-      keys: Object.keys(state).slice(0, 20),
-      veMobileBackGuard: typeof state.__veMobileBackGuard === "string" ? state.__veMobileBackGuard.slice(0, 80) : null
-    });
-  } catch {
-    return Object.freeze({ unavailable: true });
-  }
 }
 
 function tabletRotateSuggestion(localize = null) {

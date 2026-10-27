@@ -19,7 +19,7 @@ export function createControlsInvitation({ root, scope, commands, getState, isRe
   const hide = () => { element.hidden = true; };
   const blocked = () => Boolean(isNativeOpen?.()
     || root.ownerDocument.activeElement?.matches?.("input, textarea, select, [contenteditable='true']")
-    || root.ownerDocument.querySelector(".ve-controls-guide:not([hidden]), .ve-mobile-bootstrap, .ve-portrait-token-ghost, .ve-portrait-action-menu:not([hidden]), .ve-character-item-menu, .ve-mobile-dialog:not([hidden]), .ve-settings-report-modal:not([hidden]), .ve-settings-reload:not([hidden]), .ve-asset-optimizer:not([hidden]), .ve-graphics-recovery:not([hidden]), .ve-action-bar-picker:not([hidden])"));
+    || root.ownerDocument.querySelector(".ve-controls-guide:not([hidden]), .ve-mobile-bootstrap, .ve-character-item-menu, .ve-mobile-dialog:not([hidden]), .ve-settings-report-modal:not([hidden]), .ve-settings-reload:not([hidden])"));
   function reconcile() {
     if (scope.disposed) return;
     const safe = controlsInvitationReady({ ready: isReady(), state: getState(), blocked: blocked(), interacting });

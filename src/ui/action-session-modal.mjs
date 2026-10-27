@@ -1,12 +1,7 @@
 import { localizedText } from "../ui/localized-text.mjs";
 import { icon, node } from "./dom.mjs";
 
-/** Every placement surface owns interaction until its native workflow settles. */
-export function actionResultsDeferred(state) {
-  return Boolean(state?.templatePlacement || state?.nativeTokenPlacement || state?.actorTokenPlacement);
-}
-
-/** Render VE Mobile's shared, incrementally updated native action-session surface. */
+/** Render Mikelandia Controls's shared, incrementally updated native action-session surface. */
 export function renderActionSessionModal(session, commands, scope) {
   if (!session) return null;
   const compact = session.compact === true;
@@ -28,7 +23,7 @@ export function renderActionSessionModal(session, commands, scope) {
     ...(compact ? { dataset: { visible: "false" } } : {}),
     children: [node("section", {
       className: `ve-action-session${compact ? " is-compact" : ""}`,
-      attrs: { role: "dialog", "data-ve-scene-control": true, ...(compact ? {} : { "aria-modal": "true" }), "aria-labelledby": "ve-action-session-title" },
+      attrs: { role: "dialog", ...(compact ? {} : { "aria-modal": "true" }), "aria-labelledby": "ve-action-session-title" },
       children: [
         node("header", { children: [
           ...(compact ? [] : [session.img ? node("img", { attrs: { src: session.img, alt: "" } }) : icon("fa-wand-magic-sparkles")]),
@@ -49,7 +44,7 @@ export function renderActionSessionModal(session, commands, scope) {
       messageHost.replaceChildren(node("p", { className: "ve-action-session-unavailable", text: result.reason ?? localizedText(commands.localize, "VEMOBILE.Interface.ActionSessionGateway.ThatActionMessageIsUnavailable", "That action message is unavailable.") }));
     }).catch((error) => {
       if (scope.disposed) return;
-      console.error("VE Mobile | Could not mount action session", error);
+      console.error("Mikelandia Controls | Could not mount action session", error);
       messageHost.replaceChildren(node("p", { className: "ve-action-session-unavailable", text: localizedText(commands.localize, "VEMOBILE.Interface.ActionSessionModal.ThatActionMessageCouldNotBeDisplayed", "That action message could not be displayed.") }));
     });
   });

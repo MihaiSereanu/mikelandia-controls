@@ -75,12 +75,11 @@ export function createVeCloseWatcherBack({
 }
 
 /** Bottom-to-top state-owned Back surfaces; the dispatcher handles DOM layers. */
-export function veCloseWatcherLayers(state = {}, { splitActive = false, nativeLayers = [] } = {}) {
-  if (state.modeTransition || state.reconnect || state.templatePlacement) return [];
+export function veCloseWatcherLayers(state = {}, { nativeLayers = [] } = {}) {
+
   const layers = [];
   if (state.route && state.route !== "characters") layers.push(`route:${state.route}`);
-  if (splitActive) layers.push("split-pane");
-  if (state.sceneChooserOpen) layers.push("scene-chooser");
+
   if (state.route === "journals" && state.journal) layers.push(`journal:${state.journal.id ?? "open"}`);
   if (state.journalMenuOpen) layers.push("journal-page-menu");
   if (state.characterItemId) layers.push(`item:${state.characterItemId}`);
@@ -91,8 +90,7 @@ export function veCloseWatcherLayers(state = {}, { splitActive = false, nativeLa
   if (state.restEditor) layers.push("rest-editor");
   if (state.hitPointEditor) layers.push("hit-point-editor");
   if (state.actionSession) layers.push("action-session");
-  if (state.actorTokenPlacement) layers.push("actor-token-placement");
-  if (state.nativeTokenPlacement) layers.push("native-token-placement");
+
   layers.push(...nativeLayers);
   return layers;
 }

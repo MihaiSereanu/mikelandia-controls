@@ -40,7 +40,7 @@ export function renderRollResultOverlay(result, commands, scope) {
   let dismissing = false;
   return node("div", {
     className: "ve-roll-result-layer",
-    attrs: { role: "presentation", "data-ve-scene-control": true },
+    attrs: { role: "presentation" },
     on: { click: (event) => {
       if (dismissing) return;
       dismissing = true;

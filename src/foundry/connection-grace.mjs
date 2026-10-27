@@ -2,7 +2,7 @@ export const MOBILE_RECONNECT_GRACE_MS = 5 * 60 * 1000;
 
 /**
  * Replace Foundry 13's five-second reconnect reload with a mobile-sized grace
- * period for exactly one active VE Mobile lifetime.
+ * period for exactly one active Mikelandia Controls lifetime.
  */
 export function enableMobileConnectionGrace(scope, {
   getSocket = () => game.socket,
@@ -20,7 +20,7 @@ export function enableMobileConnectionGrace(scope, {
 
   const coreReconnect = Array.from(manager.listeners("reconnect") ?? []).find(isFoundryReconnectListener);
   if (!coreReconnect) {
-    console.warn("VE Mobile | Foundry reconnect handler was not recognized; connection recovery was left unchanged.");
+    console.warn("Mikelandia Controls | Foundry reconnect handler was not recognized; connection recovery was left unchanged.");
     return false;
   }
 
@@ -36,7 +36,7 @@ export function enableMobileConnectionGrace(scope, {
     try {
       onDisconnect(Object.freeze({ generation, reason: String(reason ?? "transport-disconnected") }));
     } catch (error) {
-      console.warn("VE Mobile | Could not suspend the mobile view after disconnecting", error);
+      console.warn("Mikelandia Controls | Could not suspend the mobile view after disconnecting", error);
     }
   };
 
@@ -53,7 +53,7 @@ export function enableMobileConnectionGrace(scope, {
     try {
       onReconnect(Object.freeze({ elapsedMs, recovered: Boolean(socket.recovered), generation }));
     } catch (error) {
-      console.warn("VE Mobile | Could not refresh the mobile view after reconnecting", error);
+      console.warn("Mikelandia Controls | Could not refresh the mobile view after reconnecting", error);
     }
   };
 

@@ -1,23 +1,23 @@
-# VE Mobile
+# Mikelandia Controls
 
-A phone and tablet interface for Foundry VTT, with D&D5e sheets and experimental Warhammer 4e/5e and Shadowdark PC support. Based on [VE Mobile by Silvestrae](https://github.com/Silvestrae/ve-mobile).
+A phone and tablet companion for in-person Foundry VTT sessions. Use character sheets, chat, journals, and the Combat initiative tracker. Combat retains initiative rolling, End Turn, and GM encounter progression. Scene browsing, map gestures, token controls, placement, and token-light actions are removed.
+
+Supports D&D5e sheets, experimental Warhammer 4e/5e and Shadowdark PC panels, and native-sheet fallback for other actors. Based on [VE Mobile by Silvestrae](https://github.com/Silvestrae/ve-mobile). Original license and author credits are preserved.
 
 ## Install
 
-In Foundry Setup, open **Add-on Modules**, choose **Install Module**, paste this Manifest URL, and click **Install**:
+In Foundry Setup, open **Add-on Modules**, choose **Install Module**, and paste this manifest URL:
 
 - `https://github.com/MihaiSereanu/ve-mobile/releases/download/latest/module.json`
 
-Enable **VE Mobile** in your world's **Manage Modules**. The module supports D&D5e, with experimental Warhammer 4e/5e and Shadowdark PC support.
+Enable **Mikelandia Controls** in your world's **Manage Modules** after installing a build with the new name. The technical module ID, settings namespace, installation folder, and update URLs remain ve-mobile for compatibility. Local checkout changes appear in the installer only after publication.
 
-When VE Mobile is in Phone or Tablet mode, it disables Carolingian UI using that module's client-scoped setting, saving and restoring the prior value when returning to Desktop mode. It also suppresses Narrator Tools' startup, chat, and scene-control hooks and styles in that browser. Applying or restoring Carolingian UI's setting triggers an automatic reload. This does not change the world's module settings or affect desktop clients. Foundry does not support unloading an enabled module for only one client, so the modules' scripts are still loaded even though their mobile UI/features are suppressed.
+Phone and Tablet modes use Carolingian UI's client setting to disable its interface, restoring the prior value in Desktop mode. Narrator Tools' interface hooks and styles are suppressed in that browser. Applying or restoring Carolingian UI's setting triggers its native reload. Other clients and world module settings are unaffected.
 
-For a local checkout copied directly into Foundry's `Data/modules` folder, the root manifest is also system-neutral. Restart Foundry after copying it so package metadata is rescanned.
-
-Use Foundry's module updater for new builds. Every push to `main` publishes the latest build.
+Phone and Tablet modes hide unrelated Foundry and module widgets, including ones opened after startup. The tabs, native workflows opened through them, roll dialogs, notifications/tooltips and Dice So Nice remain available. This isolation applies with or without Common Display Hide UI; switching out of mobile presentation restores the other interfaces.
 
 ## Development
 
-Start with [current status](docs/current-status.md); see [architecture](docs/architecture.md) for source boundaries and native workflows.
+Start with [current status](docs/current-status.md); see [architecture](docs/architecture.md) for source boundaries and native workflows. Keep review changes in this checkout until installation or publication is authorized. A push to main publishes a release.
 
-List browser scenarios with `node scripts/check_browser.mjs --list`. Run a focused group with `node scripts/check_browser.mjs --filter "shadowdark"`; add `--screenshots` when reviewing passing layouts. Without a filter, all cases run. Node checks accept individual files: `node --test --test-reporter=dot tests/shadowdark.test.mjs`.
+Run Node tests with `node --test --test-reporter=dot tests/*.test.mjs`. List browser scenarios with `node scripts/check_browser.mjs --list`; run a focused group with `--filter "in-person|shadowdark"`. Add --screenshots to save passing layouts. Build packages with `py scripts/build_release.py --version 1.1.0`.

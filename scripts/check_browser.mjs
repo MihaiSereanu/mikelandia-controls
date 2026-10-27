@@ -7,6 +7,14 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ["ui-isolation-phone", 390, 844, "ui-isolation", "layout=phone"],
+  ["ui-isolation-tablet", 1024, 768, "ui-isolation", "layout=tablet"],
+  ["ui-isolation-common-display-phone", 390, 844, "ui-isolation", "layout=phone&common-display=true"],
+  ["ui-isolation-common-display-tablet", 1024, 768, "ui-isolation", "layout=tablet&common-display=true"],
+  ["in-person-phone", 390, 844, "in-person", "layout=phone"],
+  ["in-person-tablet", 1024, 768, "in-person", "layout=tablet"],
+  ["in-person-dnd-phone", 390, 844, "in-person", "layout=phone&system=dnd5e"],
+  ["in-person-dnd-tablet", 1024, 768, "in-person", "layout=tablet&system=dnd5e"],
   ["fallback-phone-v1", 390, 844, "fallback", "layout=phone&application=v1"],
   ["fallback-phone-v2", 390, 844, "fallback", "layout=phone&application=v2"],
   ["fallback-android-v1", 393, 851, "fallback", "layout=phone&application=v1&host=clipped"],

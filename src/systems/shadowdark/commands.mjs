@@ -3,7 +3,7 @@ import { CommandError } from "../../foundry/command-error.mjs";
 import { localizeFoundry } from "../../foundry/localization.mjs";
 import { createProfilePanels } from "../profile-view.mjs";
 import { shadowdarkPlayerProfile } from "./profile.mjs";
-import { abilities, isShadowdarkPlayer, shadowdarkContext, ownedItem, carriedItem, nativeLightSheet } from "./context.mjs";
+import { abilities, isShadowdarkPlayer, shadowdarkContext, ownedItem } from "./context.mjs";
 import { shadowdarkResourceEdits, editShadowdarkResource } from "./resources.mjs";
 
 import { inventoryEdits, inventoryAvailable, executeInventory } from "./inventory.mjs";
@@ -26,13 +26,6 @@ function actionsFor(actor, game, hooks, user = game?.user) {
       actions.push(Object.freeze({ id: `${kind}:${row.id}`, revision: context.revision, label: row.label }));
     }
   }
-  if (nativeLightSheet(actor, game)) for (const item of Array.from(actor.items?.contents ?? actor.items ?? [])) {
-    if (/^[a-zA-Z0-9_-]{1,128}$/u.test(String(item.id)) && carriedItem(item, actor) && ["Basic", "Effect"].includes(item.type) && item.system.light?.isSource === true
-      && typeof item.system.light.active === "boolean") actions.push(Object.freeze({
-        id: `light:${item.id}`, revision: JSON.stringify([context.revision, item.system.light.active]),
-        label: item.name, icon: "fa-lightbulb", active: item.system.light.active
-      }));
-  }
   return Object.freeze(actions);
 }
 function binding(actor, item) {
@@ -44,10 +37,7 @@ export function createShadowdarkCommands({ getGame = () => globalThis.game, getH
   return Object.freeze({
     // Native RollDialogSD uses one fixed DOM ID across actors and roll types.
     // Opening a second workflow would replace the first unresolved prompt.
-    commandKey: (name, source, payload) => name === ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE && payload.resourceId?.startsWith("quantity:") && payload.value === 0
-      ? JSON.stringify([ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, source, "light"])
-      : name === ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION
-      ? JSON.stringify(typeof payload.actionId === "string" && payload.actionId.startsWith("light:") ? [name, source, "light"] : [name, "shadowdark-native-roll"]) : undefined,
+    commandKey: name => name === ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION ? JSON.stringify([name, "shadowdark-native-roll"]) : undefined,
     supportsCommand: name => [ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name),
     capabilitiesForActor(actor, user) {
       const profileActions = actionsFor(actor, getGame(), getHooks(), user), profileEdits = [...shadowdarkResourceEdits(actor, getGame(), user), ...inventoryEdits(actor, getGame(), user)];
@@ -76,10 +66,7 @@ export function createShadowdarkCommands({ getGame = () => globalThis.game, getH
           || !actionsFor(actor, getGame(), getHooks()).some(current => current.id === action.id && current.revision === action.revision)) throw unavailable();
       };
       checkpoint();
-      if (kind === "light") {
-        await nativeLightSheet(actor, game)._toggleLightSource(item);
-        return { ok: true, actorSourceUuid: sourceUuid, nativeHandled: true };
-      }
+
       const hook = kind === "stat" ? "SD-Stat-Check" : kind === "spell" ? "SD-Player-Spell" : "SD-Player-Attack";
       const config = kind.startsWith("attack-") ? { attack: { type: kind.slice(7) } } : {};
       let seen = false, failure;

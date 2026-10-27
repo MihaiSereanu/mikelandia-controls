@@ -86,7 +86,6 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
             ...(typeof readProfilePath(item, entry.descriptionPath) === "string" ? { description: readProfilePath(item, entry.descriptionPath) } : {}),
             ...(typeof entry.valueLabel === "string" && entry.valueLabel.trim() ? { valueLabel: localizedText(localize, entry.valueLabelKey ?? entry.valueLabel, entry.valueLabel) } : {}),
             ...(typeof entry.valuePrefix === "string" ? { valuePrefix: entry.valuePrefix } : {}),
-            ...(validId(entry.secondaryActionIdPrefix) && actions.has(`${entry.secondaryActionIdPrefix}:${id}`) ? { secondaryAction: actionFor(`${entry.secondaryActionIdPrefix}:${id}`).action } : {}),
             ...(entry.quantityEditable ? editFor(`quantity:${id}`, value) : {}),
             ...actionFor(validId(entry.actionIdPrefix) ? `${entry.actionIdPrefix}:${id}` : undefined) }));
         } catch { /* A malformed item cannot expose extra fields or break a section. */ }

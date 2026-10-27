@@ -4,7 +4,7 @@ import { readLocalSetting, restoreLocalSetting } from "./client-setting-restorat
 const CORE_THEME_SETTING = "core.uiConfig";
 
 /**
- * Synchronize VE Mobile with Foundry v13's Interface Theme.
+ * Synchronize Mikelandia Controls with Foundry v13's Interface Theme.
  *
  * A direct VE choice intentionally sets both native themes. A native change
  * only flows from Interface Theme back into VE, leaving Application Theme as
@@ -24,7 +24,7 @@ export function createFoundryThemeGateway({
 
   const enqueue = (action) => {
     queue = queue.then(action).catch((error) => {
-      console.warn("VE Mobile | Unified theme could not be saved", error);
+      console.warn("Mikelandia Controls | Unified theme could not be saved", error);
     });
     return queue;
   };
@@ -63,7 +63,7 @@ export function createFoundryThemeGateway({
       return;
     }
     // Foundry's Application Theme is deliberately independent. Only a native
-    // Interface Theme change transfers back to VE Mobile.
+    // Interface Theme change transfers back to Mikelandia Controls.
     if (interfaceChoice === previousInterfaceChoice || readMobileTheme() === interfaceTheme) return;
     ignoredMobileTheme = interfaceTheme;
     updateHostedSurfaces(getDocument(), interfaceTheme);

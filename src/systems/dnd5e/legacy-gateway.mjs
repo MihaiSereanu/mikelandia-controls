@@ -1,8 +1,9 @@
 import { CommandError } from "../../foundry/command-error.mjs";
+import { ownMobileApplication } from "../../foundry/mobile-ui-isolation.mjs";
 import { createDnd5eCommands } from "./commands.mjs";
 import { localizeFoundry } from "../../foundry/localization.mjs";
 import { ACTOR_COMMANDS } from "../../kernel/command-names.mjs";
-import { SCENE_RETURN_COMMANDS } from "../../kernel/action-scene-return.mjs";
+const NATIVE_ROLL_COMMANDS = Object.freeze([ACTOR_COMMANDS.USE_ITEM, ACTOR_COMMANDS.ROLL_ABILITY, ACTOR_COMMANDS.ROLL_SAVE, ACTOR_COMMANDS.ROLL_SKILL, ACTOR_COMMANDS.ROLL_TOOL, ACTOR_COMMANDS.ROLL_INITIATIVE, ACTOR_COMMANDS.ROLL_DEATH_SAVE]);
 import { biographyPlainText, createItemMenuRecord, resolveItemSourceItem } from "../../foundry/actor-view.mjs";
 import { actorSourceUuid, resolveActorSource, speakerMatchesActor, validSourceUuid } from "../../foundry/character-source.mjs";
 import { readDnd5eMessageItem, readDnd5eMessageRoll, readDnd5eMessageOriginId as originatingMessageId } from "../../foundry/dnd5e-message-reference.mjs";
@@ -14,7 +15,6 @@ const PREPARING_SPELL_METHODS = new Set(["pact", "spell"]);
 const BIOGRAPHY_CHARACTERISTICS = Object.freeze(["alignment", "faith", "gender", "age", "height", "weight", "eyes", "hair", "skin"]);
 const BIOGRAPHY_TEXT_SECTIONS = new Set(["ideal", "bond", "flaw", "trait", "appearance"]);
 const BIOGRAPHY_STORY_FIELDS = new Set(["value", "public"]);
-
 
 /**
  * Legacy D&D5e execution, result parsing, and native operations. The shared
@@ -136,7 +136,7 @@ export function createDnd5eCommandGateway({
         const existingMessageIds = new Set(messageDocuments(game).map(messageIdentifier).filter(Boolean));
         const announceAccepted = (message, { returned = false, userId } = {}) => {
           if (acceptanceAnnounced || typeof observer?.onActionAccepted !== "function"
-            || !SCENE_RETURN_COMMANDS.includes(name) || !canRevealMessage(message)
+            || !NATIVE_ROLL_COMMANDS.includes(name) || !canRevealMessage(message)
             || !messageIdentifier(message) || existingMessageIds.has(messageIdentifier(message))) return;
           if (!returned && !isAcceptedActionMessage(message, actor, actionItem, name, payload, game.user.id, userId)) return;
           acceptanceAnnounced = true;
@@ -149,7 +149,7 @@ export function createDnd5eCommandGateway({
               if (currentGame !== game || resolveActorSource(sourceUuid, { game: currentGame }) !== actor || !canOwn(actor, currentGame.user)) return;
               observer.onActionAccepted(record);
             } catch (error) {
-              console.warn("VE Mobile | Action acceptance observer failed", error);
+              console.warn("Mikelandia Controls | Action acceptance observer failed", error);
             }
           });
         };
@@ -179,13 +179,13 @@ export function createDnd5eCommandGateway({
                   && expectedSession.connectionGeneration !== getConnectionGeneration()) return;
                 observer.onActionSession(session);
               } catch (error) {
-                console.warn("VE Mobile | Action session observer failed", error);
+                console.warn("Mikelandia Controls | Action session observer failed", error);
               }
             });
           }
           return session;
         };
-        actionCapture = actionItem || (typeof observer?.onActionAccepted === "function" && SCENE_RETURN_COMMANDS.includes(name))
+        actionCapture = actionItem || (typeof observer?.onActionAccepted === "function" && NATIVE_ROLL_COMMANDS.includes(name))
           ? beginActionMessageCapture(getHooks(), existingMessageIds, (message, userId) => {
             announceActionSession();
             announceAccepted(message, { userId });
@@ -1116,6 +1116,7 @@ function openItemSheet(actor, payload) {
     throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisItemSNativeDDESheetIs", "This item's native D&D5e sheet is unavailable."));
   }
   const editMode = item.sheet.constructor?.MODES?.EDIT ?? 2;
+  ownMobileApplication(item.sheet);
   item.sheet.render({ force: true, mode: editMode });
   return Object.freeze({ itemId: String(item.id), opened: true });
 }

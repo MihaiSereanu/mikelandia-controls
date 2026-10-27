@@ -104,7 +104,7 @@ for (const pulp of [false, true]) {
     assert.equal(rows.find(r => r.id === "ac").edit, undefined);
     assert.equal(rows.find(r => r.id === "spell").valueLabel, "Tier");
     assert.equal(rows.find(r => r.id === "lost").action, undefined);
-    assert.equal(rows.find(r => r.id === "torch").secondaryAction.icon, "fa-lightbulb");
+    assert.equal(rows.find(r => r.id === "torch").secondaryAction, undefined);
     assert.equal(JSON.stringify(view).includes("Secret Relic"), false);
   });
 }
@@ -213,16 +213,13 @@ for (const pulp of [false, true]) {
     await assert.rejects(f.gateway.execute(edit, stale), { code: "STALE_STATE" });
   });
 }
-test("light controls call the native sheet/tracker and invalidate old toggle descriptors", async t => {
-  const f = setup(t); const request = f.request("light:torch");
-  await f.gateway.execute(action, request);
-  assert.equal(f.lights.length, 1); assert.equal(f.lights[0][0], f.actor);
-  assert.equal(f.actor.items.get("torch").system.light.active, true);
-  await assert.rejects(f.gateway.execute(action, request), { code: "STALE_STATE" });
-  assert.equal(f.writes.length, 0); assert.equal(f.rolls.length, 0);
-  f.game.user.character = null;
-  assert.equal(f.gateway.capabilitiesForActor(f.actor).profileActions.some(a => a.id.startsWith("light:")), true);
+test("token-light actions are unavailable even for an owned assigned PC", async t => {
+  const f = setup(t);
+  assert.equal(f.gateway.capabilitiesForActor(f.actor).profileActions.some(a => a.id.startsWith("light:")), false);
+  await assert.rejects(f.gateway.execute(action, { actorSourceUuid: f.actor.uuid, actionId: "light:torch", actionRevision: "old" }), { code: "CAPABILITY_UNAVAILABLE" });
+  assert.equal(f.lights.length, 0);
 });
+
 test("synthetic PC rolls preserve exact source UUIDs while light controls remain native-sheet only", async t => {
   const f = setup(t);
   f.actor.uuid = "Scene.scene.Token.token.Actor.hero"; f.actor.isToken = true;
@@ -265,15 +262,6 @@ test("resource saves reject stale values, limits, lifecycle and arbitrary paths"
   await assert.rejects(f.gateway.execute(edit, f.edit("hp", 5), { isCurrent: () => false }), { code: "STALE_SESSION" });
   assert.equal(f.writes.length, 0);
 });
-test("different light toggles share one actor lock while native setup is pending", async t => {
-  const f = setup(t), torch = f.actor.items.get("torch"); let finish;
-  f.actor.items.push({ ...torch, id: "lantern", uuid: `${f.actor.uuid}.Item.lantern` });
-  f.actor.sheet._toggleLightSource = () => new Promise(resolve => { finish = resolve; });
-  const pending = f.gateway.execute(action, f.request("light:torch"));
-  await assert.rejects(f.gateway.execute(action, f.request("light:lantern")), { code: "COMMAND_BUSY" });
-  finish(); await pending;
-});
-
 test("inventory uses native slot totals, coins, stashed gear, and nonempty talent tabs", t => {
   const f = setup(t);
   f.actor.system.slots = 12;

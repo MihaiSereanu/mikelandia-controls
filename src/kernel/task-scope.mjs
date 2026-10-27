@@ -70,7 +70,7 @@ export function createTaskScope(label = "scope", performanceObserver = null) {
         try {
           cleanup();
         } catch (error) {
-          console.warn(`VE Mobile | Cleanup failed in ${label}`, error);
+          console.warn(`Mikelandia Controls | Cleanup failed in ${label}`, error);
         }
       }
       cleanups.clear();

@@ -7,21 +7,13 @@ const DESKTOP_HIDDEN_SETTING_KEYS = Object.freeze([
   "colorScheme",
   "headerArtwork",
   "headerArtworkOpacity",
-  "quickbarEnabled",
-  "quickbarRows",
-  "movementRepeatDelay",
-  "recenterAfterMove",
-  "joystickSide",
-  "combatCarousel",
   "keepScreenAwake",
-  "graphicsSafety",
   "diceRendering",
   "protectVeStyling",
   "characterFavouritesSource"
 ]);
 const GROUPS = Object.freeze([
-  { id: "preferences", keys: ["quickbarSource", "showActionSummaries", "compactActionSummaries"] },
-  { id: "compatibility", keys: ["fcsAutoSoftOverride"] }
+  { id: "preferences", keys: ["showActionSummaries", "compactActionSummaries"] },
 ]);
 
 /** Remove only unedited/omitted VE controls; other modules retain native submission. */
@@ -44,7 +36,7 @@ const controlValue = control => control.type === "checkbox" ? Boolean(control.ch
 const sameValue = (a, b) => typeof a === "boolean" || typeof b === "boolean" ? a === b : String(a) === String(b);
 
 /**
- * Keep VE Mobile's native settings focused on desktop-relevant controls while
+ * Keep Mikelandia Controls's native settings focused on desktop-relevant controls while
  * Foundry's effective presentation is Desktop. This only changes rendered DOM;
  * registered settings and their stored values remain untouched.
  */
@@ -103,7 +95,7 @@ export function createFoundryDesktopSettingsVisibilityGateway({
       const ownedRows = [];
       groups.push({ element, rows: ownedRows });
       for (const row of rows) {
-        const marker = category.ownerDocument.createComment("VE settings original position");
+        const marker = category.ownerDocument.createComment("Mikelandia Controls settings original position");
         row.before(marker);
         ownedRows.push([row, marker]);
         element.append(row);

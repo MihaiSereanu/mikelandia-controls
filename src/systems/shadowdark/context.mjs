@@ -42,14 +42,3 @@ export function knownSpell(item, actor) {
   try { return ownedItem(actor, String(item.id), "Spell") === item && item.system.isSpell === true && actor.system.isSpellCaster === true; }
   catch { return false; }
 }
-export function nativeLightSheet(actor, game) {
-  try {
-    // Shadowdark 4.0.6 tracks world Player actors with player ownership, not
-    // merely the current user's assigned character. Keep synthetic actors out:
-    // the native tracker cannot retain their Scene/Token source identity.
-    if (actor.isToken || game.actors?.get?.(actor.id) !== actor) return null;
-    const sheet = actor.sheet;
-    return sheet?.actor === actor && typeof sheet._toggleLightSource === "function"
-      && typeof game.shadowdark?.lightSourceTracker?.toggleLightSource === "function" ? sheet : null;
-  } catch { return null; }
-}

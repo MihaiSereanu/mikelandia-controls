@@ -1,3 +1,26 @@
+@layer ve-mobile-ui-isolation {
+  body.ve-mobile-running [data-ve-mobile-ui-state="blocked"] {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+  body.ve-mobile-running [data-ve-mobile-ui-state="host"] {
+    display: contents !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+  body.ve-mobile-running > .ve-mobile-app {
+    display: grid !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+  body.ve-mobile-running :is(#notifications, #tooltip, #dice-box-canvas) {
+    display: block !important;
+    visibility: visible !important;
+  }
+  body.ve-mobile-running #dice-box-canvas { pointer-events: none !important; }
+}
+
 /*
  * Only VE-rendered roots opt into this layer. Important declarations in a
  * named layer outrank ordinary and unlayered-important module rules even when
@@ -19,14 +42,14 @@
     opacity: 1 !important;
     pointer-events: auto !important;
   }
-  body.ve-mobile-running .ve-mobile-native-editor > .window-header {
+  body.ve-mobile-running .ve-mobile-admitted-app > .window-header {
     display: flex !important;
     visibility: visible !important;
     flex-shrink: 0 !important;
     min-height: 44px !important;
     overflow: visible !important;
   }
-  body.ve-mobile-running .ve-mobile-native-editor > .window-header :is(.close, [data-action="close"]) {
+  body.ve-mobile-running .ve-mobile-admitted-app > .window-header :is(.close, [data-action="close"]) {
     display: inline-flex !important;
     visibility: visible !important;
     align-items: center !important;
@@ -57,21 +80,6 @@
       linear-gradient(180deg, color-mix(in srgb, var(--ve-red) 12%, var(--ve-bg)), var(--ve-bg) 58%),
       radial-gradient(circle at 85% -10%, color-mix(in srgb, var(--ve-red-bright) 22%, transparent), transparent 32%) !important;
     font: 400 16px/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
-  }
-
-  .ve-mobile-app[data-ve-style-authority][data-route="chat"]:not([data-split-screen="true"]).ve-chat-visual-viewport {
-    inset: auto !important;
-    top: var(--ve-chat-viewport-top) !important;
-    left: var(--ve-chat-viewport-left) !important;
-    width: var(--ve-chat-viewport-width) !important;
-    height: var(--ve-chat-viewport-height) !important;
-  }
-
-  .ve-mobile-app[data-ve-style-authority][data-route="chat"][data-split-screen="true"] .ve-viewport > .ve-native-chat-screen.ve-chat-visual-pane {
-    height: var(--ve-chat-pane-height) !important;
-    max-height: 100% !important;
-    min-height: 0 !important;
-    align-self: start !important;
   }
 
   .ve-mobile-app[data-ve-style-authority][data-theme="light"] {
@@ -106,19 +114,11 @@
 
   /* Match the light NPC/multiclass palette specificity so their background
    * images cannot cover the live canvas after a character publication. */
-  .ve-mobile-app[data-ve-style-authority][data-route="scene"][data-theme] {
-    background: transparent !important;
-  }
 
   .ve-mobile-app[data-ve-style-authority] .ve-viewport {
     min-width: 0 !important;
     min-height: 0 !important;
     overflow: auto !important;
-  }
-
-  .ve-mobile-app[data-ve-style-authority][data-route="scene"] .ve-viewport {
-    overflow: hidden !important;
-    background: transparent !important;
   }
 
   .ve-mobile-app[data-ve-style-authority] .ve-viewport > section {
@@ -129,8 +129,7 @@
     padding: 18px 16px 32px !important;
   }
 
-  .ve-mobile-app[data-ve-style-authority][data-form-factor="phone"] .ve-viewport > .ve-character-screen,
-  .ve-mobile-app[data-ve-style-authority][data-form-factor="tablet"][data-split-screen="true"] .ve-viewport > .ve-character-screen {
+  .ve-mobile-app[data-ve-style-authority][data-form-factor="phone"] .ve-viewport > .ve-character-screen {
     padding-top: 0 !important;
   }
 
@@ -138,12 +137,6 @@
     width: 100% !important;
     height: 100% !important;
     min-height: 0 !important;
-    padding: 0 !important;
-  }
-
-  .ve-mobile-app[data-ve-style-authority][data-route="scene"] .ve-viewport > section {
-    width: 100% !important;
-    max-width: none !important;
     padding: 0 !important;
   }
 
@@ -185,7 +178,7 @@
   .ve-mobile-app[data-ve-style-authority] .ve-bottom-nav {
     position: relative !important;
     display: grid !important;
-    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
     gap: 4px !important;
     min-height: calc(66px + var(--ve-safe-bottom)) !important;
     padding: 8px 8px calc(8px + var(--ve-safe-bottom)) !important;
@@ -450,62 +443,6 @@
     background: color-mix(in srgb, var(--ve-gold) 8%, var(--ve-surface)) !important;
   }
 
-  .ve-mobile-app[data-ve-style-authority] .ve-quickbar-wrap {
-    position: absolute !important;
-    display: grid !important;
-    bottom: calc(12px + var(--ve-safe-bottom)) !important;
-    left: 50% !important;
-    width: fit-content !important;
-    max-width: calc(100% - 20px) !important;
-  }
-
-  .ve-mobile-app[data-ve-style-authority] .ve-quickbar-wrap.is-collapsed {
-    width: 56px !important;
-    transform: translateX(-50%) !important;
-  }
-
-  .ve-mobile-app[data-ve-style-authority] .ve-quickbar-wrap.is-collapsed :is(.ve-quickbar, .ve-quickbar-status, .ve-action-bar-edit-controls, .ve-action-bar-picker) {
-    display: none !important;
-  }
-
-  .ve-mobile-app[data-ve-style-authority] .ve-quickbar {
-    display: grid !important;
-    grid-template-columns: max-content 40px !important;
-    align-items: center !important;
-    gap: 8px !important;
-    width: max-content !important;
-    max-width: 100% !important;
-    padding: 6px !important;
-    border: 1px solid color-mix(in srgb, var(--ve-class-accent-primary) 34%, var(--ve-border)) !important;
-    background: color-mix(in srgb, var(--ve-surface) 32%, transparent) !important;
-  }
-
-  .ve-mobile-app[data-ve-style-authority] .ve-quickbar-wrap[data-columns="10"] .ve-quickbar {
-    grid-template-columns: max-content 120px !important;
-  }
-
-  .ve-mobile-app[data-ve-style-authority] .ve-quickbar-wrap.is-idle .ve-quickbar {
-    grid-template-columns: max-content !important;
-  }
-
-  .ve-mobile-app[data-ve-style-authority] .ve-scene-combat-carousel {
-    position: absolute !important;
-    display: grid !important;
-    top: max(8px, var(--ve-safe-top)) !important;
-    left: calc(50% + (var(--ve-safe-left) - var(--ve-safe-right)) / 2) !important;
-    max-width: var(--ve-scene-carousel-safe-width) !important;
-    padding: 4px 5px !important;
-    border: 1px solid color-mix(in srgb, var(--ve-gold) 31%, var(--ve-border)) !important;
-    background: linear-gradient(105deg,
-      color-mix(in srgb, var(--ve-surface-up) 84%, transparent),
-      color-mix(in srgb, var(--ve-surface) 76%, transparent)) !important;
-  }
-
-  .ve-mobile-app[data-ve-style-authority] .ve-scene-combat-carousel.is-collapsed {
-    left: max(8px, var(--ve-safe-left)) !important;
-    transform: none !important;
-  }
-
   .ve-mobile-app[data-ve-style-authority] .ve-item-modal {
     position: fixed !important;
     inset: 0 !important;
@@ -528,19 +465,6 @@
     .ve-mobile-app[data-ve-style-authority][data-form-factor="tablet"][data-nav-side="left"] {
       grid-template-columns: var(--ve-tablet-nav-width) minmax(0, 1fr) !important;
     }
-    .ve-mobile-app[data-ve-style-authority][data-form-factor="tablet"][data-orientation="landscape"][data-split-screen="true"] {
-      grid-template-columns: minmax(0, 1fr) var(--ve-split-panel-width) var(--ve-tablet-nav-width) !important;
-      background: transparent !important;
-    }
-    .ve-mobile-app[data-ve-style-authority][data-form-factor="tablet"][data-orientation="landscape"][data-split-screen="true"][data-nav-side="left"] {
-      grid-template-columns: var(--ve-tablet-nav-width) var(--ve-split-panel-width) minmax(0, 1fr) !important;
-    }
-    .ve-mobile-app[data-ve-style-authority][data-form-factor="tablet"][data-orientation="landscape"][data-split-screen="true"][data-scene-focus="true"] {
-      grid-template-columns: minmax(0, 1fr) 0 var(--ve-tablet-nav-width) !important;
-    }
-    .ve-mobile-app[data-ve-style-authority][data-form-factor="tablet"][data-orientation="landscape"][data-split-screen="true"][data-nav-side="left"][data-scene-focus="true"] {
-      grid-template-columns: var(--ve-tablet-nav-width) 0 minmax(0, 1fr) !important;
-    }
     .ve-mobile-app[data-ve-style-authority][data-form-factor="tablet"] .ve-bottom-nav {
       grid-column: 2 !important;
       grid-row: 1 / -1 !important;
@@ -557,25 +481,6 @@
       grid-column: 1 !important;
       border-right: 1px solid var(--ve-border) !important;
       border-left: 0 !important;
-    }
-    .ve-mobile-app[data-ve-style-authority][data-form-factor="tablet"][data-split-screen="true"] .ve-bottom-nav {
-      grid-column: 3 !important;
-    }
-    .ve-mobile-app[data-ve-style-authority][data-form-factor="tablet"][data-split-screen="true"][data-nav-side="left"] .ve-bottom-nav {
-      grid-column: 1 !important;
-    }
-    .ve-mobile-app[data-ve-style-authority][data-form-factor="tablet"][data-split-screen="true"] .ve-sheet-tabs {
-      grid-template-columns: none !important;
-      grid-auto-flow: column !important;
-      grid-auto-columns: minmax(64px, max-content) !important;
-      justify-content: start !important;
-      overflow-x: auto !important;
-      overflow-y: hidden !important;
-    }
-    .ve-mobile-app[data-ve-style-authority][data-form-factor="tablet"][data-split-screen="true"] .ve-sheet-tabs button {
-      min-width: 64px !important;
-      min-height: 58px !important;
-      padding-inline: 4px !important;
     }
 }
 

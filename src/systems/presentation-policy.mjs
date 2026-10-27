@@ -3,7 +3,6 @@ const legacyPreferences = new Set(["headerArtwork", "headerArtworkOpacity", "cha
 /** Presentation capabilities never authorize gameplay or rewrite stored choices. */
 export function supportsPreference(key, features = {}) {
   if (legacyPreferences.has(key)) return features.legacyCharacterSheet === true;
-  if (key === "quickbarSource") return features.quickbar === true;
   if (["showActionSummaries", "compactActionSummaries"].includes(key)) return features.actionSummaries === true;
   return true;
 }

@@ -1,0 +1,106 @@
+import { createShadowdarkFixture } from "/tests/helpers/shadowdark.mjs";
+import { createActor, createGame, createHooks } from "/tests/helpers/foundry.mjs";
+import { createAppKernel } from "/src/kernel/app-kernel.mjs";
+import { createSignalStore } from "/src/kernel/signal-store.mjs";
+import { initialAppState, reduceAppState } from "/src/kernel/app-state.mjs";
+import { createFoundrySessionGateway } from "/src/foundry/session-gateway.mjs";
+import { createFoundryCommandGateway } from "/src/foundry/command-gateway.mjs";
+import { createFoundryCombatGateway } from "/src/foundry/combat-gateway.mjs";
+import { createFoundryPreferencesGateway, registerPreferences } from "/src/foundry/preferences.mjs";
+import { createConnectionGeneration } from "/src/kernel/connection-generation.mjs";
+
+const checks = [];
+const check = (name, condition) => { if (!condition) throw new Error(name); checks.push(name); };
+const tick = () => new Promise(resolve => setTimeout(resolve, 60));
+let kernel;
+try {
+  const params = new URLSearchParams(location.search);
+  const legacy = params.get("system") === "dnd5e";
+  const actor = legacy ? createActor() : null;
+  const f = legacy ? { actor, game: createGame([actor]), hooks: createHooks() } : createShadowdarkFixture();
+  f.game.user.character = f.actor;
+  globalThis.game = f.game; globalThis.Hooks = f.hooks;
+  const dictionary = await fetch("/locales/en.json").then(r => r.json());
+  const translate = key => key.split(".").reduce((entry, part) => entry?.[part], dictionary) ?? key;
+  game.i18n = { lang: "en", localize: translate };
+  const definitions = new Map(), values = new Map(), originalGet = game.settings.get;
+  game.settings = {
+    settings: definitions,
+    register(namespace, key, data) { definitions.set(`${namespace}.${key}`, { ...data, namespace, key }); },
+    get(namespace, key) { return namespace === "ve-mobile" ? values.get(key) ?? definitions.get(`${namespace}.${key}`)?.default : originalGet(namespace, key); },
+    async set(namespace, key, value) { values.set(key, value); return value; }
+  };
+  registerPreferences();
+  game.user.isGM = true;
+  const nativeCalls = [];
+  const combatant = { id: "fighter", actor: f.actor, actorId: f.actor.id, name: "Fighter", visible: true, isOwner: true, initiative: null };
+  game.combat = {
+    id: "encounter", started: true, round: 1, turn: 0, turns: [combatant], combatant,
+    combatants: new Map([[combatant.id, combatant]]),
+    async rollInitiative(ids) { nativeCalls.push(["initiative", ids]); combatant.initiative = 17; },
+    async nextTurn() { nativeCalls.push(["next"]); },
+    async previousTurn() { nativeCalls.push(["previous"]); },
+    async startCombat() { nativeCalls.push(["start"]); },
+    async endCombat() {},
+    async delete() { nativeCalls.push(["end"]); }
+  };
+  // No map or token API is available to this complete kernel/frame fixture.
+  globalThis.canvas = undefined;
+  const layout = params.get("layout") ?? "phone";
+  const policy = () => ({ active: true, sessionReady: true, runtimeMode: layout, formFactor: layout, orientation: layout === "tablet" ? "landscape" : "portrait", theme: "dark", canvasAvailable: false });
+  const store = createSignalStore(initialAppState, reduceAppState);
+  const commands = createFoundryCommandGateway();
+  const combat = createFoundryCombatGateway({
+    isMobileActive: () => kernel?.active && store.state.route === "combat",
+    getLifecycleToken: () => kernel?.combatControlLifecycleToken(),
+    getEndCombatDialog: () => ({ confirm: async options => options.yes.callback() })
+  });
+  const session = createFoundrySessionGateway({ capabilitiesForActor: commands.capabilitiesForActor, combatForSnapshot: combat.snapshot, combatControlsForSnapshot: combat.controlsSnapshot });
+  kernel = createAppKernel({
+    store, session, commandGateway: commands, combatGateway: combat,
+    authoritativeGateway: { resync: async () => ({ applied: true }) },
+    connectionGeneration: createConnectionGeneration(),
+    preferencesGateway: createFoundryPreferencesGateway(),
+    readPolicy: policy, isControlsUiReady: () => true,
+    controlsGuideGateway: { seen: () => true },
+    settingsCompatibilityGateway: { snapshot: () => ({}) },
+    sessionStatusGateway: { snapshot: () => ({ users: [] }) },
+    disable() {}
+  });
+  kernel.reconcile(); await tick(); await tick();
+  check("complete kernel starts without a canvas", kernel.active);
+  const root = document.querySelector(".ve-mobile-app");
+  check("application uses Mikelandia Controls name", root?.getAttribute("aria-label") === "Mikelandia Controls");
+  check("exactly five navigation screens remain", [...root.querySelectorAll(".ve-main-nav-item")].map(b => b.dataset.route).join(",") === "characters,chat,journals,combat,settings");
+  const nav = root.querySelector(".ve-bottom-nav");
+  check("bottom navigation has no empty sixth slot", nav.getBoundingClientRect().height > nav.getBoundingClientRect().width || getComputedStyle(nav).gridTemplateColumns.split(" ").length === 5);
+  check("character renders without token selection", !!root.querySelector(legacy ? ".ve-character-selector" : ".ve-profile-section"));
+  check("no map or split viewport mounts", !root.querySelector(".ve-scene-screen, .ve-split-scene-viewport, .ve-tablet-split-toggle"));
+  check("no light or token placement controls mount", !root.querySelector('[data-profile-action^="light:"], .ve-portrait-action-menu, .ve-portrait-token-ghost'));
+  root.querySelector('[data-route="combat"]').click(); await tick();
+  check("Combat lists initiative without a canvas", root.querySelector(".ve-combat-name")?.textContent === "Fighter");
+  check("Combat has no focus or targeting controls", !root.querySelector(".fa-bullseye, .fa-arrows-to-eye"));
+  root.querySelector(".ve-combat-roll-initiative").click(); await tick();
+  check("initiative uses native combat workflow", nativeCalls[0]?.[0] === "initiative");
+  root.querySelector(".ve-combat-end-turn").click(); await tick();
+  check("End Turn uses native progression", nativeCalls.at(-1)?.[0] === "next");
+  root.querySelector(".ve-gm-combat-previous").click(); await tick();
+  check("GM Previous remains available", nativeCalls.at(-1)?.[0] === "previous");
+  root.querySelector(".ve-gm-combat-next").click(); await tick();
+  check("GM Next remains available", nativeCalls.at(-1)?.[0] === "next");
+  root.querySelector(".ve-gm-combat-center").click(); await tick();
+  check("GM End Combat remains available", nativeCalls.at(-1)?.[0] === "end");
+  game.combat.started = false; Hooks.emit("updateCombat", game.combat, {}); await tick();
+  root.querySelector(".ve-gm-combat-center").click(); await tick();
+  check("GM Start Combat remains available", nativeCalls.at(-1)?.[0] === "start");
+  check("navigation fits viewport", document.documentElement.scrollWidth <= innerWidth + 1);
+  check("GM controls fit viewport", root.querySelector(".ve-gm-combat-controls").getBoundingClientRect().right <= innerWidth + 1);
+  root.querySelector('[data-route="settings"]').click(); await tick();
+  check("Settings no longer exposes Scene, movement, memory or overlays", !/Scene & Controls|Joystick|Mobile Asset Optimizer|Memory Protection|Module Overlays/.test(root.querySelector(".ve-settings")?.textContent ?? ""));
+  const settings = root.querySelector(".ve-settings");
+  check("Settings renders successfully", !!settings);
+  document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
+} catch (error) {
+  kernel?.stop();
+  document.querySelector("#results").textContent = JSON.stringify({ status: "failed", checks, error: error.stack });
+}

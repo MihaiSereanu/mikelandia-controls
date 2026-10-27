@@ -1,6 +1,6 @@
 import { localizeFoundry } from "./localization.mjs";
 /**
- * Temporarily hosts Foundry's live ChatLog inside VE Mobile.
+ * Temporarily hosts Foundry's live ChatLog inside Mikelandia Controls.
  *
  * The element is moved rather than cloned so Foundry, the game system, and
  * modules retain ownership of rendering, listeners, context menus, and input.
@@ -72,7 +72,7 @@ export function createFoundryNativeChatGateway({
         try {
           originalToggle?.call(chat);
         } catch (error) {
-          console.warn("VE Mobile | Foundry chat controls could not be restored", error);
+          console.warn("Mikelandia Controls | Foundry chat controls could not be restored", error);
         }
       };
 
@@ -100,12 +100,12 @@ export function createFoundryNativeChatGateway({
         queueMicrotask(() => {
           if (scope.disposed || restored) return;
           Promise.resolve(chat.scrollBottom?.({ waitImages: true })).catch((error) => {
-            console.warn("VE Mobile | Native chat could not scroll to the newest message", error);
+            console.warn("Mikelandia Controls | Native chat could not scroll to the newest message", error);
           });
         });
       } catch (error) {
         restore();
-        console.error("VE Mobile | Native chat mount failed", error);
+        console.error("Mikelandia Controls | Native chat mount failed", error);
         return Object.freeze({ ok: false, reason: localizeFoundry("VEMOBILE.Interface.NativeChatGateway.FoundryChatCouldNotBeMounted", "Foundry chat could not be mounted.") });
       }
 
@@ -122,7 +122,7 @@ export function createFoundryNativeChatGateway({
         });
       } catch (error) {
         // An optional module must never tear down Foundry's native Chat.
-        console.warn("VE Mobile | Polyglot selector could not be mounted", error);
+        console.warn("Mikelandia Controls | Polyglot selector could not be mounted", error);
       }
 
       return Object.freeze({ ok: true });
@@ -321,10 +321,10 @@ export function mountPolyglotChatSelector({ chat, chatForm, controls, input, doc
         finally { game.polyglot.tomSelect = undefined; }
       }
       void Promise.resolve(game.polyglot.updateUserLanguages?.()).catch((error) => {
-        console.warn("VE Mobile | Polyglot languages could not be refreshed", error);
+        console.warn("Mikelandia Controls | Polyglot languages could not be refreshed", error);
       });
     } catch (error) {
-      console.warn("VE Mobile | Polyglot languages could not be refreshed", error);
+      console.warn("Mikelandia Controls | Polyglot languages could not be refreshed", error);
     }
   };
   reconcile();

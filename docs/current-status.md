@@ -1,28 +1,23 @@
 # Current status
 
-Updated 2026-10-27. WFRP single-line Encumbrance and direct Momentum checkbox are installed; await phone review.
+Updated 2026-10-27. Mikelandia Controls is an in-person companion with strict Phone/Tablet UI isolation. The user has authorized GitHub publication and reports having installed the local changes already. This deployment targets GitHub; it does not modify the local Foundry installation.
 
-## Installed and verified
+Phone/Tablet UI isolation now hides unrelated module and world-macro widgets, including late V1/V2 applications and descendants that force visibility. Native windows require explicit workflow ownership, recognized roll UI, approved parents, or a deliberate mobile control. Preserve module-launched editors/settings/confirmations, temporary notifications/tooltips, native menus and Dice So Nice. The rule works with Common Display Hide UI on or off and restores external presentation on exit.
 
-WFRP Combat and Trappings begin with read-only Encumbrance current/max, using prepared system values and accepting native decimal strings. Its label and value stay on one line; adjacent Combat cards stack on phones. Momentum uses an immediate-save checkbox with pending, error, and cancellation handling. Four changed runtime files were copied to D:/FoundryVTT/Data/modules/ve-mobile and SHA256-compared. Installed version remains 1.1.0. All current checkout changes are authorized for commit and publication; the main release workflow assigns its own version and verifies both public installation channels.
+## Checkout behavior
 
-Validation: all 292 Node tests and 1,485 browser fixture checks passed across 26 scenarios, including 335 WFRP checks across 4e/5e phone/tablet scenarios. Both standard and experimental packages build with archive integrity and import checks. This is source/fixture proof; the new display and checkbox have not been confirmed on the user's phone.
+Five screens remain: Character, Chat, Journals, Combat, and Settings. Scene browsing, map gestures, token control/targeting/movement, token and template placement, Scene overlays and action bars, map asset optimization, and map-memory profiles are removed. Character selection no longer selects or releases tokens. Shadowdark light buttons and acquisition/deletion light toggles are removed; ordinary gear, quantities, coins, and native character actions remain.
 
-The Blunderbuss concat error is native to WFRP 10.1.2 / Warhammer Library 3.5.1. Missing-ammo setup returns undefined, but the library still constructs a dialog and calls concat on its absent script list. An isolated harness extracted the installed native methods and reproduced both No Ammo and the exact concat error with no VE code. Consumes Ammo disabled passes native setup. Per-weapon Details -> Consumes Ammo is the native switch; no global equivalent was found. Loading remains separate. No native code, ammo setting, actor, or item was changed.
+Combat keeps initiative rolls, End Turn, and GM start/end/previous/next progression with native authority checks and encounter-end confirmation. Synthetic Actor resolution remains for character data and chat provenance.
 
-Diagnostic harness and JSON results: dist/diagnosis/20261027-wfrp-ammo/.
+Visible names and startup artwork use Mikelandia Controls. Technical ID ve-mobile, saved settings/flags, folder and release URLs remain compatible. README credits the original VE Mobile. A small upgrade routine restores client settings saved by the removed graphics profiles.
 
-Latest backup: D:/FoundryVTT/Backups/ve-mobile/20261027-044946-runtime-before-momentum-checkbox.zip; archive contents hash-verified. Previous full module backup: 20261026-233033-module-before-inventory-ui.zip in the same directory.
+## Deployment and remaining review
 
-Shadowdark Basic-only creation, slot weight fields, unrestricted safe-integer quantities, Gear/coin controls, and deletion at zero remain installed. Its latest validation was 290 Node tests, 1,444 browser fixture checks across 26 scenarios, and six isolated native slot-getter examples. Latest Shadowdark runtime backup: 20261027-000015-runtime-before-custom-item-weight.zip.
+Distribution uses the public rolling latest release at https://github.com/MihaiSereanu/ve-mobile/releases/tag/latest. Pushing main runs Node and browser checks, builds standard/experimental packages, assigns the patch version from the workflow run number, and verifies anonymous manifests and matching ZIP downloads. Keep the technical module ID and existing manifest URLs unchanged.
 
-Earlier real-campaign touch proof remains specific to Gods of the Forbidden North, Foundry 14.369, Shadowdark 4.0.6, GamingTable/Argos with Common Display. Selection, targeting, and a native joystick step were verified; Argos position and pause state restored. Evidence: dist/diagnosis/20261026-203347-token-control/. World/module backups: 20261026-203347-{gotfn-before-token-control,module-before-token-control}.zip.
+The user reported the in-person interface works and installed the local changes themselves. Physical-phone verification of the latest isolation behavior remains pending. Latest prior agent-created runtime backup: D:/FoundryVTT/Backups/ve-mobile/20261027-044946-runtime-before-momentum-checkbox.zip.
 
-## Remaining review
+The native WFRP 10.1.2 / Warhammer Library 3.5.1 missing-ammo concat error remains external to this module. Extracted-native-method reproduction: dist/diagnosis/20261027-wfrp-ammo/. Per-weapon Details -> Consumes Ammo is the native switch; the module does not patch ammo behavior.
 
-- Phone confirmation of WFRP Encumbrance in both tabs, direct Momentum checkbox, and native weapon Consumes Ammo behavior.
-- Shadowdark phone confirmation of custom slot weights, quantity increases and totals; earlier Gear, coin, and zero-quantity controls.
-- Physical-mobile audio listening and broader light timer/reconnect and multi-client inventory/resource checks remain separate from fixtures.
-- Simplification review: experimental overlay discovery, scaling/ordering, third-party adapters, debug bookkeeping and excess performance settings. Retain overlays pending review; preserve recovery, permissions, native workflows and desktop restoration.
-
-Support/report exporting and device/FPS/latency readouts are removed. Keep controls help and online-player status. Documentation and test-runner changes do not need installation copies.
+Validation: all 289 Node tests and 34 browser scenarios pass, including 128 dedicated isolation checks across Phone/Tablet with and without Common Display Hide UI. The final native-header check also passed both existing Common Display V1/V2 scenarios. Runtime undefined-reference checks and package/archive/import validation pass. Standard dist/ve-mobile.zip and experimental dist/experimental/ve-mobile.zip contain 175 files at version 1.1.0. These results are source and browser fixture proof. Live-world installation, physical-phone interaction, audible mute confirmation, and multi-client checks remain unverified for this revision.

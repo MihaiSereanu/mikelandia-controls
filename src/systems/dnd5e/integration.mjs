@@ -10,7 +10,7 @@ export const dnd5eIntegration = Object.freeze({
     }
     return key === "dnd5e.initiativeDexTiebreaker" ? { domains: ["combat"] } : null;
   },
-  features: Object.freeze({ quickbar: true, biography: true, armorClassEditor: true, actionSummaries: true, legacyCharacterSheet: true }),
+  features: Object.freeze({ biography: true, armorClassEditor: true, actionSummaries: true, legacyCharacterSheet: true }),
   itemChangesDirectory: item => item?.type === "class",
   canOpenNativeActor(actor, user) {
     return ["group", "vehicle"].includes(actor?.type) && permitted(actor, user, "OWNER");

@@ -1,4 +1,4 @@
-/** Share a browser Screen Wake Lock across overlapping VE Mobile lifetimes. */
+/** Share a browser Screen Wake Lock across overlapping Mikelandia Controls lifetimes. */
 export function createScreenWakeLockController({
   getDocument = () => globalThis.document,
   getNavigator = () => globalThis.navigator,
@@ -20,7 +20,7 @@ export function createScreenWakeLockController({
     try {
       await current.release();
     } catch (error) {
-      console.warn("VE Mobile | Could not release the screen wake lock", error);
+      console.warn("Mikelandia Controls | Could not release the screen wake lock", error);
     }
   };
 
@@ -31,7 +31,7 @@ export function createScreenWakeLockController({
     try {
       request = getNavigator().wakeLock.request("screen");
     } catch (error) {
-      console.warn("VE Mobile | Screen wake lock was not granted", error);
+      console.warn("Mikelandia Controls | Screen wake lock was not granted", error);
       return Promise.resolve(false);
     }
     pending = Promise.resolve(request)
@@ -52,7 +52,7 @@ export function createScreenWakeLockController({
         return true;
       })
       .catch((error) => {
-        console.warn("VE Mobile | Screen wake lock was not granted", error);
+        console.warn("Mikelandia Controls | Screen wake lock was not granted", error);
         return false;
       })
       .finally(() => {

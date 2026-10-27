@@ -1,5 +1,6 @@
 import { localizeFoundry } from "./localization.mjs";
 import { promoteNativeWindow } from "./native-window-layer.mjs";
+import { enableMobileUiIsolation, mobileApplicationOwned, mobileWorkflowPending } from "./mobile-ui-isolation.mjs";
 const RESOLUTION_MESSAGE_KEYS = new Set([
   "ERROR.RESOLUTION.Screen",
   "ERROR.RESOLUTION.Scale",
@@ -26,8 +27,6 @@ const APPLICATION_ORIGIN_SELECTOR = [
   ".ve-mobile-bootstrap",
   ".ve-mobile-dialog",
   ".ve-mobile-transient-app",
-  ".ve-mobile-module-overlay-visible",
-  "#hud.ve-mobile-native-hud-host",
   "#context-menu",
   "#prosemirror-dropdown"
 ].join(", ");
@@ -110,6 +109,7 @@ export function enableMobileApplications(scope, {
   cancel = (id) => clearTimeout(id)
 } = {}) {
   const admissions = createMobileApplicationAdmissions(document?.body);
+  const isolation = enableMobileUiIsolation(scope, { document, MutationObserverType });
   const closeGuards = new Map();
   const restoreClose = application => { closeGuards.get(application)?.(); closeGuards.delete(application); };
   scope.own(() => { for (const restore of closeGuards.values()) restore(); closeGuards.clear(); });
@@ -148,6 +148,9 @@ export function enableMobileApplications(scope, {
     const classification = classifyMobileApplication(element, application, {
       preExisting: baseline,
       retained,
+      deliberate: Boolean(correlation),
+      owned: mobileApplicationOwned(application),
+      approvedParent: [application?.parent, application?.options?.parent, application?.options?.owner].some(parent => admissions.has(parent)),
       activeBaseline: baseline && (element?.matches?.("form, [role='dialog']") || element?.querySelector?.("form"))
         && element?.contains?.(document?.activeElement) && document?.activeElement !== document?.body,
       isPersistentOverlay,
@@ -158,6 +161,7 @@ export function enableMobileApplications(scope, {
     if (!classification.admitted) {
       restoreClose(application);
       admissions.release(key, element);
+      isolation.reconcile();
       traceApplication(trace, "suppressed", application, element, correlation, classification, now(), document?.body, baseline);
       return;
     }
@@ -166,6 +170,7 @@ export function enableMobileApplications(scope, {
       return;
     }
     if (correlation) lineage.claim(application, element);
+    isolation.reconcile();
     if (application && !closeGuards.has(application)) closeGuards.set(application, disableMobileV2CloseAnimation(application));
     traceApplication(trace, "admitted", application, element, correlation, classification, now(), document?.body, baseline);
   };
@@ -420,12 +425,13 @@ export function mobileDialogElements(root) {
   return elements;
 }
 
-/** New lifecycle-known windows are admitted unless a concrete desktop owner replaces them. */
-export function classifyMobileApplication(element, application = null, { preExisting = false, retained = false, activeBaseline = false, isPersistentOverlay = () => false, isSettingsApplication = () => false, isActorEditor = () => false, isNativeDialog = () => false } = {}) {
-  if (!element?.matches || element.closest?.(".ve-mobile-app, .ve-mobile-bootstrap")) return Object.freeze({ admitted: false, modal: false, reason: "VE-owned" });
+/** Native windows require an explicit mobile workflow, approved parent, or
+ * recognized roll UI. A render hook alone never grants admission. */
+export function classifyMobileApplication(element, application = null, { preExisting = false, retained = false, activeBaseline = false, deliberate = false, owned = mobileApplicationOwned(application), approvedParent = false, isPersistentOverlay = () => false, isSettingsApplication = () => false, isActorEditor = () => false, isNativeDialog = () => false } = {}) {
+  if (!element?.matches || element.closest?.(".ve-mobile-app, .ve-mobile-bootstrap")) return Object.freeze({ admitted: false, modal: false, reason: "Mikelandia Controls-owned" });
   if (element.isConnected === false) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.DisconnectedApplicationRoot", "disconnected application root") });
   if (isSettingsApplication(application, element) || element.matches(".ve-mobile-settings-app")) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.NativeSettingsSessionOwnsApplication", "native Settings session owns application") });
-  if (element.matches("#interface, #sidebar, #hud, #players, #scene-controls, #scene-navigation, #hotbar, .ve-mobile-module-overlay-visible, .ve-mobile-module-overlay-host")) {
+  if (element.matches("#interface, #sidebar, #hud, #players, #scene-controls, #scene-navigation, #hotbar")) {
     return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.PersistentShellOrOverlay", "persistent shell or overlay") });
   }
   const modal = element.matches("dialog, [role='dialog'], #sd-roll-dialog, .dialog, .activity-choice, .activity-usage, .roll-configuration, .midi-targeting, #midi-qol-targetConfirmation")
@@ -434,11 +440,20 @@ export function classifyMobileApplication(element, application = null, { preExis
   // Application lifecycle. Admitting that child as a native window would
   // stretch it across the viewport and make its transparent area eat taps.
   if (isPersistentOverlay(element, application) || (!modal && hasPersistentOverlayAncestor(element, isPersistentOverlay))) {
-    return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.PersistentSceneOverlay", "persistent Scene overlay") });
+    return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.PersistentOverlay", "persistent overlay") });
   }
   if (actorSheetApplication(application) && !isActorEditor(application)) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.ActorSheetReplacedByCharacter", "Actor sheet replaced by Character") });
-  if (desktopSidebarApplication(application, element)) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.DesktopSidebarWorkspaceReplacedByVENavigation", "desktop sidebar workspace replaced by VE navigation") });
-  if (preExisting && !retained && !modal && !activeBaseline) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.MobileActivationBaselineWorkspace", "mobile activation baseline workspace") });
+  if (desktopSidebarApplication(application, element)) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.DesktopSidebarWorkspaceReplacedByVENavigation", "desktop sidebar workspace replaced by Mikelandia Controls navigation") });
+  const nativeRollTypes = [globalThis.warhammer?.apps?.WarhammerRollDialogV2, globalThis.warhammer?.apps?.WarhammerRollDialog];
+  const roll = isNativeDialog(application) || nativeRollTypes.some(Type => typeof Type === "function" && application instanceof Type)
+    || element.matches("#sd-roll-dialog, .roll-configuration, .activity-choice, .activity-usage, .midi-targeting, #midi-qol-targetConfirmation");
+  const framed = Boolean(element.querySelector?.(".window-header"));
+  const coreDialogTypes = [globalThis.foundry?.applications?.api?.DialogV2, globalThis.foundry?.appv1?.api?.Dialog, globalThis.Dialog];
+  const workflowDialog = mobileWorkflowPending() && coreDialogTypes.some(Type => typeof Type === "function" && application?.constructor === Type);
+  if (!retained && !owned && !isActorEditor(application) && !roll && !approvedParent && !workflowDialog && !(deliberate && (modal || framed))) {
+    return Object.freeze({ admitted: false, modal: false, reason: "outside an approved mobile workflow" });
+  }
+  if (preExisting && !retained && !modal && !activeBaseline && !owned && !isActorEditor(application)) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.MobileActivationBaselineWorkspace", "mobile activation baseline workspace") });
   if (!application && !modal) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.NoApplicationLifecycle", "no application lifecycle") });
   return Object.freeze({ admitted: true, modal, reason: modal ? localizeFoundry("VEMOBILE.Interface.MobilePresentation.NativeModalApplication", "native modal application") : activeBaseline ? localizeFoundry("VEMOBILE.Interface.MobilePresentation.ActiveBaselineWorkflow", "active baseline workflow") : preExisting ? localizeFoundry("VEMOBILE.Interface.MobilePresentation.RetainedApplicationLifecycle", "retained application lifecycle") : localizeFoundry("VEMOBILE.Interface.MobilePresentation.NewNativeApplicationLifecycle", "new native application lifecycle") });
 }
@@ -474,8 +489,8 @@ function desktopSidebarApplication(application, element) {
     || types.some(type => typeof type === "function" && application instanceof type);
 }
 
-/** Capture optional interaction provenance for support diagnostics. Admission
- * never depends on this short-lived correlation. */
+/** Deliberate controls can open a native child window; unrelated renders and
+ * navigation taps cannot grant admission to automatic module widgets. */
 export function interactionStartsApplicationLineage(event) {
   return Boolean(applicationInteractionOrigin(event));
 }
@@ -492,6 +507,7 @@ export function deliberateApplicationControl(event) {
   if (target.closest("[data-action='close'], .header-button.close, .window-header .close")) return null;
   const control = event.type === "submit" ? target.closest("form") : target.closest(APPLICATION_CONTROL_SELECTOR);
   if (!control || control.disabled === true || control.getAttribute?.("aria-disabled") === "true") return null;
+  if (control.matches?.(".ve-main-nav-item, [data-route]")) return null;
   return control;
 }
 
@@ -506,8 +522,8 @@ export function applicationInteractionOrigin(event) {
   return Object.freeze({ root, control, source: interactionSource(root), controlName: interactionControlName(control) });
 }
 
-/** Correlate at most one render with a deliberate control for diagnostics.
- * Later asynchronous renders remain eligible for generic admission. */
+/** Correlate at most one native window with a deliberate control. Explicit
+ * application ownership covers asynchronous module-launched editors. */
 export function createUserInteractionLineage({
   now = () => Date.now(),
   durationMs = APPLICATION_LINEAGE_MS,
@@ -642,11 +658,10 @@ function traceApplication(trace, result, application, element, lineage, classifi
 
 function interactionSource(root) {
   if (root?.matches?.("#hud.ve-mobile-native-hud-host")) return "native HUD";
-  if (root?.matches?.(".ve-mobile-module-overlay-visible")) return "admitted Scene overlay";
   if (root?.matches?.(".ve-mobile-transient-app, .ve-mobile-dialog")) return "admitted transient application";
   if (root?.matches?.("#context-menu, #prosemirror-dropdown")) return "admitted native control";
-  if (root?.matches?.(".ve-mobile-bootstrap")) return "VE bootstrap";
-  return "VE Mobile";
+  if (root?.matches?.(".ve-mobile-bootstrap")) return "Mikelandia Controls bootstrap";
+  return "Mikelandia Controls";
 }
 
 function interactionControlName(control) {

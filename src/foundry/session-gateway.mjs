@@ -1,18 +1,14 @@
 import { localizeFoundry } from "./localization.mjs";
+import { ownMobileApplication } from "./mobile-ui-isolation.mjs";
 import { resolveSystemIntegration } from "../systems/registry.mjs";
 import { actorSourceRecord, actorSourceUuid, resolveActorSource, validSourceUuid } from "./character-source.mjs";
 
 const TOKEN_GEOMETRY_FIELDS = new Set(["x", "y", "elevation", "rotation", "sort"]);
 
 export const SESSION_INVALIDATION_MAP = Object.freeze({
-  renderHotbar: Object.freeze(["scene"]),
-  updateUser: Object.freeze(["scene", "actors", "combat", "user"]),
-  createMacro: Object.freeze(["scene"]),
-  updateMacro: Object.freeze(["scene"]),
-  deleteMacro: Object.freeze(["scene"]),
-  createFolder: Object.freeze(["scene"]),
-  updateFolder: Object.freeze(["scene"]),
-  deleteFolder: Object.freeze(["scene"]),
+
+  updateUser: Object.freeze(["actors", "combat", "user"]),
+
   createActor: Object.freeze(["actors"]),
   updateActor: Object.freeze(["actors"]),
   deleteActor: Object.freeze(["actors"]),
@@ -37,16 +33,11 @@ export const SESSION_INVALIDATION_MAP = Object.freeze({
   createCombatant: Object.freeze(["combat"]),
   updateCombatant: Object.freeze(["combat"]),
   deleteCombatant: Object.freeze(["combat"]),
-  createScene: Object.freeze(["scene", "combat"]),
-  canvasReady: Object.freeze(["scene", "combat"]),
-  canvasTearDown: Object.freeze(["scene", "combat"]),
-  updateScene: Object.freeze(["scene", "combat"]),
-  deleteScene: Object.freeze(["scene", "combat"]),
-  createToken: Object.freeze(["scene", "combat"]),
-  deleteToken: Object.freeze(["scene", "combat"]),
-  controlToken: Object.freeze(["scene"]),
-  targetToken: Object.freeze(["targets"])
-});
+
+  createToken: Object.freeze(["combat"]),
+  deleteToken: Object.freeze(["combat"]),
+
+  });
 
 /**
  * Permission-aware boundary around Foundry globals. Views receive only plain,
@@ -55,19 +46,14 @@ export const SESSION_INVALIDATION_MAP = Object.freeze({
 export function createFoundrySessionGateway({
   getSystemIntegration = () => resolveSystemIntegration(globalThis.game?.system?.id),
   capabilitiesForActor = () => null,
-  quickbarForActor = () => Object.freeze(Array.from({ length: 13 }, () => null)),
-  hotbarForSnapshot = () => null,
-  sceneForSnapshot = () => null,
+
   combatForSnapshot = () => null,
   combatControlsForSnapshot = () => Object.freeze({ isGM: false }),
-  targetCountForSnapshot = () => Number(game?.user?.targets?.size ?? 0) || 0,
+
   performanceObserver = null
 } = {}) {
   const actorEligible = (actor, user) => isActorEligible(actor, user, getSystemIntegration());
   let refreshQueued = false;
-  let targetPublicationDeferred = false;
-  let targetRefreshPending = false;
-  let flushTargetRefresh = () => {};
   let latestSnapshot = null;
   let latestDomainSignatures = Object.freeze({});
   let watchGeneration = 0;
@@ -75,13 +61,8 @@ export function createFoundrySessionGateway({
   const pendingDirectoryActorIds = new Set();
   let pendingFullDirectoryRead = false;
   let pendingSelectedActorRead = false;
-  let pendingControlledSelection = false;
-  let pendingTokenActorSourceUuid = "";
-  let pendingSceneSelectionReset = false;
   let selectedActorSourceUuid = "";
   let selectedReferenceSources = new Set();
-  let heldCharacterSourceUuid = "";
-  let characterSourceHoldGeneration = 0;
 
   const count = (name, amount) => performanceObserver?.increment?.(name, amount);
   const readDomain = (domain, reader) => {
@@ -104,7 +85,7 @@ export function createFoundrySessionGateway({
         ...getSystemIntegration().createActorViewRecord(actor, user, capabilitiesForActor, game.users),
         source: actorSourceRecord(actor),
         sourceUuid: actorSourceUuid(actor),
-        quickbar: quickbarForActor(actor, user)
+
       });
     } finally {
       finish();
@@ -142,11 +123,6 @@ export function createFoundrySessionGateway({
     return actors.find((actor) => actor.id === preferredId)?.sourceUuid ?? "";
   };
 
-  const controlledSourceUuid = () => {
-    const token = Array.from(globalThis.canvas?.tokens?.controlled ?? [])[0]?.document ?? null;
-    return actorSourceUuid(token?.actor);
-  };
-
   const resolveSelectedActor = (actors, user) => {
     let actor = selectedActorSourceUuid ? resolveActorSource(selectedActorSourceUuid) : null;
     if (!actorEligible(actor, user)) {
@@ -156,19 +132,6 @@ export function createFoundrySessionGateway({
     return actor && actorEligible(actor, user) ? projectSelectedActor(actor, user) : null;
   };
 
-  const readScene = () => readDomain("scene", () => {
-    const scene = sceneForSnapshot();
-    if (!scene) return scene;
-    const sourceUuid = String(scene?.movement?.tokens?.find((token) => token.controlled)?.actorSourceUuid ?? "");
-    const actor = sourceUuid ? resolveActorSource(sourceUuid) : null;
-    return Object.freeze({
-      ...scene,
-      hotbar: hotbarForSnapshot(),
-      quickbarActorSourceUuid: sourceUuid,
-      quickbar: actor && actorEligible(actor, game.user) ? quickbarForActor(actor, game.user) : null
-    });
-  });
-
   const read = () => {
     count("authoritative.read.full");
     count("snapshot.build.full");
@@ -176,7 +139,7 @@ export function createFoundrySessionGateway({
     try {
       const user = game.user;
       const actors = readActors();
-      if (!selectedActorSourceUuid) selectedActorSourceUuid = controlledSourceUuid() || preferredActorSourceUuid(actors);
+      if (!selectedActorSourceUuid) selectedActorSourceUuid = preferredActorSourceUuid(actors);
       const selectedActor = resolveSelectedActor(actors, user);
       const combat = readDomain("combat", () => Object.freeze({
         combat: combatForSnapshot(),
@@ -200,7 +163,7 @@ export function createFoundrySessionGateway({
         actors,
         selectedActorSourceUuid,
         selectedActor,
-        scene: readScene(),
+
         combat: combat.combat,
         combatControls: combat.controls,
         journals: readDomain("journals", () => Object.freeze(visibleJournals(user).map(journalRecord))),
@@ -211,7 +174,7 @@ export function createFoundrySessionGateway({
     }
   };
 
-  const readIncremental = (domains, actorIds, fullActorRead, refreshSelectedActor, refreshControlledSelection, resetSceneSelection) => {
+  const readIncremental = (domains, actorIds, fullActorRead, refreshSelectedActor) => {
     if (!latestSnapshot) return read();
     count("snapshot.build.incremental");
     const finish = performanceObserver?.start?.("snapshot.build.incremental") ?? (() => {});
@@ -221,24 +184,15 @@ export function createFoundrySessionGateway({
         next.actors = fullActorRead ? readActors() : actorIds.size ? patchActors(latestSnapshot.actors, actorIds) : latestSnapshot.actors;
         next.preferredActorId = preferredActorId(next.actors);
         next.preferredActorSourceUuid = preferredActorSourceUuid(next.actors);
-        if (resetSceneSelection) {
-          const current = selectedActorSourceUuid ? resolveActorSource(selectedActorSourceUuid) : null;
-          if (current?.isToken) selectedActorSourceUuid = preferredActorSourceUuid(next.actors);
-        }
-        if (refreshControlledSelection && !heldCharacterSourceUuid) {
-          const controlled = controlledSourceUuid();
-          selectedActorSourceUuid = pendingTokenActorSourceUuid && (!controlled || controlled === selectedActorSourceUuid)
-            ? pendingTokenActorSourceUuid
-            : controlled || selectedActorSourceUuid;
-        }
+
         const currentStillValid = selectedActorSourceUuid && resolveActorSource(selectedActorSourceUuid);
-        if (refreshSelectedActor || refreshControlledSelection || resetSceneSelection || !currentStillValid) {
+        if (refreshSelectedActor || !currentStillValid) {
           next.selectedActor = resolveSelectedActor(next.actors, game.user);
           next.selectedActorSourceUuid = selectedActorSourceUuid;
         }
       }
       if (domains.has("user")) next.user = readDomain("user", () => ({ id: game.user?.id ?? "", name: game.user?.name ?? "Player", isGM: Boolean(game.user?.isGM) }));
-      if (domains.has("scene")) next.scene = readScene();
+
       if (domains.has("combat")) {
         const combat = readDomain("combat", () => Object.freeze({
           combat: combatForSnapshot(),
@@ -249,7 +203,7 @@ export function createFoundrySessionGateway({
       }
       if (domains.has("journals")) next.journals = readDomain("journals", () => Object.freeze(visibleJournals(game.user).map(journalRecord)));
       if (domains.has("chat")) next.chat = readDomain("chat", () => Object.freeze(visibleMessages().slice(-30).map(chatRecord)));
-      if (domains.has("targets") && !domains.has("scene")) next.scene = patchSceneTargetCount(latestSnapshot.scene, readDomain("targets", targetCountForSnapshot));
+
       return Object.freeze(next);
     } finally {
       finish();
@@ -289,43 +243,11 @@ export function createFoundrySessionGateway({
         || !getSystemIntegration().referenceSources(origin).includes(target)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisReferenceIsNoLongerAvailable", "This reference is no longer available."));
       return this.selectCharacterSource(target, expectedSession);
     },
-    holdCharacterSource(sourceUuid) {
-      const uuid = validSourceUuid(sourceUuid);
-      const generation = ++characterSourceHoldGeneration;
-      heldCharacterSourceUuid = uuid;
-      return () => {
-        if (generation === characterSourceHoldGeneration) heldCharacterSourceUuid = "";
-      };
-    },
-    setTargetPublicationDeferred(deferred) {
-      targetPublicationDeferred = Boolean(deferred);
-      if (!targetPublicationDeferred) flushTargetRefresh();
-    },
+
     watch(scope, onSnapshot, onError, { onJournalChange = () => {} } = {}) {
-      // Foundry selects every owned token on its first draw for an unassigned
-      // player. Mobile starts with an explicit chooser instead of adopting that
-      // automatic group selection. Later user selections remain authoritative.
-      if (!game.user?.character) {
-        globalThis.canvas?.tokens?.releaseAll?.();
-        selectedActorSourceUuid = "";
-      }
       const generation = ++watchGeneration;
       const queueRefresh = (invalidation) => {
-        if (invalidation.tokenActorChanged || invalidation.replacementTokenUuid) {
-          const token = latestSnapshot?.scene?.movement?.tokens?.find((entry) =>
-            entry.id === invalidation.tokenId && latestSnapshot.scene.id === invalidation.sceneId);
-          if (token?.actorSourceUuid === selectedActorSourceUuid && (token.controlled || invalidation.replacementTokenUuid)) {
-            const replacement = invalidation.replacementTokenUuid ? resolveTokenReplacement(invalidation.replacementTokenUuid) : null;
-            const nextSourceUuid = invalidation.replacementTokenUuid
-              ? actorSourceUuid(replacement?.parent?.id === invalidation.sceneId ? replacement.actor : null)
-              : invalidation.sourceUuid;
-            const nextActor = nextSourceUuid ? resolveActorSource(nextSourceUuid) : null;
-            if (nextSourceUuid !== selectedActorSourceUuid && actorEligible(nextActor, game.user)) {
-              pendingTokenActorSourceUuid = nextSourceUuid;
-              pendingControlledSelection = true;
-            }
-          }
-        }
+
         for (const domain of invalidation.domains) {
           pendingDomains.add(domain);
           count(`invalidation.domain.${domain}`);
@@ -338,8 +260,6 @@ export function createFoundrySessionGateway({
         if (invalidation.sourceUuid && selectedReferenceSources.has(invalidation.sourceUuid)) pendingSelectedActorRead = true;
         if (invalidation.referenceTokenPrefix && [...selectedReferenceSources].some(uuid => uuid.startsWith(invalidation.referenceTokenPrefix))) pendingSelectedActorRead = true;
         if (invalidation.relatedActorId && invalidation.relatedActorId === String(latestSnapshot?.selectedActor?.id ?? "")) pendingSelectedActorRead = true;
-        if (invalidation.controlledSelection) pendingControlledSelection = true;
-        if (invalidation.sceneSelectionReset) pendingSceneSelectionReset = true;
         if (refreshQueued) {
           count("hook.coalesced");
           return;
@@ -353,23 +273,15 @@ export function createFoundrySessionGateway({
             const actorIds = new Set(pendingDirectoryActorIds);
             const fullActorRead = pendingFullDirectoryRead;
             const refreshSelectedActor = pendingSelectedActorRead;
-            const refreshControlledSelection = pendingControlledSelection;
-            const resetSceneSelection = pendingSceneSelectionReset;
             pendingDomains.clear();
             pendingDirectoryActorIds.clear();
             pendingFullDirectoryRead = false;
             pendingSelectedActorRead = false;
-            pendingControlledSelection = false;
-            pendingSceneSelectionReset = false;
-            const snapshot = readIncremental(domains, actorIds, fullActorRead, refreshSelectedActor, refreshControlledSelection, resetSceneSelection);
-            pendingTokenActorSourceUuid = "";
+            const snapshot = readIncremental(domains, actorIds, fullActorRead, refreshSelectedActor);
             const changedDomains = new Set();
             for (const domain of domains) {
               count(`snapshot.signature.${domain}`);
-              if (domain === "targets") {
-                if (Number(snapshot?.scene?.movement?.targetCount ?? 0) !== Number(latestSnapshot?.scene?.movement?.targetCount ?? 0)) changedDomains.add("scene");
-                continue;
-              }
+
               if (snapshotDomainSignature(snapshot, domain) !== latestDomainSignatures[domain]) changedDomains.add(domain);
             }
             if (!changedDomains.size) {
@@ -378,7 +290,7 @@ export function createFoundrySessionGateway({
             }
             const published = { ...snapshot };
             for (const domain of domains) {
-              const key = domain === "targets" ? "scene" : domain;
+              const key = domain;
               if (!changedDomains.has(key)) published[key] = latestSnapshot[key];
             }
             if (domains.has("actors") && !changedDomains.has("actors")) published.preferredActorId = latestSnapshot.preferredActorId;
@@ -394,24 +306,6 @@ export function createFoundrySessionGateway({
           }
         });
       };
-      const queueTargetRefresh = () => {
-        if (targetPublicationDeferred) {
-          targetRefreshPending = true;
-          count("hook.target.deferred");
-          return;
-        }
-        queueRefresh({ hook: "targetToken", domains: ["targets"] });
-      };
-      const localFlushTargetRefresh = () => {
-        if (!targetRefreshPending) return;
-        targetRefreshPending = false;
-        queueRefresh({ hook: "targetToken", domains: ["targets"] });
-      };
-      flushTargetRefresh = localFlushTargetRefresh;
-      scope.own?.(() => {
-        if (flushTargetRefresh === localFlushTargetRefresh) flushTargetRefresh = () => {};
-        targetRefreshPending = false;
-      });
       scope.own?.(() => {
         if (watchGeneration !== generation) return;
         watchGeneration += 1;
@@ -420,9 +314,6 @@ export function createFoundrySessionGateway({
         pendingDirectoryActorIds.clear();
         pendingFullDirectoryRead = false;
         pendingSelectedActorRead = false;
-        pendingControlledSelection = false;
-        pendingTokenActorSourceUuid = "";
-        pendingSceneSelectionReset = false;
       });
 
       for (const hook of [...Object.keys(SESSION_INVALIDATION_MAP), "updateToken", "updateSetting"]) {
@@ -432,15 +323,7 @@ export function createFoundrySessionGateway({
             const entry = hook.endsWith("Page") ? args[0]?.parent : args[0];
             if (entry?.id) onJournalChange(String(entry.id));
           }
-          if (hook === "targetToken") {
-            const user = args[0];
-            if (user && String(user.id ?? "") !== String(game.user?.id ?? "")) {
-              count("hook.ignored");
-              return;
-            }
-            queueTargetRefresh();
-            return;
-          }
+
           const invalidation = sessionInvalidationForHook(hook, args[0], args[1], getSystemIntegration());
           if (!invalidation.domains.length) {
             count("hook.ignored");
@@ -503,6 +386,7 @@ export function createFoundrySessionGateway({
       const sheet = page && ["text", "image"].includes(String(page.type)) && typeof page.sheet?.render === "function"
         ? page.sheet : journal.sheet;
       if (typeof sheet?.render !== "function") throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.TheNativeJournalEditorIsUnavailable", "The native Journal editor is unavailable."));
+      ownMobileApplication(sheet);
       // Foundry 13.351's JournalEntrySheet is ApplicationV2, while its text
       // and image JournalPageSheet editors still use ApplicationV1.render.
       if (sheet.isV2 === false) await Promise.resolve(sheet.render(true, { veNativeEdit: true }));
@@ -527,12 +411,12 @@ export function sessionInvalidationForHook(hook, document, changes = {}, integra
   if (hook === "updateActor") {
     const fields = changedPaths(changes);
     const directoryChanged = !document?.isToken && (fields.length === 0 || fields.some((field) => /^(?:name|img|type|folder|ownership|system\.details\.(?:level|cr|type)|system\.traits\.size)(?:\.|$)/u.test(field)));
-    const sceneChanged = fields.length === 0 || fields.some((field) => /^(?:name|img|ownership|prototypeToken|flags\.ve-mobile\.quickbar)(?:\.|$)/u.test(field));
+    const combatChanged = fields.length === 0 || fields.some(field => /^(?:name|img|ownership)(?:\.|$)/u.test(field));
     const sourceUuid = actorSourceUuid(document);
     const directoryActorId = directoryChanged ? String(document?.id ?? "") : "";
     return Object.freeze({
       hook,
-      domains: Object.freeze(["actors", ...(sceneChanged ? ["scene", "combat"] : [])]),
+      domains: Object.freeze(["actors", ...(combatChanged ? ["combat"] : [])]),
       sourceUuid,
       relatedActorId: document?.isToken ? "" : String(document?.id ?? ""),
       ...(directoryActorId ? { directoryActorId } : {})
@@ -544,7 +428,7 @@ export function sessionInvalidationForHook(hook, document, changes = {}, integra
     const sourceUuid = actorSourceUuid(document?.actor);
     const tokenActorChanged = fields.includes("actorId") || fields.includes("actorLink");
     return Object.freeze({
-      hook, domains: geometryOnly ? Object.freeze([]) : Object.freeze(["actors", "scene", "combat"]), sourceUuid,
+      hook, domains: geometryOnly ? Object.freeze([]) : Object.freeze(["actors", "combat"]), sourceUuid,
       ...(tokenActorChanged ? { referenceTokenPrefix: `Scene.${document?.parent?.id}.Token.${document?.id}.Actor.`, tokenActorChanged: true, tokenId: String(document?.id ?? ""), sceneId: String(document?.parent?.id ?? "") } : {})
     });
   }
@@ -554,7 +438,7 @@ export function sessionInvalidationForHook(hook, document, changes = {}, integra
     const fullKey = key.includes(".") ? key : namespace && key ? `${namespace}.${key}` : key;
     const contribution = integration.settingInvalidation?.(fullKey);
     if (contribution) return Object.freeze({ hook, ...contribution, domains: Object.freeze([...contribution.domains]) });
-    const domains = ["core.hotbarLock", "core.macroScript"].includes(fullKey) ? Object.freeze(["scene"])
+    const domains = [].includes(fullKey) ? Object.freeze([])
       : Object.freeze([]);
     return Object.freeze({ hook, domains });
   }
@@ -565,15 +449,14 @@ export function sessionInvalidationForHook(hook, document, changes = {}, integra
   const worldActor = actor && !actor.isToken;
   const directoryItemChanged = ["createItem", "updateItem", "deleteItem"].includes(hook) && integration.itemChangesDirectory?.(document) === true;
   const directoryActorId = worldActor && (["createActor", "deleteActor"].includes(hook) || directoryItemChanged) ? String(actor.id ?? "") : "";
-  const controlledSelection = hook === "controlToken";
+
   const validatesSelectedSource = ["canvasReady", "canvasTearDown", "deleteScene", "deleteToken"].includes(hook);
-  const sceneSelectionReset = ["canvasReady", "canvasTearDown", "deleteScene"].includes(hook);
   const replacementTokenUuid = hook === "deleteToken" ? String(changes?.replacements?.[document?.id] ?? "") : "";
   const domains = Object.freeze([...new Set([
     ...configuredDomains,
-    ...(sourceUuid || controlledSelection || validatesSelectedSource || refreshSelectedActor ? ["actors"] : [])
+    ...(sourceUuid || validatesSelectedSource || refreshSelectedActor ? ["actors"] : [])
   ])]);
-  const fullDirectoryRead = hook === "createActor" || hook === "deleteActor" ? false : configuredDomains.includes("actors") && !sourceUuid && !controlledSelection && !validatesSelectedSource;
+  const fullDirectoryRead = hook === "createActor" || hook === "deleteActor" ? false : configuredDomains.includes("actors") && !sourceUuid && !validatesSelectedSource;
   return Object.freeze({
     hook,
     domains,
@@ -582,21 +465,9 @@ export function sessionInvalidationForHook(hook, document, changes = {}, integra
     ...(worldActor ? { relatedActorId: String(actor.id ?? "") } : {}),
     ...(directoryActorId ? { directoryActorId } : {}),
     ...(fullDirectoryRead ? { fullDirectoryRead: true } : {}),
-    ...(controlledSelection ? { controlledSelection: true } : {}),
     ...(hook === "deleteToken" ? { referenceTokenPrefix: `Scene.${document?.parent?.id}.Token.${document?.id}.Actor.`, refreshSelectedActor: true } : {}),
     ...(replacementTokenUuid ? { replacementTokenUuid, tokenId: String(document?.id ?? ""), sceneId: String(document?.parent?.id ?? "") } : {}),
-    ...(sceneSelectionReset ? { sceneSelectionReset: true } : {})
   });
-}
-
-function resolveTokenReplacement(uuid) {
-  if (!/^Scene\.[^.]+\.Token\.[^.]+$/u.test(uuid)) return null;
-  try {
-    const token = (globalThis.fromUuidSync ?? globalThis.foundry?.utils?.fromUuidSync)?.(uuid, { strict: false }) ?? null;
-    return token?.uuid === uuid ? token : null;
-  } catch {
-    return null;
-  }
 }
 
 function actorForHook(hook, document) {
@@ -622,19 +493,8 @@ function changedPaths(changes, prefix = "") {
   return paths;
 }
 
-function patchSceneTargetCount(scene, targetCount) {
-  if (!scene) return scene;
-  return Object.freeze({
-    ...scene,
-    movement: Object.freeze({
-      ...(scene.movement ?? {}),
-      targetCount: Math.max(0, Number(targetCount) || 0)
-    })
-  });
-}
-
 function snapshotDomainSignatures(snapshot) {
-  return Object.freeze(Object.fromEntries(["actors", "scene", "combat", "journals", "chat", "world", "user"]
+  return Object.freeze(Object.fromEntries(["actors", "combat", "journals", "chat", "world", "user"]
     .map((domain) => [domain, snapshotDomainSignature(snapshot, domain)])));
 }
 

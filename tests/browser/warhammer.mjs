@@ -53,7 +53,7 @@ try {
     : key === "useGroupAdvantage" ? groupAdvantage : key === "groupAdvantageValues" ? groupAdvantageValues : key === "advantagemax" ? 10 : false : undefined;
   game.combat = { id: "combat", getCombatantByActor: source => source === actor ? { id: "combatant", actor } : null };
   game.i18n = { localize: key => key === "TYPES.Actor.character" ? "Player Character" : key === "TYPES.Actor.npc" ? "Non-Player Character" : key };
-  const applications = enableMobileApplications(scope, { getExistingApplications: () => [] });
+  const applications = enableMobileApplications(scope, { getExistingApplications: () => [], isNativeDialog: app => app?.fixtureNativeRoll === true });
   let nativeDialog;
   const nativeRolls = [];
   const nativeSetups = [];
@@ -61,7 +61,7 @@ try {
   const setupTest = (kind, target) => new Promise(resolve => {
     nativeSetups.push({ kind, target, use5e });
     let settled = false;
-    const dialog = { options: { modal: true }, element: document.createElement("section"), close() {
+    const dialog = { fixtureNativeRoll: true, options: { modal: true }, element: document.createElement("section"), close() {
       this.element.remove(); Hooks.emit("closeApplicationV2", this);
       if (!settled) { settled = true; resolve(undefined); }
     } };
@@ -93,7 +93,7 @@ try {
     if (spell.system.lore.value == "petty") return actor.setupCast(spell);
     return new Promise(resolve => {
       let settled = false;
-      const dialog = { options: { modal: true }, element: document.createElement("section"), close() {
+      const dialog = { fixtureNativeRoll: true, options: { modal: true }, element: document.createElement("section"), close() {
         this.element.remove(); Hooks.emit("closeApplicationV2", this);
         if (!settled) { settled = true; resolve(undefined); }
       } };

@@ -17,7 +17,7 @@ const DICE_ACTIVITY_POLL_MS = 50;
 const DICE_START_GRACE_MS = 1500;
 
 /**
- * Admit Foundry-owned settings applications through VE Mobile's desktop UI
+ * Admit Foundry-owned settings applications through Mikelandia Controls's desktop UI
  * boundary without copying or taking ownership of their form content.
  */
 export function createFoundrySettingsCompatibilityGateway({

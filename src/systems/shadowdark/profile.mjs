@@ -39,7 +39,7 @@ export function shadowdarkPlayerProfile(context) {
     { id: "inventory", labelKey: "SHADOWDARK.sheet.player.tab.inventory", label: "Inventory", sections: [
       { id: "gear", kind: "items", keepEmpty: true, labelKey: "SHADOWDARK.inventory.gear", label: "Gear", collectionPath: "items", itemTypes: physicalTypes,
         summary: [field("slots", "SHADOWDARK.inventory.slots", "Slots", null, { read: actor => actor.system.getSlotUsage?.().total, maxPath: "system.slots" })],
-        valuePath: "system.quantity", quantityEditable: true, secondaryActionIdPrefix: "light", include: (item, _context, actor) => carriedItem(item, actor) },
+        valuePath: "system.quantity", quantityEditable: true, include: (item, _context, actor) => carriedItem(item, actor) },
       { id: "coins", kind: "values", layout: "inline", labelKey: "SHADOWDARK.inventory.coins", label: "Coins",
         summary: [field("coin-slots", "SHADOWDARK.inventory.slots", "Slots", null, { read: actor => actor.system.getSlotUsage?.().coins })],
         fields: ["gp", "sp", "cp"].map(id =>

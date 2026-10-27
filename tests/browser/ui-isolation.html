@@ -1,0 +1,20 @@
+<!doctype html><html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mobile UI isolation</title>
+<style>
+  @import url("/assets/ve-mobile.css") layer(modules);
+  @import url("/assets/ve-style-authority.css") layer(modules);
+  body { margin: 0; font: 16px system-ui; }
+  .fixture-widget { position: fixed; top: 120px; left: 10px; width: 220px; height: 100px; background: orange; z-index: 2147483647; visibility: visible !important; pointer-events: auto !important; }
+  .fixture-widget * { visibility: visible !important; pointer-events: auto !important; }
+  #results { display: none; }
+</style>
+<body class="ve-mobile-running">
+<div id="interface"><div id="ui-left"><div id="smalltime-app" class="fixture-widget"><button>Calendar / weather</button></div></div></div>
+<div id="custom-macro" class="fixture-widget image-popout"><button>Travel / Underclock</button></div>
+<main class="ve-mobile-app" data-theme="dark"><section><button id="approved-button">Open native workflow</button><button class="ve-main-nav-item" data-route="combat">Combat</button></section></main>
+<div id="notifications"><div class="notification">Permission warning</div></div>
+<aside id="tooltip">Temporary tooltip</aside>
+<pre id="results">Running isolation checks…</pre>
+<script type="module" src="/tests/browser/ui-isolation.mjs"></script>
+</body></html>
