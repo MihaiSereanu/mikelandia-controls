@@ -47,9 +47,8 @@ jobs:
           cat > dist/release-notes.md <<EOF
           Built from main at $GITHUB_SHA. Version $RELEASE_VERSION.
 
-          Install module.json for the D&D-only channel.
-          Install module-experimental.json for Warhammer 4e/5e, Shadowdark, and native-sheet fallback.
-          Both channels use the same module ID; install one channel per Foundry instance.
+          Both module.json and module-experimental.json support all systems without metadata filtering.
+          Use module-experimental.json for the experimental cross-system description; both channels share the same module ID.
 
           Warhammer and Shadowdark PC workflows have initial isolated Foundry 14 live evidence.
           Full compatibility, real devices, D&D regression, ammo, Group Advantage, and timer/reconnect coverage remain pending.

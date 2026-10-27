@@ -132,7 +132,7 @@ test("missing, malformed, derived, or unsupported resources remain read-only", t
 
 test("Group Advantage uses the native setter and retains native routing", async t => {
   const { actor, gateway, calls, payload, view } = setup(t, { groupAdvantage: true });
-  assert.equal(view().panels.find(tab => tab.id === "combat").sections[0].rows[0].label, "Group Advantage");
+  assert.equal(view().panels.find(tab => tab.id === "combat").sections.find(section => section.id === "group-advantage").rows[0].label, "Group Advantage");
   const result = await gateway.execute(command, payload("advantage", 12));
   assert.equal(result.submitted, true);
   assert.deepEqual(calls, [["setAdvantage", 12]]);

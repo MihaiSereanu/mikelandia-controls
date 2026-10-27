@@ -1952,7 +1952,7 @@ function openBiographyEditor(anchor, config, commands, pageStatus, scope) {
         if (editorScope.disposed) return;
         pageStatus.classList.remove("is-error");
         pageStatus.classList.add("is-success");
-        pageStatus.textContent = localizedText(commands.localize, "VEMOBILE.Character.Presenter.Saved", "{label} saved.", { label: (config.label) });
+        pageStatus.textContent = "";
         close();
       } catch (error) {
         if (editorScope.disposed) return;
@@ -2340,12 +2340,12 @@ function showCharacterItemActionMenu(anchor, event, item, actor, commands, statu
               ...(item.activityId ? { activityId: item.activityId } : {})
             });
             status.classList.remove("is-error");
-            status.textContent = localizedText(commands.localize, "VEMOBILE.Character.Presenter.AddedToQuickbar", "{name} added to Quickbar.", { name: (item.name) });
+            status.textContent = "";
             globalThis.navigator?.vibrate?.(5);
           } else if (action.id === "hotbar") {
             await commands.addHotbarItem({ ...payload, ...(item.activityId ? { activityId: item.activityId } : {}) });
             status.classList.remove("is-error");
-            status.textContent = localizedText(commands.localize, "VEMOBILE.Character.Presenter.AddedToHotbar", "{name} added to Hotbar.", { name: (item.name) });
+            status.textContent = "";
             globalThis.navigator?.vibrate?.(5);
           } else await commands.execute(action.command, payload);
         } catch (error) {
@@ -3077,7 +3077,7 @@ async function runActorCommand(button, command, actor, payload, commands, status
   button.classList.add("is-pending");
   button.setAttribute("aria-busy", "true");
   status.classList.remove("is-error", "is-success");
-  status.textContent = pendingMessage;
+  status.textContent = "";
   let openedActionSessionId = "";
   let displayedRollResultId = 0;
   const expectsRollResult = command !== ACTOR_COMMANDS.USE_ITEM && Boolean(resultLabel);
@@ -3101,8 +3101,7 @@ async function runActorCommand(button, command, actor, payload, commands, status
     else if (displayedRollResultId) commands.dismissRollResult(displayedRollResultId);
   } catch (error) {
     if (displayedRollResultId) commands.dismissRollResult(displayedRollResultId);
-    status.classList.add("is-error");
-    status.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Character.Presenter.FoundryCouldNotCompleteThatRoll", "Foundry could not complete that roll.");
+    commands.reportCharacterMutationError?.(error);
   } finally {
     button.disabled = false;
     button.classList.remove("is-pending");

@@ -3,10 +3,8 @@
  * because Foundry v13 does not expose them; no telemetry is added to obtain them.
  */
 export function createFoundrySessionStatusGateway({
-  getGame = () => globalThis.game,
-  metrics
+  getGame = () => globalThis.game
 } = {}) {
-  let latestMetrics = Object.freeze({ latency: null, fps: null });
 
   const snapshot = () => {
     const game = getGame();
@@ -18,9 +16,7 @@ export function createFoundrySessionStatusGateway({
         name: String(user.name ?? "Player"),
         color: userColor(user),
         isSelf: String(user.id ?? "") === currentId,
-        isGM: Boolean(user.isGM),
-        latency: String(user.id ?? "") === currentId ? finiteMetric(latestMetrics.latency) : null,
-        fps: String(user.id ?? "") === currentId ? finiteMetric(latestMetrics.fps) : null
+        isGM: Boolean(user.isGM)
       }))
       .sort((a, b) => Number(b.isSelf) - Number(a.isSelf) || Number(b.isGM) - Number(a.isGM) || a.name.localeCompare(b.name));
     return Object.freeze({ users: Object.freeze(users) });
@@ -38,21 +34,12 @@ export function createFoundrySessionStatusGateway({
         onUpdate(next);
       };
       publish();
-      metrics?.watch?.(scope, (value) => {
-        latestMetrics = Object.freeze({ latency: finiteMetric(value?.latency), fps: finiteMetric(value?.fps) });
-        publish();
-      });
       scope.hook?.("userConnected", publish);
       scope.hook?.("updateUser", publish);
       scope.hook?.("deleteUser", publish);
       return snapshot();
     }
   });
-}
-
-function finiteMetric(value) {
-  const number = Number(value);
-  return Number.isFinite(number) && number >= 0 ? Math.round(number) : null;
 }
 
 function userColor(user) {

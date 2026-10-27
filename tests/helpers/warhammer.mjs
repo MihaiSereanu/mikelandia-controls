@@ -13,7 +13,7 @@ export function createWarhammerActor(overrides = {}) {
         .map((key, index) => [key, { value: 41 + index, initial: 10, advances: 0, modifier: 0 }])),
       status: { wounds: { value: 9, max: 13 }, fortune: { value: 0 }, fate: { value: 2 },
         resolve: { value: 1 }, resilience: { value: 3 }, corruption: { value: 2, max: 7 },
-        advantage: { value: 4 }, momentum: true }
+        advantage: { value: 4 }, momentum: true, encumbrance: { current: "4.50", max: 8, state: 0.5625 } }
     },
     items: [
       { id: "athletics", name: "Athletics", type: "skill", system: { advanced: { value: "bsc" }, grouped: { value: "noSpec" }, total: { value: 54 } } },

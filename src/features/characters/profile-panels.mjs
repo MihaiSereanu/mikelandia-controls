@@ -1,6 +1,7 @@
 import { node, icon } from "../../ui/dom.mjs";
 import { localizedNumber, localizedText } from "../../ui/localized-text.mjs";
 import { ACTOR_COMMANDS } from "../../kernel/command-names.mjs";
+import { renderProfileInventory } from "./profile-inventory.mjs";
 import { renderProfileResourceEditor } from "./profile-resource-editor.mjs";
 
 /** Profiles provide game labels. This renderer has no system IDs or rule paths. */
@@ -8,6 +9,7 @@ export function renderProfilePanels(actor, state, commands, scope) {
   const tabs = actor.panels ?? [];
   if (!tabs.length) return [];
   const active = tabs.find(tab => tab.id === state.characterTab) ?? tabs[0];
+  const inventory = actor.profileInventory && active.id === "inventory" ? renderProfileInventory(actor, commands, scope) : null;
   const prefix = `ve-profile-${actor.sourceUuid.replace(/[^a-zA-Z0-9_-]/gu, "-")}`;
   const valueText = row => {
     if (row.format === "boolean") return localizedText(commands.localize,
@@ -31,7 +33,6 @@ export function renderProfilePanels(actor, state, commands, scope) {
         node("p", { text })
       ] });
     }
-    const status = node("p", { className: "ve-profile-action-status", attrs: { role: "status", "aria-live": "polite" } });
     const label = row.action ? node("button", {
       className: "ve-profile-action", attrs: { type: "button", "data-profile-action": row.action.id },
       children: [node("span", { text: row.label }), icon(row.action.icon ?? "fa-dice")],
@@ -40,27 +41,36 @@ export function renderProfilePanels(actor, state, commands, scope) {
         if (button.disabled || scope.disposed) return;
         button.disabled = true;
         button.setAttribute("aria-busy", "true");
-        status.textContent = "";
         try {
-          const outcome = await commands.execute(ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, {
+          await commands.execute(ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, {
             actorSourceUuid: actor.sourceUuid, actionId: row.action.id, actionRevision: row.action.revision
           });
-          if (!scope.disposed) status.textContent = outcome?.cancelled
-            ? localizedText(commands.localize, "VEMOBILE.Panels.Cancelled", "Action cancelled.")
-            : outcome?.nativeHandled ? localizedText(commands.localize, "VEMOBILE.Panels.NativeFinished", "Native workflow finished.")
-              : localizedText(commands.localize, "VEMOBILE.Panels.ResultInChat", "See the result in Chat.");
         } catch (error) {
-          if (!scope.disposed) status.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Panels.Failed", "The game action failed.");
+          if (!scope.disposed) commands.reportCharacterMutationError?.(error);
         } finally {
           if (!scope.disposed) { button.disabled = false; button.setAttribute("aria-busy", "false"); }
         }
       } }
     }, scope) : node("span", { text: row.label });
+    const light = row.secondaryAction ? node("button", {
+      className: "ve-profile-light", attrs: { type: "button", "data-profile-action": row.secondaryAction.id,
+        "aria-pressed": String(row.secondaryAction.active),
+        "aria-label": `${localizedText(commands.localize, row.secondaryAction.active ? "VEMOBILE.Inventory.Extinguish" : "VEMOBILE.Inventory.Ignite", row.secondaryAction.active ? "Extinguish" : "Light")}: ${row.label}` },
+      children: [icon("fa-lightbulb")], on: { click: async event => {
+        const button = event.currentTarget;
+        if (scope.disposed || button.disabled) return;
+        button.disabled = true;
+        try { await commands.execute(ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, { actorSourceUuid: actor.sourceUuid,
+          actionId: row.secondaryAction.id, actionRevision: row.secondaryAction.revision }); }
+        catch (error) { if (!scope.disposed) commands.reportCharacterMutationError?.(error); }
+        finally { if (!scope.disposed) button.disabled = false; }
+      } }
+    }, scope) : null;
     return node("div", { className: "ve-profile-row", dataset: { profileField: row.id }, children: [
-      node("dt", { children: [label] }), row.value === undefined ? null : node("dd", { children: [
+      node("dt", { className: "ve-profile-item-name", children: [label, light] }), row.value === undefined || row.edit?.id.startsWith("quantity:") || row.edit?.id.startsWith("coin-") ? null : node("dd", { children: [
         row.valueLabel ? node("span", { className: "ve-profile-value-label", text: `${row.valueLabel} ` }) : null,
         node("span", { text: `${row.valuePrefix ?? ""}${valueText(row)}` })
-      ] }), description, row.action ? status : null, row.edit ? renderProfileResourceEditor(row, actor, commands, scope) : null
+      ] }), description, row.edit ? renderProfileResourceEditor(row, actor, commands, scope) : null
     ] });
   };
   // Keep related small sections together, with the last card using spare width.
@@ -69,19 +79,20 @@ export function renderProfilePanels(actor, state, commands, scope) {
   let summary;
   for (const section of active.sections) {
     const compact = ["values", "counters"].includes(section.kind) && section.rows.length === 1;
+    const inventorySection = inventory && section.id === "gear";
+    const heading = [node("h3", { text: section.label }), ...(section.summary ?? []).map(row => node("span", {
+      className: "ve-profile-section-metric", dataset: { profileMetric: row.id }, text: `${row.label} ${valueText(row)}`
+    }))];
     const element = node("section", {
-      className: `ve-profile-section ve-profile-${section.kind}`, dataset: { profileSection: section.id },
-      children: [node("header", { className: "ve-profile-section-heading", children: [
-        node("h3", { text: section.label }), ...(section.summary ?? []).map(row => node("span", {
-          className: "ve-profile-section-metric", dataset: { profileMetric: row.id },
-          text: `${row.label} ${valueText(row)}`
-        }))
-      ] }), section.kind === "text" ? node("p", { text: section.text }) : node("dl", {
+      className: `ve-profile-section ve-profile-${section.kind}${section.layout === "inline" ? " ve-profile-section-inline" : ""}`, dataset: { profileSection: section.id },
+      children: [compact && section.label === section.rows[0].label && !section.summary?.length ? null : node("header", { className: "ve-profile-section-heading", children: [
+        ...(inventorySection ? [node("div", { className: "ve-profile-section-title", children: heading }), inventory.button] : heading)
+      ] }), inventorySection ? inventory.body : null, section.kind === "text" ? node("p", { text: section.text }) : node("dl", {
         children: section.rows.map(renderRow)
       })]
     });
     if (compact) {
-      if (!summary) { summary = node("div", { className: "ve-profile-summary" }); sections.push(summary); }
+      if (!summary) { summary = node("div", { className: `ve-profile-summary${["paired", "triple"].includes(active.summaryLayout) ? ` ve-profile-summary-${active.summaryLayout}` : ""}` }); sections.push(summary); }
       summary.append(element);
     } else { summary = null; sections.push(element); }
   }

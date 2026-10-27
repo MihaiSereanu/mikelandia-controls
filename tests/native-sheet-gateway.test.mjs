@@ -57,6 +57,7 @@ for (const v1 of [true, false]) {
     assert.equal(gateway.ownsApplication(app), true);
     assert.deepEqual(app.renderArguments, v1 ? [true] : [{ force: true, mode: "play" }]);
     assert.match(app.options.id, /^ve-mobile-native-sheet-/);
+    if (v1) assert.equal(app.options.popOut, undefined);
     owner.dispose();
     assert.equal(gateway.ownsApplication(app), false);
     assert.equal(app.closeCount, 1);
@@ -168,9 +169,17 @@ test("integration-owned non-dialog roll forms receive modal admission", () => {
 test("Foundry 14 legacy actor base hooks mark and release the exact editor", async t => {
   const f = fixture(t, { v1: true }); await f.open();
   const app = f.instances.at(-1), root = element(); root.dataset = {};
+  root.nodeType = 1;
+  app.element = { 0: root };
   f.hooks.emit("renderActorSheet", app, root);
   assert.equal(root.classList.contains("ve-mobile-native-editor"), true);
   assert.equal(root.dataset.veNativeSystem, "shadowdark");
+  const innerForm = element(); innerForm.nodeType = 1; innerForm.dataset = {};
+  for (const rendered of [innerForm, { 0: innerForm }]) {
+    f.hooks.emit("renderActorSheet", app, rendered);
+    assert.equal(root.classList.contains("ve-mobile-native-editor"), true);
+    assert.equal(innerForm.classList.contains("ve-mobile-native-editor"), false);
+  }
   f.hooks.emit("closeActorSheet", app);
   assert.equal(f.gateway.ownsApplication(app), false);
   assert.equal((await f.open()).opened, true);

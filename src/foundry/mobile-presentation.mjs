@@ -110,16 +110,21 @@ export function enableMobileApplications(scope, {
   cancel = (id) => clearTimeout(id)
 } = {}) {
   const admissions = createMobileApplicationAdmissions(document?.body);
+  const closeGuards = new Map();
+  const restoreClose = application => { closeGuards.get(application)?.(); closeGuards.delete(application); };
+  scope.own(() => { for (const restore of closeGuards.values()) restore(); closeGuards.clear(); });
   const controls = new Map();
   const reconcileControls = () => {
     for (const [element, layer] of controls) if (!element.isConnected || !admissions.size) {
-      layer.restore(); controls.delete(element);
+      layer.restore(); element.classList.remove("ve-mobile-native-control"); controls.delete(element);
     }
     if (!admissions.size) return;
     for (const element of document?.querySelectorAll?.("#context-menu, #prosemirror-dropdown") ?? []) {
       if (controls.has(element) || element.closest(".ve-mobile-admitted-app")) continue;
+      element.classList.add("ve-mobile-native-control");
       const layer = promoteNativeWindow(element);
       if (layer) controls.set(element, layer);
+      else element.classList.remove("ve-mobile-native-control");
     }
   };
   const pendingApplications = new Map();
@@ -151,6 +156,7 @@ export function enableMobileApplications(scope, {
       isNativeDialog
     });
     if (!classification.admitted) {
+      restoreClose(application);
       admissions.release(key, element);
       traceApplication(trace, "suppressed", application, element, correlation, classification, now(), document?.body, baseline);
       return;
@@ -160,9 +166,11 @@ export function enableMobileApplications(scope, {
       return;
     }
     if (correlation) lineage.claim(application, element);
+    if (application && !closeGuards.has(application)) closeGuards.set(application, disableMobileV2CloseAnimation(application));
     traceApplication(trace, "admitted", application, element, correlation, classification, now(), document?.body, baseline);
   };
   const release = (application, rendered) => {
+    restoreClose(application);
     const element = applicationElement(application, rendered);
     pendingApplications.delete(application);
     admissions.release(application ?? element, element);
@@ -238,7 +246,7 @@ export function enableMobileApplications(scope, {
     lineage.dispose();
     pendingApplications.clear();
     admissions.clear();
-    for (const layer of controls.values()) layer.restore();
+    for (const [element, layer] of controls) { layer.restore(); element.classList.remove("ve-mobile-native-control"); }
     controls.clear();
     for (const [name, value, priority] of previousViewport) {
       if (value) document.body.style.setProperty(name, value, priority);
@@ -249,6 +257,28 @@ export function enableMobileApplications(scope, {
     retained: true, isPersistentOverlay, isSettingsApplication, isActorEditor, isNativeDialog
   }).admitted);
   return Object.freeze({ admissions, lineage, reconcileApplications });
+}
+
+/** Mobile window CSS fixes its dimensions, so V2 cannot receive the native
+ * max-height transitionend event. Skip that animation through its public API;
+ * otherwise close (and Shadowdark's waiting roll) hits a one-second timeout.
+ * V1 sheets retain their original close method and lifecycle. */
+export function disableMobileV2CloseAnimation(application) {
+  const ApplicationV2 = globalThis.foundry?.applications?.api?.ApplicationV2;
+  const nativeV2 = typeof ApplicationV2 === "function" && application instanceof ApplicationV2;
+  if ((!nativeV2 && application?.isV2 !== true) || typeof application.close !== "function") return () => {};
+  const descriptor = Object.getOwnPropertyDescriptor(application, "close");
+  if (descriptor?.configurable === false) return () => {};
+  const original = application.close;
+  let active = true;
+  const close = function (options = {}) { return original.call(this, active ? { ...options, animate: false } : options); };
+  application.close = close;
+  return () => {
+    active = false;
+    if (application.close !== close) return;
+    if (descriptor) Object.defineProperty(application, "close", descriptor);
+    else delete application.close;
+  };
 }
 
 /** Track admission by Application identity so a rerendered or already-closed
@@ -376,6 +406,7 @@ export function mobileDialogElements(root) {
   const selector = [
     "dialog",
     "[role='dialog']",
+    "#sd-roll-dialog",
     ".application.dialog",
     ".app.window-app.dialog",
     ".application.activity-choice",
@@ -397,7 +428,7 @@ export function classifyMobileApplication(element, application = null, { preExis
   if (element.matches("#interface, #sidebar, #hud, #players, #scene-controls, #scene-navigation, #hotbar, .ve-mobile-module-overlay-visible, .ve-mobile-module-overlay-host")) {
     return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.PersistentShellOrOverlay", "persistent shell or overlay") });
   }
-  const modal = element.matches("dialog, [role='dialog'], .dialog, .activity-choice, .activity-usage, .roll-configuration, .midi-targeting, #midi-qol-targetConfirmation")
+  const modal = element.matches("dialog, [role='dialog'], #sd-roll-dialog, .dialog, .activity-choice, .activity-usage, .roll-configuration, .midi-targeting, #midi-qol-targetConfirmation")
     || application?.options?.modal === true || isNativeDialog(application);
   // A persistent overlay may render a child surface through its own
   // Application lifecycle. Admitting that child as a native window would
@@ -629,7 +660,9 @@ function interactionControlName(control) {
 }
 
 function applicationElement(application, rendered) {
-  const candidates = [rendered, rendered?.[0], application?.element, application?.element?.[0]];
+  // V1 rerender hooks can supply only the replaced inner form. The Application
+  // element remains the outer frame, including its header and Close control.
+  const candidates = [application?.element, application?.element?.[0], rendered, rendered?.[0]];
   return candidates.find(candidate => candidate?.nodeType === 1 && candidate.isConnected !== false)
     ?? candidates.find(candidate => candidate?.nodeType === 1) ?? null;
 }

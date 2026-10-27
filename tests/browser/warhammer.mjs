@@ -116,7 +116,9 @@ try {
   let screen;
   let openedSource = "";
   let watchError;
+  const notices = [];
   const commands = {
+    reportCharacterMutationError: error => notices.push(error.message),
     localize: (key, fallback) => game.i18n.localize(key) === key ? fallback : game.i18n.localize(key),
     openNativeActorEditor: async request => { openedSource = request.actorSourceUuid; },
     execute: (name, payload) => commandGateway.execute(name, payload, {
@@ -137,6 +139,15 @@ try {
     const copy = screen.querySelector(`[data-profile-field="${id}"]`)?.cloneNode(true);
     copy?.querySelectorAll("[data-profile-resource]").forEach(editor => editor.remove());
     return copy;
+  };
+  const encumbranceFits = () => {
+    const row = screen.querySelector('[data-profile-field="encumbrance"]');
+    const label = row.querySelector("dt"), value = row.querySelector("dd");
+    const range = document.createRange(); range.selectNodeContents(label.querySelector("span"));
+    const lines = [...range.getClientRects()].filter(rect => rect.width > 0);
+    const bounds = row.getBoundingClientRect(), labelBounds = label.getBoundingClientRect(), valueBounds = value.getBoundingClientRect();
+    return lines.length === 1 && labelBounds.right <= valueBounds.left && valueBounds.right <= bounds.right + 1
+      && Math.abs((labelBounds.top + labelBounds.bottom) - (valueBounds.top + valueBounds.bottom)) < 2;
   };
   check("profile provides native Main/Combat/Skills tabs", ["Main", "Combat", "Skills"].every(label => [...screen.querySelectorAll('[role="tab"]')].some(tab => tab.textContent === label)));
   check("initial shared tab defaults to Main", screen.querySelector('[role="tab"][aria-selected="true"]').textContent === "Main");
@@ -167,6 +178,21 @@ try {
   check("native cancellation releases the button without rolling", !characteristicButton.disabled && nativeRolls.length === 1 && applications.admissions.size === 0);
   await clickTab("combat");
   check("combat resource follows the edition", use5e ? field("momentum")?.textContent === "MomentumActive" : field("advantage")?.textContent === "Advantage4");
+  check("Combat starts with native Encumbrance current/max", screen.querySelector('.ve-profile-content [data-profile-section]').dataset.profileSection === "encumbrance"
+    && field("encumbrance")?.textContent === "Encumbrance4.5 / 8");
+  check("Encumbrance is read-only", !screen.querySelector('[data-profile-field="encumbrance"] [data-profile-resource]'));
+  check("Combat Encumbrance label and value fit on one line", encumbranceFits());
+  if (use5e && innerWidth < 500) check("phone Momentum stacks below Encumbrance", screen.querySelector('[data-profile-section="momentum"]').getBoundingClientRect().top
+    >= screen.querySelector('[data-profile-section="encumbrance"]').getBoundingClientRect().bottom);
+  actor.system.status.encumbrance.current = "9.75"; actor.system.status.encumbrance.max = 10;
+  Hooks.emit("updateActor", actor, { "system.status.encumbrance.current": "9.75" }); await tick();
+  check("Combat encumbrance refreshes prepared decimal strings", field("encumbrance")?.textContent === "Encumbrance9.75 / 10");
+  await clickTab("trappings");
+  check("Trappings starts with the same native Encumbrance counter", screen.querySelector('.ve-profile-content [data-profile-section]').dataset.profileSection === "encumbrance"
+    && field("encumbrance")?.textContent === "Encumbrance9.75 / 10");
+  check("Encumbrance fits the viewport", document.documentElement.scrollWidth <= innerWidth + 1);
+  check("Trappings Encumbrance label and value fit on one line", encumbranceFits());
+  await clickTab("combat");
   use5e = !use5e;
   Hooks.emit("updateSetting", { key: "wfrp4e.editionSettings" }, {}, {}, "player");
   await tick();
@@ -277,10 +303,10 @@ try {
   await tick();
   await clickTab("main");
   const edit = async id => { screen.querySelector(`[data-profile-edit="${id}"]`).click(); await tick(); return screen.querySelector(`[data-profile-resource-input="${id}"]`); };
-  const saveResource = async input => { input.closest("form").querySelector("[data-profile-resource-save]").click(); await tick(); };
+  const saveResource = async input => { input.dispatchEvent(new Event("input", { bubbles: true })); input.closest("form").querySelector("[data-profile-resource-save]").click(); await tick(); };
   check("native rolls did not cause VE resource writes", nativeWrites.length === 0);
   let resourceInput = await edit("wounds");
-  check("Wounds editor receives native maximum and keyboard focus", resourceInput.max === "13" && resourceInput.min === "0" && document.activeElement === resourceInput);
+  check("Wounds editor retains native limits, selectable text and keyboard focus", resourceInput.max === "13" && resourceInput.min === "0" && resourceInput.type === "text" && document.activeElement === resourceInput && resourceInput.selectionStart === 0 && resourceInput.selectionEnd === resourceInput.value.length);
   resourceInput.value = "0";
   resourceInput.closest("form").querySelector("[data-profile-resource-cancel]").click();
   await tick();
@@ -288,7 +314,7 @@ try {
   resourceInput = await edit("wounds");
   resourceInput.value = "14";
   await saveResource(resourceInput);
-  check("resource form rejects values over the native maximum", nativeWrites.length === 0 && resourceInput.validity.rangeOverflow);
+  check("resource form rejects values over the native maximum", nativeWrites.length === 0 && resourceInput.validity.customError);
   resourceInput.value = "";
   await saveResource(resourceInput);
   check("empty input cannot become zero", nativeWrites.length === 0 && resourceInput.validity.valueMissing);
@@ -309,7 +335,7 @@ try {
   resourceInput.value = "2";
   actor.system.status.wounds.value = 1;
   await saveResource(resourceInput);
-  check("a changed resource cannot be overwritten by a stale editor", nativeWrites.length === beforeStaleSave && screen.textContent.includes("This resource changed"));
+  check("a stale resource save is rejected with a toast, not sheet text", nativeWrites.length === beforeStaleSave && notices.at(-1).includes("This resource changed") && !screen.textContent.includes("This resource changed"));
   resourceInput.closest("form").querySelector("[data-profile-resource-cancel]").click();
   Hooks.emit("updateActor", actor, {});
   await tick();
@@ -317,7 +343,7 @@ try {
   use5e = !use5e;
   resourceInput.value = "2";
   await saveResource(resourceInput);
-  check("a changed edition invalidates an open resource editor", nativeWrites.length === beforeStaleSave && screen.textContent.includes("This resource changed"));
+  check("a changed edition invalidates an editor with a toast", nativeWrites.length === beforeStaleSave && notices.at(-1).includes("This resource changed") && !screen.textContent.includes("This resource changed"));
   use5e = initial5e;
   Hooks.emit("updateSetting", { key: "wfrp4e.editionSettings" }, {});
   await tick();
@@ -332,11 +358,26 @@ try {
   await tick();
   await clickTab("combat");
   if (use5e) {
-    resourceInput = await edit("momentum");
+    resourceInput = screen.querySelector('[data-profile-resource-input="momentum"]');
     check("Momentum uses a labeled checkbox", resourceInput.type === "checkbox" && resourceInput.getAttribute("aria-label") === "Momentum");
-    resourceInput.checked = false;
-    await saveResource(resourceInput);
+    check("Momentum has no pencil or save form", !screen.querySelector('[data-profile-edit="momentum"]') && !resourceInput.closest("form"));
+    const execute = commands.execute;
+    let complete;
+    commands.execute = () => new Promise(resolve => { complete = resolve; });
+    resourceInput.click();
+    check("Momentum disables while saving", resourceInput.disabled && resourceInput.getAttribute("aria-busy") === "true");
+    complete({ cancelled: true }); await tick();
+    check("cancelled Momentum restores its value", resourceInput.checked && !resourceInput.disabled);
+    commands.execute = async () => { throw new Error("Momentum write failed"); };
+    resourceInput.click(); await tick();
+    check("failed Momentum restores its value and reports the error", resourceInput.checked && !resourceInput.disabled && notices.at(-1) === "Momentum write failed");
+    commands.execute = execute;
+    resourceInput.click(); await tick();
     check("Momentum updates natively and refreshes", field("momentum").textContent === "MomentumInactive" && nativeResourceEffects.includes("momentum"));
+    resourceInput = screen.querySelector('[data-profile-resource-input="momentum"]');
+    check("Momentum checkbox refreshes off", !resourceInput.checked);
+    resourceInput.click(); await tick();
+    check("Momentum toggles back on immediately", screen.querySelector('[data-profile-resource-input="momentum"]').checked && field("momentum").textContent === "MomentumActive");
   } else {
     resourceInput = await edit("advantage");
     resourceInput.value = "7";
@@ -391,7 +432,8 @@ try {
   check("Talents has its own nonempty mobile tab", screen.querySelector('[data-profile-field="talent"]').textContent.includes("A native talent"));
   check("new tabs fit the phone and tablet widths", document.documentElement.scrollWidth <= innerWidth + 1);
   await clickTab(use5e ? "combat" : "main");
-  await edit(use5e ? "momentum" : "wounds");
+  if (use5e) screen.querySelector('[data-profile-resource-input="momentum"]').focus();
+  else await edit("wounds");
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
 } catch (error) {
   scope.dispose();

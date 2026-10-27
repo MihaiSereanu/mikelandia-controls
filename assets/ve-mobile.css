@@ -1000,8 +1000,8 @@ body.ve-mobile-running.ve-mobile-dialog-open .ve-mobile-app::after {
   z-index: var(--ve-layer-modal-backdrop);
   pointer-events: auto;
   background: rgb(5 3 4 / 0.68);
-  backdrop-filter: blur(2px) saturate(0.62);
-  -webkit-backdrop-filter: blur(2px) saturate(0.62);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 body.ve-mobile-running .ve-mobile-dialog {
@@ -1164,6 +1164,7 @@ body.ve-mobile-running .ve-mobile-dialog .window-header .window-title {
   font-size: clamp(19px, 5vw, 25px) !important;
   font-weight: 750 !important;
   line-height: 1.1 !important;
+  text-transform: capitalize !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
 }
@@ -4441,6 +4442,10 @@ body.ve-mobile-running.ve-mobile-scene-active.ve-mobile-native-measurement-activ
   flex: 1 1 150px;
 }
 
+.ve-profile-summary > [data-profile-section="encumbrance"] { flex-basis: 280px; }
+[data-profile-section="encumbrance"] .ve-profile-row { flex-wrap: nowrap; }
+[data-profile-section="encumbrance"] .ve-profile-row :is(dt, dd) { flex: 0 0 auto; white-space: nowrap; }
+
 .ve-profile-section h3 {
   margin: 0 0 10px;
   overflow-wrap: anywhere;
@@ -4470,6 +4475,21 @@ body.ve-mobile-running.ve-mobile-scene-active.ve-mobile-native-measurement-activ
 
 .ve-profile-items dl {
   grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+}
+
+.ve-profile-section-inline dl {
+  display: flex;
+  gap: 6px;
+}
+
+.ve-profile-section-inline .ve-profile-row {
+  flex: 1 1 0;
+  padding: 6px;
+  gap: 4px;
+}
+
+.ve-profile-section-inline .ve-profile-row dt {
+  flex: 1 1 auto;
 }
 
 .ve-profile-row {
@@ -4539,12 +4559,67 @@ body.ve-mobile-running.ve-mobile-scene-active.ve-mobile-native-measurement-activ
 }
 
 .ve-profile-resource-editor {
-  flex: 1 0 100%;
+  flex: 0 0 auto;
   min-width: 0;
   display: grid;
   gap: 8px;
   justify-items: start;
 }
+
+.ve-profile-resource-editor.is-editing { flex: 1 0 100%; width: 100%; }
+.ve-profile-resource-open { min-width: 44px; width: 44px; }
+.ve-profile-resource-open:not([hidden]) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.ve-profile-resource-open > i { font-size: 0.72em; }
+.ve-profile-resource-open[hidden] { display: none; }
+.ve-profile-boolean-target { display: grid; place-items: center; width: 44px; min-height: 44px; cursor: pointer; }
+.ve-profile-boolean-target input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
+.ve-profile-summary-paired { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ve-profile-summary-paired > .ve-profile-section { padding: 6px; }
+.ve-profile-summary-paired .ve-profile-row { gap: 4px; }
+.ve-profile-summary-paired .ve-profile-row dt { flex-basis: auto; }
+.ve-profile-summary-paired .ve-profile-row { display: grid; grid-template-columns: minmax(0, 1fr) 44px; min-height: 60px; }
+.ve-profile-summary-paired .ve-profile-row dt { grid-column: 1; grid-row: 1; }
+.ve-profile-summary-paired .ve-profile-row dd { grid-column: 1; grid-row: 2; margin: 0; text-align: start; }
+.ve-profile-summary-paired .ve-profile-resource-editor { grid-column: 2; grid-row: 1 / span 2; }
+.ve-profile-summary-paired .ve-profile-resource-editor.is-editing { grid-column: 1 / -1; grid-row: 3; }
+.ve-profile-summary-paired .ve-profile-row:not(:has(.ve-profile-resource-editor)) { grid-template-columns: minmax(0, 1fr); }
+
+.ve-profile-summary-triple {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 8px;
+}
+.ve-profile-summary-triple > .ve-profile-section { padding: 4px; }
+.ve-profile-summary-triple .ve-profile-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 0;
+  min-height: 84px;
+  padding: 4px;
+}
+.ve-profile-summary-triple .ve-profile-row dt { grid-column: 1 / -1; grid-row: 1; }
+.ve-profile-summary-triple .ve-profile-row:has(> .ve-profile-resource-editor) dt { padding-inline-end: 28px; }
+.ve-profile-summary-triple .ve-profile-row dd { grid-column: 1 / -1; grid-row: 2; margin: 0; padding: 4px 8px; text-align: start; }
+.ve-profile-summary-triple .ve-profile-resource-editor .ve-profile-resource-open:not([hidden]) {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 4px 0 0;
+}
+.ve-profile-summary-triple .ve-profile-resource-open > i { display: block; width: 1em; height: 1em; line-height: 1; }
+.ve-profile-summary-triple .ve-profile-row:has(> .ve-profile-resource-editor) { padding-right: 4px; }
+.ve-profile-summary-triple .ve-profile-row:has(> .ve-profile-resource-editor) > .ve-profile-resource-editor {
+  position: static;
+  grid-column: 2;
+  grid-row: 1;
+}
+.ve-profile-summary-triple .ve-profile-row > .ve-profile-resource-editor.is-editing { grid-column: 1 / -1; grid-row: 3; }
+.ve-profile-summary-triple .ve-profile-row:not(:has(.ve-profile-resource-editor)) { grid-template-columns: minmax(0, 1fr); }
 
 .ve-profile-resource-editor > div {
   width: 100%;
@@ -4568,6 +4643,31 @@ body.ve-mobile-running.ve-mobile-scene-active.ve-mobile-native-measurement-activ
   background: var(--ve-surface);
   color: var(--ve-text);
   font: inherit;
+}
+
+.ve-profile-row:has(> .ve-profile-resource-editor) {
+  position: relative;
+  padding-right: 52px;
+}
+
+.ve-profile-row:has(> .ve-profile-resource-editor) > .ve-profile-resource-editor {
+  position: absolute;
+  top: 0;
+  right: 0;
+  align-self: start;
+  justify-items: end;
+}
+
+.ve-profile-summary-paired .ve-profile-row:has(> .ve-profile-resource-editor) { padding-right: 8px; }
+
+.ve-profile-summary-paired .ve-profile-row:has(> .ve-profile-resource-editor) > .ve-profile-resource-editor {
+  position: static;
+}
+
+.ve-profile-row:has(> .ve-profile-resource-editor.is-editing) { padding-right: 8px; }
+.ve-profile-row:has(> .ve-profile-resource-editor.is-editing) > .ve-profile-resource-editor {
+  position: static;
+  justify-items: stretch;
 }
 
 .ve-profile-resource-form {
@@ -8674,6 +8774,13 @@ details.ve-action-session-compact-result {
   overflow: hidden;
   background: transparent !important;
   box-shadow: none !important;
+}
+
+/* Dice So Nice hides new roll content until animation completes unless its
+ * world setting allows immediate display. Apply that behavior in VE's live
+ * mobile chat without changing the shared setting for other clients. */
+.ve-native-chat-screen > #chat.ve-native-chat .dice-roll.dsn-hide {
+  display: block !important;
 }
 
 /* Culagin UI and other desktop themes attach Foundry/D&D5e variables to
@@ -13504,3 +13611,58 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 .ve-mobile-app[data-route="combat"][data-gm-combat-controls="true"] .ve-combat-screen {
   padding-bottom: calc(var(--ve-gm-combat-row-reservation, 72px) + var(--ve-safe-bottom));
 }
+
+.ve-profile-quantity { display: flex; flex-wrap: wrap; gap: 0; margin-inline-start: auto; }
+.ve-profile-quantity > div { flex: 1 0 100%; }
+.ve-profile-quantity.is-editing > button { display: none; }
+.ve-profile-quantity > button { min-width: 44px; }
+.ve-profile-inventory-tools { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.ve-profile-inventory-tools button, .ve-profile-inventory-tools input, .ve-profile-inventory-tools select { min-height: 44px; max-width: 100%; }
+.ve-profile-inventory-body { flex: 1 0 100%; min-width: 0; }
+.ve-profile-inventory-body:empty { display: none; }
+.ve-profile-custom-item { display: grid; gap: 8px; }
+.ve-profile-custom-item label { display: grid; gap: 4px; }
+.ve-profile-catalog-results { display: grid; grid-auto-rows: max-content; gap: 4px; min-height: 0; max-height: 40dvh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+.ve-profile-catalog-results button { white-space: normal; overflow-wrap: anywhere; text-align: start; }
+
+.ve-profile-light { min-width: 44px; min-height: 44px; color: var(--ve-subtle); }
+.ve-profile-light[aria-pressed="true"] { color: var(--ve-accent); }
+.ve-profile-item-name:has(.ve-profile-light) { display: flex; align-items: center; gap: 6px; }
+.ve-mobile-app .ve-profile-row .ve-profile-light[aria-pressed] { flex: 0 0 44px; width: 44px; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.ve-profile-row:has(> .ve-profile-quantity) { padding-right: 8px; }
+.ve-profile-row:has(> .ve-profile-quantity) > .ve-profile-quantity { position: static; }
+.ve-profile-inventory-choice {
+  position: fixed;
+  inset: 0;
+  z-index: var(--ve-layer-modal);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 65%);
+}
+.ve-profile-inventory-choice-card {
+  display: grid;
+  gap: 12px;
+  width: min(100%, 360px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 16px;
+  border: 1px solid var(--ve-border);
+  border-radius: 14px;
+  background: var(--ve-surface);
+  color: var(--ve-text);
+}
+.ve-profile-inventory-choice-card h2 { margin: 0; font-size: 1.2em; }
+.ve-profile-inventory-choice-card button { min-height: 44px; white-space: normal; }
+.ve-profile-section-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; min-width: 0; flex: 1 1 0; }
+.ve-profile-section-heading > .ve-profile-add-item { flex: 0 0 44px; width: 44px; min-height: 44px; padding: 0; }
+.ve-profile-inventory-tools { margin-bottom: 8px; }
+.ve-profile-inventory-body.ve-profile-inventory-tools:not(:empty) { display: grid; }
+.ve-profile-section-inline .ve-profile-row:has(> .ve-profile-coin) { display: grid; grid-template-columns: minmax(0, 1fr); padding: 6px; }
+.ve-profile-section-inline .ve-profile-row > .ve-profile-coin { position: static; display: grid; width: 100%; justify-items: stretch; }
+.ve-profile-coin > .ve-profile-resource-open { width: 100%; min-width: 0; font-size: 1.15em; font-weight: 600; text-align: start; }
+.ve-profile-coin-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; }
+.ve-profile-coin-controls button { min-width: 0; padding: 0; }
+.ve-profile-coin.is-editing > :is(button, .ve-profile-coin-controls) { display: none; }
+.ve-profile-coin .ve-profile-resource-form input { width: 100%; min-width: 0; }
+.ve-profile-coin .ve-profile-resource-form button { padding: 8px 4px; }

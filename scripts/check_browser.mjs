@@ -6,6 +6,60 @@ import { dirname, resolve, relative, isAbsolute, join, extname, basename } from 
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const cases = [
+  ["fallback-phone-v1", 390, 844, "fallback", "layout=phone&application=v1"],
+  ["fallback-phone-v2", 390, 844, "fallback", "layout=phone&application=v2"],
+  ["fallback-android-v1", 393, 851, "fallback", "layout=phone&application=v1&host=clipped"],
+  ["fallback-android-v2", 393, 851, "fallback", "layout=phone&application=v2&host=clipped"],
+  ["fallback-common-display-v1", 393, 851, "fallback", "layout=phone&application=v1&common-display=true"],
+  ["fallback-common-display-v2", 393, 851, "fallback", "layout=phone&application=v2&common-display=true"],
+  ["fallback-tablet-v1", 1024, 768, "fallback", "layout=tablet&application=v1"],
+  ["fallback-tablet-v2", 1024, 768, "fallback", "layout=tablet&application=v2"],
+  ["warhammer-4e-phone", 390, 844, "warhammer", "layout=phone&edition=4e"],
+  ["warhammer-5e-phone", 390, 844, "warhammer", "layout=phone&edition=5e"],
+  ["warhammer-4e-tablet", 1024, 768, "warhammer", "layout=tablet&edition=4e"],
+  ["warhammer-5e-tablet", 1024, 768, "warhammer", "layout=tablet&edition=5e"],
+  ["shadowdark-narrow", 320, 844, "shadowdark", "layout=phone&pulp=false"],
+  ["shadowdark-small-tablet", 768, 1024, "shadowdark", "layout=tablet&pulp=false"],
+  ["shadowdark-large-text", 390, 844, "shadowdark", "layout=phone&pulp=false&large=true"],
+  ["shadowdark-phone", 390, 844, "shadowdark", "layout=phone&pulp=false"],
+  ["shadowdark-pulp-phone", 390, 844, "shadowdark", "layout=phone&pulp=true"],
+  ["shadowdark-tablet", 1024, 768, "shadowdark", "layout=tablet&pulp=false"],
+  ["shadowdark-pulp-tablet", 1024, 768, "shadowdark", "layout=tablet&pulp=true"],
+  ["presentation-phone", 390, 844, "presentation", "layout=phone"],
+  ["presentation-tablet", 1024, 768, "presentation", "layout=tablet"],
+  ["profile-layout-narrow", 320, 844, "profile-layout", "layout=phone"],
+  ["profile-layout-phone", 390, 844, "profile-layout", "layout=phone"],
+  ["profile-layout-small-tablet", 768, 1024, "profile-layout", "layout=tablet"],
+  ["profile-layout-tablet", 1024, 768, "profile-layout", "layout=tablet"],
+  ["profile-layout-large-text", 390, 844, "profile-layout", "layout=phone&large=true"]
+];
+
+const args = process.argv.slice(2);
+let filter;
+let list = false;
+let screenshots = false;
+for (let index = 0; index < args.length; index++) {
+  const arg = args[index];
+  if (arg === "--filter") {
+    const pattern = args[++index];
+    if (!pattern || pattern.startsWith("--")) throw new Error("--filter requires a case-name regular expression.");
+    filter = new RegExp(pattern, "i");
+  } else if (arg === "--list") list = true;
+  else if (arg === "--screenshots") screenshots = true;
+  else if (arg === "--help") {
+    console.log("Usage: node scripts/check_browser.mjs [--filter <regex>] [--list] [--screenshots]\nDefault: all cases; screenshots saved on failure. --screenshots also saves passing cases.");
+    process.exit(0);
+  } else throw new Error(`Unknown argument: ${arg}`);
+}
+const selectedCases = cases.filter(([name]) => !filter || filter.test(name));
+if (!selectedCases.length) throw new Error("No browser cases match --filter. Use --list to see available cases.");
+if (list) {
+  console.log(selectedCases.map(([name]) => name).join("\n"));
+  process.exit(0);
+}
+const startedAt = performance.now();
+let checksPassed = 0;
 const candidates = [process.env.CHROME_PATH, "C:/Program Files/Google/Chrome/Application/chrome.exe",
   "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe", "/usr/bin/google-chrome", "/usr/bin/chromium"].filter(Boolean);
 let browser;
@@ -61,29 +115,7 @@ const send = (method, params = {}, sessionId) => new Promise((resolve, reject) =
 try {
   const browserVersion = await send("Browser.getVersion");
   const chromiumVersion = browserVersion.product.split("/").at(-1);
-  for (const [name, width, height, fixture, query] of [
-    ["fallback-phone-v1", 390, 844, "fallback", "layout=phone&application=v1"],
-    ["fallback-phone-v2", 390, 844, "fallback", "layout=phone&application=v2"],
-    ["fallback-android-v1", 393, 851, "fallback", "layout=phone&application=v1&host=clipped"],
-    ["fallback-android-v2", 393, 851, "fallback", "layout=phone&application=v2&host=clipped"],
-    ["fallback-tablet-v1", 1024, 768, "fallback", "layout=tablet&application=v1"],
-    ["fallback-tablet-v2", 1024, 768, "fallback", "layout=tablet&application=v2"],
-    ["warhammer-4e-phone", 390, 844, "warhammer", "layout=phone&edition=4e"],
-    ["warhammer-5e-phone", 390, 844, "warhammer", "layout=phone&edition=5e"],
-    ["warhammer-4e-tablet", 1024, 768, "warhammer", "layout=tablet&edition=4e"],
-    ["warhammer-5e-tablet", 1024, 768, "warhammer", "layout=tablet&edition=5e"],
-    ["shadowdark-phone", 390, 844, "shadowdark", "layout=phone&pulp=false"],
-    ["shadowdark-pulp-phone", 390, 844, "shadowdark", "layout=phone&pulp=true"],
-    ["shadowdark-tablet", 1024, 768, "shadowdark", "layout=tablet&pulp=false"],
-    ["shadowdark-pulp-tablet", 1024, 768, "shadowdark", "layout=tablet&pulp=true"],
-    ["presentation-phone", 390, 844, "presentation", "layout=phone"],
-    ["presentation-tablet", 1024, 768, "presentation", "layout=tablet"],
-    ["profile-layout-narrow", 320, 844, "profile-layout", "layout=phone"],
-    ["profile-layout-phone", 390, 844, "profile-layout", "layout=phone"],
-    ["profile-layout-small-tablet", 768, 1024, "profile-layout", "layout=tablet"],
-    ["profile-layout-tablet", 1024, 768, "profile-layout", "layout=tablet"],
-    ["profile-layout-large-text", 390, 844, "profile-layout", "layout=phone&large=true"]
-  ]) {
+  for (const [name, width, height, fixture, query] of selectedCases) {
     const { targetId } = await send("Target.createTarget", { url: "about:blank" });
     const { sessionId } = await send("Target.attachToTarget", { targetId, flatten: true });
     await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width < 720 }, sessionId);
@@ -99,18 +131,21 @@ try {
       if (report?.status) break;
       await new Promise(resolve => setTimeout(resolve, 50));
     }
-    if (report?.status !== "passed") {
+    if (report?.status !== "passed" || report.width !== width || report.height !== height) {
       const screenshot = await send("Page.captureScreenshot", { format: "png" }, sessionId);
       await writeFile(join(root, "dist", `${name}-failed.png`), Buffer.from(screenshot.data, "base64"));
       throw new Error(`${name}: ${JSON.stringify(report ?? "browser did not produce a test report")}`);
     }
-    if (report.width !== width || report.height !== height) throw new Error(`${name}: wrong emulated viewport`);
-    await send("Runtime.evaluate", { expression: "document.fonts.ready.then(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))", awaitPromise: true }, sessionId);
-    const screenshot = await send("Page.captureScreenshot", { format: "png" }, sessionId);
-    await writeFile(join(root, "dist", `${name}.png`), Buffer.from(screenshot.data, "base64"));
+    if (screenshots) {
+      await send("Runtime.evaluate", { expression: "document.fonts.ready.then(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))", awaitPromise: true }, sessionId);
+      const screenshot = await send("Page.captureScreenshot", { format: "png" }, sessionId);
+      await writeFile(join(root, "dist", `${name}.png`), Buffer.from(screenshot.data, "base64"));
+    }
+    checksPassed += report.checks.length;
     console.log(`${name}: ${report.checks.length} browser fixture checks passed at ${report.width}x${report.height}.`);
     await send("Target.closeTarget", { targetId });
   }
+  console.log(`${selectedCases.length} scenario(s), ${checksPassed} checks passed in ${((performance.now() - startedAt) / 1000).toFixed(1)}s.`);
 } finally {
   try { await send("Browser.close"); } catch { child.kill(); }
   if (child.exitCode === null) await new Promise(resolve => {

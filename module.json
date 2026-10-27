@@ -1,7 +1,7 @@
 {
   "id": "ve-mobile",
   "title": "VE Mobile",
-  "description": "A purpose-built phone and tablet interface for Foundry VTT and D&D5e, with Actor sheets, native gameplay actions, chat, journals, and touch Scene controls.",
+  "description": "A purpose-built phone and tablet interface for Foundry VTT, with D&D5e, experimental Warhammer and Shadowdark PC support, chat, journals, and touch Scene controls.",
   "version": "1.1.0",
   "url": "https://github.com/MihaiSereanu/ve-mobile",
   "manifest": "https://github.com/MihaiSereanu/ve-mobile/releases/download/latest/module.json",
@@ -17,55 +17,13 @@
       "name": "Silvestrae"
     }
   ],
-  "relationships": {
-    "systems": [
-      {
-        "id": "dnd5e",
-        "type": "system",
-        "compatibility": {
-          "minimum": "5.3.2",
-          "verified": "6.0.6"
-        }
-      }
-    ]
-  },
-  "esmodules": [
-    "src/entry.mjs"
-  ],
-  "styles": [
-    "assets/ve-mobile.css",
-    "assets/ve-style-authority.css"
-  ],
+  "esmodules": ["src/entry.mjs"],
+  "styles": ["assets/ve-mobile.css", "assets/ve-style-authority.css"],
   "languages": [
     {
       "lang": "en",
       "name": "English (United States)",
       "path": "locales/en.json"
-    },
-    {
-      "lang": "en-AU",
-      "name": "English (Australia)",
-      "path": "locales/en-AU.json"
-    },
-    {
-      "lang": "es",
-      "name": "Español",
-      "path": "locales/es.json"
-    },
-    {
-      "lang": "de",
-      "name": "Deutsch",
-      "path": "locales/de.json"
-    },
-    {
-      "lang": "fr",
-      "name": "Français",
-      "path": "locales/fr.json"
-    },
-    {
-      "lang": "it",
-      "name": "Italiano",
-      "path": "locales/it.json"
     }
   ],
   "flags": {}

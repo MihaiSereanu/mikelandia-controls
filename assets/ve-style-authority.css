@@ -4,6 +4,39 @@
  * an unknown module loads later. Native applications and module overlays sit
  * outside this root and keep their own stylesheets and event handlers.
  */
+/* Common-display modes hide body-level windows with high-specificity
+ * !important rules. Only VE-admitted native roots override that hiding. */
+@layer ve-mobile-native-visibility {
+  body.ve-mobile-running .ve-mobile-admitted-app {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  body.ve-mobile-running .ve-mobile-native-control {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  body.ve-mobile-running .ve-mobile-native-editor > .window-header {
+    display: flex !important;
+    visibility: visible !important;
+    flex-shrink: 0 !important;
+    min-height: 44px !important;
+    overflow: visible !important;
+  }
+  body.ve-mobile-running .ve-mobile-native-editor > .window-header :is(.close, [data-action="close"]) {
+    display: inline-flex !important;
+    visibility: visible !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
+    flex-shrink: 0 !important;
+  }
+}
+
 @layer ve-mobile-style-authority {
   .ve-mobile-app[data-ve-style-authority] .ve-collective-card { padding: 14px !important; }
   .ve-mobile-app[data-ve-style-authority] .ve-collective-native-editor,

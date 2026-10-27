@@ -64,6 +64,9 @@ export function createFoundryTokenMovementGateway({
     if (typeof object.control !== "function") throw new MovementError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Interface.TokenMovementGateway.ThisTokenCannotBeSelected", "This token cannot be selected."));
     if (!object.controlled) await Promise.resolve(object.control({ releaseOthers: true }));
     assertSession(game, expectedSession, getConnectionGeneration);
+    if (!object.controlled || !Array.from(canvas.tokens?.controlled ?? []).includes(object)) {
+      throw new MovementError("CONTROL_REJECTED", localizeFoundry("VEMOBILE.Interface.TokenMovementGateway.TokenSelectionRejected", "Foundry or another module prevented token selection. Check the token layer and display focus settings."));
+    }
     return Object.freeze({ ok: true, action: "selected", tokenId });
   };
 
@@ -146,6 +149,7 @@ export function createFoundryTokenMovementGateway({
     cancelPendingSelection();
     if (repeated) {
       lastTokenTap = null;
+      if (owned) await selectTappedToken({ sceneId, tokenId, actorId: String(token.actorId ?? token.actor?.id ?? "") }, expectedSession);
       return toggleTokenTarget(object, token, game.user);
     }
     lastTokenTap = Object.freeze({ sceneId, tokenId, actorId: String(token.actorId ?? token.actor?.id ?? ""),
@@ -227,7 +231,16 @@ export function createFoundryTokenMovementGateway({
         record("hold-rejected", gesture, { reason: "token-unavailable" });
         return false;
       }
-      if (!object.controlled && typeof object.control === "function") object.control({ releaseOthers: true });
+      try {
+        if (!object.controlled && typeof object.control === "function") object.control({ releaseOthers: true });
+        if (!object.controlled || !Array.from(getCanvas()?.tokens?.controlled ?? []).includes(object)) {
+          throw new MovementError("CONTROL_REJECTED", localizeFoundry("VEMOBILE.Interface.TokenMovementGateway.TokenSelectionRejected", "Foundry or another module prevented token selection. Check the token layer and display focus settings."));
+        }
+      } catch (error) {
+        gesture.phase = "cancelled";
+        fail(error);
+        return false;
+      }
       gesture.phase = "armed";
       gesture.object = object;
       cancelPendingSelection();
@@ -460,7 +473,7 @@ export function createFoundryTokenMovementGateway({
       }
       if (gesture.phase !== "pending") return;
       updateFoundryCursorAtClientPoint(getCanvas(), { x: point.clientX, y: point.clientY }, createPointerEvent);
-      void tap({ sceneId: gesture.sceneId, clientX: point.clientX, clientY: point.clientY }, expectedSession, { deferSelection: true }).then(report, fail);
+      void tap({ sceneId: gesture.sceneId, clientX: point.clientX, clientY: point.clientY }, expectedSession).then(report, fail);
     };
     const contextMenu = (event) => {
       if (event.target?.closest?.("button, select, [data-ve-scene-control], [data-ve-template-control]")) return;
@@ -518,7 +531,8 @@ export function createFoundryTokenMovementGateway({
       gesture.nativeContextMenu = true;
       record("contextmenu-armed", gesture);
     };
-    const pointerCancel = () => {
+    const pointerCancel = (event) => {
+      if (active && event?.pointerId !== undefined && event.pointerId !== active.pointerId) return;
       const gesture = active;
       if (gesture?.phase === "armed" && gesture.nativeContextMenu && !gesture.movedBeyondThreshold) {
         active = null;
@@ -551,7 +565,9 @@ export function createFoundryTokenMovementGateway({
     scope.listen(eventWindow, "pointercancel", pointerCancel, { capture: true });
     scope.listen(eventWindow, "touchend", touchEnd, { capture: true, passive: false });
     scope.listen(eventWindow, "touchcancel", touchCancel, { capture: true, passive: true });
-    scope.listen(surface, "lostpointercapture", () => cancelActive("lostpointercapture"), { capture: true });
+    scope.listen(surface, "lostpointercapture", event => {
+      if (active && event.pointerId === active.pointerId) cancelActive("lostpointercapture");
+    }, { capture: true });
     scope.listen(surface, "contextmenu", contextMenu, { capture: true, passive: false });
     scope.listen(surface, "click", suppressClick, { capture: true });
     scope.hook?.("canvasTearDown", () => { cancelActive("canvas-teardown"); cancelPendingSelection(); });

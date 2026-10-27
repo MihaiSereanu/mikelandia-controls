@@ -24,6 +24,7 @@ import { createFoundrySceneGateway } from "./foundry/scene-gateway.mjs";
 import { enableMobileMediaGuard } from "./foundry/mobile-media-guard.mjs";
 import { enableMobileDiceGuard } from "./foundry/mobile-dice-guard.mjs";
 import { enableMobileAudio } from "./foundry/mobile-audio.mjs";
+import { enableCommonDisplayManualControl } from "./foundry/common-display-compatibility.mjs";
 import { createGraphicsSafetyJournal, resolveMobileGraphicsPolicy } from "./foundry/mobile-graphics-policy.mjs";
 import { createTaskScope } from "./kernel/task-scope.mjs";
 import { createFoundryTokenMovementGateway } from "./foundry/token-movement-gateway.mjs";
@@ -34,7 +35,6 @@ import { enableMobileConnectionGrace } from "./foundry/connection-grace.mjs";
 import { createMobileBootstrap, navigationStartAt, suppressBootstrapSoftwareKeyboard } from "./ui/bootstrap-loader.mjs";
 import { createBootstrapWatchdog } from "./kernel/bootstrap-watchdog.mjs";
 import { createMobileDiagnostics } from "./foundry/mobile-diagnostics.mjs";
-import { createDiagnosticsJournalGateway } from "./foundry/diagnostics-journal-gateway.mjs";
 import { createArmorClassGateway } from "./foundry/armor-class-gateway.mjs";
 import { createFoundryHotbarGateway } from "./foundry/hotbar-gateway.mjs";
 import { createActionBarPreferences } from "./foundry/action-bar-preferences.mjs";
@@ -74,6 +74,7 @@ import { createMobileClientCapabilityGateway } from "./foundry/mobile-client-cap
 import { createFoundryMobileBackGateway } from "./foundry/mobile-back-gateway.mjs";
 import { createNativeLightingPrecisionCompatibility } from "./foundry/native-lighting-precision.mjs";
 import { createActorEditorGateway } from "./foundry/actor-editor-gateway.mjs";
+import { createMobileModuleCompatibilityGateway } from "./foundry/mobile-module-compatibility.mjs";
 
 const isGamePage = /\/game\/?$/.test(window.location.pathname);
 
@@ -141,25 +142,10 @@ if (isGamePage) {
   );
   let performanceEnabled = false;
   const performanceObserver = createPerformanceObserver({ enabled: () => performanceEnabled });
-  let diagnosticsJournalGateway = null;
+  let mobileAudioController = null;
   const lightingPrecision = createNativeLightingPrecisionCompatibility();
-  const diagnostics = createMobileDiagnostics({
-    readLevel: readLoggingLevel,
-    getGraphicsPolicy: () => resolvedGraphicsPolicy(),
-    getModuleOverlays: () => moduleOverlayGateway.diagnosticSnapshot(),
-    getMobileMemory: () => mobileMemoryDiagnostics(),
-    getChatDom: () => chatDomGateway?.snapshot?.() ?? null,
-    getMobileBack: () => mobileBackGateway?.snapshot?.() ?? null,
-    getLightingPrecision: () => lightingPrecision.snapshot(),
-    getLoadTiming: () => loadTimingGateway.snapshot(),
-    onRecord: (entry) => diagnosticsJournalGateway?.onRecord?.(entry)
-  });
-  diagnosticsJournalGateway = createDiagnosticsJournalGateway({
-    getMode: () => readPolicy().runtimeMode,
-    getPreferences: () => preferencesGateway.snapshot(),
-    getGraphics: () => ({ ...resolvedGraphicsPolicy(), ...lowMemoryGateway?.snapshot?.() }),
-    getDiagnostics: () => diagnostics
-  });
+  const mobileModuleCompatibility = createMobileModuleCompatibilityGateway();
+  const diagnostics = createMobileDiagnostics({ readLevel: readLoggingLevel });
   mobileBackGateway = createFoundryMobileBackGateway({
     trace: (event) => diagnostics.record(event.action === "error" ? "warn" : "debug", `Browser Back ${JSON.stringify(event)}`)
   });
@@ -503,7 +489,7 @@ if (isGamePage) {
   const hotbarGateway = createFoundryHotbarGateway({ isActive: () => kernel?.active === true && readPolicy().active });
   const actionBarPreferences = createActionBarPreferences();
   const metrics = createMobileMetrics();
-  const sessionStatusGateway = createFoundrySessionStatusGateway({ metrics });
+  const sessionStatusGateway = createFoundrySessionStatusGateway();
   const themeGateway = createFoundryThemeGateway();
   const combatGateway = createFoundryCombatGateway({
     getSystemIntegration,
@@ -600,14 +586,12 @@ if (isGamePage) {
     actionBarPreferences,
     nativeChatGateway,
     armorClassGateway,
-    diagnosticsJournalGateway,
     activeEffectContextGateway,
     actionSessionGateway,
     preferencesGateway,
     settingsCompatibilityGateway,
     moduleOverlayGateway,
     sessionStatusGateway,
-    deviceIdentityGateway,
     controlsGuideGateway,
     isControlsUiReady: () => startupComplete,
     themeGateway,
@@ -631,7 +615,9 @@ if (isGamePage) {
     },
     disable: () => preferencesGateway.set({ key: KEYS.MODE, value: "desktop" }),
     preparePresentation: (scope) => {
-      enableMobileAudio(scope);
+      void enableCommonDisplayManualControl(scope).catch(error => diagnostics.record("error", "Common Display mobile token compatibility failed", error));
+      mobileAudioController = enableMobileAudio(scope, { enabled: game.settings.get(MODULE_ID, KEYS.MUTE_MOBILE_AUDIO) !== false });
+      scope.own(() => { mobileAudioController = null; });
       diagnostics.watch(scope);
       lowMemoryGateway.applyPresentationClass(scope);
       const nativeApplications = enableMobilePresentation(scope, {
@@ -639,7 +625,7 @@ if (isGamePage) {
         isActorEditor: actorEditorGateway.ownsApplication,
         isNativeDialog: application => getSystemIntegration().isNativeDialog?.(application) === true,
         isSettingsApplication: (application, element) => settingsCompatibilityGateway.ownsApplication(application, element),
-        trace: (event) => diagnostics.record("debug", `Application admission ${JSON.stringify(event)}`)
+        trace: (event) => diagnostics.record(event.paint?.display === "none" ? "warn" : "debug", `Application admission ${JSON.stringify(event)}`)
       });
       const isolation = enableVeStyleAuthority(scope, {
         enabled: readProtectVeStyling(),
@@ -728,6 +714,15 @@ if (isGamePage) {
   let modeTransitionQueue = Promise.resolve();
 
   Hooks.once("init", () => {
+    const compatibilityScope = createTaskScope("mobile-module-compatibility", performanceObserver);
+    compatibilityScope.listen(window, "pagehide", () => compatibilityScope.dispose(), { once: true, passive: true });
+    const mobilePresentationSelected = () => ["phone", "tablet"].includes(readRequestedPolicy().runtimeMode);
+    mobileModuleCompatibility.suppress(compatibilityScope, mobilePresentationSelected());
+    Hooks.once("setup", () => {
+      void mobileModuleCompatibility.reconcileCarolingianUi(mobilePresentationSelected()).catch(error => {
+        console.error("VE Mobile | Could not apply Carolingian UI mobile compatibility", error);
+      });
+    });
     const lightingScope = createTaskScope("native-lighting-precision", performanceObserver);
     lightingScope.listen(window, "pagehide", () => lightingScope.dispose(), { once: true, passive: true });
     lightingPrecision.install(lightingScope);
@@ -741,6 +736,7 @@ if (isGamePage) {
     advanceBootstrap("init");
     const reconcileApplicationPreference = ({ key, value } = {}) => {
       if (modeReloadPending || startupBlocked) return;
+      if (key === KEYS.MUTE_MOBILE_AUDIO) mobileAudioController?.setEnabled(value !== false);
       store.dispatch({ type: "action-navigation-invalidated" });
       if ((key === KEYS.SHOW_ACTION_SUMMARIES && value === false) || key === KEYS.COMPACT_ACTION_SUMMARIES) store.dispatch({ type: "dismiss-action-session" });
       performanceEnabled = readLoggingLevel() === "debug";
@@ -838,9 +834,6 @@ if (isGamePage) {
           checkpoint: "canvas", detail: progress.label, progress: Object.freeze({ pct: progress.pct }) });
       }
     } });
-    const journalScope = createTaskScope("diagnostics-journal", performanceObserver);
-    journalScope.listen(window, "pagehide", () => journalScope.dispose(), { once: true, passive: true });
-    diagnosticsJournalGateway.start(journalScope);
     // Foundry 13.351 constructs persistent Scene context menus during
     // initializeUI, before ready. Register before either native menu is built.
     if (mobilePerformanceAuthority.active() || globalThis.game?.user?.isGM) {
@@ -918,27 +911,9 @@ if (isGamePage) {
       return;
     }
     diagnostics.record("info", `VE Mobile v${module?.version ?? "0.1.0"} ready`);
-    diagnosticsJournalGateway?.schedule?.();
     console.info(`VE Mobile | v${module?.version ?? "0.1.0"} ready`);
   });
 
-  function mobileMemoryDiagnostics() {
-    const canvasRef = globalThis.canvas;
-    const scene = canvasRef?.scene ?? globalThis.game?.scenes?.current;
-    const presentation = memoryPresentationContext();
-    return Object.freeze({
-      scene: scene ? Object.freeze({ id: String(scene.id ?? ""), name: String(scene.name ?? ""), risk: mobileAssetGateway?.riskForScene?.(scene.id) ?? null }) : null,
-      assets: mobileAssetGateway?.aliasStatus?.() ?? null,
-      lowMemory: durableProfileHandoff?.snapshot?.() ?? lowMemoryGateway?.snapshot?.() ?? null,
-      recovery: graphicsRecoveryGateway?.snapshot?.() ?? null,
-      preflight: scenePreflightGateway?.snapshot?.() ?? null,
-      splitScreen: presentation.splitScreen,
-      sceneViewport: presentation.sceneViewport,
-      canvasBacking: presentation.canvasBacking,
-      rendererResolution: Number(canvasRef?.app?.renderer?.resolution ?? 0),
-      devicePixelRatio: Number(window.devicePixelRatio ?? 0)
-    });
-  }
 
   function memoryPresentationContext() {
     const canvasElement = globalThis.canvas?.app?.renderer?.canvas ?? globalThis.canvas?.app?.view ?? null;

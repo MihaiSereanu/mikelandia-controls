@@ -6,6 +6,80 @@ import { installGlobals, collection } from "./helpers/foundry.mjs";
 import { createShadowdarkFixture } from "./helpers/shadowdark.mjs";
 
 const action = ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, edit = ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE;
+
+test("custom resources default to zero, persist per actor flag, and preserve native fields", async t => {
+  const f = setup(t), native = JSON.stringify(f.actor.system);
+  const sections = f.view().panels[0].sections;
+  assert.deepEqual(sections.slice(0, 6).map(s => s.id), ["hp", "ac", "def", "xp", "grit", "luck"]);
+  for (const id of ["def", "grit"]) {
+    assert.equal(sections.find(s => s.id === id).rows[0].value, 0);
+    await f.gateway.execute(edit, f.edit(id, 3));
+    assert.equal(f.actor.flags["ve-mobile"].shadowdarkResources[id], 3);
+    for (const value of [-1, 1.5, "2"]) await assert.rejects(f.gateway.execute(edit, f.edit(id, value)), { code: "INVALID_INPUT" });
+    assert.equal(f.view().panels[0].sections.find(s => s.id === id).rows[0].value, 3);
+  }
+  assert.equal(JSON.stringify(f.actor.system), native);
+  assert.equal(createShadowdarkFixture().actor.flags, undefined);
+  const stale = f.edit("grit", 4);
+  await f.gateway.execute(edit, f.edit("grit", 5));
+  await assert.rejects(f.gateway.execute(edit, stale), { code: "STALE_STATE" });
+});
+
+test("XP edits use the native field and reject stale or invalid values without migrating Renown", async t => {
+  const f = setup(t);
+  f.actor.flags = { "ve-mobile": { shadowdarkResources: { renown: 17 } } };
+  assert.equal(f.view().panels[0].sections.find(s => s.id === "xp").rows[0].value, 8);
+  await assert.rejects(f.gateway.execute(edit, f.edit("renown", 3)), { code: "CAPABILITY_UNAVAILABLE" });
+  for (const value of [-1, 1.5, "2", Number.MAX_SAFE_INTEGER + 1]) {
+    await assert.rejects(f.gateway.execute(edit, f.edit("xp", value)), { code: "INVALID_INPUT" });
+  }
+  const stale = f.edit("xp", 12);
+  f.actor.system.level.xp = 9;
+  await assert.rejects(f.gateway.execute(edit, stale), { code: "STALE_STATE" });
+  await f.gateway.execute(edit, f.edit("xp", 0));
+  assert.equal(f.actor.system.level.xp, 0);
+  assert.deepEqual(f.writes.at(-1)[0], { "system.level.xp": 0 });
+  assert.equal(f.actor.flags["ve-mobile"].shadowdarkResources.renown, 17);
+});
+
+test("the native Shadowdark roll application is recognized across V1 sheet workflows", t => {
+  const f = setup(t);
+  class RollDialogSD {}
+  installGlobals(t, { shadowdark: { apps: { RollDialogSD } } });
+  const integration = resolveSystemIntegration("shadowdark");
+  assert.equal(integration.isNativeDialog(new RollDialogSD()), true);
+  assert.equal(integration.isNativeDialog({ id: "sd-roll-dialog" }), true);
+  assert.equal(integration.isNativeDialog({ options: { id: "sd-roll-dialog" } }), true);
+  assert.equal(integration.isNativeDialog({ id: "unrelated-dialog" }), false);
+});
+
+test("coin edits use native denominations, enforce integer limits and reject stale or injected saves", async t => {
+  const f = setup(t), before = f.actor.items.length;
+  for (const denomination of ["gp", "sp", "cp"]) {
+    const id = `coin-${denomination}`;
+    await f.gateway.execute(edit, f.edit(id, 1));
+    assert.equal(f.actor.system.coins[denomination], 1);
+    for (const value of [-1, 0.5, "2", Number.MAX_SAFE_INTEGER + 1]) {
+      await assert.rejects(f.gateway.execute(edit, f.edit(id, value)), { code: "INVALID_INPUT" });
+    }
+    const stale = f.edit(id, 3);
+    f.actor.system.coins[denomination] = 2;
+    await assert.rejects(f.gateway.execute(edit, stale), { code: "STALE_STATE" });
+    await assert.rejects(f.gateway.execute(edit, { ...f.edit(id, 3), path: "system.coins.gp" }), { code: "INVALID_INPUT" });
+    await f.gateway.execute(edit, f.edit(id, 0));
+    assert.equal(f.actor.system.coins[denomination], 0);
+    assert.deepEqual(f.writes.at(-1)[0], { [`system.coins.${denomination}`]: 0 });
+  }
+  assert.equal(f.actor.items.length, before);
+});
+
+test("an empty inventory retains the Gear section for adding new items", t => {
+  const f = setup(t);
+  f.actor.items = collection([]);
+  const inventory = f.view().panels.find(tab => tab.id === "inventory");
+  assert.deepEqual(inventory.sections.find(section => section.id === "gear").rows, []);
+});
+
 function setup(t, options) {
   const f = createShadowdarkFixture(options);
   installGlobals(t, { game: f.game, Hooks: f.hooks });
@@ -30,7 +104,7 @@ for (const pulp of [false, true]) {
     assert.equal(rows.find(r => r.id === "ac").edit, undefined);
     assert.equal(rows.find(r => r.id === "spell").valueLabel, "Tier");
     assert.equal(rows.find(r => r.id === "lost").action, undefined);
-    assert.equal(rows.find(r => r.id === "torch" && r.format === "boolean").action.icon, "fa-lightbulb");
+    assert.equal(rows.find(r => r.id === "torch").secondaryAction.icon, "fa-lightbulb");
     assert.equal(JSON.stringify(view).includes("Secret Relic"), false);
   });
 }
@@ -147,7 +221,7 @@ test("light controls call the native sheet/tracker and invalidate old toggle des
   await assert.rejects(f.gateway.execute(action, request), { code: "STALE_STATE" });
   assert.equal(f.writes.length, 0); assert.equal(f.rolls.length, 0);
   f.game.user.character = null;
-  assert.equal(f.gateway.capabilitiesForActor(f.actor).profileActions.some(a => a.id.startsWith("light:")), false);
+  assert.equal(f.gateway.capabilitiesForActor(f.actor).profileActions.some(a => a.id.startsWith("light:")), true);
 });
 test("synthetic PC rolls preserve exact source UUIDs while light controls remain native-sheet only", async t => {
   const f = setup(t);

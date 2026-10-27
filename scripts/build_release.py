@@ -27,7 +27,7 @@ def main():
     parser.add_argument("--manifest-url")
     parser.add_argument("--download-url")
     parser.add_argument("--experimental-fallback", action="store_true",
-                        help="Allow other systems in this development package for profile and native-sheet testing")
+                        help="Mark this build as an experimental cross-system package")
     args = parser.parse_args()
     if not re.fullmatch(r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)", args.version):
         parser.error("Version must be MAJOR.MINOR.PATCH with no leading zeroes")
@@ -50,7 +50,6 @@ def main():
             "Experimental VE Mobile development build: D&D5e mobile sheets, Warhammer character "
             "panels/actions/resources, Shadowdark PC panels/actions/light controls, and native-sheet fallback. Cross-system compatibility is unverified."
         )
-
     files = []
     for entry in RUNTIME_ENTRIES:
         path = ROOT / entry

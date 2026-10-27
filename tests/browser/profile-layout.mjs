@@ -12,6 +12,7 @@ const actor = { sourceUuid: "Actor.layout", panels: [{ id: "overview", label: "O
   { id: "hp", label: "HP", kind: "counters", rows: [row("hp", "HP", 9, { max: 12 })] },
   { id: "ac", label: "AC", kind: "values", rows: [row("ac", "AC", 14)] },
   { id: "luck", label: "Luck", kind: "values", rows: [row("luck", "Luck", 4, { edit })] },
+  { id: "coins", label: "Coins", kind: "values", layout: "inline", rows: [row("gp", "GP", 0), row("sp", "SP", 0), row("cp", "CP", 0)] },
   { id: "stats", label: "Stats", kind: "values", rows: ["Str", "Dex", "Con", "Int", "Wis", "Cha"].map(label => row(label, label, "14 (+2)", { format: "display", action: { id: `stat:${label}`, revision: "1" } })) },
   { id: "items", label: "Skills and equipment", kind: "items", rows: [
     row("skill", "An unusually long translated skill specialization", 999, { action: { id: "skill:test", revision: "1" } }),
@@ -33,7 +34,16 @@ try {
   await document.fonts.ready; await tick();
   if (params.has("large")) check("enlarged text is actually rendered", parseFloat(getComputedStyle(main.querySelector('dt')).fontSize) >= 24);
   check("Luck label and value share a line", sameLine(rect('[data-profile-field="luck"] dt'), rect('[data-profile-field="luck"] dd')));
-  check("Luck value aligns to the trailing edge", Math.abs(rect('[data-profile-field="luck"] dd').right - rect('[data-profile-field="luck"]').right + 8) < 2);
+  const coins = ["gp", "sp", "cp"].map(id => rect(`[data-profile-field="${id}"]`));
+  check("compact coin boxes fit one row even at narrow widths", coins.every(r => Math.abs(r.top - coins[0].top) < 1 && r.width < rect('[data-profile-section="coins"]').width / 2));
+  check("resource label appears only inside box", !main.querySelector('[data-profile-section="luck"] h3'));
+  check("pencil is beside the value", sameLine(rect('[data-profile-edit="luck"]'), rect('[data-profile-field="luck"] dd')));
+  check("pencil keeps a touch target", rect('[data-profile-edit="luck"]').width >= 44 && rect('[data-profile-edit="luck"]').height >= 44);
+  const editButton = main.querySelector('[data-profile-edit="luck"]'), editIcon = editButton.querySelector("i");
+  check("pencil icon is small and has no button background", getComputedStyle(editButton).backgroundColor === "rgba(0, 0, 0, 0)"
+    && parseFloat(getComputedStyle(editIcon).fontSize) < parseFloat(getComputedStyle(editButton).fontSize));
+  const editRect = rect('[data-profile-edit="luck"]'), fieldRect = rect('[data-profile-field="luck"]');
+  check("pencil is aligned to the field's top-right", editRect.right >= fieldRect.right - 2 && editRect.top <= fieldRect.top + 2);
   const hp = rect('[data-profile-section="hp"]'), ac = rect('[data-profile-section="ac"]'), luck = rect('[data-profile-section="luck"]');
   if (main.clientWidth >= 352) check("small resource sections share a row", sameLine(hp, ac));
   if (luck.top > hp.top + 2) check("last resource card fills spare row width", Math.abs(luck.width - rect('.ve-profile-summary').width) < 2);
@@ -46,9 +56,11 @@ try {
   main.querySelector('[data-profile-edit="luck"]').click(); await tick();
   check("open editor fits alongside available controls", contained());
   check("editor preserves touch target height", [...main.querySelectorAll('.ve-profile-resource-form button, .ve-profile-resource-form input')].every(e => e.getBoundingClientRect().height >= 44));
+  const input = main.querySelector('[data-profile-resource-input="luck"]');
+  check("opening the editor selects the full current value", input.selectionStart === 0 && input.selectionEnd === input.value.length);
   main.querySelector('[data-profile-resource-cancel]').click(); await tick();
   main.querySelector('[data-profile-action="stat:Str"]').click(); await tick();
-  check("native completion feedback stays readable", main.querySelector('[data-profile-field="Str"] [role="status"]').textContent === "Native workflow finished." && contained());
+  check("native completion adds no status text to the sheet", !main.querySelector('[data-profile-field="Str"] [role="status"]') && !main.textContent.includes("Native workflow finished") && contained());
   check("profile never adds horizontal scrolling", document.documentElement.scrollWidth <= innerWidth);
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
 } catch (error) {

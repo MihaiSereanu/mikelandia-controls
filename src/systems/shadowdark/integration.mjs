@@ -11,7 +11,9 @@ export const shadowdarkIntegration = Object.freeze({
   createCommands: createShadowdarkCommands,
   isNativeDialog(application) {
     const RollDialog = globalThis.shadowdark?.apps?.RollDialogSD;
-    return typeof RollDialog === "function" && application instanceof RollDialog;
+    return (typeof RollDialog === "function" && application instanceof RollDialog)
+      || application?.id === "sd-roll-dialog"
+      || application?.options?.id === "sd-roll-dialog";
   },
   settingInvalidation(key) {
     return key.startsWith("shadowdark.") ? { domains: ["actors"], refreshSelectedActor: true } : null;
@@ -23,6 +25,6 @@ export const shadowdarkIntegration = Object.freeze({
     if (!context) return identity;
     const capabilities = capabilitiesForActor(actor, user);
     const panels = createProfilePanels(actor, shadowdarkPlayerProfile(context), { actions: capabilities?.profileActions, edits: capabilities?.profileEdits });
-    return panels.length ? Object.freeze({ ...identity, presentation: "profile", profileId: "shadowdark-player", panels }) : identity;
+    return panels.length ? Object.freeze({ ...identity, presentation: "profile", profileId: "shadowdark-player", profileInventory: capabilities.profileInventory === true, panels }) : identity;
   }
 });

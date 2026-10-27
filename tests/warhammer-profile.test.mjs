@@ -17,7 +17,7 @@ for (const use5e of [false, true]) {
     const record = integration.createActorViewRecord(actor, game.user);
     assert.equal(record.presentation, "profile");
     assert.equal(record.edition, use5e ? "5e" : "4e");
-    assert.deepEqual(record.panels.map(tab => tab.label), ["Main", "Combat", "Skills"]);
+    assert.deepEqual(record.panels.map(tab => tab.label), ["Main", "Combat", "Skills", "Trappings"]);
     assert.equal(fields(record).find(field => field.id === "ws").value, 41, "use prepared value; do not recompute from initial/advances");
     assert.deepEqual(fields(record).find(field => field.id === "wounds"), { id: "wounds", label: "Wounds", value: 9, max: 13, format: "number" });
     assert.equal(fields(record).find(field => field.id === "fortune").value, 0);
@@ -47,8 +47,8 @@ test("4e Group Advantage uses the native label and actor value", t => {
   installGlobals(t, { game: createWarhammerGame([actor], { groupAdvantage: true }) });
   const record = integration.createActorViewRecord(actor, game.user);
   const combat = record.panels.find(tab => tab.id === "combat");
-  assert.equal(combat.sections[0].label, "Group Advantage");
-  assert.equal(combat.sections[0].rows[0].value, 4);
+  assert.equal(combat.sections.find(section => section.id === "group-advantage").label, "Group Advantage");
+  assert.equal(combat.sections.find(section => section.id === "group-advantage").rows[0].value, 4);
 });
 
 test("unmapped types and unreadable editions retain native access without data projection", t => {
@@ -132,8 +132,28 @@ test("nonempty Trappings and Talents tabs retain exact owned item data", t => {
   add("talent", "talent", { description: { value: "<p>A talent</p>" } });
   installGlobals(t, { game: createWarhammerGame([actor]) });
   const view = () => integration.createActorViewRecord(actor, game.user);
-  assert.equal(view().panels.find(p => p.id === "trappings").sections[0].rows[0].value, 2);
+  assert.equal(view().panels.find(p => p.id === "trappings").sections.find(s => s.id === "trappings").rows[0].value, 2);
   assert.equal(view().panels.find(p => p.id === "talents").sections[0].rows[0].description, "<p>A talent</p>");
   for (const item of actor.items.filter(i => ["rope", "talent"].includes(i.id))) item.visible = false;
-  assert.equal(view().panels.some(p => ["trappings", "talents"].includes(p.id)), false);
+  assert.equal(view().panels.some(p => p.id === "talents"), false);
+  assert.deepEqual(view().panels.find(p => p.id === "trappings").sections.map(s => s.id), ["encumbrance"]);
 });
+
+for (const use5e of [false, true]) {
+  test(`Warhammer ${use5e ? "5e" : "4e"} shows native encumbrance first in Combat and Trappings without edit controls`, t => {
+    const actor = createWarhammerActor();
+    installGlobals(t, { game: createWarhammerGame([actor], { use5e }) });
+    for (const current of ["4.50", 3.25, "0.00", "12.75"]) {
+      actor.system.status.encumbrance.current = current;
+      const view = integration.createActorViewRecord(actor, game.user);
+      for (const tab of view.panels.filter(tab => ["combat", "trappings"].includes(tab.id))) {
+        assert.deepEqual(tab.sections[0].rows[0], { id: "encumbrance", label: "Encumbrance", value: Number(current), max: 8, format: "number" });
+      }
+    }
+    for (const current of [undefined, null, "", " ", "invalid", Infinity, false]) {
+      actor.system.status.encumbrance.current = current;
+      const view = integration.createActorViewRecord(actor, game.user);
+      assert.equal(fields(view).some(row => row.id === "encumbrance"), false);
+    }
+  });
+}

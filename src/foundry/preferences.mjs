@@ -9,6 +9,7 @@ export const LOAD_TIMING_KEYS = Object.freeze({ FULL: "lastSuccessfulFullLoadMs"
 
 const KEYS = Object.freeze({
   MODE: "mode",
+  MUTE_MOBILE_AUDIO: "muteMobileAudio",
   THEME: "theme",
   COLOR_SCHEME: "colorScheme",
   HEADER_ARTWORK: "headerArtwork",
@@ -54,9 +55,7 @@ const KEYS = Object.freeze({
   CHARACTER_FEATURE_SORT: "characterFeatureSort",
   CHARACTER_FAVOURITES_SORT: "characterFavouritesSort",
   CHARACTER_EFFECTS_SORT: "characterEffectsSort",
-  CHARACTER_FAVOURITES_SOURCE: "characterFavouritesSource",
-  LOGGING_LEVEL: "loggingLevel",
-  SAVE_DIAGNOSTICS_TO_JOURNAL: "saveDiagnosticsToJournal"
+  CHARACTER_FAVOURITES_SOURCE: "characterFavouritesSource"
 });
 
 const CHOICES = Object.freeze({
@@ -82,10 +81,9 @@ const CHOICES = Object.freeze({
   [KEYS.CHARACTER_FAVOURITES_SORT]: Object.freeze(["manual", "alphabetical"]),
   [KEYS.CHARACTER_EFFECTS_SORT]: Object.freeze(["manual", "alphabetical"]),
   [KEYS.CHARACTER_FAVOURITES_SOURCE]: Object.freeze(["core", "tidy", "both", "off"]),
-  [KEYS.LOGGING_LEVEL]: Object.freeze(["off", "error", "warn", "info", "debug"])
 });
 
-const DEFAULTS = Object.freeze({ mode: "auto", theme: "system", colorScheme: "class", headerArtwork: "automatic", headerArtworkOpacity: 1, quickbarEnabled: true, quickbarSource: "character", quickbarRows: "1", showActionSummaries: true, compactActionSummaries: false, graphicsSafety: "auto", diceRendering: "auto", mobileOptimizedAssets: "auto", lowMemoryCanvas: false, memoryProtectionProfile: "normal", memoryProtectionBehavior: "recommend", afterGraphicsFailure: "ask", sceneMemoryWarnings: true, fcsAutoSoftOverride: true, movementRepeatDelay: 0.5, recenterAfterMove: false, joystickSide: "follow", movementControl: "joystick", actionSceneReturn: "off", combatCarousel: true, keepScreenAwake: false, protectVeStyling: true, moduleOverlayVisibility: Object.freeze({}), moduleOverlayCatalog: Object.freeze({ scanned: false, entries: Object.freeze([]) }), moduleOverlayOrder: Object.freeze([]), moduleOverlayScale: Object.freeze({}), characterInventorySort: "manual", characterSpellSort: "manual", characterSpellFilter: "all", characterFeatureSort: "manual", characterFavouritesSort: "manual", characterEffectsSort: "manual", characterFavouritesSource: "core", loggingLevel: "warn", saveDiagnosticsToJournal: true });
+const DEFAULTS = Object.freeze({ mode: "auto", muteMobileAudio: true, theme: "system", colorScheme: "class", headerArtwork: "automatic", headerArtworkOpacity: 1, quickbarEnabled: true, quickbarSource: "character", quickbarRows: "1", showActionSummaries: true, compactActionSummaries: false, graphicsSafety: "auto", diceRendering: "auto", mobileOptimizedAssets: "auto", lowMemoryCanvas: false, memoryProtectionProfile: "normal", memoryProtectionBehavior: "recommend", afterGraphicsFailure: "ask", sceneMemoryWarnings: true, fcsAutoSoftOverride: true, movementRepeatDelay: 0.5, recenterAfterMove: false, joystickSide: "follow", movementControl: "joystick", actionSceneReturn: "off", combatCarousel: true, keepScreenAwake: false, protectVeStyling: true, moduleOverlayVisibility: Object.freeze({}), moduleOverlayCatalog: Object.freeze({ scanned: false, entries: Object.freeze([]) }), moduleOverlayOrder: Object.freeze([]), moduleOverlayScale: Object.freeze({}), characterInventorySort: "manual", characterSpellSort: "manual", characterSpellFilter: "all", characterFeatureSort: "manual", characterFavouritesSort: "manual", characterEffectsSort: "manual", characterFavouritesSource: "core" });
 
 const CHARACTER_COLLECTION_SETTING_KEYS = Object.freeze({
   inventorySort: KEYS.CHARACTER_INVENTORY_SORT,
@@ -131,6 +129,12 @@ export function registerPreferences({
     },
     default: "auto",
     onChange: changed(KEYS.MODE, onPresentationChange)
+  });
+
+  game.settings.register(MODULE_ID, KEYS.MUTE_MOBILE_AUDIO, {
+    name: "VEMOBILE.Settings.MuteMobileAudio.Name", hint: "VEMOBILE.Settings.MuteMobileAudio.Hint",
+    scope: "client", config: true, type: Boolean, default: true,
+    onChange: changed(KEYS.MUTE_MOBILE_AUDIO, onApplicationChange)
   });
 
   game.settings.register(MODULE_ID, KEYS.THEME, {
@@ -582,31 +586,6 @@ export function registerPreferences({
     onChange: changed(KEYS.CHARACTER_FAVOURITES_SOURCE, onApplicationChange)
   });
 
-  game.settings.register(MODULE_ID, KEYS.LOGGING_LEVEL, {
-    name: "VEMOBILE.Settings.LoggingLevel.Name",
-    hint: "VEMOBILE.Settings.LoggingLevel.Hint",
-    scope: "client",
-    config: true,
-    type: String,
-    choices: {
-      off: "VEMOBILE.Settings.LoggingLevel.Off",
-      error: "VEMOBILE.Settings.LoggingLevel.Error",
-      warn: "VEMOBILE.Settings.LoggingLevel.Warn",
-      info: "VEMOBILE.Settings.LoggingLevel.Info",
-      debug: "VEMOBILE.Settings.LoggingLevel.Debug"
-    },
-    default: "warn",
-    onChange: changed(KEYS.LOGGING_LEVEL, onApplicationChange)
-  });
-  game.settings.register(MODULE_ID, KEYS.SAVE_DIAGNOSTICS_TO_JOURNAL, {
-    name: "VEMOBILE.Settings.SaveDiagnosticsToJournal.Name",
-    hint: "VEMOBILE.Settings.SaveDiagnosticsToJournal.Hint",
-    scope: "client",
-    config: true,
-    type: Boolean,
-    default: true,
-    onChange: changed(KEYS.SAVE_DIAGNOSTICS_TO_JOURNAL, onApplicationChange)
-  });
   for (const key of Object.values(LOAD_TIMING_KEYS)) {
     game.settings.register(MODULE_ID, key, {
       name: `VE Mobile ${key}`,
@@ -689,13 +668,7 @@ export function readProtectVeStyling() {
   return readSetting(KEYS.PROTECT_VE_STYLING, true) !== false;
 }
 
-export function readLoggingLevel() {
-  return normalizedLoggingLevel(readSetting(KEYS.LOGGING_LEVEL, "warn"));
-}
-
-export function readSaveDiagnosticsToJournal() {
-  return readSetting(KEYS.SAVE_DIAGNOSTICS_TO_JOURNAL, true) !== false;
-}
+export function readLoggingLevel() { return "warn"; }
 
 export function readBootstrapPreferences({ getStorage = () => globalThis.localStorage } = {}) {
   try {
@@ -745,6 +718,7 @@ export function createFoundryPreferencesGateway({
   const setting = (key) => getGame()?.settings?.get?.(MODULE_ID, key);
 
   const readers = {
+    muteMobileAudio: () => setting(KEYS.MUTE_MOBILE_AUDIO) !== false,
     mode: () => normalizedModePreference(setting(KEYS.MODE)),
     movementRepeatDelayMs: () => normalizedDelay(setting(KEYS.MOVEMENT_REPEAT_DELAY)) * 1000,
     colorScheme: () => effectiveColorScheme(normalizedColorScheme(setting(KEYS.COLOR_SCHEME)), getSystemIntegration().features),
@@ -813,8 +787,6 @@ export function createFoundryPreferencesGateway({
       const fields = preferenceFields(setting, localize, getNavigator, getGame, getSystemIntegration().features);
       return Object.freeze({
         ...presentation(),
-        loggingLevel: normalizedLoggingLevel(setting(KEYS.LOGGING_LEVEL)),
-        saveDiagnosticsToJournal: setting(KEYS.SAVE_DIAGNOSTICS_TO_JOURNAL) !== false,
         wakeLockSupported: typeof getNavigator()?.wakeLock?.request === "function",
         logoutLabel: localize("MENU.Logout"),
         labels: settingsLabels(localize),
@@ -951,6 +923,7 @@ export function performanceModeField(game = globalThis.game, localize = (key) =>
 
 function preferenceFields(setting, localize, getNavigator, getGame, features) {
   return Object.freeze([
+    booleanField(KEYS.MUTE_MOBILE_AUDIO, "MuteMobileAudio", setting(KEYS.MUTE_MOBILE_AUDIO) !== false, localize),
     choiceField(KEYS.MODE, "Mode", normalizedModePreference(setting(KEYS.MODE)), localize),
     choiceField(KEYS.THEME, "Theme", setting(KEYS.THEME), localize),
     choiceField(KEYS.COLOR_SCHEME, "ColourScheme", setting(KEYS.COLOR_SCHEME), localize),
@@ -977,8 +950,6 @@ function preferenceFields(setting, localize, getNavigator, getGame, features) {
     choiceField(KEYS.MOBILE_OPTIMIZED_ASSETS, "MobileOptimizedAssets", normalizedChoice(KEYS.MOBILE_OPTIMIZED_ASSETS, setting(KEYS.MOBILE_OPTIMIZED_ASSETS), DEFAULTS.mobileOptimizedAssets), localize),
     choiceField(KEYS.AFTER_GRAPHICS_FAILURE, "AfterGraphicsFailure", normalizedChoice(KEYS.AFTER_GRAPHICS_FAILURE, setting(KEYS.AFTER_GRAPHICS_FAILURE), DEFAULTS.afterGraphicsFailure), localize),
     booleanField(KEYS.SCENE_MEMORY_WARNINGS, "SceneMemoryWarnings", setting(KEYS.SCENE_MEMORY_WARNINGS) !== false, localize),
-    choiceField(KEYS.LOGGING_LEVEL, "LoggingLevel", setting(KEYS.LOGGING_LEVEL), localize),
-    booleanField(KEYS.SAVE_DIAGNOSTICS_TO_JOURNAL, "SaveDiagnosticsToJournal", setting(KEYS.SAVE_DIAGNOSTICS_TO_JOURNAL) !== false, localize),
     canvasField(getGame, localize),
     Object.freeze({
       namespace: MODULE_ID,
@@ -1165,8 +1136,8 @@ function normalizeSetting(key, value) {
   if (key === KEYS.MODULE_OVERLAY_CATALOG) return sanitizeOverlayCatalog(value);
   if (key === KEYS.MODULE_OVERLAY_ORDER) return sanitizeStringArray(value);
   if (key === KEYS.MODULE_OVERLAY_SCALE) return sanitizeScaleRecord(value);
-  if (key === KEYS.RECENTER_AFTER_MOVE || key === KEYS.COMBAT_CAROUSEL || key === KEYS.KEEP_SCREEN_AWAKE || key === KEYS.PROTECT_VE_STYLING || key === KEYS.QUICKBAR_ENABLED || key === KEYS.SHOW_ACTION_SUMMARIES || key === KEYS.COMPACT_ACTION_SUMMARIES
-    || key === KEYS.LOW_MEMORY_CANVAS || key === KEYS.SCENE_MEMORY_WARNINGS || key === KEYS.FCS_AUTO_SOFT_OVERRIDE || key === KEYS.SAVE_DIAGNOSTICS_TO_JOURNAL) {
+  if (key === KEYS.MUTE_MOBILE_AUDIO || key === KEYS.RECENTER_AFTER_MOVE || key === KEYS.COMBAT_CAROUSEL || key === KEYS.KEEP_SCREEN_AWAKE || key === KEYS.PROTECT_VE_STYLING || key === KEYS.QUICKBAR_ENABLED || key === KEYS.SHOW_ACTION_SUMMARIES || key === KEYS.COMPACT_ACTION_SUMMARIES
+    || key === KEYS.LOW_MEMORY_CANVAS || key === KEYS.SCENE_MEMORY_WARNINGS || key === KEYS.FCS_AUTO_SOFT_OVERRIDE) {
     if (typeof value !== "boolean") throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.BooleanExpected", "That setting requires an on or off value."));
     return value;
   }
@@ -1248,10 +1219,7 @@ function canvasField(getGame, localize) {
   });
 }
 
-function normalizedLoggingLevel(value) {
-  const level = String(value ?? "");
-  return CHOICES[KEYS.LOGGING_LEVEL].includes(level) ? level : "warn";
-}
+
 
 function normalizedChoice(key, value, fallback) {
   const choice = String(value ?? "");

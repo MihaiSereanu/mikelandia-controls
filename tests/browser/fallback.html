@@ -3,8 +3,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fallback browser checks</title>
-<link rel="stylesheet" href="/assets/ve-mobile.css">
-<link rel="stylesheet" href="/assets/ve-style-authority.css">
+<style>
+  @import url("/assets/ve-mobile.css") layer(modules);
+  @import url("/assets/ve-style-authority.css") layer(modules);
+</style>
 <style>
   body { margin: 0; background: #16191f; color: #f0eee6; font: 16px system-ui; }
   /* Test host only; the renderer and native application CSS are unchanged. */
@@ -32,12 +34,20 @@ try {
   document.querySelector("main").dataset.formFactor = new URLSearchParams(location.search).get("layout") ?? "phone";
   const v1 = new URLSearchParams(location.search).get("application") === "v1";
   const clipped = new URLSearchParams(location.search).get("host") === "clipped";
-  const nativeHost = document.createElement("div");
+  const commonDisplay = new URLSearchParams(location.search).has("common-display");
+  const nativeHost = commonDisplay ? document.body : document.createElement("div");
+  if (commonDisplay) {
+    document.body.classList.add("hide-ui");
+    const style = document.createElement("style");
+    const exclusions = Array.from({ length: 40 }, (_, index) => `:not(#desktop-exclusion-${index})`).join("");
+    style.textContent = `@layer modules { body.hide-ui > *${exclusions} { display:none !important; } body.hide-ui .window-header { display:none !important; } }`;
+    document.head.append(style);
+  }
   if (clipped) {
     nativeHost.style.cssText = "position:fixed;left:200vw;top:200vh;transform:translateZ(0);overflow:hidden;opacity:0;width:1px;height:1px";
     document.querySelector("main").style.setProperty("z-index", "2147483647", "important");
   }
-  document.body.append(nativeHost);
+  if (!commonDisplay) document.body.append(nativeHost);
   const portrait = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="#38434f"/><circle cx="40" cy="27" r="15" fill="#b3bdc4"/><path d="M12 80V66a28 28 0 0 1 56 0v14" fill="#b3bdc4"/></svg>');
   const actor = createActor({ type: "Player", name: "Aldren the Watcher", img: portrait });
   const other = createActor({ id: "other", uuid: "Actor.other", type: "Player", name: "Bryn", img: portrait });
@@ -56,7 +66,8 @@ try {
     async render() {
       this.element = document.createElement(v1 ? "section" : "form");
       this.element.className = "application";
-      this.element.innerHTML = '<header class="window-header">Character Sheet</header><div class="window-content"><label>Luck <input name="luck" value="1"></label><button type="button">Native action</button></div>';
+      this.element.innerHTML = '<header class="window-header">Character Sheet<button type="button" class="close" data-native-close>Close</button></header><div class="window-content"><label>Luck <input name="luck" value="1"></label><button type="button">Native action</button></div>';
+      this.element.querySelector("[data-native-close]").onclick = () => this.close();
       nativeHost.append(this.element);
       Hooks.emit(v1 ? "renderActorSheet" : "renderApplicationV2", this, this.element);
       opened = this;
@@ -104,6 +115,13 @@ try {
   check("native input is actually reachable above the page", reachable(opened.element.querySelector("input")));
   if (clipped) check("Android browser signals are exercised", /Android/.test(navigator.userAgent) && navigator.maxTouchPoints > 0);
   check("native input remains editable", !!opened.element.querySelector("input"));
+  const fragment = document.createElement("form");
+  fragment.innerHTML = '<label>Luck <input name="luck" value="1"></label><button type="button">Native action</button>';
+  opened.element.querySelector(".window-content").replaceChildren(fragment);
+  Hooks.emit(v1 ? "renderActorSheet" : "renderApplicationV2", opened, v1 ? { 0: fragment } : fragment);
+  await tick();
+  check("rerender keeps the outer native frame admitted", opened.element.classList.contains("ve-mobile-admitted-app") && !fragment.classList.contains("ve-mobile-admitted-app"));
+  check("native close control survives inner-form rerender", reachable(opened.element.querySelector("[data-native-close]")));
   const input = opened.element.querySelector("input");
   input.focus(); input.value = "2"; input.dispatchEvent(new Event("input", { bubbles: true }));
   check("native input retains focus and value", document.activeElement === input && input.value === "2");
@@ -138,6 +156,9 @@ try {
   button().click();
   await tick();
   check("rerendered button opens the selected actor", opened.document === other);
+  const finalRoot = opened.element;
+  opened.element.querySelector("[data-native-close]").click(); await tick();
+  check("native Close removes the whole frame and its form", !finalRoot.isConnected && apps.admissions.size === 0 && !document.querySelector('.window-content form'));
   scope.dispose();
   check("teardown closes owned sheets", !opened.element.isConnected && apps.admissions.size === 0);
   const previewScope = createTaskScope("browser-preview");

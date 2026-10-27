@@ -50,11 +50,9 @@ function settingsContent({ commands, scope, refresh, requiresReload, overlayHost
   const status = node("div", { className: "ve-settings-status", attrs: { role: "status", "aria-live": "polite" } });
   const reloadPrompt = createReloadPrompt(commands, scope);
   const defaults = createDefaultsPrompt(commands, scope, refresh);
-  const reportModal = createDiagnosticReportModal(commands, scope);
-  const reportActions = diagnosticsButtons(commands, scope, reportModal);
   const lowMemoryPrompt = createLowMemoryPrompt(commands, scope, refresh);
   const optimizer = preferences.mobileMemory?.assets?.isGm ? createMobileAssetOptimizer(commands, scope) : null;
-  const overlays = [reloadPrompt.element, defaults.element, reportModal.element, lowMemoryPrompt.element, optimizer?.element].filter(Boolean);
+  const overlays = [reloadPrompt.element, defaults.element, lowMemoryPrompt.element, optimizer?.element].filter(Boolean);
   captureOverlays(overlays);
   scope.own(() => { for (const element of overlays) element.remove(); });
   if (overlayHost) overlayHost.replaceChildren(...overlays);
@@ -66,8 +64,6 @@ function settingsContent({ commands, scope, refresh, requiresReload, overlayHost
   const graphicsDetail = node("p", { className: "ve-setting-live-detail", attrs: { "data-ve-graphics-resolved": true } });
   const diceDetail = node("p", { className: "ve-setting-live-detail", attrs: { "data-ve-dice-resolved": true } });
   let currentLayout = preferences;
-  let deviceIdentity = Object.freeze({ label: uiText(commands, "DesktopBrowser", "Desktop browser"), precision: "family" });
-  const deviceValue = node("strong", { text: uiText(commands, "DeviceResolving", labels.deviceResolving ?? "Detecting…") });
   const updateNarrowDetails = (layout = commands.readPresentationPreferences()) => {
     currentLayout = Object.freeze({ ...currentLayout, ...layout });
     const followsLayout = currentLayout.joystickSide === "follow";
@@ -77,13 +73,6 @@ function settingsContent({ commands, scope, refresh, requiresReload, overlayHost
       const side = currentLayout.joystickResolvedSide === "right" ? (labels.right ?? uiText(commands, "Right", "Right")) : (labels.left ?? uiText(commands, "Left", "Left"));
       joystickDetail.textContent = uiText(commands, "FollowLayoutCurrently", "Follow layout · currently {side}", { side });
     }
-    deviceValue.textContent = deviceDetectedText({
-      deviceLabel: deviceIdentity.label,
-      modePreference: currentLayout.mode,
-      resolvedMode: currentLayout.resolvedMode ?? currentLayout.formFactor,
-      labels,
-      localize: commands.localize
-    });
     updateAutoPolicyDetail(graphicsDetail, currentLayout.graphicsSafety, currentLayout.graphicsPolicy?.effects, (value) => choiceLabel(fieldsByKey.get("graphicsSafety"), value), commands.localize);
     updateAutoPolicyDetail(diceDetail, currentLayout.diceRendering, currentLayout.graphicsPolicy?.dice, (value) => choiceLabel(fieldsByKey.get("diceRendering"), value), commands.localize);
   };
@@ -93,19 +82,6 @@ function settingsContent({ commands, scope, refresh, requiresReload, overlayHost
   updateNarrowDetails(preferences);
   commands.watchLayoutState?.(scope, updateNarrowDetails);
   commands.watchGraphicsPolicy?.(scope, (graphicsPolicy) => updateNarrowDetails({ graphicsPolicy }));
-
-  const deviceInfo = node("div", { className: "ve-setting ve-device-information", children: [
-    node("span", { className: "ve-device-information-label", text: labels.deviceLabel ?? uiText(commands, "DeviceLabel", "Device Detected") }),
-    deviceValue
-  ] });
-  void commands.readDeviceIdentity?.().then((identity) => {
-    if (!scope.disposed) {
-      deviceIdentity = identity ?? deviceIdentity;
-      updateNarrowDetails(currentLayout);
-    }
-  }).catch(() => {
-    if (!scope.disposed) updateNarrowDetails(currentLayout);
-  });
 
   const native = preferences.nativeSettings ?? {};
   return node("section", {
@@ -141,7 +117,7 @@ function settingsContent({ commands, scope, refresh, requiresReload, overlayHost
               detail: field.key === "joystickSide" ? joystickDetail : field.key === "graphicsSafety" ? graphicsDetail : field.key === "diceRendering" ? diceDetail : null,
               onSaved: ["joystickSide", "mode", "graphicsSafety", "diceRendering"].includes(field.key) ? () => updateJoystickDetail(commands.readPresentationPreferences()) : null
             });
-            return field.key === "mode" ? [row, deviceInfo] : [row];
+            return [row];
           });
           let children = rowsFor(group.fields);
           if (group.id === "performance") {
@@ -156,15 +132,11 @@ function settingsContent({ commands, scope, refresh, requiresReload, overlayHost
             ];
           }
           if (group.id === "overlays") children.push(moduleOverlaySettings(commands, scope, status, labels));
-          if (group.id === "support") {
-            children.unshift(node("div", { className: "ve-settings-help", children: [node("button", {
-              className: "ve-settings-controls-link", attrs: { type: "button" },
-              children: [icon("fa-hand-pointer"), node("strong", { text: commands.localize("VEMOBILE.Controls.Title") })],
-              on: { click: event => commands.openControlsGuide(event.currentTarget) }
-            }, scope)] }));
-            reportActions.classList.add("ve-settings-support-actions");
-            children.push(reportActions);
-          }
+          if (group.id === "device") children.push(node("button", {
+            className: "ve-settings-controls-link", attrs: { type: "button" },
+            children: [icon("fa-hand-pointer"), node("span", { text: commands.localize("VEMOBILE.Controls.Title") })],
+            on: { click: event => commands.openControlsGuide(event.currentTarget) }
+          }, scope));
           return settingsSection(group.id, localizedText(commands.localize, `VEMOBILE.Settings.UI.Group.${group.id}`, group.title), children, scope, accordionState);
         }) })
       ] }),
@@ -896,52 +868,26 @@ function profileName(value) {
 
 function sessionStatusPanel(commands, scope, labels) {
   const list = node("div", { className: "ve-session-status-list" });
-  const rows = new Map();
-  const update = (snapshot) => {
-    const users = snapshot?.users ?? [];
-    const ids = users.map((user) => String(user.id ?? user.name));
-    if (ids.length !== rows.size || ids.some((id) => !rows.has(id))) {
-      rows.clear();
-      const elements = users.map((user) => {
-        const latency = node("span", { className: "ve-session-metric", attrs: { title: labels.latencyTitle ?? uiText(commands, "LatencyTitle", "Local average one-way connection latency") } });
-        const fps = node("span", { className: "ve-session-metric", attrs: { title: labels.fpsTitle ?? uiText(commands, "FpsTitle", "Local display frame rate") } });
-        const element = node("div", { className: "ve-session-user", children: [
-          node("span", { className: "ve-session-user-dot", attrs: { "aria-hidden": "true", style: `--ve-session-user-color:${user.color}` } }),
-          node("strong", { text: user.name }), latency, fps
-        ] });
-        rows.set(String(user.id ?? user.name), { element, latency, fps });
-        return element;
-      });
-      list.replaceChildren(...elements);
-    }
-    for (const user of users) {
-      const row = rows.get(String(user.id ?? user.name));
-      if (!row) continue;
-      row.latency.textContent = metricText(user.latency, "ms", commands.readLocale?.() ?? "en");
-      row.fps.textContent = metricText(user.fps, "FPS", commands.readLocale?.() ?? "en");
-    }
-  };
+  const update = snapshot => list.replaceChildren(...(snapshot?.users ?? []).map(user => node("div", {
+    className: "ve-session-user", children: [
+      node("span", { className: "ve-session-user-dot", attrs: { "aria-hidden": "true", style: `--ve-session-user-color:${user.color}` } }),
+      node("strong", { text: user.name })
+    ]
+  })));
   update(commands.readSessionStatus());
   commands.watchSessionStatus?.(scope, update);
-  return node("div", { className: "ve-session-status", attrs: { "aria-label": labels.online ?? uiText(commands, "Online", "Online") }, children: [
-    node("span", { className: "ve-session-status-online", text: labels.online ?? uiText(commands, "Online", "Online") }),
-    list,
-    node("p", { className: "ve-session-status-note", text: labels.sessionMetricsNote ?? uiText(commands, "SessionMetricsNote", "Latency and FPS are available for this device only.") })
+  return node("div", { className: "ve-session-status", children: [
+    node("span", { className: "ve-session-status-online", text: labels.online ?? uiText(commands, "Online", "Online") }), list
   ] });
-}
-
-function metricText(value, suffix, locale = "en") {
-  return Number.isFinite(value) ? `${localizedNumber(value, locale)} ${suffix}` : "—";
 }
 
 export function groupSettings(fields) {
   const groups = [
-    { id: "device", title: "Device & Power", keys: ["mode", "keepScreenAwake"] },
+    { id: "device", title: "Device & Power", keys: ["mode", "keepScreenAwake", "muteMobileAudio"] },
     { id: "scene", title: "Scene & Controls", keys: ["movementControl", "joystickSide", "actionSceneReturn", "recenterAfterMove", "movementRepeatDelay", "quickbarEnabled", "quickbarSource", "quickbarRows", "showActionSummaries", "compactActionSummaries", "combatCarousel"] },
     { id: "appearance", title: "Appearance", keys: ["theme", "colorScheme", "headerArtwork", "headerArtworkOpacity", "protectVeStyling"] },
     { id: "performance", title: "Performance & Memory", keys: ["performanceMode", "noCanvas", "graphicsSafety", "diceRendering", "mobileOptimizedAssets", "afterGraphicsFailure", "sceneMemoryWarnings"] },
     { id: "overlays", title: "Module Overlays (Experimental)", keys: [], always: true },
-    { id: "support", title: "Support", keys: ["loggingLevel", "saveDiagnosticsToJournal"], always: true }
   ];
   const known = new Set(groups.flatMap((group) => group.keys));
   const result = groups.map((group) => ({ ...group,
@@ -1023,94 +969,6 @@ function createReloadPrompt(commands, scope) {
       later.disabled = false;
       element.removeAttribute("hidden");
       reload.focus({ preventScroll: true });
-    }
-  });
-}
-
-function diagnosticsButtons(commands, scope, reportModal) {
-  const feedback = node("span", { className: "ve-settings-diagnostics-feedback", attrs: { role: "status", "aria-live": "polite" } });
-  const copy = node("button", {
-    className: "ve-settings-diagnostics-button ve-button-accent-outline",
-    attrs: { type: "button", "aria-label": uiText(commands, "CopyDiagnosticReport", "Copy diagnostic report to clipboard"), title: uiText(commands, "CopyDiagnosticReport", "Copy diagnostic report to clipboard") },
-    children: [
-      icon("fa-copy"),
-      node("strong", { text: uiText(commands, "CopyReport", "Copy report") })
-    ]
-  });
-  const show = node("button", {
-    className: "ve-settings-diagnostics-button ve-button-accent-outline",
-    attrs: { type: "button", "aria-label": uiText(commands, "ShowDiagnosticReport", "Show diagnostic report"), title: uiText(commands, "ShowDiagnosticReport", "Show diagnostic report") },
-    children: [icon("fa-file-lines"), node("strong", { text: uiText(commands, "ShowReport", "Show report") })]
-  });
-  scope.listen(copy, "click", async () => {
-    if (copy.disabled) return;
-    copy.disabled = true;
-    feedback.textContent = uiText(commands, "Copying", "Copying…");
-    try {
-      const report = commands.generateDiagnosticReport();
-      const result = await commands.copyDiagnostics(report);
-      if (!result.ok) throw new Error(uiText(commands, "CopyReportFailed", "This browser could not copy the report. Try again from a secure browser tab."));
-      feedback.textContent = uiText(commands, "Copied", "Copied");
-    } catch (error) {
-      feedback.textContent = error?.message ?? uiText(commands, "CouldNotCopy", "Could not copy");
-    } finally {
-      copy.disabled = false;
-    }
-  });
-  scope.listen(show, "click", () => {
-    reportModal.show(commands.generateDiagnosticReport(), show);
-  });
-  return node("div", { className: "ve-settings-diagnostics", children: [show, copy, feedback] });
-}
-
-function createDiagnosticReportModal(commands, scope) {
-  let displayedReport = "";
-  let returnFocus = null;
-  const report = node("pre", { className: "ve-settings-report-text", attrs: { tabindex: "0" } });
-  const feedback = node("span", { className: "ve-settings-diagnostics-feedback", attrs: { role: "status", "aria-live": "polite" } });
-  const copyButton = node("button", { className: "ve-settings-reload-now", attrs: { type: "button" }, children: [icon("fa-copy"), node("span", { text: uiText(commands, "CopyReport", "Copy report") })] });
-  const close = node("button", { className: "ve-settings-reload-later", attrs: { type: "button" }, text: uiText(commands, "Close", "Close") });
-  const element = node("div", {
-    className: "ve-settings-report-modal",
-    attrs: { hidden: true, role: "dialog", "aria-modal": "true", "aria-labelledby": "ve-settings-report-title" },
-    children: [node("section", { className: "ve-settings-report-card", children: [
-      node("h2", { text: uiText(commands, "DiagnosticReport", "Diagnostic Report"), attrs: { id: "ve-settings-report-title" } }),
-      node("p", { text: uiText(commands, "LiveReportDescription", "This is the same live report used by Copy Report.") }),
-      report,
-      feedback,
-      node("div", { className: "ve-settings-reload-actions", children: [close, copyButton] })
-    ] })]
-  });
-  const dismiss = () => {
-    element.hidden = true;
-    returnFocus?.focus?.({ preventScroll: true });
-  };
-  scope.listen(close, "click", dismiss);
-  scope.listen(element, "ve-close", dismiss);
-  scope.listen(element, "click", (event) => { if (event.target === element) dismiss(); });
-  scope.listen(copyButton, "click", async () => {
-    if (copyButton.disabled) return;
-    copyButton.disabled = true;
-    feedback.textContent = uiText(commands, "Copying", "Copying…");
-    try {
-      const result = await commands.copyDiagnostics(displayedReport);
-      if (!result.ok) throw new Error(uiText(commands, "CopyReportFailed", "This browser could not copy the report. Try again from a secure browser tab."));
-      feedback.textContent = uiText(commands, "Copied", "Copied");
-    } catch (error) {
-      feedback.textContent = error?.message ?? uiText(commands, "CouldNotCopy", "Could not copy");
-    } finally {
-      copyButton.disabled = false;
-    }
-  });
-  return Object.freeze({
-    element,
-    show(value, trigger) {
-      displayedReport = String(value);
-      report.textContent = displayedReport;
-      feedback.textContent = "";
-      returnFocus = trigger ?? null;
-      element.hidden = false;
-      report.focus({ preventScroll: true });
     }
   });
 }
@@ -1200,7 +1058,7 @@ function settingField(field, commands, status, scope, reloadPrompt, { detail = n
     });
   }
   return node("div", {
-    className: `ve-setting ve-setting-${field.type}${field.key === "loggingLevel" ? " ve-setting-logging" : ""}`,
+    className: `ve-setting ve-setting-${field.type}`,
     children: [
       settingCopy({ ...field, hint }, controlId, hintId, detail, commands),
       node("div", { className: "ve-setting-control", children: [control, suffix] })
@@ -1342,16 +1200,6 @@ function safeId(value) {
 function friendlyLabel(value, fallback) {
   const label = String(value ?? "").trim();
   return !label || /^[A-Z0-9_.-]+$/u.test(label) ? fallback : label;
-}
-
-export function deviceDetectedText({ deviceLabel, modePreference, resolvedMode, labels = {}, localize }) {
-  const selected = modePreference !== "auto";
-  const mode = selected ? modePreference : resolvedMode;
-  const normalized = ["phone", "tablet", "desktop"].includes(mode) ? mode : "phone";
-  const suffixKey = `${normalized}Mode${selected ? "Selected" : "Enabled"}`;
-  const fallbackMode = localizedText(localize, `VEMOBILE.Settings.UI.${normalized[0].toUpperCase()}${normalized.slice(1)}Mode${selected ? "Selected" : "Enabled"}`, `${normalized[0].toUpperCase()}${normalized.slice(1)} mode ${selected ? "selected" : "enabled"}`);
-  const device = String(deviceLabel || uiText({ localize }, "DesktopBrowser", "Desktop browser"));
-  return `${device} · ${labels[suffixKey] ?? fallbackMode}`;
 }
 
 export function autoResolvedPolicyText(requested, resolved, label = titleCase, localize) {

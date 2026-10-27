@@ -18,8 +18,9 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
   const actions = new Map((Array.isArray(context.actions) ? context.actions : []).filter(action =>
     action && typeof action.id === "string" && typeof action.revision === "string").map(action => [action.id, action]));
   const actionFor = id => actions.has(id) ? { action: Object.freeze({ id, revision: actions.get(id).revision,
+    ...(typeof actions.get(id).active === "boolean" ? { active: actions.get(id).active } : {}),
     ...(actions.get(id).icon === "fa-lightbulb" ? { icon: "fa-lightbulb" } : {}) }) } : {};
-  const edits = new Map((Array.isArray(context.edits) ? context.edits : []).filter(edit => edit && validId(edit.id)
+  const edits = new Map((Array.isArray(context.edits) ? context.edits : []).filter(edit => edit && typeof edit.id === "string" && /^(?:[a-z][a-z0-9-]{0,63}|quantity:[a-zA-Z0-9_-]{1,128})$/u.test(edit.id)
     && typeof edit.revision === "string" && ["integer", "boolean"].includes(edit.kind)).map(edit => [edit.id, edit]));
   const editFor = (id, value) => {
     const edit = edits.get(id);
@@ -49,6 +50,7 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
       seen.add(entry.id);
       const max = entry.maxPath ? readProfilePath(actor, entry.maxPath) : undefined;
       return [Object.freeze({ id: entry.id, label: label(entry), value, format: entry.format ?? "number",
+        ...(entry.editControl === "checkbox" && entry.format === "boolean" ? { editControl: "checkbox" } : {}),
         ...actionFor(entry.actionId),
         ...editFor(entry.editId, value),
         ...(typeof value === "number" && typeof max === "number" && Number.isFinite(max) ? { max } : {}) })];
@@ -58,7 +60,8 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
     if (!entry || !validId(entry.id) || !enabled(entry) || !label(entry)) return null;
     if (["values", "counters"].includes(entry.kind)) {
       const projected = rows(entry.fields);
-      return projected.length ? Object.freeze({ id: entry.id, label: label(entry), kind: entry.kind, rows: projected, summary: rows(entry.summary) }) : null;
+      return projected.length ? Object.freeze({ id: entry.id, label: label(entry), kind: entry.kind, rows: projected, summary: rows(entry.summary),
+        ...(entry.layout === "inline" ? { layout: "inline" } : {}) }) : null;
     }
     if (entry.kind === "text") {
       const value = readProfilePath(actor, entry.path);
@@ -83,11 +86,13 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
             ...(typeof readProfilePath(item, entry.descriptionPath) === "string" ? { description: readProfilePath(item, entry.descriptionPath) } : {}),
             ...(typeof entry.valueLabel === "string" && entry.valueLabel.trim() ? { valueLabel: localizedText(localize, entry.valueLabelKey ?? entry.valueLabel, entry.valueLabel) } : {}),
             ...(typeof entry.valuePrefix === "string" ? { valuePrefix: entry.valuePrefix } : {}),
+            ...(validId(entry.secondaryActionIdPrefix) && actions.has(`${entry.secondaryActionIdPrefix}:${id}`) ? { secondaryAction: actionFor(`${entry.secondaryActionIdPrefix}:${id}`).action } : {}),
+            ...(entry.quantityEditable ? editFor(`quantity:${id}`, value) : {}),
             ...actionFor(validId(entry.actionIdPrefix) ? `${entry.actionIdPrefix}:${id}` : undefined) }));
         } catch { /* A malformed item cannot expose extra fields or break a section. */ }
       }
       projected.sort((a, b) => a.label.localeCompare(b.label));
-      return projected.length ? Object.freeze({ id: entry.id, label: label(entry), kind: "items", rows: Object.freeze(projected), summary: rows(entry.summary) }) : null;
+      return projected.length || entry.keepEmpty === true ? Object.freeze({ id: entry.id, label: label(entry), kind: "items", rows: Object.freeze(projected), summary: rows(entry.summary) }) : null;
     }
     return null;
   };
@@ -104,7 +109,8 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
     });
     if (!sections.length) continue;
     seenTabs.add(tab.id);
-    tabs.push(Object.freeze({ id: tab.id, label: label(tab), sections: Object.freeze(sections) }));
+    tabs.push(Object.freeze({ id: tab.id, label: label(tab), sections: Object.freeze(sections),
+      ...(["paired", "triple"].includes(tab.summaryLayout) ? { summaryLayout: tab.summaryLayout } : {}) }));
   }
   return Object.freeze(tabs);
 }

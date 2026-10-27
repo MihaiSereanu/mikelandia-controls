@@ -3,6 +3,15 @@ import { spellForActor, magicWinds } from "./magic.mjs";
 
 const field = (id, labelKey, path, extra = {}) => ({ id, labelKey, label: labelKey, path, editId: id, ...extra });
 const characteristic = (id, key, label) => ({ id, labelKey: key, label, path: `system.characteristics.${id}.value`, actionId: `characteristic:${id}` });
+const encumbrance = { id: "encumbrance", kind: "counters", labelKey: "Encumbrance", label: "Encumbrance", fields: [
+  { id: "encumbrance", labelKey: "Encumbrance", label: "Encumbrance", maxPath: "system.status.encumbrance.max", read: actor => {
+    const value = actor.system?.status?.encumbrance?.current;
+    // Native preparation uses toFixed(2); keep the counter numeric without recomputing it.
+    if (typeof value !== "number" && (typeof value !== "string" || !value.trim())) return undefined;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : undefined;
+  } }
+] };
 
 /** Mappings verified against wfrp4e 10.1.2 native models and sheet templates. */
 export const warhammerCharacterProfile = {
@@ -28,8 +37,9 @@ export const warhammerCharacterProfile = {
       ] }
     ] },
     { id: "combat", labelKey: "Combat", label: "Combat", sections: [
+      encumbrance,
       { id: "momentum", kind: "values", labelKey: "Momentum", label: "Momentum", when: context => context.use5e, fields: [
-        field("momentum", "Momentum", "system.status.momentum", { format: "boolean" })
+        field("momentum", "Momentum", "system.status.momentum", { format: "boolean", editControl: "checkbox" })
       ] },
       { id: "advantage", kind: "counters", labelKey: "Advantage", label: "Advantage", when: context => !context.use5e && !context.groupAdvantage, fields: [
         field("advantage", "Advantage", "system.status.advantage.value")
@@ -72,6 +82,7 @@ export function createWarhammerCharacterProfile(actor, context) {
     include: (item, _context, owner) => ownedWarhammerItem(owner, String(item.id), item.type) === item });
   return { tabs: [...warhammerCharacterProfile.tabs,
   { id: "trappings", labelKey: "Trappings", label: "Trappings", sections: [
+    encumbrance,
     inventory("money", "Money", "Money", ["money"]),
     inventory("weapons", "Weapons", "Weapons", ["weapon"]),
     inventory("armour", "Armour", "Armour", ["armour"]),

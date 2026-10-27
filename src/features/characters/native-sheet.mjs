@@ -12,19 +12,16 @@ export function renderNativeCharacter({ state, commands, scope, createChooser, r
   scope = shell.scope = owner.child("native-character-pane");
   const actor = state.snapshot.selectedActor;
   const text = (key, fallback) => localizedText(commands.localize, `VEMOBILE.NativeSheet.${key}`, fallback);
-  const status = node("p", { attrs: { role: "status", "aria-live": "polite" } });
   const button = node("button", {
     className: "ve-native-sheet-open", text: text("Open", "Open Character Sheet"),
     attrs: { type: "button", disabled: !actor.nativeSheetAvailable },
     on: { click: async () => {
       if (button.disabled || scope.disposed) return;
       button.disabled = true;
-      status.textContent = text("Opening", "Opening character sheet…");
       try {
         await commands.openNativeActorEditor({ actorSourceUuid: actor.sourceUuid });
-        if (!scope.disposed) status.textContent = "";
       } catch (error) {
-        if (!scope.disposed) status.textContent = error?.message ?? text("Failed", "The character sheet could not be opened.");
+        if (!scope.disposed) commands.reportCharacterMutationError?.(error);
       } finally { if (!scope.disposed) button.disabled = !actor.nativeSheetAvailable; }
     } }
   }, scope);
@@ -37,9 +34,8 @@ export function renderNativeCharacter({ state, commands, scope, createChooser, r
       node("div", { children: [node("h2", { text: actor.name }), node("p", { text: actor.typeLabel })] })
     ] }),
     button,
-    status,
     node("p", { text: actor.presentation === "profile"
-      ? localizedText(commands.localize, "VEMOBILE.Panels.NativeHint", "Use the character sheet for edits and additional game actions.")
+      ? localizedText(commands.localize, "VEMOBILE.Panels.NativeHint", "Open the sheet to make other changes.")
       : text("Hint", "Use the character sheet for inventory and game actions.") }),
     ...renderProfilePanels(actor, state, commands, scope),
     chooser.element

@@ -83,7 +83,7 @@ export function createActorEditorGateway({ getGame = () => globalThis.game, isAc
         sessions.set(application, { sourceUuid: actorSourceUuid(actor) });
         const markEditor = (app, html) => {
           if (app !== application) return;
-          const candidates = [app.element, html, app.element?.[0], html?.[0]];
+          const candidates = [app.element, app.element?.[0], html, html?.[0]];
           // HTMLFormElement[0] is its first control, not a jQuery root.
           const element = candidates.find(candidate => candidate?.nodeType === 1) ?? candidates.find(candidate => candidate?.classList);
           element?.classList?.add("ve-mobile-native-editor");

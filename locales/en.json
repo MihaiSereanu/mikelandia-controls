@@ -1,6 +1,7 @@
 {
   "VEMOBILE": {
     "Panels": {
+      "XP": "XP",
       "ActionUnavailable": "This game action is no longer available.",
       "InvalidAction": "Invalid game action request.",
       "EditionChanged": "The game edition changed. Reopen the action.",
@@ -26,7 +27,28 @@
       "InvalidResource": "Invalid resource edit.",
       "InvalidResourceValue": "Enter a valid value within this resource's limits.",
       "ResourceFailed": "The resource could not be saved.",
-      "NativeHint": "Use the character sheet for edits and additional game actions."
+      "NativeHint": "Open the sheet to make other changes."
+    },
+    "Inventory": {
+      "AddItem": "Add item",
+      "Custom": "Create custom item",
+      "SearchCatalog": "Search catalog",
+      "Catalog": "Catalog",
+      "Search": "Search gear",
+      "Name": "Item name",
+      "SlotsUsed": "Slots used",
+      "PerQuantity": "Per quantity",
+      "InvalidSlots": "Use whole numbers: slots at least 0 and per quantity at least 1.",
+      "Create": "Create item",
+      "Cancel": "Cancel",
+      "Loading": "Loading gear…",
+      "Matches": "matching items",
+      "NoItems": "No matching gear.",
+      "Unavailable": "Some catalogs could not be loaded.",
+      "LoadFailed": "Could not load the catalog. Try again.",
+      "Retry": "Retry catalog",
+      "Ignite": "Light",
+      "Extinguish": "Extinguish"
     },
     "NativeSheet": {
       "Open": "Open Character Sheet",
@@ -121,6 +143,10 @@
       }
     },
     "Settings": {
+      "MuteMobileAudio": {
+        "Name": "Mute audio in mobile view",
+        "Hint": "Silence audio in this browser while the mobile view is active. Turn off to hear Foundry audio."
+      },
       "DesktopMobileNotice": "Phone and Tablet controls are available in those modes. Your preferences are saved, and changing Mobile Mode reloads Foundry.",
       "Mode": {
         "Name": "Mobile Mode",
@@ -1312,7 +1338,7 @@
         "Back": "Back or Escape closes the topmost surface first. Use the visible Close or Cancel button when a placement asks for a decision.",
         "Availability": "Available actions depend on the object, Scene configuration and your permissions. A control cannot grant permission to act.",
         "Pan": "Drag with one finger to pan the Scene. Pinch with two fingers to zoom. Begin outside buttons and overlays.",
-        "Select": "Tap a token you control to select it. Another ordinary tap keeps it selected; it is not the same as a timed double tap. Tap a token whose controls are open to close those controls.",
+        "Select": "Tap a token you control to select it immediately. A quick second tap toggles its target while keeping it selected. Tap a token whose controls are open to close those controls.",
         "Target": "Quickly tap the same visible token twice to toggle targeting. The taps must be close together in time and position; this does not open its sheet.",
         "TokenHold": "Hold a token you control without moving, then release to open its native controls.",
         "TokenDrag": "To move an existing token, hold it still first, then drag after the hold activates. Moving before the hold activates pans the Scene. Native movement, walls and pause rules still apply.",
@@ -1731,6 +1757,7 @@
         "TheNativeSettingsApplicationDidNotProduceAVisible": "The native settings application did not produce a visible window."
       },
       "TokenMovementGateway": {
+        "TokenSelectionRejected": "Foundry or another module prevented token selection. Check the token layer and display focus settings.",
         "TheActiveSceneHasChanged": "The active scene has changed.",
         "ThatTokenIsNoLongerAvailable": "That token is no longer available.",
         "YouNoLongerControlThisToken": "You no longer control this token.",

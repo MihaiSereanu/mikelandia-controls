@@ -21,7 +21,7 @@ export function nativeSceneTileTapAllowed({ active, state, presentation }) {
     && sceneInteractionIsReady(presentation));
 }
 
-export function createAppKernel({ store, session, commandGateway, biographyGateway, actorEditorGateway = null, combatGateway, cameraIntents, authoritativeGateway, canvasRecoveryGateway = null, loadTimingGateway = null, reloadApplication = () => globalThis.window?.location?.reload?.(), connectionGeneration, sceneGateway, templatePlacementGateway, nativeTokenPlacementGateway = null, actorTokenPlacementGateway = null, movementGateway, quickbarGateway, hotbarGateway = null, actionBarPreferences = null, nativeChatGateway, armorClassGateway = null, diagnosticsJournalGateway = null, activeEffectContextGateway, actionSessionGateway, preferencesGateway, settingsCompatibilityGateway, moduleOverlayGateway, sessionStatusGateway, deviceIdentityGateway, controlsGuideGateway = null, isControlsUiReady = () => false, themeGateway, mobileBackGateway = null, mobileAssetGateway = null, lowMemoryGateway = null, graphicsProfileGateway = lowMemoryGateway, graphicsRecoveryGateway = null, metrics, diagnostics, performanceObserver = null, wakeLockController, readPolicy, readGraphicsPolicy = () => null, watchGraphicsPolicy = () => () => {}, disable, preparePresentation = () => {}, createFrame = createAppFrame }) {
+export function createAppKernel({ store, session, commandGateway, biographyGateway, actorEditorGateway = null, combatGateway, cameraIntents, authoritativeGateway, canvasRecoveryGateway = null, loadTimingGateway = null, reloadApplication = () => globalThis.window?.location?.reload?.(), connectionGeneration, sceneGateway, templatePlacementGateway, nativeTokenPlacementGateway = null, actorTokenPlacementGateway = null, movementGateway, quickbarGateway, hotbarGateway = null, actionBarPreferences = null, nativeChatGateway, armorClassGateway = null, activeEffectContextGateway, actionSessionGateway, preferencesGateway, settingsCompatibilityGateway, moduleOverlayGateway, sessionStatusGateway, controlsGuideGateway = null, isControlsUiReady = () => false, themeGateway, mobileBackGateway = null, mobileAssetGateway = null, lowMemoryGateway = null, graphicsProfileGateway = lowMemoryGateway, graphicsRecoveryGateway = null, metrics, diagnostics, performanceObserver = null, wakeLockController, readPolicy, readGraphicsPolicy = () => null, watchGraphicsPolicy = () => () => {}, disable, preparePresentation = () => {}, createFrame = createAppFrame }) {
   const localize = (key, fallback, data) => localizedText((id, _fallback, values) => preferencesGateway?.localize?.(id, values), key, fallback, data);
   let runtimeScope = null;
   let activationCommitted = false;
@@ -523,7 +523,6 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       return unsubscribe;
     },
     watchGraphicsPolicy: (owner, onUpdate) => watchGraphicsPolicy(owner, onUpdate),
-    readDeviceIdentity: () => deviceIdentityGateway?.read?.() ?? Promise.resolve(Object.freeze({ label: localizedText(localize, "VEMOBILE.Interface.DeviceIdentity.DesktopBrowser", "Desktop browser"), precision: "family" })),
     readSessionStatus: () => sessionStatusGateway?.snapshot?.() ?? Object.freeze({ users: Object.freeze([]) }),
     watchSessionStatus: (owner, onUpdate) => sessionStatusGateway?.watch?.(owner, onUpdate),
     readModuleOverlays: () => moduleOverlayGateway?.snapshot?.() ?? Object.freeze({ scanned: false, entries: Object.freeze([]) }),
@@ -551,16 +550,9 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       guardConnection,
       invalidate: () => store.dispatch({ type: "view-invalidated" })
     }),
-    generateDiagnosticReport: () => diagnostics?.report?.() ?? "VE Mobile diagnostics are unavailable.",
-    saveDiagnosticsNow: () => diagnosticsJournalGateway?.flush?.({ explicit: true }) ?? Promise.resolve(false),
     openArmorClass: (actorSourceUuid) => guardConnection(expected => armorClassGateway.open({ actorSourceUuid, ...expected })),
-    copyDiagnostics: (report) => diagnostics?.copy?.(report) ?? Promise.resolve(Object.freeze({ ok: false, text: String(report ?? localizedText(localize, "VEMOBILE.Interface.AppKernel.VEMobileDiagnosticsAreUnavailable", "VE Mobile diagnostics are unavailable.")) })),
     updateSetting: async (payload) => {
       store.dispatch({ type: "action-navigation-invalidated" });
-      if ((payload?.namespace ?? "ve-mobile") === "ve-mobile" && payload?.key === "mode" && readPolicy().active) {
-        try { await diagnosticsJournalGateway?.flush?.({ explicit: true }); }
-        catch (error) { diagnostics?.record?.("warn", "Diagnostics Journal could not flush before mode change", error); }
-      }
       const result = await guardConnection(() => preferencesGateway.set(payload));
       if (result.namespace === "ve-mobile" && ((result.key === "showActionSummaries" && result.value === false) || result.key === "compactActionSummaries")) {
         store.dispatch({ type: "dismiss-action-session" });
@@ -598,7 +590,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
         : store.state.route === "scene" ? store.state.snapshot?.scene?.quickbarActorSourceUuid || store.state.selectedActorSourceUuid : "";
       if (sourceUuid && sourceUuid !== visibleSource) return Promise.reject(new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.TheSelectedActorSourceChangedBeforeThisActionCould", "The selected Actor source changed before this action could run.")));
       if ([ACTOR_COMMANDS.ADD_EXPERIENCE, ACTOR_COMMANDS.UPDATE_CURRENCY, ACTOR_COMMANDS.SET_SPELL_SLOT_VALUE, ACTOR_COMMANDS.SET_ITEM_EQUIPPED, ACTOR_COMMANDS.SET_ITEM_ATTUNED, ACTOR_COMMANDS.SET_ITEM_FAVORITE, ACTOR_COMMANDS.SET_SPELL_PREPARED, ACTOR_COMMANDS.OPEN_ITEM_SHEET].includes(name)
-        || name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION || name === ACTOR_COMMANDS.SET_EXHAUSTION_LEVEL || [ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE].includes(name)) {
+        || name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION || name === ACTOR_COMMANDS.SET_EXHAUSTION_LEVEL || [ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name)) {
         const sourceUuid = String(payload?.actorSourceUuid ?? "");
         if (store.state.route !== "characters" || store.state.selectedActorSourceUuid !== sourceUuid
           || (name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION && store.state.characterTab !== "biography")) {
@@ -641,7 +633,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       executionSequence = activeActionExecutions.get(executionKey);
       const summaryExecution = { roots: new Set(), dismissed: false };
       activeSummaryExecutions.add(summaryExecution);
-      return guardConnection((expected) => commandGateway.execute(name, payload, [ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE].includes(name) ? {
+      return guardConnection((expected) => commandGateway.execute(name, payload, [ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name) ? {
         ...expected, isCurrent: () => owner === runtimeScope && !owner.disposed && activationCommitted && readPolicy().active
           && !store.state.reconnect && !store.state.modeTransition && store.state.route === "characters"
           && store.state.selectedActorSourceUuid === sourceUuid

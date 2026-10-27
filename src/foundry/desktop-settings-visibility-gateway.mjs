@@ -17,13 +17,11 @@ const DESKTOP_HIDDEN_SETTING_KEYS = Object.freeze([
   "graphicsSafety",
   "diceRendering",
   "protectVeStyling",
-  "characterFavouritesSource",
-  "loggingLevel"
+  "characterFavouritesSource"
 ]);
 const GROUPS = Object.freeze([
   { id: "preferences", keys: ["quickbarSource", "showActionSummaries", "compactActionSummaries"] },
-  { id: "compatibility", keys: ["fcsAutoSoftOverride"] },
-  { id: "support", keys: ["saveDiagnosticsToJournal", "controlsGuide"] }
+  { id: "compatibility", keys: ["fcsAutoSoftOverride"] }
 ]);
 
 /** Remove only unedited/omitted VE controls; other modules retain native submission. */

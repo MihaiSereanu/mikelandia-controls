@@ -44,10 +44,10 @@ export function knownSpell(item, actor) {
 }
 export function nativeLightSheet(actor, game) {
   try {
-    // The installed native tracker gathers world Player actors assigned to users.
-    // Native isClaimedByUser() is async in 4.0.6. Exact current-user
-    // assignment already establishes the claim without awaiting in projection.
-    if (actor.isToken || game.actors?.get?.(actor.id) !== actor || game.user.character !== actor) return null;
+    // Shadowdark 4.0.6 tracks world Player actors with player ownership, not
+    // merely the current user's assigned character. Keep synthetic actors out:
+    // the native tracker cannot retain their Scene/Token source identity.
+    if (actor.isToken || game.actors?.get?.(actor.id) !== actor) return null;
     const sheet = actor.sheet;
     return sheet?.actor === actor && typeof sheet._toggleLightSource === "function"
       && typeof game.shadowdark?.lightSourceTracker?.toggleLightSource === "function" ? sheet : null;

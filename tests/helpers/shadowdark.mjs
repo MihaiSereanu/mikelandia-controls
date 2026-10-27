@@ -6,9 +6,9 @@ export function createShadowdarkFixture({ pulp = false } = {}) {
   const actor = createActor({ type: "Player", name: "Mara", system: {
     attributes: { hp: { value: 7, max: 12 }, ac: { value: 14 } },
     abilities: Object.fromEntries(["str", "dex", "con", "int", "wis", "cha"].map((key, index) => [key, { value: 14 - index, mod: 2 - index }])),
-    luck: { available: true, remaining: 2 }, isSpellCaster: true, class: "Item.class", spellcasting: { classes: ["wizard"] }
+    level: { xp: 8 }, coins: { gp: 0, sp: 0, cp: 0 }, luck: { available: true, remaining: 2 }, isSpellCaster: true, class: "Item.class", spellcasting: { classes: ["wizard"] }
   } });
-  const physical = { isPhysical: true, isIdentified: true, stashed: false, quantity: 1 };
+  const physical = { isPhysical: true, isIdentified: true, stashed: false, quantity: 1, slots: { per_slot: 20 } };
   actor.items = collection([
     { id: "sword", type: "Weapon", name: "Sword", system: { ...physical, equipped: true, isWeapon: true, type: "melee", isThrown: false, handedness: "1h", subtext: "Melee • Close • 1d8" } },
     { id: "dagger", type: "Weapon", name: "Dagger", system: { ...physical, equipped: true, isWeapon: true, type: "melee", isThrown: true, handedness: "1h", subtext: "Melee • Close • 1d4" } },
@@ -46,13 +46,34 @@ export function createShadowdarkFixture({ pulp = false } = {}) {
     writes.push(args);
     for (const [path, value] of Object.entries(args[0])) {
       const keys = path.split(".");
-      keys.slice(0, -1).reduce((value, key) => value[key], actor)[keys.at(-1)] = value;
+      keys.slice(0, -1).reduce((value, key) => value[key] ??= {}, actor)[keys.at(-1)] = value;
     }
     hooks.emit("updateActor", actor, args[0]);
     return actor;
   };
+  actor.updateEmbeddedDocuments = async (_type, updates) => {
+    for (const update of updates) {
+      const item = actor.items.get(update._id);
+      item.system.quantity = update["system.quantity"];
+      hooks.emit("updateItem", item, update);
+    }
+    return updates;
+  };
+  actor.deleteEmbeddedDocuments = async (_type, ids) => ids.map(id => {
+    const item = actor.items.get(id);
+    actor.items.splice(actor.items.indexOf(item), 1);
+    hooks.emit("deleteItem", item, {});
+    return item;
+  });
+  actor.createEmbeddedDocuments = async (_type, records) => records.map(record => {
+    const id = `new${actor.items.length}`;
+    const item = { ...record, id, parent: actor, uuid: `${actor.uuid}.Item.${id}`,
+      system: { ...physical, ...record.system } };
+    if (hooks.call("preCreateItem", item, record, {}, game.user.id) === false) return null;
+    actor.items.push(item); hooks.emit("createItem", item, {}); return item;
+  }).filter(Boolean);
   actor.isClaimedByUser = async () => true;
-  actor.sheet = { actor, async _toggleLightSource(item) {
+  actor.sheet = { actor, async _onDropItemSD(_event, data) { return actor.createEmbeddedDocuments("Item", [{ name: data.uuid, type: "Basic", system: {} }]); }, async _toggleLightSource(item) {
     item.system.light.active = !item.system.light.active;
     game.shadowdark.lightSourceTracker.toggleLightSource(actor, item);
     hooks.emit("updateItem", item, {});

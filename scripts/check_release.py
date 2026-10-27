@@ -22,7 +22,7 @@ def check(base, version, build):
             if any(name.startswith(("tests/", "dist/", ".git/")) for name in archive.namelist()):
                 raise ValueError("Unexpected development files in public archive")
         systems = manifest.get("relationships", {}).get("systems", [])
-        if (suffix and systems) or (not suffix and [s["id"] for s in systems] != ["dnd5e"]):
+        if systems:
             raise ValueError("Unexpected installation channel restriction")
         print(f"Verified anonymous manifest and matching ZIP: module{suffix}.json {version}")
 
