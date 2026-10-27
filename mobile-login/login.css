@@ -149,6 +149,14 @@ footer {
   margin-top: 28px;
   text-align: center;
 }
+.install-help {
+  color: #bbc5cc;
+  font-size: 0.8125rem;
+  text-align: left;
+}
+@media (display-mode: standalone) {
+  #app-install { display: none; }
+}
 a {
   color: #cbd5dc;
   display: inline-flex;

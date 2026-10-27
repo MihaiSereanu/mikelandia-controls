@@ -1,20 +1,24 @@
-# Mobile login on the existing Foundry host
+# Mobile login and PWA runbook
 
-The standalone page uses the same origin as Foundry at `/mobile/`. Caddy serves five static files; Foundry owns the player list, passwords, and sessions. No database, build step, third-party script host, or additional service is required. This page is independent of the world's module activation and leaves the module's existing device detection and saved modes unchanged.
+`https://mikelandia.duckdns.org/mobile/` serves ten static files from `/srv/mikelandia-mobile`. Foundry owns users, passwords, and sessions; the page remembers only a per-world player ID, clears submitted passwords, and disables connected users. Visiting establishes a native `/join` session, logging out an existing world login in that browser. Module activation and mode selection remain independent.
 
-The page shows the running world's title and background, remembers only the selected player ID per world in browser local storage, and disables already-connected players. Passwords are cleared from the field on submission and never persisted by the page. Visiting it establishes a native `/join` session, which logs out an existing world login in that browser, as the standard login page does.
+## Build and check
 
-## Local checks and preview
+- Build: `py scripts/build_mobile_login.py` > `dist/mobile-login.zip`, separate from module packages.
+- Protocol: `node --test --test-reporter=dot tests/mobile-login.test.mjs`.
+- Fixtures: `node scripts/check_browser.mjs --filter "mobile-login" --screenshots`. Screenshots: `dist/mobile-login-*.png`; short viewports simulate keyboard space only.
 
-Run `node --test --test-reporter=dot tests/mobile-login.test.mjs` and `node scripts/check_browser.mjs --filter "mobile-login" --screenshots`. The browser fixtures exercise the real page/controller and native adapter with a simulated Foundry socket and authentication responses. Screenshots are in `dist/mobile-login-*.png`; they are fixture previews, not live login evidence. The short viewport simulates reduced space for a keyboard; physical keyboard behavior still requires a phone check.
+Latest deployed evidence and pending phone checks: [current status](current-status.md).
 
-Build the independent upload archive with `py scripts/build_mobile_login.py`. It contains only the page's five static files and does not change the normal Foundry module archive.
+## App installation
 
-## Deployed Caddy setup
+Android Chrome: use Install or **Add to home screen > Install**, then launch MC. iOS: **Share > Add to Home Screen**. Regular tabs retain browser controls.
 
-Deployed on 2026-10-27 at `https://mikelandia.duckdns.org/mobile/`. Static files are in `/srv/mikelandia-mobile`; the original Caddyfile and deployment file hashes are backed up at `/var/backups/mikelandia-mobile/20261027-210837/`. Caddy was validated and reloaded; Foundry's process remained running without a restart. Serve only this static directory, never the whole Foundry Data directory.
+Manifest: standalone display, start `./`, scope `../` relative to `/mobile/manifest.webmanifest`, covering login and `/game`; route prefixes work. OS bars remain device-controlled. Installation controls hide when installed/standalone and work independently of Foundry availability. Icons (180/192/512px, 512 maskable) render Foundry's Amiri Bold as gold MC/hexagon on navy; font files are not redistributed. No service worker or offline game cache.
 
-The verified upstream is `127.0.0.1:30000`. The deployed configuration is:
+## Hosting and updates
+
+Caddy configuration (serve only this static directory):
 
 ```caddyfile
 mikelandia.duckdns.org {
@@ -31,14 +35,17 @@ mikelandia.duckdns.org {
 }
 ```
 
-For updates, validate using `sudo caddy validate --config /etc/caddy/Caddyfile`, then reload Caddy if its configuration changed. A Foundry restart is unnecessary. Public HTTP checks confirmed all five deployed files match the checkout, `/mobile` redirects to `/mobile/`, and the standard root, `/join`, `/game`, and Socket.IO library routes still reach Foundry. A browser loaded the deployed page and obtained the live world's seven players through the real socket, without errors or horizontal overflow. Evidence: `dist/mobile-login-deployment-http.json` and `dist/mobile-login-deployed-prelogin.{json,png}`. No credentials were submitted. Successful live login and physical-phone/keyboard checks remain pending; rejected credentials and no-world handling have fixture coverage.
+Replace static files without a service restart. For Caddy changes, run `sudo caddy validate --config /etc/caddy/Caddyfile`, then reload Caddy. Verify public hashes, `/mobile` redirect, and native `/`, `/join`, `/game`, and Socket.IO routes. Foundry need not restart.
 
-Rollback restores `/var/backups/mikelandia-mobile/20261027-210837/Caddyfile` to `/etc/caddy/Caddyfile`, validates it, and reloads Caddy. The static directory can remain on disk because the restored configuration will not serve it.
+Caddy can serve the page while Foundry is stopped; connection failures offer retry. No active world triggers a 20-second retry. Stopping the AWS instance stops both.
 
-The page remains available while Caddy runs, even if Foundry is stopped; it reports the connection failure and offers retry. With a running Foundry server and no active world, it checks again every 20 seconds. If the AWS instance is stopped, both pages are unavailable.
+## Rollback
 
-## Native compatibility boundary
+- PWA update deployed 2026-10-28: restore the five prior files from `/var/backups/mikelandia-mobile/20261027-225515-pwa/static/` to the static root; remove `pwa.mjs`, `manifest.webmanifest`, and `icons/mc-*.png`. No reload; installed device icons may persist. Backup name uses server time. This update left Caddy configuration unchanged.
+- Original login deployment: restore `/var/backups/mikelandia-mobile/20261027-210837/Caddyfile` to `/etc/caddy/Caddyfile`, validate, and reload. Static files may remain unserved. That backup also holds original deployment hashes.
 
-Verified against installed Foundry 14.369 source: GET `/join` establishes the cookie; Socket.IO emits `session`, followed by a `getJoinData` request returning `world`, `users`, and `activeUsers`. The page submits JSON `{action: "join", userId, password}` to POST `/join`, then follows a successful same-origin `/game` redirect. It loads the Socket.IO library served by that Foundry installation. Route prefixes are supported when mounted at `<prefix>/mobile/`.
+## Native compatibility
 
-These are Foundry's native internal login interfaces, so major Foundry updates need a login check. No Foundry core files are patched. No module-enabled detection is claimed. The standard Foundry login remains the fallback.
+Verified against Foundry 14.369 source: GET `/join` establishes a cookie; its served Socket.IO library emits `session`, then `getJoinData` returns `world`, `users`, `activeUsers`. POST `/join` accepts JSON `{action: "join", userId, password}`; follow a successful same-origin `/game` redirect. Mount prefixes at `<prefix>/mobile/`.
+
+These internal interfaces require checks after major Foundry upgrades. Core is unpatched; module-enabled detection is unavailable. Standard Foundry login is the fallback.

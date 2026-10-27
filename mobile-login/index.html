@@ -5,8 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#111b24">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Mikelandia Controls">
   <title>Mikelandia · Join your game</title>
   <link rel="stylesheet" href="./login.css">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" href="./icons/mc-192.png">
+  <link rel="apple-touch-icon" href="./icons/mc-180.png">
+  <script type="module" src="./pwa.mjs"></script>
   <script type="module" src="./main.mjs"></script>
 </head>
 <body>
@@ -27,7 +33,13 @@
     </form>
     <p id="error" role="alert" hidden></p>
     <button id="retry" class="secondary" type="button" hidden>Try again</button>
-    <footer><a id="standard-login" href="../join">Standard Foundry login</a></footer>
+    <footer>
+      <div id="app-install">
+        <button id="install-app" class="secondary" type="button" hidden>Install Mikelandia Controls</button>
+        <p class="install-help">For a view without the address bar, install this page from your browser menu: <strong>Add to home screen → Install</strong>. On iPhone or iPad, use <strong>Share → Add to Home Screen</strong>. Then open the MC icon.</p>
+      </div>
+      <a id="standard-login" href="../join">Standard Foundry login</a>
+    </footer>
     <noscript><p>JavaScript is needed for mobile login. Use the standard Foundry login link above.</p></noscript>
   </main>
 </body>

@@ -12,6 +12,26 @@ try {
   const doc = frame.contentDocument;
   if (new URLSearchParams(location.search).has("large")) doc.documentElement.style.fontSize = "150%";
   const el = id => doc.getElementById(id);
+  const manifestUrl = new URL(doc.querySelector('link[rel="manifest"]').href);
+  const manifest = await (await fetch(manifestUrl)).json();
+  check("installed app uses standalone display", manifest.display === "standalone");
+  for (const base of ["https://example.test/mobile/", "https://example.test/foundry/mobile/"]) {
+    const url = new URL("manifest.webmanifest", base);
+    const scope = new URL(manifest.scope, url);
+    const nativeRoutes = foundryRoutes(base);
+    check("login and native game stay inside installed scope " + base,
+      new URL(manifest.start_url, url).href === base && new URL(nativeRoutes.game).pathname.startsWith(scope.pathname));
+  }
+  const installEvent = new frame.contentWindow.Event("beforeinstallprompt", { cancelable: true });
+  let prompts = 0;
+  installEvent.prompt = async () => { prompts++; };
+  installEvent.userChoice = Promise.resolve({ outcome: "dismissed" });
+  frame.contentWindow.dispatchEvent(installEvent);
+  check("browser install offer reveals install button", installEvent.defaultPrevented && !el("install-app").hidden);
+  el("install-app").click(); el("install-app").click(); await tick();
+  check("install prompt is consumed once and dismissal retains instructions", prompts === 1 && el("install-app").hidden && !el("app-install").hidden);
+  frame.contentWindow.dispatchEvent(new frame.contentWindow.Event("appinstalled"));
+  check("installed app hides install instructions", el("app-install").hidden);
   const routes = foundryRoutes(`${location.origin}/mobile/`);
   let data = { world: { id: "fixture", title: "Gods of the Forbidden North" },
     users: [{ _id: "one", name: "Player One" }, { _id: "two", name: "Player Two" }, { _id: "busy", name: "Connected Player" }], activeUsers: ["busy"] };
