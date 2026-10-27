@@ -30,6 +30,19 @@ try {
   globalThis.game = { user: { isGM: false }, system: { id: "fixture" } };
   const apps = enableMobileApplications(scope, { getExistingApplications: () => [], isNativeDialog: app => app?.isNativeRoll === true });
   await tick();
+  const desktopHost = document.querySelector("#interface"), originalQuery = desktopHost.querySelector;
+  let desktopScans = 0;
+  desktopHost.querySelector = function (...args) { desktopScans++; return originalQuery.apply(this, args); };
+  for (let index = 0; index < 100; index++) {
+    root.style.setProperty("--fixture-animation-progress", String(index));
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+  desktopHost.querySelector = originalQuery;
+  check("100 approved animation mutations do not rescan desktop branches", desktopScans === 0);
+  root.classList.remove("ve-mobile-app"); await tick();
+  check("removing root ownership suppresses the formerly approved branch", !displayed(root));
+  root.classList.add("ve-mobile-app"); await tick();
+  check("restoring root ownership reveals the previously blocked branch", displayed(root));
   for (const protect of [true, false]) {
     root.toggleAttribute("data-ve-style-authority", protect); await tick();
     check(`calendar hidden with style protection ${protect}`, !displayed(document.querySelector("#smalltime-app button")));

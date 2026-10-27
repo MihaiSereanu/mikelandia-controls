@@ -20,6 +20,7 @@ import {
 import { createFoundrySessionGateway } from "./foundry/session-gateway.mjs";
 import { enableMobilePresentation, enableVeStyleAuthority } from "./foundry/mobile-presentation.mjs";
 import { createFoundryCommandGateway } from "./foundry/command-gateway.mjs";
+import { createRollTimingGateway } from "./foundry/roll-timing.mjs";
 import { enableMobileDiceGuard } from "./foundry/mobile-dice-guard.mjs";
 import { enableMobileAudio } from "./foundry/mobile-audio.mjs";
 import { resolveMobileGraphicsPolicy } from "./foundry/mobile-graphics-policy.mjs";
@@ -291,7 +292,8 @@ if (isGamePage) {
 
   const store = createSignalStore(initialAppState, reduceAppState);
   const connectionGeneration = createConnectionGeneration();
-  const commandGateway = createFoundryCommandGateway({ getSystemIntegration, getConnectionGeneration: () => connectionGeneration.current });
+  const rollTiming = createRollTimingGateway();
+  const commandGateway = createFoundryCommandGateway({ getSystemIntegration, rollTiming, getConnectionGeneration: () => connectionGeneration.current });
   const actorEditorGateway = createActorEditorGateway({ getSystemIntegration, isActive: () => readPolicy().active && mobileMutationReady,
     getConnectionGeneration: () => connectionGeneration.current });
   const biographyGateway = createFoundryBiographyGateway({ getSystemIntegration, getConnectionGeneration: () => connectionGeneration.current });
@@ -545,6 +547,7 @@ if (isGamePage) {
       installVeChatWindowClass();
     }
     const startupScope = createTaskScope("client-startup", performanceObserver);
+    startupScope.own(() => rollTiming.setEnabled(false));
     startupScope.listen(window, "pagehide", () => startupScope.dispose(), { once: true, passive: true });
     desktopSettingsVisibility.enable(startupScope);
     void startupGate.install(startupScope).then(() => reconcileMediaGuard());
@@ -580,6 +583,9 @@ if (isGamePage) {
         snapshot: () => kernel.snapshot(),
         backDiagnosticSnapshot: () => mobileBackGateway.snapshot(),
         performanceSnapshot: () => performanceObserver.snapshot(),
+        setRollTimingEnabled: enabled => rollTiming.setEnabled(enabled),
+        rollTimingSnapshot: () => rollTiming.snapshot(),
+        resetRollTiming: () => rollTiming.reset(),
         resetPerformance: () => performanceObserver.reset()
       });
     }

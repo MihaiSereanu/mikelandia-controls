@@ -31,6 +31,10 @@ try {
   unrelatedHiddenCard.className = "dsn-hide";
   document.body.append(unrelatedHiddenCard);
   check("VE native chat reveals Dice So Nice roll content during animation", getComputedStyle(hiddenRollCard).display === "block");
+  const wholeCard = document.createElement("li");
+  wholeCard.className = "message chat-message dsn-hide";
+  chatScreen.querySelector(".chat-log").append(wholeCard);
+  check("VE native chat reveals the complete Shadowdark card hidden by DSN", getComputedStyle(wholeCard).display === "flex");
   check("Dice So Nice visibility remains unchanged outside VE native chat", getComputedStyle(unrelatedHiddenCard).display === "none");
   chatScreen.remove(); unrelatedHiddenCard.remove(); dsnStyle.remove();
   f.actor.img = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="#39413d"/><circle cx="40" cy="28" r="17" fill="#b3bdb6"/></svg>');

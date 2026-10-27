@@ -58,6 +58,10 @@ Visible branding is Mikelandia Controls, including its vector startup mark. Keep
 
 `muteMobileAudio` is browser-local and defaults on. Guard first-gesture audio contexts, later playback, gain writes, detached media, and known embedded-player lifecycle. Restore prior audio state on disable/exit. Fixtures cannot establish audible silence on a real phone.
 
+YouTube mute commands must be idempotent per player, including while the iframe reports stale state. Player Widget ignores one programmatic volume event; issuing extra mute commands during each volume update causes callbacks to write playlist volume, rerender playlists, and repeat. Block unmute and guard volume without repeatedly commanding mute. Isolation observers skip mutations wholly inside approved branches while retaining explicit admission and ownership-change reconciliation.
+
+Roll timing is opt-in and stays in memory. The module API exposes `setRollTimingEnabled`, `rollTimingSnapshot`, and `resetRollTiming`. Observations distinguish native invocation, dialog rendering/visibility, user submission, message creation/rendering/visibility, and native return. Keep user thinking and time spent outside the Chat screen separate from processing latency. Retain at most 20 observations and dispose listeners after 30 seconds or cancelled workflows.
+
 ## Checks and packaging
 
 Node tests: `node --test --test-reporter=dot tests/*.test.mjs`. Browser fixtures: `node scripts/check_browser.mjs --list`, then `--filter "shadowdark|profile-layout"`. Default runs all scenarios; add `--screenshots` for passing captures. Failures save screenshots in ignored `dist/`.

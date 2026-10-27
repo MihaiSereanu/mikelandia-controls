@@ -12,6 +12,7 @@ export function createFoundryCommandGateway({
   getHooks = () => globalThis.Hooks,
   getNotifications = () => globalThis.ui?.notifications,
   getConnectionGeneration = () => 0,
+  rollTiming = null,
   getSystemIntegration = () => resolveSystemIntegration(getGame()?.system?.id)
 } = {}) {
   const adapters = new WeakMap();
@@ -74,15 +75,18 @@ export function createFoundryCommandGateway({
       const key = commands.commandKey?.(name, sourceUuid, payload) ?? JSON.stringify([name, sourceUuid, payload.actionId, payload.resourceId]);
       if (inFlight.has(key)) throw new CommandError("COMMAND_BUSY", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActionIsAlreadyRunning", "This action is already running."));
       inFlight.add(key);
+      const timing = name === ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION
+        ? rollTiming?.begin?.({ actorSourceUuid: sourceUuid, actionId: payload.actionId }) : null;
       try {
         assertCurrent();
-        const output = await commands.execute(name, payload, expected, observer, { game, actor, sourceUuid, assertCurrent });
+        const output = await commands.execute(name, payload, expected, observer, { game, actor, sourceUuid, assertCurrent, rollTiming: timing });
         assertCurrent();
         return output;
       } catch (error) {
+        timing?.mark("failed");
         if (error instanceof CommandError) throw error;
         throw new CommandError("COMMAND_FAILED", error?.message ?? localizeFoundry("VEMOBILE.Character.CommandGateway.TheFoundryActionFailed", "The Foundry action failed."), { cause: error });
-      } finally { inFlight.delete(key); }
+      } finally { timing?.finish(); inFlight.delete(key); }
     }
   });
 }

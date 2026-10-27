@@ -83,6 +83,7 @@ export function createShadowdarkCommands({ getGame = () => globalThis.game, getH
       hooks.on(hook, guard);
       try {
         // These native methods own dialogs, rolling, chat, and post-roll effects.
+        context.rollTiming?.mark("native-invoked");
         if (kind === "stat") await model.rollStatCheck(id, config);
         else if (kind === "spell") await model.castSpell(item.uuid, config);
         else await model.rollAttack(item.uuid, config);

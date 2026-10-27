@@ -98,3 +98,66 @@ test("YouTube methods installed at onReady are guarded before native playback", 
   assert.equal(player.muted, true); assert.equal(player.volume, 0);
   scope.dispose(); assert.equal(player.muted, false); assert.equal(player.volume, 80);
 });
+
+test("YouTube mute and playlist-volume callbacks settle instead of feeding repeated playlist renders", () => {
+  const events = [], scope = createTaskScope("youtube-volume-feedback");
+  let muteCommands = 0, settingsWrites = 0, playlistRenders = 0;
+  const player = {
+    muted: false, volume: 80,
+    isMuted() { return this.muted; }, getVolume() { return this.volume; },
+    // The iframe posts a separate asynchronous volume event for each API
+    // command, including repeated commands whose numeric volume is unchanged.
+    mute() { muteCommands++; events.push(() => { this.muted = true; onVolumeChange(); }); },
+    unMute() { events.push(() => { this.muted = false; onVolumeChange(); }); },
+    setVolume(volume) { events.push(() => { this.volume = volume; onVolumeChange(); }); },
+    playVideo() {}
+  };
+  const app = { YTPlayer: player,
+    setVolume() { this._volumeSetProgrammatically = true; this.YTPlayer.setVolume(80); } };
+  // Mirror YouTube Player Widget's single-event suppression and Foundry's
+  // volume setting -> playlist render + globalPlaylistVolumeChanged hook.
+  const game = { settings: { set() { settingsWrites++; playlistRenders++; app.setVolume(); } } };
+  function onVolumeChange() {
+    if (app._volumeSetProgrammatically) { app._volumeSetProgrammatically = false; return; }
+    game.settings.set("core", "globalPlaylistVolume", player.getVolume() / 100);
+  }
+  const flush = () => {
+    let delivered = 0;
+    while (events.length && delivered++ < 30) events.shift()();
+    assert.equal(events.length, 0, "volume feedback must reach idle within a bounded number of events");
+    return delivered;
+  };
+  class NativeAudio {
+    #muted = false;
+    get globalMute() { return this.#muted; }
+    set globalMute(value) { this.#muted = value; app.setVolume(); }
+  }
+  game.audio = new NativeAudio();
+  try {
+    enableMobileAudio(scope, { getGame: () => game, getUi: () => ({ sidebarVideoPlayer: app }), document: null });
+    // Repeated calls before the iframe acknowledges mute must remain bounded.
+    app.setVolume(); player.playVideo(); player.unMute();
+    assert.ok(flush() <= 8);
+    assert.equal(muteCommands, 1);
+    assert.equal(player.muted, true); assert.equal(player.volume, 0);
+    assert.ok(settingsWrites <= 2); assert.equal(playlistRenders, settingsWrites);
+    const previousWrites = settingsWrites;
+    game.audio.globalMute = true;
+    assert.equal(flush(), 1, "later native mute hooks issue only their one expected volume event");
+    assert.equal(settingsWrites, previousWrites);
+    assert.equal(muteCommands, 1);
+  } finally { scope.dispose(); }
+});
+
+test("an already-muted YouTube player needs no extra mute commands", () => {
+  let muteCommands = 0;
+  const player = { isMuted: () => true, getVolume: () => 0, mute() { muteCommands++; },
+    setVolume() {}, unMute() {}, playVideo() {} };
+  const app = { YTPlayer: player, setVolume() { player.setVolume(80); } };
+  const scope = createTaskScope("youtube-already-muted");
+  try {
+    enableMobileAudio(scope, { getGame: () => ({}), getUi: () => ({ sidebarVideoPlayer: app }), document: null });
+    app.setVolume(); player.unMute(); player.playVideo();
+    assert.equal(muteCommands, 0);
+  } finally { scope.dispose(); }
+});

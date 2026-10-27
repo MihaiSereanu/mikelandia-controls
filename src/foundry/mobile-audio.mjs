@@ -58,13 +58,24 @@ export function enableMobileAudio(scope, { getGame = () => globalThis.game, docu
         players.set(player, state);
         active.own(() => { if (state.volume !== undefined) player.setVolume?.(state.volume); if (state.muted === false) player.unMute?.(); });
       }
+      const ensureMuted = () => {
+        if (state.muteCommanded || typeof player.mute !== "function") return;
+        // The iframe can report its old state until the command round trip
+        // finishes. Remember the command before sending it so later volume
+        // hooks do not issue more mute commands while that reply is pending.
+        state.muteCommanded = true;
+        if (player.isMuted?.() !== true) player.mute();
+      };
       for (const key of ["playVideo", "unMute", "setVolume"]) if (typeof player[key] === "function") {
         guard(player, key, original => ({ writable: true, value: function (...args) {
-          capture(); player.mute?.();
+          capture(); ensureMuted();
           return key === "unMute" ? undefined : original.apply(this, key === "setVolume" ? [0] : args);
         } }));
       }
-      player.mute?.();
+      // YouTube Player Widget suppresses one volume event per setVolume call.
+      // Repeating mute alongside it emits extra events which write Foundry's
+      // playlist volume and call setVolume again without reaching an idle state.
+      ensureMuted();
     };
     const watchVideoApplication = app => {
       if (!app) return;

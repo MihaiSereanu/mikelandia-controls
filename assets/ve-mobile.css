@@ -7218,6 +7218,11 @@ details.ve-action-session-compact-result {
   display: block !important;
 }
 
+/* DSN also hides the complete first-render card, including Shadowdark rolls. */
+.ve-native-chat-screen > #chat.ve-native-chat .message.dsn-hide {
+  display: flex !important;
+}
+
 /* Culagin UI and other desktop themes attach Foundry/D&D5e variables to
  * themed chat-popout descendants. Own the base palette at VE's live-chat
  * boundary, before those values can be inherited by message content. */

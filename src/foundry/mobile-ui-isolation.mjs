@@ -52,7 +52,19 @@ export function enableMobileUiIsolation(scope, { document = globalThis.document,
     for (const element of marked) if (!element.isConnected) setState(element, null);
     for (const element of document.body?.children ?? []) visit(element);
   };
-  const observer = MutationObserverType && document?.body ? new MutationObserverType(reconcile) : null;
+  const observer = MutationObserverType && document?.body ? new MutationObserverType((mutations) => {
+    // Changes within an approved branch cannot expose a desktop sibling. In
+    // particular, native roll/chat animations must not rescan the hidden
+    // canvas and every module widget on each style update. Removing a root's
+    // ownership class/id still reconciles because it no longer has an allowed
+    // ancestor when this delivery runs.
+    if (mutations?.length && mutations.every(mutation => {
+      const target = mutation.target?.nodeType === 1 ? mutation.target : mutation.target?.parentElement;
+      const root = target?.closest?.(`${OWNED_ROOTS}, ${FEEDBACK_ROOTS}`);
+      return Boolean(root && !marked.has(root) && !root.closest(`[${STATE}="blocked"]`));
+    })) return;
+    reconcile();
+  }) : null;
   observer?.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "id", "role", "popover", "style"] });
   scope.own(() => {
     observer?.disconnect();
