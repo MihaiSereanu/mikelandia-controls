@@ -58,16 +58,18 @@ try {
   const nativeRolls = [];
   const nativeSetups = [];
   let nativeAmmo = 4;
-  class WarhammerRollDialogV2 {}
+  class WarhammerRollDialogV2 extends EventTarget {}
   globalThis.warhammer = { apps: { WarhammerRollDialogV2 } };
   const setupTest = (kind, target, options = {}) => new Promise(resolve => {
     nativeSetups.push({ kind, target, use5e });
     let settled = false;
-    const dialog = Object.assign(new WarhammerRollDialogV2(), { actor, fixtureNativeRoll: true, options: { modal: true, ...options }, element: document.createElement("section"), close() {
+    const dialog = Object.assign(new WarhammerRollDialogV2(), { actor, fixtureNativeRoll: true, options: Object.freeze({ modal: true, ...options }), element: document.createElement("section"), close() {
       this.element.remove(); Hooks.emit("closeApplicationV2", this);
       if (!settled && this.options.resolveClose) { settled = true; resolve(undefined); }
+      this.dispatchEvent(new Event("close"));
     } });
-    const finish = test => { settled = true; dialog.close(); resolve(test); };
+    dialog.resolve = resolve;
+    const finish = test => { settled = true; dialog.submitted = true; resolve(test); dialog.close(); };
     dialog.element.className = "application dialog";
     dialog.element.innerHTML = '<header class="window-header">Native Test<button type="button" data-action="close" aria-label="Close">X</button></header><form class="window-content"><label>Modifier <input name="modifier" type="number" value="0"></label><button type="button" data-native-roll>Roll</button><button type="button" data-native-cancel>Cancel</button></form>';
     dialog.element.querySelector("[data-native-roll]").onclick = () => {
@@ -375,7 +377,7 @@ try {
     const momentumAligned = () => {
       const input = screen.querySelector('[data-profile-resource-input="momentum"]').getBoundingClientRect();
       const value = screen.querySelector('[data-profile-field="momentum"] dd').getBoundingClientRect();
-      return Math.abs(input.top + input.height / 2 - value.top - value.height / 2) <= 1;
+      return input.height === 20 && Math.abs(input.top + input.height / 2 - value.top - value.height / 2) <= 1;
     };
     check("Active Momentum checkbox is centered beside its value", momentumAligned());
     check("Momentum has no pencil or save form", !screen.querySelector('[data-profile-edit="momentum"]') && !resourceInput.closest("form"));

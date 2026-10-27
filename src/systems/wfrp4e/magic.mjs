@@ -35,9 +35,17 @@ export function magicWinds(actor, context) {
 export async function cancellableCastOrChannel(actor, spell) {
   const hooks = globalThis.Hooks;
   const Dialog = globalThis.warhammer?.apps?.WarhammerRollDialogV2;
+  const listeners = new Map();
   const listener = hooks && typeof Dialog === "function" ? hooks.on("renderApplicationV2", app => {
-    if (app instanceof Dialog && app.actor === actor) app.options.resolveClose = true;
+    if (!(app instanceof Dialog) || app.actor !== actor || listeners.has(app)) return;
+    // ApplicationV2 freezes options. Observe its native close event instead.
+    const close = () => { if (!app.submitted) app.resolve?.(); };
+    app.addEventListener("close", close, { once: true });
+    listeners.set(app, close);
   }) : null;
   try { return await castChannelSheet(actor).castOrChannelPrompt(spell); }
-  finally { if (listener !== null) hooks.off("renderApplicationV2", listener); }
+  finally {
+    if (listener !== null) hooks.off("renderApplicationV2", listener);
+    for (const [app, close] of listeners) app.removeEventListener("close", close);
+  }
 }

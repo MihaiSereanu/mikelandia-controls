@@ -3056,7 +3056,7 @@ body.ve-mobile-running #pause {
 .ve-profile-resource-open > i { font-size: 0.72em; }
 .ve-profile-resource-open[hidden] { display: none; }
 .ve-profile-boolean-target { display: grid; place-items: center; width: 44px; min-height: 44px; cursor: pointer; }
-.ve-profile-boolean-target input[type="checkbox"] { width: 20px; height: 20px; margin: 0; }
+.ve-profile-boolean-target input[type="checkbox"] { width: 20px; height: 20px; min-height: 20px; margin: 0; }
 .ve-profile-summary-paired { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .ve-profile-summary-paired > .ve-profile-section { padding: 6px; }
 .ve-profile-summary-paired .ve-profile-row { gap: 4px; }

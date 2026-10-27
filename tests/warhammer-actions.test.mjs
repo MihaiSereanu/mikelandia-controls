@@ -167,9 +167,9 @@ for (const use5e of [false, true]) for (const [id, method] of [
   const { actor, gateway } = setup(t, { use5e });
   addWarhammerMagic(actor, use5e);
   const hooks = createHooks();
-  class Dialog {
-    constructor(actor, options, resolve) { Object.assign(this, { actor, options, resolve }); }
-    close() { if (this.options.resolveClose) this.resolve(); }
+  class Dialog extends EventTarget {
+    constructor(actor, options, resolve) { super(); Object.assign(this, { actor, options: Object.freeze(options), resolve }); }
+    close() { if (this.options.resolveClose) this.resolve(); this.dispatchEvent(new Event("close")); }
     submit() { this.resolve({ actor, roll: async () => { rolls++; } }); this.close(); }
   }
   installGlobals(t, { Hooks: hooks, warhammer: { apps: { WarhammerRollDialogV2: Dialog } } });
@@ -189,7 +189,8 @@ for (const use5e of [false, true]) for (const [id, method] of [
   const request = payload(id, use5e ? "5e" : "4e");
   const pending = gateway.execute(command, request);
   await assert.rejects(gateway.execute(command, request), { code: "COMMAND_BUSY" });
-  assert.equal(dialog.options.resolveClose, true);
+  if (use5e || !id.startsWith("spell:")) assert.equal(dialog.options.resolveClose, true);
+  else assert.equal(dialog.options.resolveClose, undefined, "native chooser options remain frozen and unchanged");
   dialog.close();
   assert.equal((await pending).cancelled, true);
   assert.equal(rolls, 0);
