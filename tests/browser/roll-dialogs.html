@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Native roll dialog theme checks</title>
+<style>
+  @layer systems, modules;
+  @import url("/assets/mikelandia-controls.css") layer(modules);
+  @import url("/assets/mc-style-authority.css") layer(modules);
+  @import url("/tests/browser/roll-dialogs-native.css") layer(systems);
+</style>
+<style>
+  body { margin: 0; font: 16px system-ui; }
+  #results { display: none; }
+  @layer systems {
+  .fa-solid { font-family: "Font Awesome 7 Pro"; font-weight: 900; }
+  .fa-xmark::before { content: "\f00d"; }
+  .fa-ellipsis-vertical::before { content: "\f142"; }
+  .application { display: flex; flex-direction: column; position: absolute; width: 600px; background: #222; color: white; }
+  .window-header { display: flex; align-items: center; flex: 0 0 auto; }
+  .window-title { flex: 1; font-size: 20px; margin: 0; }
+  .window-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .form-group, .form-fields, .flexrow, .form-footer { display: flex; align-items: center; }
+  .form-group > label { flex: 1; }
+  .form-fields > input, .form-fields > select { width: 100%; }
+  .hidden { display: none !important; }
+  button { cursor: pointer; }
+  }
+  .sentinel { position: absolute; left: -10000px; }
+</style>
+<body class="mc-mobile-running classic-font">
+<main class="mc-mobile-app" data-mc-style-authority data-theme="dark"></main>
+<pre id="results">Running browser checks</pre>
+<script type="module" src="/tests/browser/roll-dialogs.mjs"></script>
+</body>
+</html>

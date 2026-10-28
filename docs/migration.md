@@ -1,6 +1,6 @@
 # Mikelandia Controls migration
 
-The repository, Foundry module ID, install folder, settings namespace, and ZIP use `mikelandia-controls`. CSS/data prefixes use `mc-`; localization uses `MIKELANDIA_CONTROLS`.
+Use this runbook to move a world from `ve-mobile` to `mikelandia-controls`. See [current status](current-status.md#deployment) for the last recorded deployment state and [architecture](architecture.md#mobile-frame-and-upgrades) for internal namespaces.
 
 ## Installation
 
@@ -19,13 +19,13 @@ Each browser copies its old preferences, bootstrap cache, controls-guide receipt
 
 One active GM copies missing flags from world Actors and raw unlinked-token deltas. Existing new values win, including zero, false, null, and arrays. The complete old flag namespace is retained, including historical Renown. Imported or compendium Actors can still read their legacy resource values before those values are written under the new namespace. Packs are not bulk rewritten.
 
-Legacy identifiers are confined to the migration implementation, its tests, and this runbook. Original MIT copyright and permission notices remain in `LICENSE`.
+Legacy identifiers remain where migration, release-asset retirement, and deployment/rollback records require them. Original MIT notices remain in `LICENSE`.
 
 ## Rollback
 
 Disable the new module and re-enable the original installation. Its retained browser preferences and document flags represent the pre-migration state; later changes made under the new namespace are separate.
 
-The pre-rename source snapshot is `dist/diagnosis/rebrand-before.zip`. Earlier deployment backups retain their original paths:
+The earlier source snapshot was recorded as `dist/diagnosis/rebrand-before.zip`; it is absent from this checkout. Deployment backups were recorded at the following paths; verify availability before rollback:
 
 - `/home/ubuntu/backups/ve-mobile/20261028-momentum-cancellation/`
 - `/home/ubuntu/backups/ve-mobile-journals/20261027-212646/`

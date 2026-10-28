@@ -1,4 +1,5 @@
 import { localizeFoundry } from "./localization.mjs";
+import { decorateNativeRollDialog } from "./native-roll-presentation.mjs";
 import { promoteNativeWindow } from "./native-window-layer.mjs";
 import { enableMobileUiIsolation, mobileApplicationOwned, mobileWorkflowPending } from "./mobile-ui-isolation.mjs";
 const RESOLUTION_MESSAGE_KEYS = new Set([
@@ -58,7 +59,7 @@ export function enableMobilePresentation(scope, { isPersistentOverlay = () => fa
   return applications;
 }
 
-/** Own presentation only on Mikelandia Controls-rendered roots; native windows keep their CSS. */
+/** Protect Mikelandia Controls-rendered roots; native roll styling is scoped separately. */
 export function enableMcStyleAuthority(scope, {
   document = globalThis.document,
   enabled: initialEnabled = true,
@@ -294,6 +295,7 @@ export function createMobileApplicationAdmissions(body) {
   const listeners = new Set();
   const publish = () => { for (const listener of listeners) listener(); };
   const clearClasses = (element, record) => {
+    record?.restoreRollPresentation?.();
     record?.topLayer?.restore();
     element?.classList?.remove?.("mc-mobile-admitted-app", "mc-mobile-dialog", "mc-mobile-transient-app");
     if (!element?.style || !record) return;
@@ -371,6 +373,7 @@ export function createMobileApplicationAdmissions(body) {
       }
       const previous = records.get(key);
       if (previous?.element !== element) clearClasses(previous?.element, previous);
+      else previous.restoreRollPresentation?.();
       const style = element.style;
       const priorLayer = previous?.element === element ? previous.priorLayer : style?.getPropertyValue?.(NATIVE_APPLICATION_LAYER_PROPERTY) ?? "";
       const priorLayerPriority = previous?.element === element ? previous.priorLayerPriority : style?.getPropertyPriority?.(NATIVE_APPLICATION_LAYER_PROPERTY) ?? "";
@@ -379,7 +382,8 @@ export function createMobileApplicationAdmissions(body) {
       element.classList.remove("mc-mobile-dialog", "mc-mobile-transient-app");
       element.classList.add(modal ? "mc-mobile-dialog" : "mc-mobile-transient-app");
       const topLayer = previous?.element === element ? previous.topLayer : promoteNativeWindow(element);
-      records.set(key, Object.freeze({ element, application, modal: Boolean(modal), lineage, priorLayer, priorLayerPriority, topLayer }));
+      const restoreRollPresentation = decorateNativeRollDialog(element);
+      records.set(key, Object.freeze({ element, application, modal: Boolean(modal), lineage, priorLayer, priorLayerPriority, topLayer, restoreRollPresentation }));
       reconcileBackdrop(true);
       return true;
     },

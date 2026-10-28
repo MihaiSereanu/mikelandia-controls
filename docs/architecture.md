@@ -7,29 +7,39 @@
 | System profiles | `src/systems/registry.mjs`, `{dnd5e,wfrp4e,shadowdark,fallback}/`, `profile-view.mjs` |
 | Character UI | `src/features/characters/{profile-panels,profile-resource-editor,profile-inventory,native-sheet}.mjs` |
 | Validated writes | `src/foundry/actor-editor-gateway.mjs` |
-| Native windows / isolation | `src/foundry/{mobile-presentation,mobile-ui-isolation}.mjs`; CSS in `assets/` |
-| Combat | `src/features/combat/presenter.mjs`, `src/foundry/combat-gateway.mjs` |
+| Native windows / isolation | `src/foundry/{mobile-presentation,native-roll-presentation,mobile-ui-isolation}.mjs`; CSS in `assets/` |
+| Combat / targets | `src/features/combat/presenter.mjs`, `src/foundry/{combat-gateway,targeting-gateway}.mjs` |
 | Journals / audio / upgrades | `src/foundry/{journal-visibility,mobile-audio,legacy-client-restoration}.mjs` |
 
-## Scope and commands
+## Scope and validated actions
 
 Five routes: Character, Chat, Journals, Combat, Settings. Character selection never controls tokens. Synthetic Actor UUIDs support character data and chat provenance. Combat retains initiative, End Turn, and GM encounter progression with native permissions, stale-state checks, and end confirmation. Map/token/light controls, placement, scene overlays, and graphics profiles are removed.
 
+Resolve fresh Actor/Item state by UUID. Validate ownership, session/config revisions, and duplicate submissions; clean up pending actions on cancellation. Never accept arbitrary client paths or native method names. Refresh after native updates; system models own derived values. Share implementation while retaining each game's terminology/grouping. Unsupported systems get identity and native sheets; isolate D&D handlers.
+
+## Combat targeting
+
 Combat targeting uses native user targets through `targeting-gateway.mjs`; it never controls or moves tokens. The selector appears for started combat linked to the loaded scene, or a global (unlinked) encounter containing combatants in that scene. Each combatant is filtered by its own scene before resolving its token, so cross-scene token IDs cannot admit foreign combatants. Eligible tokens must belong to that combat and have neither token nor combatant hidden, regardless of ownership or line of sight. Friendly disposition forms Friendly; other dispositions form Enemies. The selected character must have a matching scene token; synthetic sources require their exact token, and ambiguous world Actors require a source choice. Automatic cleanup affects only targets acquired through this feature; individual toggles handle manual deselection. Native external target changes relinquish feature ownership on release. Selection persists across turns, rolls, and routes, with reconciliation active throughout the mobile runtime.
 
-Targets starts collapsed to preserve initiative space. Its padded header shows the selected-target summary and a 24px expand/collapse chevron; disclosure state is remembered for the session. The source token shows an inline (You) label and no distance. There is no bulk-clear button; post-roll targeting remains system-native.
+Targets starts collapsed to preserve initiative space. Its padded header shows the selected-target summary and a 24px expand/collapse chevron; disclosure state lasts for the current mobile-runtime session. The source token shows an inline (You) label and no distance. There is no bulk-clear button; post-roll targeting remains system-native.
 
 While Targets is expanded and Combat is visible, relevant native refreshToken position/size events refresh distances once per animation frame. Equal snapshots are suppressed; distance-only changes patch existing text nodes without replacing rows or focus. Structural updates still rerender normally, and disposal cancels queued frames. Distance uses minimum native occupied-space measurement on square/hex grids, stripping elevation. Foundry v14 requires `{level:null,elevation:0,depth:1}` to bypass level-based wall/surface filtering; v13 uses its unconstrained occupied-space API. Gridless measurement uses nearest rectangular footprint edges. Scene grid rules, distance scale and units remain authoritative. Failed measurement is unavailable; no range enforcement or roll metadata is added. Warhammer consumes native targets; Shadowdark retains its targeting setting and first-target semantics.
 
-In standalone display mode, the root reserves `env(safe-area-inset-top) + 8px` with border-box sizing. Both base and protected-style CSS implement this contract; regular browser spacing remains unchanged.
+## Mobile frame and upgrades
+
+The in-game companion frame reserves the top safe-area inset plus 8px in standalone mode. Both base and protected-style CSS use border-box sizing to keep navigation within the viewport. Login/PWA behavior and operations are in the [runbook](mobile-login.md).
 
 Mobile Logout navigates to Foundry's prefix-aware `mobile` route with a trailing slash. The mobile login establishes the native `/join` session to end the world login. The bootstrap icon is bundled as `assets/mc-512.png`, matching the transparent gold PWA icon.
-
-Resolve fresh Actor/Item state by UUID. Validate ownership, session/config revisions, and duplicate submissions; clean up pending actions on cancellation. Never accept arbitrary client paths or native method names. Refresh after native updates; system models own derived values. Share implementation while retaining each game's terminology/grouping. Unsupported systems get identity and native sheets; isolate D&D handlers.
 
 Branding and technical ID are Mikelandia Controls / `mikelandia-controls`; CSS/data prefixes are `mc-`, and localization uses `MIKELANDIA_CONTROLS`. `branding-migration.mjs` copies browser state before first reads and missing Actor/raw-token flag leaves under one GM, preserving destination values and originals. See [migration](migration.md) for world activation and rollback. Upgrade restoration restores only owned client settings and preserves failed restoration data.
 
 ## Native applications and rolls
+
+Admitted Shadowdark `#sd-roll-dialog` and Warhammer `.warhammer.roll-dialog-v2` forms use Mikelandia colors, typography and touch controls while the mobile shell runs. Their palette follows the shell even when Foundry's application theme differs. Native controls, handlers and hidden effects remain intact. Header controls stay transparent and borderless with 44px touch targets; `.icon` buttons retain their native icon font.
+
+Warhammer fields stack on phones and share columns with modifiers on wider screens. Charging stays beside its checkbox in both native structures (4e separate fields, 5e nested label); the 5e Damage/Charging flex row aligns Charging with the Damage input. State controls stay in three equal columns aligned with Roll Mode. Below a containing width of 28em, localized ADV/DISADV spans replace the visible full labels at a smaller size; full native labels remain accessible. `native-roll-presentation.mjs` decorates labels on admission/rerender and restores their original nodes on release. These 5e per-test states are distinct from 4e combat Advantage; native Momentum contributes an Advantage source on WS tests.
+
+Desktop and D&D 5E retain their styling. Fixtures include native CSS excerpts from Shadowdark 4.0.6, WFRP 10.1.2 and Warhammer Library 3.5.1, icon-class frame buttons and the Damage/Charging row. `node scripts/check_browser.mjs --filter "^roll-dialogs-" --native-assets --screenshots` reads the installed Foundry icon font without copying or shipping it (`FOUNDRY_APP_PATH` overrides the application path). This establishes fixture/font evidence, not live-system behavior.
 
 Inspect ancestry: Shadowdark 4.0.6 `PlayerSheetSD` is V1; `RollDialogSD` is V2; Warhammer sheets use V2. CSS suppresses maximum-height transitions, so admitted V2 windows close with `{animate: false}`; keep V1 lifecycle native.
 
@@ -75,4 +85,4 @@ Optional in-memory API: `setRollTimingEnabled`, `rollTimingSnapshot`, `resetRoll
 
 ## Packaging
 
-Validation workflow: [AGENTS.md](../AGENTS.md). Build the single module package with `py scripts/build_release.py --version <version>`; verify with `scripts/check_release.py`. The canonical release contains `module.json` and `mikelandia-controls.zip`; publication removes obsolete experimental assets. Main pushes publish releases. The standalone login has its own build/deployment [runbook](mobile-login.md).
+Validation workflow: [AGENTS.md](../AGENTS.md). Build with `py -3 scripts/build_release.py --version <version>`; the builder validates local ZIP contents, manifest references and runtime imports. After publication, verify anonymous HTTP downloads with `py -3 scripts/check_release.py --base-url <release-url> --version <version> --build <commit-sha>`. The canonical release contains `module.json` and `mikelandia-controls.zip`; publication removes obsolete experimental assets. Main pushes publish releases. The standalone login has its own build/deployment [runbook](mobile-login.md).

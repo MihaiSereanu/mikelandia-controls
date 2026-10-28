@@ -1,0 +1,285 @@
+/* Native rule excerpts for cascade regression fixtures. Sources: Shadowdark 4.0.6, WFRP 10.1.2, Warhammer Library 3.5.1. */
+
+/* systems/shadowdark/css/shadowdark.css:644 */
+#sd-roll-dialog hr {
+  margin: 0.75rem 0;
+  border: none;
+  border-top: 1px solid var(--color-border-light-primary);
+}
+#sd-roll-dialog h2 {
+  font-size: 24px;
+  font-family: "Old Newspaper Font";
+  text-align: center;
+}
+#sd-roll-dialog .roll-input {
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+#sd-roll-dialog .roll-input label {
+  font-weight: bold;
+  flex: 1;
+  font-size: 1.25em;
+}
+#sd-roll-dialog .roll-input input {
+  flex: 1;
+}
+#sd-roll-dialog .roll-input .tooltips {
+  flex-basis: 100%;
+  font-size: 0.75rem;
+  color: var(--color-text-dark-secondary);
+  line-height: 1.2;
+  margin: 0;
+}
+#sd-roll-dialog .advantage-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+#sd-roll-dialog .advantage-buttons input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+#sd-roll-dialog .advantage-buttons label {
+  flex: 1;
+  display: block;
+  padding: 0.5rem 1rem;
+  text-align: center;
+  background: transparent;
+  color: #777;
+  border-radius: 3px;
+  transition: background 0.15s;
+  user-select: none;
+  cursor: pointer;
+}
+#sd-roll-dialog .advantage-buttons input:checked + label {
+  background: #6c757d;
+  color: #fff;
+}
+#sd-roll-dialog .advantage-buttons input:not(:checked) + label:hover {
+  background: #1f2224;
+}
+#sd-roll-dialog .advantage-buttons input:focus-visible + label {
+  outline: 2px solid #4a9eff;
+  outline-offset: 2px;
+}
+#sd-roll-dialog .situational-options label {
+  font-weight: bold;
+  flex: 1;
+  font-size: 1.25em;
+}
+#sd-roll-dialog .situational-options .situational-option {
+  display: flex;
+  align-items: start;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 3px;
+  margin-bottom: 0.5rem;
+}
+#sd-roll-dialog .situational-options .situational-option .tooltips {
+  flex: 1;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  color: var(--color-text-dark-primary);
+  margin: 0;
+}
+#sd-roll-dialog .situational-options .situational-option input {
+  flex-shrink: 0;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin: 0;
+  cursor: pointer;
+}
+#sd-roll-dialog .situational-options .situational-option:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+#sd-roll-dialog .roll-footer {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+#sd-roll-dialog .roll-footer select {
+  flex: 1;
+  height: 2.5rem;
+}
+#sd-roll-dialog .roll-footer button {
+  flex: 1;
+  height: 2.5rem;
+}
+
+body.theme-light #sd-roll-dialog hr {
+  background-image: linear-gradient(90deg, transparent 0%, #000000 50%, transparent 100%);
+}
+
+/* systems/wfrp4e/wfrp4e.css:4428 */
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 {
+  --modifier-bg: var(--color-warm);
+}
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .form-group {
+  gap: 0px;
+}
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .form-group input:not([type=checkbox]),
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .form-group select {
+  height: 2rem;
+  line-height: 2rem;
+  border-radius: 0px;
+  outline: none;
+  color: #d6d6d6;
+  border: 1px solid var(--color-faded);
+  box-shadow: 0px 0px 10px inset black;
+  background: #352516;
+}
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .form-group label {
+  color: #d6d6d6;
+  border: 1px solid var(--color-form-border);
+  background: #080808;
+  height: 2rem;
+  line-height: 2rem;
+  padding: 0px 0.5rem;
+}
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .form-group .form-fields input:not([type=checkbox]),
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .form-group .form-fields select {
+  border-left: none;
+}
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .form-group.stacked label {
+  border-bottom: 0px;
+}
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .form-group.stacked .form-fields select,
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .form-group.stacked .form-fields input {
+  border-left: 1px solid var(--color-faded);
+}
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .dialog-modifiers label {
+  display: block;
+  color: #d6d6d6;
+  border: 1px solid #5d513e;
+  border-bottom: none;
+  background: #080808;
+  width: 100%;
+  height: 2rem;
+  line-height: 2rem;
+}
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .dialog-modifiers .modifier-list {
+  color: #000000;
+  border: 1px solid rgba(115, 105, 83, 0.6509803922);
+  border-radius: 0px;
+  box-shadow: 0px 0px 10px inset black;
+  background: url(./ui/backgrounds/parchment-texture.webp);
+}
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .dialog-modifiers .modifier-list li.active {
+  color: var(--color-cream);
+}
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .state-field {
+  color: #d6d6d6;
+  border: 1px solid var(--color-form-border);
+  background: #080808;
+  height: 2rem;
+  line-height: 2rem;
+  padding: 0px 0.5rem;
+}
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .state-field .state-value {
+  border-right: 1px solid var(--color-form-border);
+  width: 1rem;
+}
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .state-field.active {
+  border-color: var(--color-warm);
+  background: var(--color-warm-half);
+}
+body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .state-field.active .state-value {
+  border-color: var(--color-warm);
+}
+
+/* systems/wfrp4e/wfrp4e.css:4906 */
+.warhammer.application.roll-dialog-v2 .window-title {
+  text-align: center;
+}
+.warhammer.application.roll-dialog-v2 .dialog-base .form-group:not(.stacked) .form-fields {
+  width: 3rem;
+  flex: 0 0 3rem;
+}
+.warhammer.application.roll-dialog-v2 .dialog-base .dialog-fields {
+  flex: 0 0 10rem;
+}
+.warhammer.application.roll-dialog-v2 .form-group label {
+  text-align: center;
+}
+.warhammer.application.roll-dialog-v2 div[data-application-part=default],
+.warhammer.application.roll-dialog-v2 div[data-application-part=specific] {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.warhammer.application.roll-dialog-v2 .state-fields {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+.warhammer.application.roll-dialog-v2 .state-fields > * {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.warhammer.application.roll-dialog-v2 .state-fields .state-field {
+  margin: 10px;
+  display: flex;
+  align-items: center;
+}
+.warhammer.application.roll-dialog-v2 .state-fields .state-field:hover {
+  cursor: pointer;
+}
+.warhammer.application.roll-dialog-v2 .state-fields .state-field label {
+  margin: 5px 5px;
+}
+.warhammer.application.item-properties .property-columns {
+  overflow: auto;
+  display: flex;
+}
+
+/* modules/warhammer-lib/warhammer.css:112 */
+.warhammer.roll-dialog-v2 {
+  --modifier-bg: var(--color-cool-3);
+  gap: 0px;
+}
+.warhammer.roll-dialog-v2 .dialog-base {
+  display: flex;
+  flex: 1;
+  gap: 1rem;
+  height: calc(100% - 2.5rem - 1rem);
+}
+.warhammer.roll-dialog-v2 .dialog-base .dialog-fields {
+  overflow: hidden;
+  gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+}
+.warhammer.roll-dialog-v2 .dialog-base .dialog-fields > * {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.warhammer.roll-dialog-v2 .dialog-modifiers {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  flex: 1;
+}
+.warhammer.roll-dialog-v2 .dialog-modifiers .modifier-list {
+  height: 100%;
+  overflow: auto;
+}
+.warhammer.roll-dialog-v2 .dialog-modifiers ul {
+  text-align: left;
+  list-style: none;
+  padding: 0px;
+  flex: 1;
+  margin: 0px;
+}
+.warhammer.roll-dialog-v2 .dialog-modifiers .modifier {
+  margin: 0px;
+  padding: 0.3rem 0.3rem;
+}
+.warhammer.roll-dialog-v2 .dialog-modifiers .modifier.active {
+  background: var(--modifier-bg);
+}

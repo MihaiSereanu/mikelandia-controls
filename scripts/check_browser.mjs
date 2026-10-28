@@ -7,6 +7,12 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ...["shadowdark", "4e", "5e"].flatMap(system => ["dark", "light"].flatMap(theme => [
+    [`roll-dialogs-${system}-${theme}-phone`, 390, 844, "roll-dialogs", `system=${system}&theme=${theme}&layout=phone`],
+    [`roll-dialogs-${system}-${theme}-tablet`, 1024, 768, "roll-dialogs", `system=${system}&theme=${theme}&layout=tablet`],
+    [`roll-dialogs-${system}-${theme}-narrow`, 320, 844, "roll-dialogs", `system=${system}&theme=${theme}&layout=phone`],
+    [`roll-dialogs-${system}-${theme}-large-text`, 390, 844, "roll-dialogs", `system=${system}&theme=${theme}&layout=phone&large=true`]
+  ])),
   ["targeting-phone", 390, 844, "targeting", "layout=phone"],
   ["targeting-tablet", 1024, 768, "targeting", "layout=tablet"],
   ["bootstrap-light-phone", 393, 851, "bootstrap", "theme=light"],
@@ -60,6 +66,7 @@ const args = process.argv.slice(2);
 let filter;
 let list = false;
 let screenshots = false;
+let nativeAssets = false;
 for (let index = 0; index < args.length; index++) {
   const arg = args[index];
   if (arg === "--filter") {
@@ -68,8 +75,9 @@ for (let index = 0; index < args.length; index++) {
     filter = new RegExp(pattern, "i");
   } else if (arg === "--list") list = true;
   else if (arg === "--screenshots") screenshots = true;
+  else if (arg === "--native-assets") nativeAssets = true;
   else if (arg === "--help") {
-    console.log("Usage: node scripts/check_browser.mjs [--filter <regex>] [--list] [--screenshots]\nDefault: all cases; screenshots saved on failure. --screenshots also saves passing cases.");
+    console.log("Usage: node scripts/check_browser.mjs [--filter <regex>] [--list] [--screenshots] [--native-assets]\nDefault: all cases; screenshots saved on failure. --native-assets reads the installed Foundry icon font (FOUNDRY_APP_PATH overrides its application path).");
     process.exit(0);
   } else throw new Error(`Unknown argument: ${arg}`);
 }
@@ -90,6 +98,12 @@ const contentTypes = { ".html": "text/html", ".mjs": "text/javascript", ".css": 
 let simulateStandalone = false;
 const server = createServer(async (request, response) => {
   try {
+    if (nativeAssets && new URL(request.url, "http://localhost").pathname === "/native-fixture/fa-solid-900.woff2") {
+      const app = process.env.FOUNDRY_APP_PATH ?? "C:/Program Files/Foundry Virtual Tabletop/resources/app";
+      const font = await readFile(join(app, "public/fonts/fontawesome/webfonts/fa-solid-900.woff2"));
+      response.writeHead(200, { "Content-Type": "font/woff2" }).end(font);
+      return;
+    }
     const path = resolve(root, `.${decodeURIComponent(new URL(request.url, "http://localhost").pathname)}`);
     const rel = relative(root, path);
     if (rel.startsWith("..") || isAbsolute(rel)) { response.writeHead(403).end(); return; }
@@ -144,6 +158,7 @@ try {
   const chromiumVersion = browserVersion.product.split("/").at(-1);
   for (const [name, width, height, fixture, query] of selectedCases) {
     simulateStandalone = query.includes("standalone=true");
+    const fixtureQuery = query + (nativeAssets ? "&native-assets=true" : "");
     const { targetId } = await send("Target.createTarget", { url: "about:blank" });
     const { sessionId } = await send("Target.attachToTarget", { targetId, flatten: true });
     await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width < 720 }, sessionId);
@@ -156,7 +171,7 @@ try {
       await send("Emulation.setUserAgentOverride", { userAgent: `Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromiumVersion} Mobile Safari/537.36`, platform: "Linux armv8l" }, sessionId);
       await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 }, sessionId);
     }
-    await send("Page.navigate", { url: `http://127.0.0.1:${server.address().port}/tests/browser/${fixture}.html?${query}` }, sessionId);
+    await send("Page.navigate", { url: `http://127.0.0.1:${server.address().port}/tests/browser/${fixture}.html?${fixtureQuery}` }, sessionId);
     let report;
     for (let attempt = 0; attempt < 100; attempt++) {
       const { result } = await send("Runtime.evaluate", { expression: 'document.querySelector("#results")?.textContent', returnByValue: true }, sessionId);

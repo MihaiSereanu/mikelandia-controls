@@ -1135,6 +1135,394 @@ body.mc-mobile-running .mc-mobile-dialog :is(input, select, textarea) {
   font-size: max(16px, 1em);
 }
 
+/* Restyle only admitted Shadowdark/Warhammer roll forms. Native DOM, actions,
+ * hidden modifiers and rerenders remain owned by the systems. Dialogs are body
+ * siblings of the shell, so resolve their palette from the active shell. */
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app {
+  --mc-surface: var(--mc-panel);
+  --mc-surface-up: var(--mc-panel-up);
+  --mc-border: var(--mc-line);
+  --mc-text: var(--mc-paper);
+  --mc-subtle: var(--mc-muted);
+  --color-text-primary: var(--mc-text);
+  --color-text-secondary: var(--mc-subtle);
+  --color-text-dark-primary: var(--mc-text);
+  --color-text-dark-secondary: var(--mc-subtle);
+  --modifier-bg: var(--mc-red);
+  padding: 0 !important;
+  color-scheme: dark;
+  color: var(--mc-text) !important;
+  background: var(--mc-surface) !important;
+  border: 1px solid var(--mc-border) !important;
+  border-radius: var(--mc-radius) !important;
+  box-shadow: 0 18px 50px rgb(0 0 0 / 0.4) !important;
+  font: 400 max(16px, 1rem)/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  text-shadow: none !important;
+}
+
+body.mc-mobile-running:has(.mc-mobile-app[data-theme="light"]) :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app {
+  --mc-surface: #fffdf9;
+  --mc-surface-up: #f0e8dc;
+  --mc-border: #d5c8b8;
+  --mc-text: #231f20;
+  --mc-subtle: #675f56;
+  color-scheme: light;
+}
+
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app .window-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-height: 52px !important;
+  padding: 7px 8px 7px 16px !important;
+  color: var(--mc-text) !important;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--mc-red) 18%, var(--mc-surface)), var(--mc-surface)) !important;
+  border-bottom: 1px solid var(--mc-border) !important;
+}
+
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(.window-title, h2, h3, label, button:not(.icon), input, select, textarea) {
+  font-family: inherit !important;
+  text-shadow: none !important;
+}
+
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(.window-content, .application-content) {
+  padding: 16px !important;
+  background: transparent !important;
+  color: var(--mc-text) !important;
+  gap: 14px;
+}
+
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(h2, h3) {
+  color: var(--mc-text) !important;
+  font-size: 1.15em !important;
+  font-weight: 700;
+  border: 0;
+  margin: 0 0 12px;
+}
+
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(.form-group, .roll-input) {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px !important;
+  margin: 0 0 12px;
+  min-width: 0;
+}
+
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(.form-group, .roll-input, .situational-options, .dialog-modifiers) > label {
+  flex: initial;
+  height: auto !important;
+  line-height: 1.4 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  color: var(--mc-subtle) !important;
+  font-size: 0.9em !important;
+  font-weight: 650;
+  text-align: start !important;
+  overflow-wrap: anywhere;
+}
+
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(.form-fields, .dialog-fields) {
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 0;
+  gap: 8px;
+}
+
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea, button) {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  height: auto !important;
+  padding: 8px 12px;
+  border: 1px solid var(--mc-border) !important;
+  border-radius: 10px !important;
+  background: var(--mc-surface-up) !important;
+  color: var(--mc-text) !important;
+  box-shadow: none !important;
+  font-size: 1em !important;
+  line-height: 1.4 !important;
+}
+
+/* Frame icons put their Font Awesome classes on the button itself. */
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app .window-header button.header-control {
+  flex: 0 0 44px !important;
+  width: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(input[type="checkbox"], input[type="radio"]) {
+  accent-color: var(--mc-red);
+}
+
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(button, input, select, textarea, a):focus-visible {
+  outline: 2px solid var(--mc-red-bright) !important;
+  outline-offset: 2px;
+}
+
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(button[type="submit"], .form-footer button.default) {
+  border-color: var(--mc-red) !important;
+  background: var(--mc-red) !important;
+  color: #fff !important;
+  font-weight: 700;
+}
+
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(.form-footer, .roll-footer) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mc-border);
+}
+
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(.form-footer, .roll-footer) > :is(button, select) {
+  flex: 1 1 140px;
+}
+
+body.mc-mobile-running #sd-roll-dialog.mc-mobile-admitted-app hr {
+  margin: 14px 0;
+  border: 0;
+  border-top: 1px solid var(--mc-border);
+  background: none;
+}
+
+body.mc-mobile-running #sd-roll-dialog.mc-mobile-admitted-app .tooltips {
+  font-size: 0.875em !important;
+  line-height: 1.45 !important;
+  color: var(--mc-subtle) !important;
+}
+
+body.mc-mobile-running #sd-roll-dialog.mc-mobile-admitted-app .advantage-buttons {
+  gap: 6px;
+}
+
+body.mc-mobile-running #sd-roll-dialog.mc-mobile-admitted-app .advantage-buttons label {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 4px;
+  border: 1px solid var(--mc-border);
+  border-radius: 10px;
+  background: var(--mc-surface-up);
+  color: var(--mc-text);
+  font-size: 0.875em;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+body.mc-mobile-running #sd-roll-dialog.mc-mobile-admitted-app .advantage-buttons input:checked + label {
+  border-color: var(--mc-red);
+  background: var(--mc-red);
+  color: #fff;
+  font-weight: 700;
+}
+
+body.mc-mobile-running #sd-roll-dialog.mc-mobile-admitted-app .advantage-buttons input:not(:checked) + label:hover {
+  background: color-mix(in srgb, var(--mc-red) 12%, var(--mc-surface-up));
+}
+
+body.mc-mobile-running #sd-roll-dialog.mc-mobile-admitted-app .situational-option {
+  min-height: 44px;
+  padding: 12px !important;
+  border: 1px solid var(--mc-border) !important;
+  border-radius: 10px !important;
+  background: var(--mc-surface-up);
+}
+
+body.mc-mobile-running #sd-roll-dialog.mc-mobile-admitted-app .situational-option input {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .dialog-base {
+  display: grid;
+  height: auto;
+  flex: 0 0 auto;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .dialog-fields {
+  overflow: visible;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .form-fields:has(input[type="checkbox"]) {
+  min-height: 44px;
+  align-items: center;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .form-fields input[type="checkbox"] {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+}
+
+/* 4e separates Charging into label/fields; 5e nests the input in its label. */
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .form-group:has(input[name="charging"]) {
+  display: grid !important;
+  grid-template-columns: auto 24px;
+  justify-content: start;
+  align-items: center !important;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app label:has(> input[name="charging"]) {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app label > input[name="charging"] {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app :is(.dialog-modifiers, .state-fields) {
+  min-width: 0;
+  gap: 8px;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .state-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  width: 100%;
+}
+
+/* Query the actual containing part, including a narrow native fields column. */
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app :has(> .state-fields) {
+  container: mc-warhammer-states / inline-size;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .state-fields > * {
+  min-width: 0;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .state-fields .state-field {
+  width: 100%;
+  height: 100% !important;
+  justify-content: center;
+  gap: 6px;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .state-field label {
+  min-width: 0;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.mc-roll-state-short { display: none; }
+
+@container mc-warhammer-states (max-width: 28em) {
+  body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .state-field {
+    padding: 8px 4px !important;
+    gap: 4px;
+    font-size: 0.8em;
+  }
+  body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .mc-roll-state-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .mc-roll-state-short {
+    display: inline;
+  }
+  body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .state-value {
+    width: auto;
+  }
+}
+
+/* Native 5e puts Damage and the nested Charging label in one flex row. */
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .flexrow:has(> .form-group input[name="charging"]) {
+  align-items: flex-end;
+  gap: 10px;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .flexrow > .form-group:has(label > input[name="charging"]) {
+  flex: 0 0 auto;
+  grid-template-columns: auto;
+  min-height: max(44px, calc(1.4rem + 18px));
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .modifier-list {
+  padding: 6px !important;
+  border: 1px solid var(--mc-border) !important;
+  border-radius: 10px !important;
+  background: var(--mc-surface-up) !important;
+  color: var(--mc-text) !important;
+  box-shadow: none !important;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .modifier-list .modifier {
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 10px;
+  border-radius: 7px;
+  color: var(--mc-text) !important;
+  overflow-wrap: anywhere;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .modifier-list .modifier.active {
+  background: var(--mc-red) !important;
+  color: #fff !important;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .modifier-list a {
+  color: inherit !important;
+  text-shadow: none !important;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .state-field {
+  box-sizing: border-box;
+  min-height: 44px;
+  height: auto !important;
+  margin: 0 !important;
+  padding: 8px !important;
+  border: 1px solid var(--mc-border) !important;
+  border-radius: 10px;
+  background: var(--mc-surface-up) !important;
+  color: var(--mc-text) !important;
+  line-height: 1.4 !important;
+  overflow-wrap: anywhere;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .state-field.active {
+  border-color: var(--mc-red) !important;
+  background: var(--mc-red) !important;
+  color: #fff !important;
+}
+
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .state-value {
+  flex: 0 0 auto;
+  border-color: currentColor !important;
+}
+
+@media (max-width: 600px) {
+  body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .dialog-base {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* Wide native form controls must not enlarge the document viewport. */
 body.mc-mobile-running .mc-mobile-admitted-app :is(.form-group, .form-fields) button {
   box-sizing: border-box;

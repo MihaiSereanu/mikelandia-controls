@@ -1029,6 +1029,8 @@
         "MCMobileEvent": "Mikelandia Controls event"
       },
       "MobilePresentation": {
+        "AdvantageShort": "ADV",
+        "DisadvantageShort": "DISADV",
         "DisconnectedApplicationRoot": "disconnected application root",
         "NativeSettingsSessionOwnsApplication": "native Settings session owns application",
         "PersistentShellOrOverlay": "persistent shell or overlay",
