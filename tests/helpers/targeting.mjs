@@ -1,5 +1,5 @@
 import { collection, createActor, createGame, createHooks } from "./foundry.mjs";
-import { createFoundryTargetingGateway } from "../../src/foundry/targeting-gateway.mjs";
+import { createFoundryTargetingGateway } from "../../src/foundry/combat/targeting-gateway.mjs";
 
 export function targetingFixture(gatewayOptions = {}) {
   const actor = createActor(), game = createGame([actor]), hooks = createHooks();

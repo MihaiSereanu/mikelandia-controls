@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { enableMobileAudio } from "../src/foundry/mobile-audio.mjs";
-import { createTaskScope } from "../src/kernel/task-scope.mjs";
+import { enableMobileAudio } from "../src/foundry/media/mobile-audio.mjs";
+import { createTaskScope } from "../src/kernel/lifecycle/task-scope.mjs";
 
 test("later native unmute and media volume changes cannot escape mobile mute", () => {
   const audio = { globalMute: false };

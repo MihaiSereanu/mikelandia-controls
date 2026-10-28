@@ -1,6 +1,6 @@
-import { ACTOR_COMMANDS } from "../../kernel/command-names.mjs";
-import { CommandError } from "../../foundry/command-error.mjs";
-import { localizeFoundry } from "../../foundry/localization.mjs";
+import { ACTOR_COMMANDS } from "../../kernel/state/command-names.mjs";
+import { CommandError } from "../../foundry/commands/command-error.mjs";
+import { localizeFoundry } from "../../foundry/settings/localization.mjs";
 import { createProfilePanels } from "../profile-view.mjs";
 import { shadowdarkPlayerProfile } from "./profile.mjs";
 import { abilities, isShadowdarkPlayer, shadowdarkContext, ownedItem } from "./context.mjs";

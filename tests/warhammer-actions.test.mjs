@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createFoundryCommandGateway, ACTOR_COMMANDS } from "../src/foundry/command-gateway.mjs";
+import { createFoundryCommandGateway, ACTOR_COMMANDS } from "../src/foundry/commands/command-gateway.mjs";
 import { resolveSystemIntegration } from "../src/systems/registry.mjs";
 import { collection, createActor, createGame, installGlobals, createHooks } from "./helpers/foundry.mjs";
 import { createWarhammerActor, createWarhammerGame, addWarhammerMagic } from "./helpers/warhammer.mjs";

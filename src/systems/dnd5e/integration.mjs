@@ -1,5 +1,5 @@
-import { createActorDirectoryRecord, createActorViewRecord } from "../../foundry/actor-view.mjs";
-import { collectiveReferenceUuids } from "../../foundry/collective-actor-view.mjs";
+import { createActorDirectoryRecord, createActorViewRecord } from "../../foundry/actors/actor-view.mjs";
+import { collectiveReferenceUuids } from "../../foundry/actors/collective-actor-view.mjs";
 import { createDnd5eCommandGateway } from "./legacy-gateway.mjs";
 
 export const dnd5eIntegration = Object.freeze({

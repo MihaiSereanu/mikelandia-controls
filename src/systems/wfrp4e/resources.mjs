@@ -1,6 +1,6 @@
 import { readProfilePath } from "../profile-view.mjs";
-import { localizeFoundry } from "../../foundry/localization.mjs";
-import { CommandError } from "../../foundry/command-error.mjs";
+import { localizeFoundry } from "../../foundry/settings/localization.mjs";
+import { CommandError } from "../../foundry/commands/command-error.mjs";
 import { readWarhammerContext } from "./context.mjs";
 import { fallbackIntegration } from "../fallback/integration.mjs";
 

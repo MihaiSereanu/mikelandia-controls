@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { disableMobileV2CloseAnimation } from "../src/foundry/mobile-presentation.mjs";
+import { disableMobileV2CloseAnimation } from "../src/foundry/presentation/mobile-presentation.mjs";
 import { installGlobals } from "./helpers/foundry.mjs";
 
 test("V2 close delegates options to the native API with animation disabled and restores afterward", async () => {

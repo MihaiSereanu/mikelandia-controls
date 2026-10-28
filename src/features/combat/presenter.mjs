@@ -1,5 +1,5 @@
-import { localizedText, localizedCount, localizedNumber } from "../../ui/localized-text.mjs";
-import { icon, node } from "../../ui/dom.mjs";
+import { localizedText, localizedCount, localizedNumber } from "../../ui/primitives/localized-text.mjs";
+import { icon, node } from "../../ui/primitives/dom.mjs";
 import { renderTargets } from "./targets.mjs";
 
 export function renderCombat({ state, commands, scope }) {

@@ -2,14 +2,20 @@
 
 ## Source map
 
-| Area | Entry points |
+The entry point wires the runtime together. Keep orchestration in `kernel`, Foundry APIs in `foundry`, route behavior in `features`, shared controls in `ui`, and game rules in `systems`.
+
+| Area | Folders and entry points |
 |---|---|
+| Runtime coordination | `src/entry.mjs`, `src/kernel/app-kernel.mjs` |
+| Kernel responsibilities | `src/kernel/state/`, `lifecycle/`, `connection/`, `presentation/` |
+| Character UI | `src/features/characters/presenter.mjs`; `profile/`, `sheets/`, `appearance/` |
+| Other routes and help | `src/features/{chat,combat,journals,settings,help}/` |
+| Foundry data and actions | `src/foundry/{actors,chat,combat,commands,journals,session}/` |
+| Foundry client behavior | `src/foundry/{presentation,settings,compatibility,media,diagnostics}/` |
+| Shared UI | `src/ui/{bootstrap,frame,help,media,navigation,primitives,timing}/` |
 | System profiles | `src/systems/registry.mjs`, `{dnd5e,wfrp4e,shadowdark,fallback}/`, `profile-view.mjs` |
-| Character UI | `src/features/characters/{profile-panels,profile-resource-editor,profile-inventory,native-sheet}.mjs` |
-| Validated writes | `src/foundry/actor-editor-gateway.mjs` |
-| Native windows / isolation | `src/foundry/{mobile-presentation,native-roll-presentation,mobile-ui-isolation}.mjs`; CSS in `assets/` |
-| Combat / targets | `src/features/combat/presenter.mjs`, `src/foundry/{combat-gateway,targeting-gateway}.mjs` |
-| Journals / audio / upgrades | `src/foundry/{journal-visibility,mobile-audio,legacy-client-restoration}.mjs` |
+
+Character themes, header artwork, and header scrolling live in `features/characters/appearance/`. The banner catalogue resolves artwork relative to its own module; the elapsed clock loads its worker from `ui/timing/`. Preserve these URLs when moving their modules.
 
 ## Scope and validated actions
 
@@ -29,7 +35,7 @@ While Targets is expanded and Combat is visible, relevant native refreshToken po
 
 The in-game companion frame reserves the top safe-area inset plus 8px in standalone mode. Both base and protected-style CSS use border-box sizing to keep navigation within the viewport. Login/PWA behavior and operations are in the [runbook](mobile-login.md).
 
-Mobile Logout navigates to Foundry's prefix-aware `mobile` route with a trailing slash. The mobile login establishes the native `/join` session to end the world login. The bootstrap icon is bundled as `assets/mc-512.png`, matching the transparent gold PWA icon.
+Mobile Logout navigates to Foundry's prefix-aware `mobile` route with a trailing slash. The mobile login establishes the native `/join` session to end the world login.
 
 Branding and technical ID are Mikelandia Controls / `mikelandia-controls`; CSS/data prefixes are `mc-`, and localization uses `MIKELANDIA_CONTROLS`. `branding-migration.mjs` copies browser state before first reads and missing Actor/raw-token flag leaves under one GM, preserving destination values and originals. See [migration](migration.md) for world activation and rollback. Upgrade restoration restores only owned client settings and preserves failed restoration data.
 
@@ -86,3 +92,5 @@ Optional in-memory API: `setRollTimingEnabled`, `rollTimingSnapshot`, `resetRoll
 ## Packaging
 
 Validation workflow: [AGENTS.md](../AGENTS.md). Build with `py -3 scripts/build_release.py --version <version>`; the builder validates local ZIP contents, manifest references and runtime imports. After publication, verify anonymous HTTP downloads with `py -3 scripts/check_release.py --base-url <release-url> --version <version> --build <commit-sha>`. The canonical release contains `module.json` and `mikelandia-controls.zip`; publication removes obsolete experimental assets. Main pushes publish releases. The standalone login has its own build/deployment [runbook](mobile-login.md).
+
+All five scripts support maintained workflows: `build_release.py` packages the module, `build_mobile_login.py` packages the login app, `check_browser.mjs` runs browser fixtures, `check_release.py` checks published downloads, and `retire_legacy_assets.py` removes obsolete release assets after publication. The retirement step remains needed for the pending module rename.

@@ -1,12 +1,12 @@
-import { migrateBrowserBranding, registerBrandingMigration, migrateWorldBranding } from "./foundry/branding-migration.mjs";
+import { migrateBrowserBranding, registerBrandingMigration, migrateWorldBranding } from "./foundry/compatibility/branding-migration.mjs";
 import { createSystemIntegrationResolver } from "./systems/registry.mjs";
-import { localizeFoundry } from "./foundry/localization.mjs";
-import { createControlsGuideGateway } from "./foundry/controls-guide-gateway.mjs";
-import { createControlsGuide } from "./ui/controls-guide.mjs";
+import { localizeFoundry } from "./foundry/settings/localization.mjs";
+import { createControlsGuideGateway } from "./foundry/settings/controls-guide-gateway.mjs";
+import { createControlsGuide } from "./ui/help/controls-guide.mjs";
 import { createAppKernel } from "./kernel/app-kernel.mjs";
-import { createSignalStore } from "./kernel/signal-store.mjs";
-import { initialAppState, reduceAppState } from "./kernel/app-state.mjs";
-import { createActivationPolicyResolver, createSessionActivationOverride } from "./foundry/activation-policy.mjs";
+import { createSignalStore } from "./kernel/state/signal-store.mjs";
+import { initialAppState, reduceAppState } from "./kernel/state/app-state.mjs";
+import { createActivationPolicyResolver, createSessionActivationOverride } from "./foundry/session/activation-policy.mjs";
 import {
   createFoundryPreferencesGateway,
   KEYS,
@@ -17,45 +17,45 @@ import {
   readProtectMcStyling,
   readPreferences,
   registerPreferences
-} from "./foundry/preferences.mjs";
-import { createFoundrySessionGateway } from "./foundry/session-gateway.mjs";
-import { enableMobilePresentation, enableMcStyleAuthority } from "./foundry/mobile-presentation.mjs";
-import { createFoundryCommandGateway } from "./foundry/command-gateway.mjs";
-import { createRollTimingGateway } from "./foundry/roll-timing.mjs";
-import { enableMobileDiceGuard } from "./foundry/mobile-dice-guard.mjs";
-import { enableMobileAudio } from "./foundry/mobile-audio.mjs";
-import { resolveMobileGraphicsPolicy } from "./foundry/mobile-graphics-policy.mjs";
-import { createTaskScope } from "./kernel/task-scope.mjs";
-import { createFoundryNativeChatGateway } from "./foundry/native-chat-gateway.mjs";
-import { createFoundryActionSessionGateway } from "./foundry/action-session-gateway.mjs";
-import { createBootstrapWakePreference, createScreenWakeLockController } from "./foundry/screen-wake-lock.mjs";
-import { enableMobileConnectionGrace } from "./foundry/connection-grace.mjs";
-import { createMobileBootstrap, navigationStartAt, suppressBootstrapSoftwareKeyboard } from "./ui/bootstrap-loader.mjs";
-import { createBootstrapWatchdog } from "./kernel/bootstrap-watchdog.mjs";
-import { createMobileDiagnostics } from "./foundry/mobile-diagnostics.mjs";
-import { createArmorClassGateway } from "./foundry/armor-class-gateway.mjs";
-import { createFoundryCombatGateway } from "./foundry/combat-gateway.mjs";
-import { createFoundryTargetingGateway } from "./foundry/targeting-gateway.mjs";
-import { createFoundryAuthoritativeSessionGateway } from "./foundry/authoritative-session-gateway.mjs";
-import { createClientLoadTimingGateway } from "./foundry/client-load-timing-gateway.mjs";
-import { createConnectionGeneration } from "./kernel/connection-generation.mjs";
-import { createFoundryThemeGateway } from "./foundry/theme-gateway.mjs";
-import { createFoundrySettingsCompatibilityGateway } from "./foundry/settings-compatibility-gateway.mjs";
-import { createFoundryDesktopSettingsVisibilityGateway } from "./foundry/desktop-settings-visibility-gateway.mjs";
-import { createFoundrySessionStatusGateway } from "./foundry/session-status-gateway.mjs";
-import { createFoundryActiveEffectContextGateway } from "./foundry/active-effect-context-gateway.mjs";
-import { createPerformanceObserver } from "./kernel/performance-observer.mjs";
-import { createMobilePerformanceAuthority, isMobilePerformanceAuthorityActive } from "./kernel/presentation-mode-authority.mjs";
-import { createMobileStartupGateway } from "./foundry/mobile-startup-gateway.mjs";
-import { showDesktopRestorationRecovery } from "./ui/desktop-restoration-recovery.mjs";
-import { createFoundryBiographyGateway } from "./foundry/biography-gateway.mjs";
-import { enableMobileJournalReader } from "./foundry/mobile-journal-reader-gateway.mjs";
-import { createChatDomGateway, installMcChatWindowClass } from "./foundry/chat-dom-gateway.mjs";
-import { createFoundryMobileBackGateway } from "./foundry/mobile-back-gateway.mjs";
-import { createActorEditorGateway } from "./foundry/actor-editor-gateway.mjs";
-import { createMobileModuleCompatibilityGateway } from "./foundry/mobile-module-compatibility.mjs";
+} from "./foundry/settings/preferences.mjs";
+import { createFoundrySessionGateway } from "./foundry/session/session-gateway.mjs";
+import { enableMobilePresentation, enableMcStyleAuthority } from "./foundry/presentation/mobile-presentation.mjs";
+import { createFoundryCommandGateway } from "./foundry/commands/command-gateway.mjs";
+import { createRollTimingGateway } from "./foundry/media/roll-timing.mjs";
+import { enableMobileDiceGuard } from "./foundry/media/mobile-dice-guard.mjs";
+import { enableMobileAudio } from "./foundry/media/mobile-audio.mjs";
+import { resolveMobileGraphicsPolicy } from "./foundry/presentation/mobile-graphics-policy.mjs";
+import { createTaskScope } from "./kernel/lifecycle/task-scope.mjs";
+import { createFoundryNativeChatGateway } from "./foundry/chat/native-chat-gateway.mjs";
+import { createFoundryActionSessionGateway } from "./foundry/commands/action-session-gateway.mjs";
+import { createBootstrapWakePreference, createScreenWakeLockController } from "./foundry/presentation/screen-wake-lock.mjs";
+import { enableMobileConnectionGrace } from "./foundry/session/connection-grace.mjs";
+import { createMobileBootstrap, navigationStartAt, suppressBootstrapSoftwareKeyboard } from "./ui/bootstrap/bootstrap-loader.mjs";
+import { createBootstrapWatchdog } from "./kernel/lifecycle/bootstrap-watchdog.mjs";
+import { createMobileDiagnostics } from "./foundry/diagnostics/mobile-diagnostics.mjs";
+import { createArmorClassGateway } from "./foundry/actors/armor-class-gateway.mjs";
+import { createFoundryCombatGateway } from "./foundry/combat/combat-gateway.mjs";
+import { createFoundryTargetingGateway } from "./foundry/combat/targeting-gateway.mjs";
+import { createFoundryAuthoritativeSessionGateway } from "./foundry/session/authoritative-session-gateway.mjs";
+import { createClientLoadTimingGateway } from "./foundry/diagnostics/client-load-timing-gateway.mjs";
+import { createConnectionGeneration } from "./kernel/connection/connection-generation.mjs";
+import { createFoundryThemeGateway } from "./foundry/settings/theme-gateway.mjs";
+import { createFoundrySettingsCompatibilityGateway } from "./foundry/settings/settings-compatibility-gateway.mjs";
+import { createFoundryDesktopSettingsVisibilityGateway } from "./foundry/settings/desktop-settings-visibility-gateway.mjs";
+import { createFoundrySessionStatusGateway } from "./foundry/session/session-status-gateway.mjs";
+import { createFoundryActiveEffectContextGateway } from "./foundry/actors/active-effect-context-gateway.mjs";
+import { createPerformanceObserver } from "./kernel/lifecycle/performance-observer.mjs";
+import { createMobilePerformanceAuthority, isMobilePerformanceAuthorityActive } from "./kernel/presentation/presentation-mode-authority.mjs";
+import { createMobileStartupGateway } from "./foundry/session/mobile-startup-gateway.mjs";
+import { showDesktopRestorationRecovery } from "./ui/bootstrap/desktop-restoration-recovery.mjs";
+import { createFoundryBiographyGateway } from "./foundry/actors/biography-gateway.mjs";
+import { enableMobileJournalReader } from "./foundry/journals/mobile-journal-reader-gateway.mjs";
+import { createChatDomGateway, installMcChatWindowClass } from "./foundry/chat/chat-dom-gateway.mjs";
+import { createFoundryMobileBackGateway } from "./foundry/presentation/mobile-back-gateway.mjs";
+import { createActorEditorGateway } from "./foundry/actors/actor-editor-gateway.mjs";
+import { createMobileModuleCompatibilityGateway } from "./foundry/compatibility/mobile-module-compatibility.mjs";
 
-import { createLegacyClientRestoration } from "./foundry/legacy-client-restoration.mjs";
+import { createLegacyClientRestoration } from "./foundry/compatibility/legacy-client-restoration.mjs";
 const isGamePage = /\/game\/?$/.test(window.location.pathname);
 
 const migrateBrowserState = () => {

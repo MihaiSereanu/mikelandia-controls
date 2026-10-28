@@ -1,18 +1,18 @@
-import { localizedNumber, localizedText, localizedCount } from "../../ui/localized-text.mjs";
-import { ACTOR_COMMANDS } from "../../kernel/command-names.mjs";
-import { icon, node } from "../../ui/dom.mjs";
+import { localizedNumber, localizedText, localizedCount } from "../../ui/primitives/localized-text.mjs";
+import { ACTOR_COMMANDS } from "../../kernel/state/command-names.mjs";
+import { icon, node } from "../../ui/primitives/dom.mjs";
 import { countInventoryContents, favouriteItemMetadata, filterSpellsByAvailability, groupFavourites, groupFeatures, groupNpcFeatures, groupInventory, groupSpells, isSpellUnprepared, itemSubtitle } from "./collections.mjs";
-import { sheetTabIcon } from "./sheet-icons.mjs";
-import { resolveCharacterTheme } from "../../kernel/character-theme.mjs";
-import { bindLongPress } from "../../ui/long-press.mjs";
-import { renderActionSessionModal } from "../../ui/action-session-modal.mjs";
-import { bindDetailsDisclosure } from "../../ui/disclosure.mjs";
-import { hasCharacterDisclosure } from "../../kernel/app-state.mjs";
-import { renderImageViewer } from "../../ui/image-viewer.mjs";
-import { renderRollResultOverlay } from "../../ui/roll-result-overlay.mjs";
-import { resolveHeaderBanner } from "../../kernel/header-banner.mjs";
-import { actorSheetTabs, actorOriginBack, collectiveHeaderContent, renderCollectivePanel } from "./collective-sheet.mjs";
-import { renderNativeCharacter } from "./native-sheet.mjs";
+import { sheetTabIcon } from "./sheets/sheet-icons.mjs";
+import { resolveCharacterTheme } from "./appearance/character-theme.mjs";
+import { bindLongPress } from "../../ui/primitives/long-press.mjs";
+import { renderActionSessionModal } from "../../ui/frame/action-session-modal.mjs";
+import { bindDetailsDisclosure } from "../../ui/primitives/disclosure.mjs";
+import { hasCharacterDisclosure } from "../../kernel/state/app-state.mjs";
+import { renderImageViewer } from "../../ui/media/image-viewer.mjs";
+import { renderRollResultOverlay } from "../../ui/media/roll-result-overlay.mjs";
+import { resolveHeaderBanner } from "./appearance/header-banner.mjs";
+import { actorSheetTabs, actorOriginBack, collectiveHeaderContent, renderCollectivePanel } from "./sheets/collective-sheet.mjs";
+import { renderNativeCharacter } from "./sheets/native-sheet.mjs";
 
 const SHEET_TABS = Object.freeze([
   ["favourites", "favourites", "Favourites"],

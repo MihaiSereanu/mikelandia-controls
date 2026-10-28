@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { MODULE_ID, migrateBrowserBranding, registerBrandingMigration, migrateWorldBranding, readMigratedFlags } from "../src/foundry/branding-migration.mjs";
+import { MODULE_ID, migrateBrowserBranding, registerBrandingMigration, migrateWorldBranding, readMigratedFlags } from "../src/foundry/compatibility/branding-migration.mjs";
 
 const oldId = "ve-mobile";
 const marker = `${MODULE_ID}:branding-migration:v1`;

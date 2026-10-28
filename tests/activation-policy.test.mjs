@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { classifyRuntimeMode, createActivationPolicyResolver } from "../src/foundry/activation-policy.mjs";
+import { classifyRuntimeMode, createActivationPolicyResolver } from "../src/foundry/session/activation-policy.mjs";
 
 const browser = { innerWidth: 390, innerHeight: 844, screen: { width: 390, height: 844 }, matchMedia: () => ({ matches: true }) };
 for (const [name, navigator, mode] of [

@@ -1,6 +1,6 @@
-import { localizedText, localizedCount } from "../../ui/localized-text.mjs";
-import { icon, node } from "../../ui/dom.mjs";
-import { renderImageViewer } from "../../ui/image-viewer.mjs";
+import { localizedText, localizedCount } from "../../ui/primitives/localized-text.mjs";
+import { icon, node } from "../../ui/primitives/dom.mjs";
+import { renderImageViewer } from "../../ui/media/image-viewer.mjs";
 import { buildJournalTree, journalBranchCount } from "./model.mjs";
 
 export function renderJournals({ state, commands, scope }) {

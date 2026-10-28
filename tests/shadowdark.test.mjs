@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createFoundryCommandGateway, ACTOR_COMMANDS } from "../src/foundry/command-gateway.mjs";
+import { createFoundryCommandGateway, ACTOR_COMMANDS } from "../src/foundry/commands/command-gateway.mjs";
 import { resolveSystemIntegration } from "../src/systems/registry.mjs";
 import { installGlobals, collection } from "./helpers/foundry.mjs";
 import { createShadowdarkFixture } from "./helpers/shadowdark.mjs";

@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isJournalVisible, isJournalPageVisible } from "../src/foundry/journal-visibility.mjs";
-import { createFoundrySessionGateway, sessionInvalidationForHook } from "../src/foundry/session-gateway.mjs";
-import { journalReadTarget } from "../src/foundry/mobile-journal-reader-gateway.mjs";
+import { isJournalVisible, isJournalPageVisible } from "../src/foundry/journals/journal-visibility.mjs";
+import { createFoundrySessionGateway, sessionInvalidationForHook } from "../src/foundry/session/session-gateway.mjs";
+import { journalReadTarget } from "../src/foundry/journals/mobile-journal-reader-gateway.mjs";
 import { collection, createGame, createHooks, installGlobals } from "./helpers/foundry.mjs";
-import { createTaskScope } from "../src/kernel/task-scope.mjs";
+import { createTaskScope } from "../src/kernel/lifecycle/task-scope.mjs";
 
 function journal(id, overrides = {}) {
   return { id, documentName: "JournalEntry", name: id, pages: collection(),

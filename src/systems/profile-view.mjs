@@ -1,5 +1,5 @@
-import { localizeFoundry } from "../foundry/localization.mjs";
-import { localizedText } from "../ui/localized-text.mjs";
+import { localizeFoundry } from "../foundry/settings/localization.mjs";
+import { localizedText } from "../ui/primitives/localized-text.mjs";
 
 const FORBIDDEN_KEYS = new Set(["__proto__", "prototype", "constructor"]);
 const validId = value => typeof value === "string" && /^[a-z][a-z0-9-]{0,63}$/u.test(value);

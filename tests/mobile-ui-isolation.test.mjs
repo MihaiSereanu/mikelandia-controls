@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { classifyMobileApplication } from "../src/foundry/mobile-presentation.mjs";
-import { ownMobileApplication, runMobileApplicationWorkflow, mobileWorkflowPending } from "../src/foundry/mobile-ui-isolation.mjs";
+import { classifyMobileApplication } from "../src/foundry/presentation/mobile-presentation.mjs";
+import { ownMobileApplication, runMobileApplicationWorkflow, mobileWorkflowPending } from "../src/foundry/presentation/mobile-ui-isolation.mjs";
 import { installGlobals } from "./helpers/foundry.mjs";
 
 function root({ modal = false, framed = false } = {}) {

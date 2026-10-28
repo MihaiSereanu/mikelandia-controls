@@ -1,5 +1,5 @@
-import { node, vectorIcon } from "../../ui/dom.mjs";
-import { localizedText, localizedNumber } from "../../ui/localized-text.mjs";
+import { node, vectorIcon } from "../../ui/primitives/dom.mjs";
+import { localizedText, localizedNumber } from "../../ui/primitives/localized-text.mjs";
 
 export function renderTargets({ targeting, commands, scope }) {
   if (!targeting) return null;

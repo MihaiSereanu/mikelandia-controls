@@ -1,8 +1,8 @@
 import { createHooks } from "/tests/helpers/foundry.mjs";
-import { createTaskScope } from "/src/kernel/task-scope.mjs";
-import { createFoundrySettingsCompatibilityGateway } from "/src/foundry/settings-compatibility-gateway.mjs";
-import { enableMobileApplications } from "/src/foundry/mobile-presentation.mjs";
-import { ownMobileApplication, runMobileApplicationWorkflow } from "/src/foundry/mobile-ui-isolation.mjs";
+import { createTaskScope } from "/src/kernel/lifecycle/task-scope.mjs";
+import { createFoundrySettingsCompatibilityGateway } from "/src/foundry/settings/settings-compatibility-gateway.mjs";
+import { enableMobileApplications } from "/src/foundry/presentation/mobile-presentation.mjs";
+import { ownMobileApplication, runMobileApplicationWorkflow } from "/src/foundry/presentation/mobile-ui-isolation.mjs";
 
 const checks = [], check = (name, value) => { if (!value) throw new Error(name); checks.push(name); };
 const tick = () => new Promise(resolve => setTimeout(resolve, 40));

@@ -14,7 +14,7 @@ Latest deployed evidence and pending phone checks: [current status](current-stat
 
 The collapsed **Install Mikelandia Controls** section detects Android, iPhone/iPad (including desktop-identified iPads), or other browsers. Android Chrome: **Install and create shortcut > Install**, **Add to home screen > Install**, or **Install app**, depending on version. iOS Safari: **Share > Add to Home Screen**, keeping **Open as Web App** on if shown. Open Mikelandia from the home screen. Regular tabs retain browser controls.
 
-Manifest: standalone display, start `./`, scope `../` relative to `/mobile/manifest.webmanifest`, covering login and `/game`; route prefixes work. OS bars remain device-controlled. Installation controls hide when installed/standalone and work independently of Foundry availability. The regular 192/512px icons use gold MC/hexagon on transparency; separate opaque cream icons with navy artwork serve Apple (180px) and Android masking (512px). All use Foundry's Amiri Bold; font files are not redistributed. Icon URLs are refreshed, but an existing installation may need reinstalling to display the new icon. No service worker or offline game cache.
+Manifest: standalone display, start `./`, scope `../` relative to `/mobile/manifest.webmanifest`, covering login and `/game`; route prefixes work. OS bars remain device-controlled. Installation controls hide when installed/standalone and work independently of Foundry availability. No service worker or offline game cache.
 
 The in-game companion frame follows the [standalone spacing contract](architecture.md#mobile-frame-and-upgrades). Browser fixtures explicitly activate that CSS branch because CDP display-mode emulation does not establish standalone context. Physical installed-app review remains required.
 
@@ -43,8 +43,8 @@ Caddy can serve the page while Foundry is stopped; connection failures offer ret
 
 ## Rollback
 
-- PWA fixes deployed 2026-10-28: `/var/backups/mikelandia-mobile/20261028-095230-pwa-fixes/` contains `static/` originals, `module/assets/` originals, and the deployment hash receipt. Restore these over `/srv/mikelandia-mobile/` and `/home/ubuntu/foundrydata/Data/modules/ve-mobile/` respectively; remove the newly added `icons/mc-maskable-512.png` from the static root. No service restart; reload clients. Only the spacing delta was applied to the still-named `ve-mobile` runtime, version 1.1.15. The local Profile wording edit was excluded.
-- PWA update deployed 2026-10-28: restore the five prior files from `/var/backups/mikelandia-mobile/20261027-225515-pwa/static/` to the static root; remove `pwa.mjs`, `manifest.webmanifest`, and `icons/mc-*.png`. No service restart; reload clients. Installed device icons may persist. Backup name uses server time. This update left Caddy configuration unchanged.
+- PWA fixes deployed 2026-10-28: `/var/backups/mikelandia-mobile/20261028-095230-pwa-fixes/` contains `static/` originals, `module/assets/` originals, and the deployment hash receipt. Restore these over `/srv/mikelandia-mobile/` and `/home/ubuntu/foundrydata/Data/modules/ve-mobile/` respectively. No service restart; reload clients. Only the spacing delta was applied to the still-named `ve-mobile` runtime, version 1.1.15. The local Profile wording edit was excluded.
+- PWA update deployed 2026-10-28: restore the five prior files from `/var/backups/mikelandia-mobile/20261027-225515-pwa/static/` to the static root; remove `pwa.mjs`, `manifest.webmanifest`. No service restart; reload clients. Backup name uses server time. This update left Caddy configuration unchanged.
 - Original login deployment: restore `/var/backups/mikelandia-mobile/20261027-210837/Caddyfile` to `/etc/caddy/Caddyfile`, validate, and reload. Static files may remain unserved. That backup also holds original deployment hashes.
 
 ## Native compatibility

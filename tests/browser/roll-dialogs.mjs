@@ -1,4 +1,4 @@
-import { createMobileApplicationAdmissions } from "/src/foundry/mobile-presentation.mjs";
+import { createMobileApplicationAdmissions } from "/src/foundry/presentation/mobile-presentation.mjs";
 
 // Representative native template structure; actions below are fixture handlers,
 // not proof of native calculations, chat, effects or ammunition consumption.

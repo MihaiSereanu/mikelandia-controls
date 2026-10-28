@@ -1,4 +1,4 @@
-import { localizedText } from "../../ui/localized-text.mjs";
+import { localizedText } from "../../ui/primitives/localized-text.mjs";
 
 const INVENTORY_CATEGORIES = Object.freeze([
   ["weapons", "Weapons", new Set(["weapon"])],

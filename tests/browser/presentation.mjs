@@ -1,8 +1,8 @@
 import { createGame } from "/tests/helpers/foundry.mjs";
-import { createFoundryPreferencesGateway, registerPreferences } from "/src/foundry/preferences.mjs";
+import { createFoundryPreferencesGateway, registerPreferences } from "/src/foundry/settings/preferences.mjs";
 import { renderSettings } from "/src/features/settings/presenter.mjs";
-import { createControlsGuide } from "/src/ui/controls-guide.mjs";
-import { createTaskScope } from "/src/kernel/task-scope.mjs";
+import { createControlsGuide } from "/src/ui/help/controls-guide.mjs";
+import { createTaskScope } from "/src/kernel/lifecycle/task-scope.mjs";
 
 const checks = [], check = (name, value) => { if (!value) throw new Error(name); checks.push(name); };
 const tick = () => new Promise(resolve => setTimeout(resolve, 30));

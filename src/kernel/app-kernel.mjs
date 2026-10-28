@@ -1,12 +1,12 @@
-import { localizedText } from "../ui/localized-text.mjs";
-import { runMobileApplicationWorkflow } from "../foundry/mobile-ui-isolation.mjs";
-import { createTaskScope } from "./task-scope.mjs";
-import { createAppFrame } from "../ui/app-frame.mjs";
-import { createAuthoritativeResynchronizer } from "./authoritative-resync.mjs";
+import { localizedText } from "../ui/primitives/localized-text.mjs";
+import { runMobileApplicationWorkflow } from "../foundry/presentation/mobile-ui-isolation.mjs";
+import { createTaskScope } from "./lifecycle/task-scope.mjs";
+import { createAppFrame } from "../ui/frame/app-frame.mjs";
+import { createAuthoritativeResynchronizer } from "./connection/authoritative-resync.mjs";
 
-import { ACTOR_COMMANDS } from "./command-names.mjs";
+import { ACTOR_COMMANDS } from "./state/command-names.mjs";
 
-import { createModeTransitionCoordinator, presentationLabel } from "./mode-transition.mjs";
+import { createModeTransitionCoordinator, presentationLabel } from "./presentation/mode-transition.mjs";
 
 export function createAppKernel({ store, session, commandGateway, biographyGateway, actorEditorGateway = null, combatGateway, targetingGateway = null, authoritativeGateway, loadTimingGateway = null, reloadApplication = () => globalThis.window?.location?.reload?.(), connectionGeneration, nativeChatGateway, armorClassGateway = null, activeEffectContextGateway, actionSessionGateway, preferencesGateway, settingsCompatibilityGateway, sessionStatusGateway, controlsGuideGateway = null, isControlsUiReady = () => false, themeGateway, mobileBackGateway = null, diagnostics, performanceObserver = null, wakeLockController, readPolicy, disable, preparePresentation = () => {}, createFrame = createAppFrame }) {
   const localize = (key, fallback, data) => localizedText((id, _fallback, values) => preferencesGateway?.localize?.(id, values), key, fallback, data);

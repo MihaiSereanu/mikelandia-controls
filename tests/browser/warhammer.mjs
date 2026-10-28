@@ -1,8 +1,8 @@
-import { createFoundrySessionGateway } from "/src/foundry/session-gateway.mjs";
-import { createFoundryCommandGateway } from "/src/foundry/command-gateway.mjs";
-import { enableMobileApplications } from "/src/foundry/mobile-presentation.mjs";
+import { createFoundrySessionGateway } from "/src/foundry/session/session-gateway.mjs";
+import { createFoundryCommandGateway } from "/src/foundry/commands/command-gateway.mjs";
+import { enableMobileApplications } from "/src/foundry/presentation/mobile-presentation.mjs";
 import { renderCharacters } from "/src/features/characters/presenter.mjs";
-import { createTaskScope } from "/src/kernel/task-scope.mjs";
+import { createTaskScope } from "/src/kernel/lifecycle/task-scope.mjs";
 import { createHooks } from "/tests/helpers/foundry.mjs";
 import { createWarhammerActor, createWarhammerGame, addWarhammerMagic } from "/tests/helpers/warhammer.mjs";
 

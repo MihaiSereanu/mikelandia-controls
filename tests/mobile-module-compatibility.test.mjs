@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createMobileModuleCompatibilityGateway } from "../src/foundry/mobile-module-compatibility.mjs";
+import { createMobileModuleCompatibilityGateway } from "../src/foundry/compatibility/mobile-module-compatibility.mjs";
 
 function createNode({ href = "", id = "", classNames = [] } = {}) {
   const classes = new Set(classNames);

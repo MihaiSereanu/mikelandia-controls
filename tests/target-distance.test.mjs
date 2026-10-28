@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { targetDistance } from "../src/foundry/target-distance.mjs";
+import { targetDistance } from "../src/foundry/combat/target-distance.mjs";
 
 test("gridded distance minimizes footprint pairs, strips elevation and bypasses v14 collisions", () => {
   for (const generation of [13, 14]) {

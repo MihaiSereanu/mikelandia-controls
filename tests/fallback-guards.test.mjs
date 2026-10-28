@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createFoundryBiographyGateway } from "../src/foundry/biography-gateway.mjs";
-import { createArmorClassGateway } from "../src/foundry/armor-class-gateway.mjs";
-import { createFoundryPreferencesGateway } from "../src/foundry/preferences.mjs";
-import { createFoundryCombatGateway } from "../src/foundry/combat-gateway.mjs";
+import { createFoundryBiographyGateway } from "../src/foundry/actors/biography-gateway.mjs";
+import { createArmorClassGateway } from "../src/foundry/actors/armor-class-gateway.mjs";
+import { createFoundryPreferencesGateway } from "../src/foundry/settings/preferences.mjs";
+import { createFoundryCombatGateway } from "../src/foundry/combat/combat-gateway.mjs";
 import { resolveSystemIntegration } from "../src/systems/registry.mjs";
 import { collection, createActor, createGame, installGlobals } from "./helpers/foundry.mjs";
 

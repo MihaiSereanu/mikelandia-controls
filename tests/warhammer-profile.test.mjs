@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { resolveSystemIntegration } from "../src/systems/registry.mjs";
-import { createFoundrySessionGateway, sessionInvalidationForHook } from "../src/foundry/session-gateway.mjs";
-import { createTaskScope } from "../src/kernel/task-scope.mjs";
+import { createFoundrySessionGateway, sessionInvalidationForHook } from "../src/foundry/session/session-gateway.mjs";
+import { createTaskScope } from "../src/kernel/lifecycle/task-scope.mjs";
 import { createHooks, installGlobals } from "./helpers/foundry.mjs";
 import { createWarhammerActor, createWarhammerGame } from "./helpers/warhammer.mjs";
 

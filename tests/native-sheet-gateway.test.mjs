@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createActorEditorGateway } from "../src/foundry/actor-editor-gateway.mjs";
-import { classifyMobileApplication, createMobileApplicationAdmissions } from "../src/foundry/mobile-presentation.mjs";
-import { createTaskScope } from "../src/kernel/task-scope.mjs";
+import { createActorEditorGateway } from "../src/foundry/actors/actor-editor-gateway.mjs";
+import { classifyMobileApplication, createMobileApplicationAdmissions } from "../src/foundry/presentation/mobile-presentation.mjs";
+import { createTaskScope } from "../src/kernel/lifecycle/task-scope.mjs";
 import { createActor, createGame, createHooks, installGlobals } from "./helpers/foundry.mjs";
 
 function fixture(t, { v1 = false, systemId = "shadowdark", type = "Player", render = () => {} } = {}) {

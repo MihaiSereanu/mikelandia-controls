@@ -1,8 +1,8 @@
-import { readMigratedFlags } from "../../foundry/branding-migration.mjs";
+import { readMigratedFlags } from "../../foundry/compatibility/branding-migration.mjs";
 import { readProfilePath } from "../profile-view.mjs";
 import { isShadowdarkPlayer, shadowdarkContext } from "./context.mjs";
-import { CommandError } from "../../foundry/command-error.mjs";
-import { localizeFoundry } from "../../foundry/localization.mjs";
+import { CommandError } from "../../foundry/commands/command-error.mjs";
+import { localizeFoundry } from "../../foundry/settings/localization.mjs";
 
 export const customResources = Object.freeze({ def: "DEF", grit: "Grit" });
 const coinPaths = Object.freeze({ "coin-gp": "system.coins.gp", "coin-sp": "system.coins.sp", "coin-cp": "system.coins.cp" });

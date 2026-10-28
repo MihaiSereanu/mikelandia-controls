@@ -1,15 +1,15 @@
 import { createShadowdarkFixture } from "/tests/helpers/shadowdark.mjs";
 import { createActor, createGame, createHooks, collection } from "/tests/helpers/foundry.mjs";
 import { createAppKernel } from "/src/kernel/app-kernel.mjs";
-import { createSignalStore } from "/src/kernel/signal-store.mjs";
-import { initialAppState, reduceAppState } from "/src/kernel/app-state.mjs";
-import { createFoundrySessionGateway } from "/src/foundry/session-gateway.mjs";
-import { createFoundryCommandGateway } from "/src/foundry/command-gateway.mjs";
-import { createFoundryCombatGateway } from "/src/foundry/combat-gateway.mjs";
-import { createFoundryTargetingGateway } from "/src/foundry/targeting-gateway.mjs";
+import { createSignalStore } from "/src/kernel/state/signal-store.mjs";
+import { initialAppState, reduceAppState } from "/src/kernel/state/app-state.mjs";
+import { createFoundrySessionGateway } from "/src/foundry/session/session-gateway.mjs";
+import { createFoundryCommandGateway } from "/src/foundry/commands/command-gateway.mjs";
+import { createFoundryCombatGateway } from "/src/foundry/combat/combat-gateway.mjs";
+import { createFoundryTargetingGateway } from "/src/foundry/combat/targeting-gateway.mjs";
 import { targetingFixture } from "/tests/helpers/targeting.mjs";
-import { createFoundryPreferencesGateway, registerPreferences } from "/src/foundry/preferences.mjs";
-import { createConnectionGeneration } from "/src/kernel/connection-generation.mjs";
+import { createFoundryPreferencesGateway, registerPreferences } from "/src/foundry/settings/preferences.mjs";
+import { createConnectionGeneration } from "/src/kernel/connection/connection-generation.mjs";
 
 const checks = [];
 const check = (name, condition) => { if (!condition) throw new Error(name); checks.push(name); };

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createFoundryPreferencesGateway } from "../src/foundry/preferences.mjs";
+import { createFoundryPreferencesGateway } from "../src/foundry/settings/preferences.mjs";
 import { foundryRoutes } from "../mobile-login/foundry-client.mjs";
 
 for (const prefix of ["", "/foundry"]) {

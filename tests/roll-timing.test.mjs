@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createRollTimingGateway } from "../src/foundry/roll-timing.mjs";
+import { createRollTimingGateway } from "../src/foundry/media/roll-timing.mjs";
 import { createHooks } from "./helpers/foundry.mjs";
 
 function fixture() {

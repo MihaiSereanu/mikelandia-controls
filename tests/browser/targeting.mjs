@@ -1,5 +1,5 @@
 import { targetingFixture } from "../helpers/targeting.mjs";
-import { createTaskScope } from "/src/kernel/task-scope.mjs";
+import { createTaskScope } from "/src/kernel/lifecycle/task-scope.mjs";
 import { renderCombat } from "/src/features/combat/presenter.mjs";
 
 const checks = [];

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createShadowdarkFixture } from "./helpers/shadowdark.mjs";
 import { installGlobals, collection } from "./helpers/foundry.mjs";
-import { createFoundryCommandGateway, ACTOR_COMMANDS as C } from "../src/foundry/command-gateway.mjs";
+import { createFoundryCommandGateway, ACTOR_COMMANDS as C } from "../src/foundry/commands/command-gateway.mjs";
 function setup(t) {
   const f = createShadowdarkFixture(); installGlobals(t, { game: f.game, Hooks: f.hooks });
   f.gateway = createFoundryCommandGateway();

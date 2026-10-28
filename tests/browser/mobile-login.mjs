@@ -28,7 +28,7 @@ try {
     const canvas = document.createElement("canvas"); canvas.width = image.width; canvas.height = image.height;
     const ctx = canvas.getContext("2d"); ctx.drawImage(image, 0, 0);
     const pixel = ctx.getImageData(0, 0, 1, 1).data;
-    check("icon background matches platform purpose " + icon.src, icon.purpose === "any" ? pixel[3] === 0 : pixel[3] === 255 && pixel[0] > 200);
+    check("icon background matches platform purpose " + icon.src, icon.purpose === "any" ? pixel[3] === 0 : pixel[3] === 255 && pixel[0] === 0 && pixel[1] === 0 && pixel[2] === 0);
   }
   for (const base of ["https://example.test/mobile/", "https://example.test/foundry/mobile/"]) {
     const url = new URL("manifest.webmanifest", base);

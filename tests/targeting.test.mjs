@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { targetingFixture } from "./helpers/targeting.mjs";
-import { createTaskScope } from "../src/kernel/task-scope.mjs";
+import { createTaskScope } from "../src/kernel/lifecycle/task-scope.mjs";
 import { installGlobals } from "./helpers/foundry.mjs";
 
 test("native unlinked encounter uses combatant scenes and ignores foreign-scene token ID collisions", () => {

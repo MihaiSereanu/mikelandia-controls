@@ -1,12 +1,12 @@
-import { CommandError } from "../../foundry/command-error.mjs";
-import { ownMobileApplication } from "../../foundry/mobile-ui-isolation.mjs";
+import { CommandError } from "../../foundry/commands/command-error.mjs";
+import { ownMobileApplication } from "../../foundry/presentation/mobile-ui-isolation.mjs";
 import { createDnd5eCommands } from "./commands.mjs";
-import { localizeFoundry } from "../../foundry/localization.mjs";
-import { ACTOR_COMMANDS } from "../../kernel/command-names.mjs";
+import { localizeFoundry } from "../../foundry/settings/localization.mjs";
+import { ACTOR_COMMANDS } from "../../kernel/state/command-names.mjs";
 const NATIVE_ROLL_COMMANDS = Object.freeze([ACTOR_COMMANDS.USE_ITEM, ACTOR_COMMANDS.ROLL_ABILITY, ACTOR_COMMANDS.ROLL_SAVE, ACTOR_COMMANDS.ROLL_SKILL, ACTOR_COMMANDS.ROLL_TOOL, ACTOR_COMMANDS.ROLL_INITIATIVE, ACTOR_COMMANDS.ROLL_DEATH_SAVE]);
-import { biographyPlainText, createItemMenuRecord, resolveItemSourceItem } from "../../foundry/actor-view.mjs";
-import { actorSourceUuid, resolveActorSource, speakerMatchesActor, validSourceUuid } from "../../foundry/character-source.mjs";
-import { readDnd5eMessageItem, readDnd5eMessageRoll, readDnd5eMessageOriginId as originatingMessageId } from "../../foundry/dnd5e-message-reference.mjs";
+import { biographyPlainText, createItemMenuRecord, resolveItemSourceItem } from "../../foundry/actors/actor-view.mjs";
+import { actorSourceUuid, resolveActorSource, speakerMatchesActor, validSourceUuid } from "../../foundry/actors/character-source.mjs";
+import { readDnd5eMessageItem, readDnd5eMessageRoll, readDnd5eMessageOriginId as originatingMessageId } from "../../foundry/chat/dnd5e-message-reference.mjs";
 
 export { ACTOR_COMMANDS };
 

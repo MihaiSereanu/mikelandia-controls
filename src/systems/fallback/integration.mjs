@@ -1,5 +1,5 @@
-import { actorSourceUuid } from "../../foundry/character-source.mjs";
-import { localizeFoundry } from "../../foundry/localization.mjs";
+import { actorSourceUuid } from "../../foundry/actors/character-source.mjs";
+import { localizeFoundry } from "../../foundry/settings/localization.mjs";
 
 const NO_CAPABILITIES = Object.freeze({});
 const NO_REFERENCES = Object.freeze([]);

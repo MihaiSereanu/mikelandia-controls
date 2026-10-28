@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createFoundrySessionGateway, isActorEligible } from "../src/foundry/session-gateway.mjs";
-import { createTaskScope } from "../src/kernel/task-scope.mjs";
+import { createFoundrySessionGateway, isActorEligible } from "../src/foundry/session/session-gateway.mjs";
+import { createTaskScope } from "../src/kernel/lifecycle/task-scope.mjs";
 import { resolveSystemIntegration } from "../src/systems/registry.mjs";
 import { createActor, createGame, createHooks, installGlobals } from "./helpers/foundry.mjs";
 

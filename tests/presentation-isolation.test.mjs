@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { controlsGuideSections } from "../src/kernel/controls-guide-model.mjs";
-import { createFoundryPreferencesGateway, registerPreferences } from "../src/foundry/preferences.mjs";
-import { createFoundryActionSessionGateway } from "../src/foundry/action-session-gateway.mjs";
-import { sessionInvalidationForHook } from "../src/foundry/session-gateway.mjs";
+import { controlsGuideSections } from "../src/features/help/controls-guide-model.mjs";
+import { createFoundryPreferencesGateway, registerPreferences } from "../src/foundry/settings/preferences.mjs";
+import { createFoundryActionSessionGateway } from "../src/foundry/commands/action-session-gateway.mjs";
+import { sessionInvalidationForHook } from "../src/foundry/session/session-gateway.mjs";
 import { resolveSystemIntegration } from "../src/systems/registry.mjs";
 import { createActor, createGame, installGlobals } from "./helpers/foundry.mjs";
 

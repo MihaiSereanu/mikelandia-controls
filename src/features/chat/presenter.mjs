@@ -1,5 +1,5 @@
-import { localizedText } from "../../ui/localized-text.mjs";
-import { icon, node } from "../../ui/dom.mjs";
+import { localizedText } from "../../ui/primitives/localized-text.mjs";
+import { icon, node } from "../../ui/primitives/dom.mjs";
 
 export function renderChat({ commands, scope }) {
   const host = node("section", {

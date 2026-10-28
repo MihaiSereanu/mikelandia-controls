@@ -1,4 +1,4 @@
-import { createMobileBootstrap } from "/src/ui/bootstrap-loader.mjs";
+import { createMobileBootstrap } from "/src/ui/bootstrap/bootstrap-loader.mjs";
 
 const checks = [];
 function check(value, description) {

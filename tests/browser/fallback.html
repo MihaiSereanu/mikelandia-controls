@@ -18,11 +18,11 @@
 <main class="mc-mobile-app" data-mc-style-authority data-form-factor="phone" data-theme="dark"></main>
 <pre id="results">Running browser checksâ€¦</pre>
 <script type="module">
-import { createActorEditorGateway } from "/src/foundry/actor-editor-gateway.mjs";
-import { createFoundrySessionGateway } from "/src/foundry/session-gateway.mjs";
-import { enableMobileApplications } from "/src/foundry/mobile-presentation.mjs";
+import { createActorEditorGateway } from "/src/foundry/actors/actor-editor-gateway.mjs";
+import { createFoundrySessionGateway } from "/src/foundry/session/session-gateway.mjs";
+import { enableMobileApplications } from "/src/foundry/presentation/mobile-presentation.mjs";
 import { renderCharacters } from "/src/features/characters/presenter.mjs";
-import { createTaskScope } from "/src/kernel/task-scope.mjs";
+import { createTaskScope } from "/src/kernel/lifecycle/task-scope.mjs";
 import { createActor, createGame, createHooks } from "/tests/helpers/foundry.mjs";
 
 const checks = [];

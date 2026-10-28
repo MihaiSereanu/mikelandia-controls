@@ -1,10 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { initialAppState, reduceAppState } from "../src/kernel/app-state.mjs";
-import { createFoundrySessionGateway } from "../src/foundry/session-gateway.mjs";
-import { createLegacyClientRestoration } from "../src/foundry/legacy-client-restoration.mjs";
-import { createTaskScope } from "../src/kernel/task-scope.mjs";
-import { resolveMobileGraphicsPolicy } from "../src/foundry/mobile-graphics-policy.mjs";
+import { initialAppState, reduceAppState } from "../src/kernel/state/app-state.mjs";
+import { createFoundrySessionGateway } from "../src/foundry/session/session-gateway.mjs";
+import { createLegacyClientRestoration } from "../src/foundry/compatibility/legacy-client-restoration.mjs";
+import { createTaskScope } from "../src/kernel/lifecycle/task-scope.mjs";
+import { resolveMobileGraphicsPolicy } from "../src/foundry/presentation/mobile-graphics-policy.mjs";
 import { createActor, createGame, createHooks, installGlobals } from "./helpers/foundry.mjs";
 
 test("explicit dice choices override device hints and invalid choices use automatic mode", () => {

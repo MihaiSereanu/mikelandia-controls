@@ -1,12 +1,12 @@
 import { createShadowdarkFixture } from "/tests/helpers/shadowdark.mjs";
 import { createActor, collection } from "/tests/helpers/foundry.mjs";
-import { createFoundrySessionGateway } from "/src/foundry/session-gateway.mjs";
-import { createFoundryCommandGateway } from "/src/foundry/command-gateway.mjs";
-import { enableMobileApplications, mobileDialogElements } from "/src/foundry/mobile-presentation.mjs";
+import { createFoundrySessionGateway } from "/src/foundry/session/session-gateway.mjs";
+import { createFoundryCommandGateway } from "/src/foundry/commands/command-gateway.mjs";
+import { enableMobileApplications, mobileDialogElements } from "/src/foundry/presentation/mobile-presentation.mjs";
 import { resolveSystemIntegration } from "/src/systems/registry.mjs";
 import { renderCharacters } from "/src/features/characters/presenter.mjs";
-import { createTaskScope } from "/src/kernel/task-scope.mjs";
-import { createMcBackDispatcher } from "/src/ui/mc-back-dispatcher.mjs";
+import { createTaskScope } from "/src/kernel/lifecycle/task-scope.mjs";
+import { createMcBackDispatcher } from "/src/ui/navigation/mc-back-dispatcher.mjs";
 
 const checks = [], check = (name, value) => { if (!value) throw new Error(name); checks.push(name); };
 const tick = () => new Promise(resolve => setTimeout(resolve, 30));

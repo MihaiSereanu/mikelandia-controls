@@ -1,5 +1,5 @@
-import { renderProfilePanels } from "/src/features/characters/profile-panels.mjs";
-import { createTaskScope } from "/src/kernel/task-scope.mjs";
+import { renderProfilePanels } from "/src/features/characters/profile/profile-panels.mjs";
+import { createTaskScope } from "/src/kernel/lifecycle/task-scope.mjs";
 
 const checks = [], check = (name, value) => { if (!value) throw new Error(name); checks.push(name); };
 const scope = createTaskScope("profile-layout");

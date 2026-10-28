@@ -1,5 +1,5 @@
-import { icon, node } from "../../ui/dom.mjs";
-import { localizedNumber, localizedText } from "../../ui/localized-text.mjs";
+import { icon, node } from "../../ui/primitives/dom.mjs";
+import { localizedNumber, localizedText } from "../../ui/primitives/localized-text.mjs";
 
 const uiText = (commands, key, fallback, data) =>
   localizedText(
