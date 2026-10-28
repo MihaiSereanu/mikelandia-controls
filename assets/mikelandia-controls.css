@@ -10743,3 +10743,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 .mc-profile-coin.is-editing > :is(button, .mc-profile-coin-controls) { display: none; }
 .mc-profile-coin .mc-profile-resource-form input { width: 100%; min-width: 0; }
 .mc-profile-coin .mc-profile-resource-form button { padding: 8px 4px; }
+
+/* Keep installed app content clear of the device status area. */
+@media (display-mode: standalone) {
+  .mc-mobile-app {
+    box-sizing: border-box;
+    padding-top: calc(var(--mc-safe-top, 0px) + 8px);
+  }
+}

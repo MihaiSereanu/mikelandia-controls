@@ -508,3 +508,11 @@
   }
   .mc-mobile-app[data-mc-style-authority] .mc-character-shared-shell > .mc-character-heading > .mc-sheet-tabs { position: relative !important; top: 0 !important; }
 }
+
+@layer mc-mobile-style-authority {
+  @media (display-mode: standalone) {
+    .mc-mobile-app[data-mc-style-authority] {
+      padding-top: calc(var(--mc-safe-top, 0px) + 8px) !important;
+    }
+  }
+}

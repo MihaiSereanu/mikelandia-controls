@@ -8,6 +8,10 @@ import { fileURLToPath } from "node:url";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
   ["mobile-login-narrow", 320, 844, "mobile-login", ""],
+  ["mobile-login-ios", 393, 851, "mobile-login", ""],
+  ["mobile-login-ipados", 1024, 768, "mobile-login", ""],
+  ["in-person-standalone-phone", 393, 851, "in-person", "layout=phone&standalone=true"],
+  ["in-person-standalone-tablet", 1024, 768, "in-person", "layout=tablet&standalone=true"],
   ["mobile-login-android", 393, 851, "mobile-login", ""],
   ["mobile-login-keyboard", 393, 430, "mobile-login", ""],
   ["mobile-login-tablet", 1024, 768, "mobile-login", ""],
@@ -79,12 +83,18 @@ let browser;
 for (const path of candidates) { try { await access(path); browser = path; break; } catch {} }
 if (!browser) throw new Error("Set CHROME_PATH to a Chromium browser executable to run these checks.");
 const contentTypes = { ".html": "text/html", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".webp": "image/webp", ".png": "image/png" };
+let simulateStandalone = false;
 const server = createServer(async (request, response) => {
   try {
     const path = resolve(root, `.${decodeURIComponent(new URL(request.url, "http://localhost").pathname)}`);
     const rel = relative(root, path);
     if (rel.startsWith("..") || isAbsolute(rel)) { response.writeHead(403).end(); return; }
-    const content = await readFile(path);
+    let content = await readFile(path);
+    // CDP does not emulate display-mode. Exercise the production standalone
+    // branches explicitly in these fixtures; this is not installed-device proof.
+    if (simulateStandalone && extname(path) === ".css") {
+      content = Buffer.from(content.toString().replaceAll("@media (display-mode: standalone)", "@media all"));
+    }
     response.writeHead(200, { "Content-Type": contentTypes[extname(path)] ?? "application/octet-stream" });
     response.end(content);
   } catch { response.writeHead(404).end(); }
@@ -129,9 +139,15 @@ try {
   const browserVersion = await send("Browser.getVersion");
   const chromiumVersion = browserVersion.product.split("/").at(-1);
   for (const [name, width, height, fixture, query] of selectedCases) {
+    simulateStandalone = query.includes("standalone=true");
     const { targetId } = await send("Target.createTarget", { url: "about:blank" });
     const { sessionId } = await send("Target.attachToTarget", { targetId, flatten: true });
     await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width < 720 }, sessionId);
+    if (name.includes("ios") || name.includes("ipados")) {
+      const ipad = name.includes("ipados");
+      await send("Emulation.setUserAgentOverride", { userAgent: ipad ? "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15" : "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1", platform: ipad ? "MacIntel" : "iPhone" }, sessionId);
+      await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 }, sessionId);
+    }
     if (name.includes("android")) {
       await send("Emulation.setUserAgentOverride", { userAgent: `Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromiumVersion} Mobile Safari/537.36`, platform: "Linux armv8l" }, sessionId);
       await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 }, sessionId);

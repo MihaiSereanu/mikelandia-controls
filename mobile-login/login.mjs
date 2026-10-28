@@ -38,6 +38,7 @@ export function mountLogin({
   const showError = (message) => {
     error.textContent = message;
     error.hidden = !message;
+    element("standard-login").hidden = !message;
   };
   const updateButton = () => {
     join.disabled =
@@ -102,8 +103,8 @@ export function mountLogin({
         ? preferred
         : "";
       status.textContent = users.some((user) => !user.active)
-        ? "Choose your player to join the table."
-        : "All players are connected. Ask your host if you need another account.";
+        ? "Choose Profile to join the table."
+        : "All players are connected. Ask your host if you need another Profile.";
       updateButton();
     } catch (failure) {
       if (closed) return;

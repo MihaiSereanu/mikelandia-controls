@@ -154,6 +154,18 @@ footer {
   font-size: 0.8125rem;
   text-align: left;
 }
+summary {
+  min-height: 44px;
+  padding: 10px 4px;
+  color: #cbd5dc;
+  cursor: pointer;
+}
+.install-help ol {
+  padding-left: 22px;
+}
+.install-help li + li {
+  margin-top: 8px;
+}
 @media (display-mode: standalone) {
   #app-install { display: none; }
 }

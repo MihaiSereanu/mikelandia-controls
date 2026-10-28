@@ -81,6 +81,20 @@ try {
   check("application uses Mikelandia Controls name", root?.getAttribute("aria-label") === "Mikelandia Controls");
   check("exactly five navigation screens remain", [...root.querySelectorAll(".mc-main-nav-item")].map(b => b.dataset.route).join(",") === "characters,chat,journals,combat,settings");
   const nav = root.querySelector(".mc-bottom-nav");
+  const standalone = params.get("standalone") === "true";
+  for (const protectedStyle of [false, true]) {
+    root.toggleAttribute("data-mc-style-authority", protectedStyle);
+    for (const safeTop of [0, 24]) {
+      root.style.setProperty("--mc-safe-top", `${safeTop}px`);
+      await tick();
+      const viewport = root.querySelector(".mc-viewport").getBoundingClientRect();
+      const navRect = nav.getBoundingClientRect();
+      check(`app clears top inset; standalone=${standalone}, protection=${protectedStyle}, safe=${safeTop}`, Math.abs(viewport.top - (standalone ? safeTop + 8 : 0)) <= 1);
+      check(`bottom navigation stays inside viewport; protection=${protectedStyle}, safe=${safeTop}`, navRect.bottom <= innerHeight + 1 && root.getBoundingClientRect().bottom <= innerHeight + 1);
+    }
+  }
+  root.style.removeProperty("--mc-safe-top");
+  root.setAttribute("data-mc-style-authority", "");
   check("bottom navigation has no empty sixth slot", nav.getBoundingClientRect().height > nav.getBoundingClientRect().width || getComputedStyle(nav).gridTemplateColumns.split(" ").length === 5);
   check("character renders without token selection", !!root.querySelector(legacy ? ".mc-character-selector" : ".mc-profile-section"));
   check("no map or split viewport mounts", !root.querySelector(".mc-scene-screen, .mc-split-scene-viewport, .mc-tablet-split-toggle"));

@@ -1,6 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { backgroundUrl, createFoundryClient, foundryRoutes, safeRedirect } from "../mobile-login/foundry-client.mjs";
+import { installPlatform } from "../mobile-login/pwa.mjs";
+
+test("installation help detects Android, iPhone, and desktop-identified iPad", () => {
+  assert.equal(installPlatform({ userAgent: "Mozilla/5.0 (Linux; Android 14)" }), "android");
+  assert.equal(installPlatform({ userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)" }), "ios");
+  assert.equal(installPlatform({ userAgent: "Mozilla/5.0 (iPad)" }), "ios");
+  assert.equal(installPlatform({ userAgent: "Mozilla/5.0 (Macintosh)", platform: "MacIntel", maxTouchPoints: 5 }), "ios");
+  assert.equal(installPlatform({ platform: "MacIntel", maxTouchPoints: 0 }), "other");
+  assert.equal(installPlatform({ userAgent: "Windows" }), "other");
+});
 
 const routes = foundryRoutes("https://example.test/foundry/mobile/");
 function socketMock({ session = { sessionId: "test-session" }, data = { world: { id: "test" } }, silent = false } = {}) {

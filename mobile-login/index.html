@@ -10,8 +10,8 @@
   <title>Mikelandia · Join your game</title>
   <link rel="stylesheet" href="./login.css">
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" type="image/png" href="./icons/mc-192.png">
-  <link rel="apple-touch-icon" href="./icons/mc-180.png">
+  <link rel="icon" type="image/png" href="./icons/mc-192.png?v=2">
+  <link rel="apple-touch-icon" href="./icons/mc-180.png?v=2">
   <script type="module" src="./pwa.mjs"></script>
   <script type="module" src="./main.mjs"></script>
 </head>
@@ -32,15 +32,24 @@
       <button id="join" type="submit">Join game <span aria-hidden="true">→</span></button>
     </form>
     <p id="error" role="alert" hidden></p>
+    <a id="standard-login" href="../join" hidden>Open Foundry login</a>
     <button id="retry" class="secondary" type="button" hidden>Try again</button>
     <footer>
-      <div id="app-install">
+      <details id="app-install">
+        <summary>Install Mikelandia Controls</summary>
         <button id="install-app" class="secondary" type="button" hidden>Install Mikelandia Controls</button>
-        <p class="install-help">For a view without the address bar, install this page from your browser menu: <strong>Add to home screen → Install</strong>. On iPhone or iPad, use <strong>Share → Add to Home Screen</strong>. Then open the MC icon.</p>
-      </div>
-      <a id="standard-login" href="../join">Standard Foundry login</a>
+        <div class="install-help" data-install-platform="android" hidden>
+          <ol><li>Open this page in Chrome.</li><li>Tap the browser menu (⋮), then <strong>Install and create shortcut → Install</strong>. Some versions call this <strong>Add to home screen → Install</strong> or <strong>Install app</strong>.</li><li>Open Mikelandia from your home screen, then join your game.</li></ol>
+        </div>
+        <div class="install-help" data-install-platform="ios" hidden>
+          <ol><li>Open this page in Safari.</li><li>Tap <strong>Share</strong> (or the page menu, then <strong>Share</strong>), then <strong>Add to Home Screen</strong>.</li><li>Leave <strong>Open as Web App</strong> on if shown, then tap <strong>Add</strong>.</li><li>Open Mikelandia from your home screen, then join your game.</li></ol>
+        </div>
+        <div class="install-help" data-install-platform="other">
+          <p>Use your browser’s <strong>Install app</strong> or <strong>Add to home screen</strong> option. On iPhone or iPad, open this page in Safari and choose <strong>Share → Add to Home Screen</strong>. Then open Mikelandia to join your game.</p>
+        </div>
+      </details>
     </footer>
-    <noscript><p>JavaScript is needed for mobile login. Use the standard Foundry login link above.</p></noscript>
+    <noscript><p>JavaScript is needed for mobile login. <a href="../join">Open Foundry login</a>.</p></noscript>
   </main>
 </body>
 </html>

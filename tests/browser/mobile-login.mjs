@@ -1,5 +1,6 @@
 import { mountLogin } from "/mobile-login/login.mjs";
 import { createFoundryClient, foundryRoutes } from "/mobile-login/foundry-client.mjs";
+import { mountInstall, installPlatform } from "/mobile-login/pwa.mjs";
 
 const checks = [], check = (name, value) => { if (!value) throw new Error(name); checks.push(name); };
 const tick = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -12,9 +13,23 @@ try {
   const doc = frame.contentDocument;
   if (new URLSearchParams(location.search).has("large")) doc.documentElement.style.fontSize = "150%";
   const el = id => doc.getElementById(id);
+  check("install help starts collapsed and replaces normal footer link", !el("app-install").open && !doc.querySelector("footer #standard-login") && el("standard-login").hidden);
+  const platform = installPlatform(frame.contentWindow.navigator);
+  check("only detected platform instructions are shown", [...doc.querySelectorAll("[data-install-platform]")].every(node => node.hidden === (node.dataset.installPlatform !== platform)));
+  el("app-install").querySelector("summary").click(); await tick();
+  check("install help expands on click without horizontal overflow", el("app-install").open && doc.documentElement.scrollWidth <= innerWidth);
+  el("app-install").querySelector("summary").click();
   const manifestUrl = new URL(doc.querySelector('link[rel="manifest"]').href);
   const manifest = await (await fetch(manifestUrl)).json();
   check("installed app uses standalone display", manifest.display === "standalone");
+  check("adaptive icon has its own opaque asset", manifest.icons.some(icon => icon.purpose === "maskable" && icon.src.includes("mc-maskable")));
+  for (const icon of [...manifest.icons, { src: doc.querySelector('link[rel="apple-touch-icon"]').href, opaque: true }]) {
+    const image = new Image(); image.src = new URL(icon.src, manifestUrl); await image.decode();
+    const canvas = document.createElement("canvas"); canvas.width = image.width; canvas.height = image.height;
+    const ctx = canvas.getContext("2d"); ctx.drawImage(image, 0, 0);
+    const pixel = ctx.getImageData(0, 0, 1, 1).data;
+    check("icon background matches platform purpose " + icon.src, icon.purpose === "any" ? pixel[3] === 0 : pixel[3] === 255 && pixel[0] > 200);
+  }
   for (const base of ["https://example.test/mobile/", "https://example.test/foundry/mobile/"]) {
     const url = new URL("manifest.webmanifest", base);
     const scope = new URL(manifest.scope, url);
@@ -32,6 +47,9 @@ try {
   check("install prompt is consumed once and dismissal retains instructions", prompts === 1 && el("install-app").hidden && !el("app-install").hidden);
   frame.contentWindow.dispatchEvent(new frame.contentWindow.Event("appinstalled"));
   check("installed app hides install instructions", el("app-install").hidden);
+  // Exercise the iOS standalone flag independently of the Chromium install event.
+  mountInstall({ window: frame.contentWindow, document: doc, navigator: { userAgent: "iPhone", standalone: true } });
+  check("iOS installed app hides install instructions", el("app-install").hidden);
   const routes = foundryRoutes(`${location.origin}/mobile/`);
   let data = { world: { id: "fixture", title: "Gods of the Forbidden North" },
     users: [{ _id: "one", name: "Player One" }, { _id: "two", name: "Player Two" }, { _id: "busy", name: "Connected Player" }], activeUsers: ["busy"] };
@@ -61,7 +79,7 @@ try {
   check("native current world is displayed", el("world-title").textContent === data.world.title);
   check("last player restored for this world", el("player").value === "one");
   check("connected player cannot be selected", [...el("player").options].find(option => option.value === "busy").disabled);
-  check("standard login uses same origin", el("standard-login").href === routes.join);
+  check("error fallback uses same origin and stays hidden during normal login", el("standard-login").href === routes.join && el("standard-login").hidden);
   check("login controls have touch targets", ["player", "password", "join"].every(id => el(id).getBoundingClientRect().height >= 44));
   check("no horizontal page overflow", doc.documentElement.scrollWidth <= innerWidth);
   check("accessible labels target both fields", ["player", "password"].every(id => doc.querySelector(`label[for="${id}"]`)));
@@ -73,6 +91,7 @@ try {
   await tick();
   check("native authentication receives expected fields", submitted.userId === "two" && submitted.password === "fixture-secret" && submitted.action === "join");
   check("wrong password shows a readable error", el("error").textContent.includes("password was not accepted") && !el("error").hidden);
+  check("login errors expose the native fallback", !el("standard-login").hidden);
   check("rejected password permits retry", !el("join").disabled && !el("password").disabled && !navigated);
   check("password never written to storage", [...saved.values()].every(value => value !== "fixture-secret"));
   data = {};

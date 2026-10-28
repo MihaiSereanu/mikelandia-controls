@@ -43,6 +43,7 @@ try {
   const error = document.getElementById("error");
   error.textContent = failure.message;
   error.hidden = false;
+  document.getElementById("standard-login").hidden = false;
   const retry = document.getElementById("retry");
   retry.hidden = false;
   retry.addEventListener("click", () => location.reload());
