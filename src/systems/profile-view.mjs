@@ -51,6 +51,7 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
       const max = entry.maxPath ? readProfilePath(actor, entry.maxPath) : undefined;
       return [Object.freeze({ id: entry.id, label: label(entry), value, format: entry.format ?? "number",
         ...(entry.editControl === "checkbox" && entry.format === "boolean" ? { editControl: "checkbox" } : {}),
+        ...(entry.editControl === "counter" ? { editControl: "counter" } : {}),
         ...actionFor(entry.actionId),
         ...editFor(entry.editId, value),
         ...(typeof value === "number" && typeof max === "number" && Number.isFinite(max) ? { max } : {}) })];

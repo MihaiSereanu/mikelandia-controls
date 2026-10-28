@@ -516,3 +516,14 @@
     }
   }
 }
+/* Keep native/module button defaults from obscuring player targeting controls. */
+.mc-mobile-app[data-mc-style-authority] .mc-targets-heading { padding: 16px 18px !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-targets-caret { width: 24px !important; height: 24px !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-targets button,
+.mc-mobile-app[data-mc-style-authority] .mc-target-source select {
+  min-height: 44px !important;
+  color: var(--mc-text) !important;
+  background: var(--mc-surface-up) !important;
+  border: 1px solid var(--mc-border) !important;
+  border-radius: 6px !important;
+}

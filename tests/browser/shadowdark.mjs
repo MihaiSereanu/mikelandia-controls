@@ -83,16 +83,16 @@ try {
   }, error => { watchError = error; }) };
   screen = renderCharacters({ state, commands, scope }); document.querySelector("main").append(screen); await tick();
   const tab = async id => { screen.querySelector(`[data-profile-tab="${id}"]`).click(); await tick(); };
-  const field = id => { const copy = screen.querySelector(`[data-profile-field="${id}"]`)?.cloneNode(true); copy?.querySelectorAll("[data-profile-resource]").forEach(node => node.remove()); return copy?.textContent; };
+  const field = id => { const counter = screen.querySelector(`[data-profile-field="${id}"] .mc-profile-counter`); if (counter) return screen.querySelector(`[data-profile-field="${id}"] dt`).textContent + counter.querySelector("[data-profile-edit]").textContent; const copy = screen.querySelector(`[data-profile-field="${id}"]`)?.cloneNode(true); copy?.querySelectorAll("[data-profile-resource]").forEach(node => node.remove()); return copy?.textContent; };
   const begin = async id => { screen.querySelector(`[data-profile-action="${id}"]`).click(); await tick(); };
   const confirm = async () => { dialog.element.querySelector("[data-native-confirm]").click(); await tick(); };
   const cancel = async () => { dialog.element.querySelector("[data-native-cancel]").click(); await tick(); };
-  const resource = async id => { screen.querySelector(`[data-profile-edit="${id}"]`).click(); await tick(); return screen.querySelector(`[data-profile-resource-input="${id}"]`); };
-  const save = async input => { input.closest("form").querySelector("[data-profile-resource-save]").click(); await tick(); };
+  const resource = async id => { const lock = screen.querySelector(`[data-profile-counter-lock="${id}"]`); if (lock?.getAttribute("aria-pressed") === "true") lock.click(); screen.querySelector(`[data-profile-edit="${id}"]`).click(); await tick(); return screen.querySelector(`[data-profile-resource-input="${id}"]`); };
+  const save = async input => { input.dispatchEvent(new Event("input", { bubbles: true })); input.closest("form").querySelector("[data-profile-resource-save]").click(); await tick(); };
   check("PC uses native Abilities/Spells/Inventory labels", [...screen.querySelectorAll('[role="tab"]')].map(node => node.textContent).join(",") === "Abilities,Spells,Inventory");
   check("prepared stats and modifiers are displayed", field("str") === "Str14 (+2)");
   check("native HP and AC values are used", field("hp") === "HP7 / 12" && field("ac") === "AC14");
-  check("Luck follows Pulp Mode", field("luck") === (initialPulp ? "Luck2" : "LuckActive"));
+  check("Luck follows Pulp Mode", field("luck") === (initialPulp ? "Luck2" : "Luck1"));
   check("unrelated game controls are absent", !/Wounds|Fortune|Spell Slots|Death Saves|Long Rest/.test(screen.textContent));
   check("PC profile fits the viewport", document.documentElement.scrollWidth <= innerWidth + 1);
   await begin("stat:str");
@@ -129,27 +129,64 @@ try {
   sword.system.equipped = true; Hooks.emit("updateItem", sword, {}); await tick();
   await begin("stat:str"); f.settings.usePulpMode = !initialPulp; Hooks.emit("updateSetting", { key: "shadowdark.usePulpMode" }, {}); await tick(); await confirm();
   check("Pulp Mode changes invalidate pending native dialogs", f.rolls.length === 2);
-  check("Pulp Mode refresh changes the Luck control", field("luck") === (!initialPulp ? "Luck2" : "LuckActive"));
+  check("Pulp Mode refresh changes the Luck control", field("luck") === (!initialPulp ? "Luck2" : "Luck1"));
   f.settings.usePulpMode = initialPulp; Hooks.emit("updateSetting", { key: "shadowdark.usePulpMode" }, {}); await tick();
   const resourceOrder = [...screen.querySelectorAll('.mc-profile-summary-triple > section')].map(e => e.dataset.profileSection);
   check("Shadowdark resources use HP/AC/DEF, XP/Grit/Luck order", resourceOrder.join(",") === "hp,ac,def,xp,grit,luck");
   check("resource labels appear once inside their boxes", !screen.querySelector('.mc-profile-summary-triple h3'));
   const boxes = resourceOrder.map(id => screen.querySelector(`[data-profile-section="${id}"]`).getBoundingClientRect());
-  check("Shadowdark resources have three cards per row", [0, 3].every(i => [1, 2].every(j => Math.abs(boxes[i].top - boxes[i + j].top) < 1)) && boxes[3].top > boxes[0].top);
-  check("short resource labels fit on one line", resourceOrder.every(id => {
+  check("counter cards use available width without overflow", boxes.every(box => box.width >= 160 && box.right <= innerWidth));
+  const counter = id => screen.querySelector(`[data-profile-resource="${id}"]`);
+  const delta = (id, n) => counter(id).querySelector(`[data-profile-counter-delta="${n}"]`);
+  const lock = id => screen.querySelector(`[data-profile-counter-lock="${id}"]`);
+  check("all five counters start locked", ["hp", "def", "xp", "grit", "luck"].every(id => lock(id).getAttribute("aria-pressed") === "true"
+    && [...counter(id).querySelectorAll("[data-profile-counter-delta], [data-profile-edit]")].every(b => b.disabled)));
+  check("AC remains read-only", !screen.querySelector('[data-profile-resource="ac"]'));
+  check("locked padlocks have no background", ["hp", "def", "xp", "grit", "luck"].every(id => getComputedStyle(lock(id)).backgroundColor === "rgba(0, 0, 0, 0)"));
+  check("resource labels stay on one line", resourceOrder.every(id => {
     const range = document.createRange(); range.selectNodeContents(screen.querySelector(`[data-profile-field="${id}"] dt span`));
     return range.getClientRects().length === 1;
   }));
-  check("resource pencils align with labels at the top right", ["hp", "xp", "def", "grit", "luck"].every(id => {
-    const pencil = screen.querySelector(`[data-profile-edit="${id}"] i`).getBoundingClientRect();
-    const button = screen.querySelector(`[data-profile-edit="${id}"]`).getBoundingClientRect();
-    const row = screen.querySelector(`[data-profile-field="${id}"]`).getBoundingClientRect();
-    return Math.abs(pencil.right - (row.right - 4)) < 2 && pencil.top <= row.top + 10 && pencil.width > 0 && button.height >= 44;
-  }));
-  check("resource values have an extra inset from the left", resourceOrder.every(id => {
-    const row = screen.querySelector(`[data-profile-field="${id}"]`), text = row.querySelector("dd span");
-    return text.getBoundingClientRect().left >= row.getBoundingClientRect().left + 12;
-  }));
+  check("padlocks and adjustments have 44px touch targets", [...screen.querySelectorAll("[data-profile-counter-lock], [data-profile-counter-delta]")].every(b => b.getBoundingClientRect().width >= 44 && b.getBoundingClientRect().height >= 44));
+  check("locked clicks do not write", (() => { const n = f.writes.length; delta("hp", 1).click(); return f.writes.length === n; })());
+  lock("hp").click();
+  check("unlocked padlocks have no background", getComputedStyle(lock("hp")).backgroundColor === "rgba(0, 0, 0, 0)");
+  check("unlocking one counter leaves others locked", !delta("hp", 1).disabled && delta("xp", 1).disabled);
+  delta("hp", 1).click(); await tick();
+  check("HP increment saves immediately and stays unlocked after refresh", f.actor.system.attributes.hp.value === 8 && !delta("hp", 1).disabled);
+  delta("hp", -1).click(); await tick();
+  check("HP decrement saves immediately", f.actor.system.attributes.hp.value === 7);
+  let hpInput = await resource("hp"); hpInput.value = "13";
+  hpInput.dispatchEvent(new Event("input", { bubbles: true }));
+  check("HP entry rejects values above maximum", !hpInput.checkValidity());
+  hpInput.value = "12"; await save(hpInput);
+  check("maximum HP disables increment", delta("hp", 1).disabled && !delta("hp", -1).disabled);
+  hpInput = await resource("hp"); hpInput.value = "7"; await save(hpInput);
+  await tab("inventory"); await tab("abilities");
+  check("lock choices survive tab navigation", lock("hp").getAttribute("aria-pressed") === "false" && delta("xp", 1).disabled);
+  lock("hp").click();
+  check("relocking disables numeric entry and both buttons", counter("hp").querySelector('[data-profile-edit]').disabled && delta("hp", 1).disabled && delta("hp", -1).disabled);
+  lock("def").click();
+  check("zero disables decrement", delta("def", -1).disabled && !delta("def", 1).disabled);
+  const nativeResourceUpdate = f.actor.update;
+  let finishResourceWrite;
+  f.actor.update = () => new Promise(resolve => { finishResourceWrite = resolve; });
+  delta("def", 1).click(); await tick();
+  check("pending writes disable all counter buttons", [...counter("def").querySelectorAll('button')].every(b => b.disabled));
+  finishResourceWrite(false); await tick();
+  check("cancelled writes restore controls without changing value", !delta("def", 1).disabled && delta("def", -1).disabled && field("def") === "DEF0");
+  f.actor.update = async () => { throw new Error("counter write failure"); };
+  delta("def", 1).click(); await tick();
+  check("failed counter writes restore controls and report an error", !delta("def", 1).disabled && notices.at(-1)?.includes("counter write failure"));
+  f.actor.update = nativeResourceUpdate;
+  lock("luck").click();
+  if (!initialPulp) {
+    check("standard Luck caps at one", delta("luck", 1).disabled);
+    delta("luck", -1).click(); await tick();
+    check("standard Luck decrement writes false and displays zero", f.actor.system.luck.available === false && field("luck") === "Luck0" && delta("luck", -1).disabled);
+    delta("luck", 1).click(); await tick();
+    check("standard Luck increment writes true", f.actor.system.luck.available === true && delta("luck", 1).disabled);
+  }
   for (const id of ["def", "grit"]) {
     const custom = await resource(id);
     if (id === "def") {
@@ -167,12 +204,17 @@ try {
   let input = await resource("xp"); input.value = "19"; await save(input);
   check("XP uses native current XP and saves to the native field", f.actor.system.level.xp === 19 && field("xp") === "XP19");
   input = await resource("hp"); input.value = "0"; await save(input);
+  check("zero HP disables decrement", screen.querySelector('[data-profile-resource="hp"] [data-profile-counter-delta="-1"]').disabled);
   check("zero HP saves through native updates and refreshes", field("hp") === "HP0 / 12" && f.writes.some(write => write[0]["system.attributes.hp.value"] === 0));
   input = await resource("luck");
-  check("Luck editor has selectable numeric/boolean mode", input.type === (initialPulp ? "text" : "checkbox"));
-  if (initialPulp) input.value = "4"; else input.checked = false;
+  check("Luck editor uses numeric entry with native limits", input.type === "text" && (initialPulp || input.max === "1"));
+  if (!initialPulp) {
+    input.value = "2"; input.dispatchEvent(new Event("input", { bubbles: true }));
+    check("standard Luck entry rejects values above one", !input.checkValidity());
+  }
+  input.value = initialPulp ? "4" : "0";
   await save(input);
-  check("Luck save refreshes the correct native field", field("luck") === (initialPulp ? "Luck4" : "LuckInactive"));
+  check("Luck save refreshes the correct native field", field("luck") === (initialPulp ? "Luck4" : "Luck0"));
   await tab("spells");
   check("known and lost spells use separate sections", screen.textContent.includes("Spells Known") && screen.textContent.includes("Lost Spells") && !screen.querySelector('[data-profile-action="spell:lost"]'));
   f.success = false; await begin("spell:spell"); await confirm();
@@ -327,6 +369,9 @@ try {
   check("session watcher stays healthy", !watchError && state.snapshot.selectedActor.profileId === "shadowdark-player");
   await tab("abilities"); input = await resource("luck");
   check("open resource editor fits the viewport", document.documentElement.scrollWidth <= innerWidth + 1);
+  screen.querySelector('[data-profile-resource-cancel]').click(); await tick();
+  check("HP unlock choice survives actor navigation", lock("hp").getAttribute("aria-pressed") === "false");
+  for (const id of ["hp", "def", "xp", "grit", "luck"]) if (lock(id).getAttribute("aria-pressed") === "false") lock(id).click();
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
 } catch (error) {
   scope.dispose(); document.querySelector("#results").textContent = JSON.stringify({ status: "failed", checks, error: error.stack });

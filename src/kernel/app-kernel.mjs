@@ -8,7 +8,7 @@ import { ACTOR_COMMANDS } from "./command-names.mjs";
 
 import { createModeTransitionCoordinator, presentationLabel } from "./mode-transition.mjs";
 
-export function createAppKernel({ store, session, commandGateway, biographyGateway, actorEditorGateway = null, combatGateway, authoritativeGateway, loadTimingGateway = null, reloadApplication = () => globalThis.window?.location?.reload?.(), connectionGeneration, nativeChatGateway, armorClassGateway = null, activeEffectContextGateway, actionSessionGateway, preferencesGateway, settingsCompatibilityGateway, sessionStatusGateway, controlsGuideGateway = null, isControlsUiReady = () => false, themeGateway, mobileBackGateway = null, diagnostics, performanceObserver = null, wakeLockController, readPolicy, disable, preparePresentation = () => {}, createFrame = createAppFrame }) {
+export function createAppKernel({ store, session, commandGateway, biographyGateway, actorEditorGateway = null, combatGateway, targetingGateway = null, authoritativeGateway, loadTimingGateway = null, reloadApplication = () => globalThis.window?.location?.reload?.(), connectionGeneration, nativeChatGateway, armorClassGateway = null, activeEffectContextGateway, actionSessionGateway, preferencesGateway, settingsCompatibilityGateway, sessionStatusGateway, controlsGuideGateway = null, isControlsUiReady = () => false, themeGateway, mobileBackGateway = null, diagnostics, performanceObserver = null, wakeLockController, readPolicy, disable, preparePresentation = () => {}, createFrame = createAppFrame }) {
   const localize = (key, fallback, data) => localizedText((id, _fallback, values) => preferencesGateway?.localize?.(id, values), key, fallback, data);
   let runtimeScope = null;
   let activationCommitted = false;
@@ -234,6 +234,9 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     previousCombatTurn: (request) => guardCombatControl(request, expected => combatGateway.previousTurn(expected)),
     nextCombatTurn: (request) => guardCombatControl(request, expected => combatGateway.nextTurn(expected)),
     rollCombatInitiative: (combatId, combatantId) => guardConnection((expected) => combatGateway.rollInitiative({ combatId, combatantId }, expected)),
+    toggleCombatTarget: request => guardConnection(() => targetingGateway.toggle(request)),
+    selectCombatTargetSource: request => guardConnection(() => targetingGateway.selectSource(request)),
+    setCombatTargetsExpanded: value => targetingGateway?.setExpanded(value),
 
     mountNativeChat: (host, owner) => nativeChatGateway.mount(host, owner),
     openActiveEffectContextMenu: (payload) => payload?.actorSourceUuid === store.state.selectedActorSourceUuid
@@ -494,6 +497,17 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       } });
       assertCurrent();
       if (initialSnapshot) store.dispatch({ type: "session-loaded", snapshot: initialSnapshot });
+      if (targetingGateway) {
+        targetingGateway.watch(runtimeScope, () => store.state.selectedActorSourceUuid,
+          targeting => store.dispatch({ type: "targeting-updated", targeting }),
+          { isVisible: () => store.state.route === "combat" });
+        let source = store.state.selectedActorSourceUuid;
+        runtimeScope.own(store.subscribe(state => {
+          if (source === state.selectedActorSourceUuid) return;
+          source = state.selectedActorSourceUuid;
+          targetingGateway.refresh(source);
+        }, { immediate: false }));
+      }
       assertCurrent();
       modeTransition = createModeTransitionCoordinator({
     localize,

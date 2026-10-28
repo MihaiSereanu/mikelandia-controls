@@ -2,7 +2,8 @@ import { abilities, carriedItem, stashedItem, ownedItem, physicalTypes, knownSpe
 
 import { customResources, readCustomResource } from "./resources.mjs";
 
-const field = (id, key, label, path, extra = {}) => ({ id, labelKey: key, label, path, ...extra });
+const field = (id, key, label, path, extra = {}) => ({ id, labelKey: key, label, path,
+  ...(["hp", "def", "xp", "grit", "luck"].includes(id) ? { editControl: "counter" } : {}), ...extra });
 export function shadowdarkPlayerProfile(context) {
   return { tabs: [
     { id: "abilities", summaryLayout: "triple", labelKey: "SHADOWDARK.sheet.player.tab.abilities", label: "Abilities", sections: [

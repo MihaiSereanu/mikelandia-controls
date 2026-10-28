@@ -35,6 +35,7 @@ import { createBootstrapWatchdog } from "./kernel/bootstrap-watchdog.mjs";
 import { createMobileDiagnostics } from "./foundry/mobile-diagnostics.mjs";
 import { createArmorClassGateway } from "./foundry/armor-class-gateway.mjs";
 import { createFoundryCombatGateway } from "./foundry/combat-gateway.mjs";
+import { createFoundryTargetingGateway } from "./foundry/targeting-gateway.mjs";
 import { createFoundryAuthoritativeSessionGateway } from "./foundry/authoritative-session-gateway.mjs";
 import { createClientLoadTimingGateway } from "./foundry/client-load-timing-gateway.mjs";
 import { createConnectionGeneration } from "./kernel/connection-generation.mjs";
@@ -340,6 +341,7 @@ if (isGamePage && migrateBrowserState()) {
     getLifecycleToken: () => kernel?.combatControlLifecycleToken?.() ?? null,
     getConnectionGeneration: () => connectionGeneration.current,
   });
+  const targetingGateway = createFoundryTargetingGateway();
   const authoritativeGateway = createFoundryAuthoritativeSessionGateway({ diagnostics, performanceObserver });
   const session = createFoundrySessionGateway({
     getSystemIntegration,
@@ -364,6 +366,7 @@ if (isGamePage && migrateBrowserState()) {
     actorEditorGateway,
     biographyGateway,
     combatGateway,
+    targetingGateway,
     authoritativeGateway,
     loadTimingGateway,
     connectionGeneration,

@@ -1,5 +1,6 @@
 import { localizedText, localizedCount, localizedNumber } from "../../ui/localized-text.mjs";
 import { icon, node } from "../../ui/dom.mjs";
+import { renderTargets } from "./targets.mjs";
 
 export function renderCombat({ state, commands, scope }) {
   const combat = state.snapshot?.combat;
@@ -33,15 +34,19 @@ export function renderCombat({ state, commands, scope }) {
     children: endTurnContents(commands)
   }, scope) : null;
 
-  return node("section", { className: "mc-combat-screen", children: [
+  const targets = renderTargets({ targeting: state.targeting, commands, scope });
+  const screen = node("section", { className: "mc-combat-screen", children: [
     node("header", { className: "mc-combat-heading", children: [
       node("span", { className: "mc-combat-round", children: [node("small", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.Round", "Round") }), node("strong", { text: combat.round || "—" })] }),
       node("div", { className: "mc-combat-heading-copy", children: [node("h2", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.Combat", "Combat") }), node("p", { text: combat.started ? localizedCount(commands.localize, "MIKELANDIA_CONTROLS.Combat.Count", { one: "{count} combatant", other: "{count} combatants" }, combat.combatants.length, commands.readLocale?.() ?? "en") : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.WaitingToBegin", "Waiting to begin") })] }),
       endTurn
     ].filter(Boolean) }),
     status,
+    targets,
     combat.combatants.length ? list : emptyCombat(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.NoVisibleCombatants", "No visible combatants"), localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.TheEncounterHasNoCombatantsYouCanView", "The encounter has no combatants you can view."))
   ].filter(Boolean) });
+  screen.__mcUpdateCombatTargets = next => targets?.__mcUpdateTargetDistances(next) ?? false;
+  return screen;
 }
 
 export function renderGmCombatControls({ controls, commands, scope }) {

@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ["targeting-phone", 390, 844, "targeting", "layout=phone"],
+  ["targeting-tablet", 1024, 768, "targeting", "layout=tablet"],
   ["bootstrap-light-phone", 393, 851, "bootstrap", "theme=light"],
   ["bootstrap-dark-phone", 393, 851, "bootstrap", "theme=dark"],
   ["mobile-login-narrow", 320, 844, "mobile-login", ""],

@@ -53,7 +53,7 @@ export function renderProfilePanels(actor, state, commands, scope) {
       } }
     }, scope) : node("span", { text: row.label });
     return node("div", { className: "mc-profile-row", dataset: { profileField: row.id }, children: [
-      node("dt", { className: "mc-profile-item-name", children: [label] }), row.value === undefined || row.edit?.id.startsWith("quantity:") || row.edit?.id.startsWith("coin-") ? null : node("dd", { children: [
+      node("dt", { className: "mc-profile-item-name", children: [label] }), row.value === undefined || (row.edit && row.editControl === "counter") || row.edit?.id.startsWith("quantity:") || row.edit?.id.startsWith("coin-") ? null : node("dd", { children: [
         row.valueLabel ? node("span", { className: "mc-profile-value-label", text: `${row.valueLabel} ` }) : null,
         node("span", { text: `${row.valuePrefix ?? ""}${valueText(row)}` })
       ] }), description, row.edit ? renderProfileResourceEditor(row, actor, commands, scope) : null

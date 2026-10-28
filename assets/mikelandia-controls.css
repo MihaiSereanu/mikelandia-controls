@@ -3157,6 +3157,74 @@ body.mc-mobile-running #pause {
   justify-items: stretch;
 }
 
+/* Counter cards reserve separate touch targets for the lock and each adjustment. */
+.mc-profile-summary-triple:has(.mc-profile-counter) {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5em), 1fr));
+}
+.mc-profile-summary-triple .mc-profile-row:has(> .mc-profile-counter) {
+  grid-template-columns: minmax(0, 1fr);
+  padding: 4px;
+}
+.mc-profile-summary-triple:has(.mc-profile-counter) .mc-profile-row dt {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0;
+  text-align: center;
+  font-weight: 700;
+}
+.mc-profile-summary-triple:has(.mc-profile-counter) .mc-profile-row dd { text-align: center; }
+.mc-profile-summary-triple .mc-profile-row:has(> .mc-profile-counter) > .mc-profile-counter,
+.mc-profile-summary-triple .mc-profile-row:has(> .mc-profile-counter) > .mc-profile-counter.is-editing {
+  position: static;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  justify-items: stretch;
+  gap: 0;
+  width: 100%;
+}
+.mc-mobile-app[data-form-factor] .mc-profile-counter > .mc-profile-counter-lock[aria-pressed] {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.mc-mobile-app[data-form-factor] .mc-profile-counter > .mc-profile-counter-lock[aria-pressed="true"] { color: var(--mc-text); }
+.mc-mobile-app[data-form-factor] .mc-profile-counter > .mc-profile-counter-lock[aria-pressed="false"] { color: #969696; }
+.mc-profile-counter-lock svg { width: 18px; height: 18px; vertical-align: middle; }
+.mc-profile-counter > button[data-profile-counter-delta] {
+  width: 44px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  font-size: 1.4em;
+}
+.mc-profile-summary-triple .mc-profile-counter .mc-profile-resource-open:not([hidden]) {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  text-align: center;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.mc-mobile-app[data-form-factor] .mc-profile-counter button:disabled { opacity: 0.35; cursor: default; }
+.mc-mobile-app[data-form-factor] .mc-profile-counter .mc-profile-resource-open:disabled { opacity: 1; color: var(--mc-text); }
+.mc-profile-counter > div { grid-column: 1 / -1; }
+.mc-profile-counter.is-editing > button[data-profile-counter-delta] { display: none; }
+.mc-profile-counter .mc-profile-resource-form input {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .mc-profile-resource-form {
   display: flex;
   flex-wrap: wrap;
@@ -10751,3 +10819,26 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
     padding-top: calc(var(--mc-safe-top, 0px) + 8px);
   }
 }
+/* Player combat targeting */
+.mc-targets { border: 1px solid var(--mc-border, #7776); border-radius: 8px; margin-block: 12px; overflow: hidden; }
+.mc-targets button, .mc-target-source select { min-height: 44px; color: var(--mc-text, var(--mc-paper)); background: var(--mc-surface-up, var(--mc-panel-up)); border: 1px solid var(--mc-border, var(--mc-line)); border-radius: 6px; font: inherit; }
+.mc-targets button:disabled { opacity: .55; }
+.mc-targets button:focus-visible, .mc-target-source select:focus-visible { outline: 2px solid var(--mc-gold); outline-offset: 2px; }
+.mc-targets-summary, .mc-target-name small, .mc-target-you { color: var(--mc-subtle, var(--mc-muted)); }
+.mc-targets-heading { display: flex; flex-direction: column; align-items: flex-start; width: 100%; padding: 16px 18px; text-align: start; }
+.mc-targets-summary { font-size: .85em; overflow-wrap: anywhere; }
+.mc-targets-title { display: flex; align-items: center; gap: 10px; }
+.mc-targets-caret { width: 24px; height: 24px; flex-shrink: 0; }
+.mc-target-you { font-size: .9em; font-weight: normal; white-space: nowrap; }
+.mc-targets-body { padding: 12px; }
+.mc-target-status:empty { display: none; }
+.mc-target-source { display: grid; gap: 6px; margin-bottom: 10px; }
+.mc-target-source select { width: 100%; max-width: 100%; }
+.mc-target-group h3 { margin-block: 12px 6px; }
+.mc-target-row { display: flex; gap: 10px; align-items: center; width: 100%; padding: 8px; text-align: start; margin-block: 4px; }
+.mc-target-row img { width: 36px; height: 36px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+.mc-target-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.mc-target-name strong, .mc-target-name small { display: block; }
+.mc-target-distance { max-width: 40%; font-size: .9em; overflow-wrap: anywhere; }
+.mc-target-check { flex: 0 0 20px; }
+.mc-target-row.is-selected { outline: 2px solid currentColor; outline-offset: -2px; }

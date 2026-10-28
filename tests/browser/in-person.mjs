@@ -6,6 +6,8 @@ import { initialAppState, reduceAppState } from "/src/kernel/app-state.mjs";
 import { createFoundrySessionGateway } from "/src/foundry/session-gateway.mjs";
 import { createFoundryCommandGateway } from "/src/foundry/command-gateway.mjs";
 import { createFoundryCombatGateway } from "/src/foundry/combat-gateway.mjs";
+import { createFoundryTargetingGateway } from "/src/foundry/targeting-gateway.mjs";
+import { targetingFixture } from "/tests/helpers/targeting.mjs";
 import { createFoundryPreferencesGateway, registerPreferences } from "/src/foundry/preferences.mjs";
 import { createConnectionGeneration } from "/src/kernel/connection-generation.mjs";
 
@@ -65,7 +67,7 @@ try {
   });
   const session = createFoundrySessionGateway({ capabilitiesForActor: commands.capabilitiesForActor, combatForSnapshot: combat.snapshot, combatControlsForSnapshot: combat.controlsSnapshot });
   kernel = createAppKernel({
-    store, session, commandGateway: commands, combatGateway: combat,
+    store, session, commandGateway: commands, combatGateway: combat, targetingGateway: createFoundryTargetingGateway(),
     authoritativeGateway: { resync: async () => ({ applied: true }) },
     connectionGeneration: createConnectionGeneration(),
     preferencesGateway: createFoundryPreferencesGateway(),
@@ -121,6 +123,32 @@ try {
   game.combat.started = false; Hooks.emit("updateCombat", game.combat, {}); await tick();
   root.querySelector(".mc-gm-combat-center").click(); await tick();
   check("GM Start Combat remains available", nativeCalls.at(-1)?.[0] === "start");
+  // Exercise real kernel/store/frame targeting updates after the canvas-free checks.
+  const targeting = targetingFixture();
+  for (const token of targeting.scene.tokens) if (token.id === "pc") token.actorId = f.actor.id;
+  globalThis.canvas = targeting.canvas;
+  game.combat = targeting.game.combat;
+  game.combat.scene = null; // Native global encounter, as in the player's local report.
+  game.user.targets = targeting.game.user.targets;
+  // Native placeables emit into this kernel's existing session hooks.
+  for (const token of canvas.tokens) {
+    const original = token.setTarget;
+    token.setTarget = function(selected, options) { original.call(this, selected, options); Hooks.emit("targetToken", game.user, this, selected); };
+  }
+  Hooks.emit("canvasReady"); await tick();
+  check("kernel renders targeting in active scene", !!root.querySelector(".mc-targets"));
+  check("kernel starts targeting collapsed", !root.querySelector(".mc-target-row"));
+  root.querySelector(".mc-targets-heading").click(); await tick();
+  root.querySelector('[data-target-id="enemy"]').click(); await tick();
+  check("kernel updates pressed state without combat snapshot change", root.querySelector('[data-target-id="enemy"]').getAttribute("aria-pressed") === "true");
+  const combatScreen = root.querySelector(".mc-combat-screen"), enemyRow = root.querySelector('[data-target-id="enemy"]');
+  enemyRow.focus(); targeting.enemy.x = 500;
+  Hooks.emit("refreshToken", canvas.tokens.get("enemy"), { refreshPosition: true }); await tick();
+  check("kernel patches animation distance without replacing rows or focus", enemyRow.querySelector(".mc-target-distance").textContent === "25 ft" && root.querySelector(".mc-combat-screen") === combatScreen && root.querySelector('[data-target-id="enemy"]') === enemyRow && document.activeElement === enemyRow);
+  targeting.pc.x = 100; Hooks.emit("refreshToken", canvas.tokens.get("pc"), { refreshPosition: true }); await tick();
+  check("kernel patches source movement distances", enemyRow.querySelector(".mc-target-distance").textContent === "20 ft" && root.querySelector('[data-target-id="enemy"]') === enemyRow);
+  root.querySelector(".mc-targets-heading").click(); await tick();
+  check("kernel remembers collapsed targeting state", !root.querySelector(".mc-target-row"));
   check("navigation fits viewport", document.documentElement.scrollWidth <= innerWidth + 1);
   check("GM controls fit viewport", root.querySelector(".mc-gm-combat-controls").getBoundingClientRect().right <= innerWidth + 1);
   root.querySelector('[data-route="settings"]').click(); await tick();

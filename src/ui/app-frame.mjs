@@ -162,7 +162,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
       && renderedState?.status === state.status
       && renderedState?.error === state.error
       && renderedState?.layoutKey === layoutKey;
-    const snapshotChanged = renderedState?.snapshot !== state.snapshot;
+    const snapshotChanged = renderedState?.snapshot !== state.snapshot || renderedState?.targeting !== state.targeting;
     const selectionChanged = renderedState?.selectedActorSourceUuid !== state.selectedActorSourceUuid
       || (state.route === "characters" && state.snapshot?.selectedActor === null && Boolean(viewport.firstElementChild?.__mcUpdateCharacter));
     const characterTabChanged = renderedState?.characterTab !== state.characterTab;
@@ -283,6 +283,12 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     }
 
     const routeSnapshotChanged = snapshotChanged && snapshotPresentationChangedForRoute(renderedState, state);
+    if (sameScreen && state.status === "ready" && state.route === "combat" && !viewChanged && !selectionChanged
+      && renderedState?.snapshot?.combat === state.snapshot?.combat && renderedState?.targeting !== state.targeting
+      && viewport.firstElementChild?.__mcUpdateCombatTargets?.(state.targeting)) {
+      renderedState = screenState(state, layoutKey);
+      return;
+    }
     if (sameScreen && !routeSnapshotChanged && !selectionChanged && !characterTabChanged && !rollResultChanged && !actionSessionChanged && !characterItemChanged && !expandedCharacterItemChanged && !hitPointEditorChanged && !restEditorChanged && !spellSlotEditorChanged && !xpEditorChanged && !portraitImageChanged && !journalChanged && !viewChanged) {
       renderedState = screenState(state, layoutKey);
       return;
@@ -633,7 +639,7 @@ export function snapshotPresentationChangedForRoute(previous, current) {
     return previous.snapshot.selectedActor !== current.snapshot.selectedActor
       || actorMenuSignature(previous.snapshot.actors) !== actorMenuSignature(current.snapshot.actors);
   }
-  if (current.route === "combat") return previous.snapshot.combat !== current.snapshot.combat;
+  if (current.route === "combat") return previous.snapshot.combat !== current.snapshot.combat || previous.targeting !== current.targeting;
   if (current.route === "journals") return previous.snapshot.journals !== current.snapshot.journals;
   return false;
 }
@@ -794,6 +800,7 @@ function screenState(state, layoutKey = "") {
     status: state.status,
     error: state.error,
     snapshot: state.snapshot,
+    targeting: state.targeting,
     selectedActorId: state.selectedActorId,
     selectedActorSourceUuid: state.selectedActorSourceUuid,
     characterTab: state.characterTab,

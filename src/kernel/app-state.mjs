@@ -11,6 +11,7 @@ export const initialAppState = Object.freeze({
   characterTab: "overview",
   characterNavigation: Object.freeze([]),
   snapshot: null,
+  targeting: null,
   status: "starting",
   error: "",
   rollResult: null,
@@ -54,6 +55,7 @@ export function reduceAppState(state, event) {
 
 function reduceState(state, event) {
   switch (event.type) {
+    case "targeting-updated": return { ...state, targeting: event.targeting };
     case "action-navigation-invalidated": return { ...state };
     case "session-loaded": {
       const legacyActors = event.snapshot?.actors ?? [];

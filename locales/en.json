@@ -1,5 +1,24 @@
 {
   "MIKELANDIA_CONTROLS": {
+    "Targets": {
+      "Title": "Targets",
+      "None": "No targets selected",
+      "Friendly": "Friendly",
+      "Enemies": "Enemies",
+      "You": "You",
+      "Defeated": "Defeated",
+      "YourToken": "Your token",
+      "ChooseToken": "Choose a token",
+      "ChooseSource": "Choose your token to enable targeting.",
+      "NoSource": "Place the selected character in this scene to enable targeting.",
+      "NotReady": "Targeting is unavailable until the scene finishes loading.",
+      "NativeUnavailable": "Some tokens are unavailable for native targeting.",
+      "DistanceUnavailable": "Distance unavailable",
+      "Empty": "No visible combat tokens.",
+      "Stale": "The target selection has changed. Try again.",
+      "SourceMissing": "Your token is no longer available.",
+      "Unavailable": "This token is no longer available for targeting."
+    },
     "Panels": {
       "XP": "XP",
       "ActionUnavailable": "This game action is no longer available.",
@@ -19,6 +38,8 @@
       "Active": "Active",
       "Inactive": "Inactive",
       "Edit": "Edit",
+      "LockCounter": "Lock counter",
+      "UnlockCounter": "Unlock counter",
       "Save": "Save",
       "Cancel": "Cancel",
       "Saved": "Saved.",
