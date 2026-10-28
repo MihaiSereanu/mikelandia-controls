@@ -395,7 +395,9 @@ export function syncBootstrapPreferences(getGame = () => globalThis.game, { getS
 export function createFoundryPreferencesGateway({
   getGame = () => globalThis.game,
   getSystemIntegration = () => resolveSystemIntegration(getGame()?.system?.id),
-  getNavigator = () => globalThis.navigator
+  getNavigator = () => globalThis.navigator,
+  getRoute = (path) => globalThis.foundry.utils.getRoute(path),
+  navigate = (url) => { globalThis.window.location.href = url; }
 } = {}) {
   const localize = (key, data) => localizeValue(getGame(), key, data);
   const setting = (key) => getGame()?.settings?.get?.(MODULE_ID, key);
@@ -535,9 +537,8 @@ export function createFoundryPreferencesGateway({
     },
 
     async logout() {
-      const game = getGame();
-      if (typeof game?.logOut !== "function") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.LogoutUnavailable", "Foundry logout is unavailable."));
-      await game.logOut();
+      // The mobile login establishes the native /join session, ending the world login.
+      await navigate(`${getRoute("mobile")}/`);
       return Object.freeze({ ok: true });
     }
   });

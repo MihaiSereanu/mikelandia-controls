@@ -121,7 +121,7 @@ if (isGamePage && migrateBrowserState()) {
   const bootstrap = createMobileBootstrap({
     readLocale,
     localize: (key, fallback) => localizeFoundry(key, fallback),
-    iconUrl: new URL("../Icon.svg", import.meta.url).href
+    iconUrl: new URL("../assets/mc-512.png", import.meta.url).href
   });
   const refreshBootstrapLocalization = () => { bootstrap.refreshLocalization?.(); renderBootstrapPhase(currentBootstrapStage); if (bootstrapRecoveryReason) showBootstrapRecovery(bootstrapRecoveryReason); };
   const localizationHook = Hooks.once("i18nInit", refreshBootstrapLocalization);

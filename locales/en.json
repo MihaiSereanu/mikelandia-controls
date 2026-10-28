@@ -154,7 +154,7 @@
       },
       "Copy": {
         "SettingsSubtitle": "Settings for this Foundry session and device.",
-        "MobileSettingsTitle": "Mikelandia Controls Settings",
+        "MobileSettingsTitle": "Mikelandia Controls",
         "DeviceLabel": "Device Detected",
         "DeviceResolving": "Detecting…",
         "PhoneModeEnabled": "Phone mode enabled",
@@ -199,7 +199,7 @@
       "UI": {
         "SessionTitle": "Session",
         "FoundrySettingsTitle": "Foundry Settings",
-        "MobileSettingsTitle": "Mikelandia Controls Settings",
+        "MobileSettingsTitle": "MC Settings",
         "OpenFoundryLabel": "Open Foundry Settings",
         "OpenFoundryHint": "Use Foundry's native settings interface for core, system, and module configuration.",
         "OpenFoundryDescription": "Open core Foundry and module settings here.",
@@ -240,7 +240,7 @@
           "performance": "Dice",
           "overlays": "Module Overlays (Experimental)",
           "support": "Support",
-          "additional": "Additional Mikelandia Controls Settings",
+          "additional": "Additional MC Settings",
           "actions": "Action Results"
         },
         "Online": "Online",
@@ -262,7 +262,7 @@
         "NumberExpected": "That setting requires a number.",
         "RangeExceeded": "That setting is outside its allowed range.",
         "MobileTypeUnsupported": "That setting type is not supported on mobile.",
-        "McSettingMissing": "That Mikelandia Controls setting does not exist."
+        "McSettingMissing": "That MC setting does not exist."
       }
     },
     "Character": {

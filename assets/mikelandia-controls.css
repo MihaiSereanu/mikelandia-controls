@@ -532,13 +532,13 @@ body.mc-mobile-booting {
 
 @keyframes mc-mobile-bootstrap-glow {
   0%, 100% {
-    filter: drop-shadow(0 0 5px rgb(207 35 71 / 0.18));
+    filter: drop-shadow(0 0 5px rgb(209 190 135 / 0.14));
   }
 
   50% {
     filter:
-      drop-shadow(0 0 12px rgb(207 35 71 / 0.42))
-      drop-shadow(0 0 24px rgb(166 15 47 / 0.24));
+      drop-shadow(0 0 10px rgb(209 190 135 / 0.26))
+      drop-shadow(0 0 20px rgb(209 190 135 / 0.12));
   }
 }
 

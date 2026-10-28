@@ -17,6 +17,8 @@ Five routes: Character, Chat, Journals, Combat, Settings. Character selection ne
 
 In standalone display mode, the root reserves `env(safe-area-inset-top) + 8px` with border-box sizing. Both base and protected-style CSS implement this contract; regular browser spacing remains unchanged.
 
+Mobile Logout navigates to Foundry's prefix-aware `mobile` route with a trailing slash. The mobile login establishes the native `/join` session to end the world login. The bootstrap icon is bundled as `assets/mc-512.png`, matching the transparent gold PWA icon.
+
 Resolve fresh Actor/Item state by UUID. Validate ownership, session/config revisions, and duplicate submissions; clean up pending actions on cancellation. Never accept arbitrary client paths or native method names. Refresh after native updates; system models own derived values. Share implementation while retaining each game's terminology/grouping. Unsupported systems get identity and native sheets; isolate D&D handlers.
 
 Branding and technical ID are Mikelandia Controls / `mikelandia-controls`; CSS/data prefixes are `mc-`, and localization uses `MIKELANDIA_CONTROLS`. `branding-migration.mjs` copies browser state before first reads and missing Actor/raw-token flag leaves under one GM, preserving destination values and originals. See [migration](migration.md) for world activation and rollback. Upgrade restoration restores only owned client settings and preserves failed restoration data.
