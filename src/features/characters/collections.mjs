@@ -170,7 +170,7 @@ function favouriteSection(key, label, icon, items, compare, resource = null) {
 }
 
 function collectionText(localize, key, fallback, data) {
-  return localizedText(localize, `VEMOBILE.Character.Collections.${key}`, fallback, data);
+  return localizedText(localize, `MIKELANDIA_CONTROLS.Character.Collections.${key}`, fallback, data);
 }
 
 function favouriteSpellSections(spells, resources, compare, localize) {
@@ -238,9 +238,9 @@ export function favouriteItemMetadata(item, localize = null) {
   const range = meaningfulMetadata(activity?.range || detail("Range") || item.range);
   const uses = meaningfulMetadata(activity?.uses || detail("Uses") || item.usesLabel || formatUses(item.uses));
   const columns = Object.freeze([
-    Object.freeze({ key: "uses", label: localizedText(localize, "VEMOBILE.Character.Labels.Uses", "Uses"), value: uses }),
-    Object.freeze({ key: "action-use", label: localizedText(localize, "VEMOBILE.Character.Labels.Actionuse", "Action use"), value: actionUse }),
-    Object.freeze({ key: "range", label: localizedText(localize, "VEMOBILE.Character.Labels.Range", "Range"), value: range })
+    Object.freeze({ key: "uses", label: localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Uses", "Uses"), value: uses }),
+    Object.freeze({ key: "action-use", label: localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Actionuse", "Action use"), value: actionUse }),
+    Object.freeze({ key: "range", label: localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Range", "Range"), value: range })
   ]);
   return Object.freeze({
     actionUse,
@@ -254,9 +254,9 @@ export function favouriteItemMetadata(item, localize = null) {
 export function compactActionUse(value, localize = null) {
   const normalized = String(value ?? "").trim().toLowerCase().replace(/[._-]+/gu, " ");
   if (!normalized || /^(?:none|n\/a|special|varies?)$/u.test(normalized)) return "";
-  if (/\bbonus(?:\s+action)?\b/u.test(normalized)) return localizedText(localize, "VEMOBILE.Character.Copy.BonusActionAbbreviation", "BA");
-  if (/\breaction\b/u.test(normalized)) return localizedText(localize, "VEMOBILE.Character.Copy.ReactionAbbreviation", "R");
-  if (/\baction\b/u.test(normalized)) return localizedText(localize, "VEMOBILE.Character.Copy.ActionAbbreviation", "A");
+  if (/\bbonus(?:\s+action)?\b/u.test(normalized)) return localizedText(localize, "MIKELANDIA_CONTROLS.Character.Copy.BonusActionAbbreviation", "BA");
+  if (/\breaction\b/u.test(normalized)) return localizedText(localize, "MIKELANDIA_CONTROLS.Character.Copy.ReactionAbbreviation", "R");
+  if (/\baction\b/u.test(normalized)) return localizedText(localize, "MIKELANDIA_CONTROLS.Character.Copy.ActionAbbreviation", "A");
   return "";
 }
 

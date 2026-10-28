@@ -3,27 +3,27 @@ import { controlsGuideSections } from "../kernel/controls-guide-model.mjs";
 
 /** Shared Desktop/mobile guide. It is appended above, never remounts its route. */
 export function createControlsGuide({ scope, readContext, localize, onVisibility = () => {} }) {
-  const text = key => localize(`VEMOBILE.Controls.${key}`);
+  const text = key => localize(`MIKELANDIA_CONTROLS.Controls.${key}`);
   let opener = null;
-  const body = node("div", { className: "ve-controls-guide-body", attrs: { tabindex: "0" } });
+  const body = node("div", { className: "mc-controls-guide-body", attrs: { tabindex: "0" } });
   const closeLabel = node("span", { text: text("Close") });
-  const close = node("button", { className: "ve-button-accent-outline", attrs: { type: "button" }, children: [icon("fa-xmark"), closeLabel] });
-  const title = node("h2", { text: text("Title"), attrs: { id: "ve-controls-guide-title" } });
-  const card = node("section", { className: "ve-controls-guide-card", children: [
+  const close = node("button", { className: "mc-button-accent-outline", attrs: { type: "button" }, children: [icon("fa-xmark"), closeLabel] });
+  const title = node("h2", { text: text("Title"), attrs: { id: "mc-controls-guide-title" } });
+  const card = node("section", { className: "mc-controls-guide-card", children: [
     node("header", { children: [icon("fa-hand-pointer"), title] }), body,
     node("footer", { children: [close] })
   ] });
-  const element = node("div", { className: "ve-controls-guide", attrs: { hidden: true, role: "dialog", "aria-modal": "true", "aria-labelledby": "ve-controls-guide-title", "data-ve-back-kind": "controls-guide", "data-ve-back-dismissable": "true" }, children: [card] });
+  const element = node("div", { className: "mc-controls-guide", attrs: { hidden: true, role: "dialog", "aria-modal": "true", "aria-labelledby": "mc-controls-guide-title", "data-mc-back-kind": "controls-guide", "data-mc-back-dismissable": "true" }, children: [card] });
   function hide() {
     if (element.hidden) return;
     element.hidden = true;
     onVisibility(false);
     if (opener?.isConnected && !opener.closest?.("[hidden]")) opener.focus?.({ preventScroll: true });
-    else element.closest(".ve-mobile-app")?.querySelector(".ve-bottom-nav button")?.focus?.({ preventScroll: true });
+    else element.closest(".mc-mobile-app")?.querySelector(".mc-bottom-nav button")?.focus?.({ preventScroll: true });
     opener = null;
   }
   scope.listen(close, "click", hide);
-  scope.listen(element, "ve-close", hide);
+  scope.listen(element, "mc-close", hide);
   scope.listen(element, "keydown", event => {
     if (event.key === "Escape") { event.preventDefault(); event.stopImmediatePropagation(); hide(); }
     if (event.key !== "Tab") return;

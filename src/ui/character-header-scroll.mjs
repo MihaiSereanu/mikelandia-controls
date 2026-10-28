@@ -4,8 +4,8 @@
  * the header. There is no outer/nested scrollbar or persistent storage. */
 export function bindCharacterHeaderScroll({ scroller, screen, scope }) {
   if (scope.disposed) return null;
-  const heading = screen.querySelector(".ve-character-heading");
-  const root = screen.closest(".ve-mobile-app");
+  const heading = screen.querySelector(".mc-character-heading");
+  const root = screen.closest(".mc-mobile-app");
   if (!heading || !(root?.dataset.formFactor === "phone" || root?.dataset.splitScreen === "true")) return null;
   const view = heading.ownerDocument.defaultView;
   const reducedMotion = view.matchMedia("(prefers-reduced-motion: reduce)");
@@ -24,7 +24,7 @@ export function bindCharacterHeaderScroll({ scroller, screen, scope }) {
   };
   const paint = () => {
     if (scope.disposed || !heading.isConnected) return;
-    heading.style.setProperty("--ve-header-progress", String(range ? offset / range : 0));
+    heading.style.setProperty("--mc-header-progress", String(range ? offset / range : 0));
     // CSS first reserves the portrait column, then raises HP into that band.
     // Let the shared heading follow this intrinsic geometry without a layout read.
     if (xp) xp.inert = offset > range * 0.05;
@@ -32,10 +32,10 @@ export function bindCharacterHeaderScroll({ scroller, screen, scope }) {
   const ensureFiller = () => {
     if (scope.disposed || !scroller.isConnected) return;
     const previousScrollTop = scroller.scrollTop;
-    spacer = scroller.querySelector(".ve-character-scroll-spacer");
+    spacer = scroller.querySelector(".mc-character-scroll-spacer");
     if (!spacer) {
       spacer = view.document.createElement("div");
-      spacer.className = "ve-character-scroll-spacer";
+      spacer.className = "mc-character-scroll-spacer";
       spacer.setAttribute("aria-hidden", "true");
       scroller.append(spacer);
       ownedSpacer = spacer;
@@ -70,17 +70,17 @@ export function bindCharacterHeaderScroll({ scroller, screen, scope }) {
   };
   const measure = () => {
     if (scope.disposed || !heading.isConnected) return;
-    const band = heading.querySelector(".ve-character-identity-band");
+    const band = heading.querySelector(".mc-character-identity-band");
     if (!band) return;
-    const header = band.closest(".ve-sheet-identity");
-    header.style.removeProperty("--ve-header-compact-band");
-    header.style.removeProperty("--ve-header-compact-metrics");
+    const header = band.closest(".mc-sheet-identity");
+    header.style.removeProperty("--mc-header-compact-band");
+    header.style.removeProperty("--mc-header-compact-metrics");
     const progress = range ? offset / range : 0;
-    xp = heading.querySelector(".ve-character-header-xp");
+    xp = heading.querySelector(".mc-character-header-xp");
     delete heading.dataset.collapse;
     heading.dataset.measure = "true";
     heading.style.height = "";
-    heading.style.setProperty("--ve-header-progress", "0");
+    heading.style.setProperty("--mc-header-progress", "0");
     if (reducedMotion.matches) {
       delete heading.dataset.measure;
       offset = range = 0;
@@ -92,23 +92,23 @@ export function bindCharacterHeaderScroll({ scroller, screen, scope }) {
       update();
       return;
     }
-    heading.style.setProperty("--ve-header-full-band", `${band.getBoundingClientRect().height}px`);
-    heading.style.setProperty("--ve-header-full-portrait", `${band.querySelector(".ve-sheet-portrait-frame").getBoundingClientRect().width}px`);
-    heading.style.setProperty("--ve-header-full-controls", `${band.querySelector(".ve-character-identity-controls").getBoundingClientRect().width}px`);
-    heading.style.setProperty("--ve-header-full-xp", `${xp?.getBoundingClientRect().height ?? 0}px`);
+    heading.style.setProperty("--mc-header-full-band", `${band.getBoundingClientRect().height}px`);
+    heading.style.setProperty("--mc-header-full-portrait", `${band.querySelector(".mc-sheet-portrait-frame").getBoundingClientRect().width}px`);
+    heading.style.setProperty("--mc-header-full-controls", `${band.querySelector(".mc-character-identity-controls").getBoundingClientRect().width}px`);
+    heading.style.setProperty("--mc-header-full-xp", `${xp?.getBoundingClientRect().height ?? 0}px`);
     expanded = heading.getBoundingClientRect().height;
     heading.dataset.collapse = "true";
     delete heading.dataset.measure;
-    heading.style.setProperty("--ve-header-progress", "1");
+    heading.style.setProperty("--mc-header-progress", "1");
     // Measure the actual compact text and HP row once per geometry invalidation.
     // Long NPC metadata and downed controls must not be clipped by a fixed band.
-    const metricsHeight = header.querySelector(".ve-character-vitals-group").getBoundingClientRect().height;
-    const summary = band.querySelector(".ve-character-compact-summary");
-    const deathRowHeight = band.querySelector(".ve-death-saves")?.getBoundingClientRect().height ?? 0;
+    const metricsHeight = header.querySelector(".mc-character-vitals-group").getBoundingClientRect().height;
+    const summary = band.querySelector(".mc-character-compact-summary");
+    const deathRowHeight = band.querySelector(".mc-death-saves")?.getBoundingClientRect().height ?? 0;
     const compactBand = Math.max(104,
       27 + summary.getBoundingClientRect().height + metricsHeight + 4) + (deathRowHeight ? deathRowHeight + 6 : 0);
-    header.style.setProperty("--ve-header-compact-metrics", `${metricsHeight}px`);
-    header.style.setProperty("--ve-header-compact-band", `${compactBand}px`);
+    header.style.setProperty("--mc-header-compact-metrics", `${metricsHeight}px`);
+    header.style.setProperty("--mc-header-compact-band", `${compactBand}px`);
     range = Math.max(0, expanded - heading.getBoundingClientRect().height);
     collapsedClientHeight = scroller.clientHeight;
     offset = progress * range;
@@ -208,9 +208,9 @@ export function bindCharacterHeaderScroll({ scroller, screen, scope }) {
     delete heading.dataset.collapse;
     delete heading.dataset.measure;
     heading.removeAttribute("style");
-    const header = heading.querySelector(".ve-sheet-identity");
-    header?.style.removeProperty("--ve-header-compact-band");
-    header?.style.removeProperty("--ve-header-compact-metrics");
+    const header = heading.querySelector(".mc-sheet-identity");
+    header?.style.removeProperty("--mc-header-compact-band");
+    header?.style.removeProperty("--mc-header-compact-metrics");
     if (xp) xp.inert = false;
   });
   mutationObserver.observe(scroller, { childList: true, characterData: true, subtree: true });
@@ -220,14 +220,14 @@ export function bindCharacterHeaderScroll({ scroller, screen, scope }) {
   view.document.fonts?.ready.then(() => { if (!scope.disposed) measure(); });
   measure();
   let selector = heading.firstElementChild;
-  let tabs = heading.querySelector(".ve-sheet-tabs");
+  let tabs = heading.querySelector(".mc-sheet-tabs");
   return {
     update,
     prepareScrollRestore: update,
     refresh() {
-      if (selector === heading.firstElementChild && tabs === heading.querySelector(".ve-sheet-tabs")) return;
+      if (selector === heading.firstElementChild && tabs === heading.querySelector(".mc-sheet-tabs")) return;
       selector = heading.firstElementChild;
-      tabs = heading.querySelector(".ve-sheet-tabs");
+      tabs = heading.querySelector(".mc-sheet-tabs");
       measure();
     },
     get scrollTop() { return scroller.scrollTop; },

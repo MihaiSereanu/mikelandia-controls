@@ -1,6 +1,6 @@
 const MOBILE_COMPATIBILITY_MODULES = Object.freeze(["crlngn-ui", "narrator-tools"]);
 const CAROLINGIAN_UI_SETTING = "crlngn-ui.disable-ui";
-const COMPATIBILITY_STORAGE_PREFIX = "ve-mobile:module-compatibility:v1";
+const COMPATIBILITY_STORAGE_PREFIX = "mikelandia-controls:module-compatibility:v1";
 // Foundry's hook entries have no owning-module metadata, so target only the
 // Narrator Tools callbacks installed by its current main/compatibility scripts.
 const NARRATOR_HOOK_MATCHERS = Object.freeze({

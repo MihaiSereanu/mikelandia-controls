@@ -1,5 +1,5 @@
-const STATE = "data-ve-mobile-ui-state";
-const OWNED_ROOTS = ".ve-mobile-app, .ve-mobile-bootstrap, .ve-mobile-admitted-app, .ve-mobile-settings-app, .ve-mobile-native-control";
+const STATE = "data-mc-mobile-ui-state";
+const OWNED_ROOTS = ".mc-mobile-app, .mc-mobile-bootstrap, .mc-mobile-admitted-app, .mc-mobile-settings-app, .mc-mobile-native-control";
 const FEEDBACK_ROOTS = "#notifications, #tooltip, #dice-box-canvas";
 
 /** Hide foreign branches, rather than relying on inherited visibility. Hosts

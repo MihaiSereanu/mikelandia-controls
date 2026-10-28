@@ -2,7 +2,7 @@
  * D&D5e 6 stores chat references on system data; 5.x uses dnd5e flags.
  * The prepared 6.x origin is a ForeignDocumentField (a ChatMessage), while
  * its source is an ID. Read identity only, without resolving documents or
- * exposing live system data in VE's serializable action records.
+ * exposing live system data in Mikelandia Controls's serializable action records.
  */
 export function readDnd5eMessageOriginId(message) {
   const modern = message?.system?.origin ?? message?._source?.system?.origin;

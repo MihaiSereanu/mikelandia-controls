@@ -101,12 +101,12 @@ export function createActorDirectoryRecord(actor) {
   return Object.freeze({
     id: String(actor?.id ?? ""),
     sourceUuid: String(actor?.uuid ?? `Actor.${String(actor?.id ?? "")}`),
-    name: String(actor?.name ?? localizeFoundry("VEMOBILE.Character.ActorView.UnknownActor", "Unknown actor")),
+    name: String(actor?.name ?? localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.UnknownActor", "Unknown actor")),
     img: String(actor?.img ?? ""),
     type: String(actor?.type ?? ""),
     sort: number(actor?.sort),
     folderPath: actorFolderPath(actor),
-    header: Object.freeze({ labels: Object.freeze({ level: localizeFoundry("VEMOBILE.Character.Header.level", "Level") }) }),
+    header: Object.freeze({ labels: Object.freeze({ level: localizeFoundry("MIKELANDIA_CONTROLS.Character.Header.level", "Level") }) }),
     level,
     classes: Object.freeze(classes.map((item) => Object.freeze({ id: String(item.id ?? ""), name: String(item.name ?? ""), levels: number(item.system?.levels) }))),
     npc: actor?.type === "npc" ? Object.freeze(npcIdentityRecord(system)) : null
@@ -147,7 +147,7 @@ export function createActorViewRecord(actor, user, capabilitiesForActor = () => 
   return {
     id: String(actor.id ?? ""),
     sourceUuid: String(actor.uuid ?? `Actor.${actor.id}`),
-    name: String(actor.name ?? localizeFoundry("VEMOBILE.Character.ActorView.UnknownActor", "Unknown actor")),
+    name: String(actor.name ?? localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.UnknownActor", "Unknown actor")),
     img: actor.img ?? "",
     type: actor.type,
     header: {
@@ -313,7 +313,7 @@ function favouriteDiagnostics(actor, favourites) {
   const game = globalThis.game;
   const tidyDetected = Boolean(game?.modules?.get?.("tidy5e-sheet")?.active);
   let configuredSource = "core";
-  try { configuredSource = String(game?.settings?.get?.("ve-mobile", "characterFavouritesSource") ?? "core"); } catch { configuredSource = "core"; }
+  try { configuredSource = String(game?.settings?.get?.("mikelandia-controls", "characterFavouritesSource") ?? "core"); } catch { configuredSource = "core"; }
   if (!["core", "tidy", "both", "off"].includes(configuredSource)) configuredSource = "core";
   const staleConfiguration = !tidyDetected && ["tidy", "both"].includes(configuredSource);
   const sourceMode = staleConfiguration ? "core" : configuredSource;
@@ -355,7 +355,7 @@ export function createItemMenuRecord(actor, item, user, { activityId = "", favou
   const favouriteIds = Array.from(actor.system?.favorites ?? [])
     .map(entry => String(entry?.id ?? ""))
     .filter(id => id === relativeUuid || id.startsWith(`${relativeUuid}.Activity.`));
-  return Object.freeze({ id: String(item.id), name: String(item.name ?? localizeFoundry("VEMOBILE.Character.ActorView.UnknownItem", "Unknown item")),
+  return Object.freeze({ id: String(item.id), name: String(item.name ?? localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.UnknownItem", "Unknown item")),
     type: String(item.type ?? "item"), img: String(item.img ?? ""),
     equipped: item.system?.equipped ?? null, attuned: item.system?.attuned ?? null,
     ...itemActionFields(actor, item, user),
@@ -371,7 +371,7 @@ function itemViewRecord(actor, item, user) {
   const detail = itemDetailRecord(item);
   return {
     id: String(item.id ?? ""),
-    name: String(item.name ?? localizeFoundry("VEMOBILE.Character.ActorView.UnknownItem", "Unknown item")),
+    name: String(item.name ?? localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.UnknownItem", "Unknown item")),
     img: item.img ?? "",
     type: String(item.type ?? "item"),
     typeLabel: itemTypeLabel(item),
@@ -607,7 +607,7 @@ function actorFolderPath(actor) {
     const id = String(folder.id ?? "");
     if (!id) break;
     seen.add(id);
-    path.push({ id, name: String(folder.name ?? localizeFoundry("VEMOBILE.Character.ActorView.UnnamedFolder", "Unnamed folder")), sort: number(folder.sort) });
+    path.push({ id, name: String(folder.name ?? localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.UnnamedFolder", "Unnamed folder")), sort: number(folder.sort) });
     folder = folder.folder ?? null;
   }
   return path.reverse();
@@ -616,15 +616,15 @@ function actorFolderPath(actor) {
 function biographyRecord(details = {}, actorType = "character") {
   const isNpc = actorType === "npc";
   const characteristics = [
-    ["alignment", "VEMOBILE.Character.ActorView.Alignment", "Alignment"],
-    ["faith", "VEMOBILE.Character.ActorView.Faith", "Faith"],
-    ["gender", "VEMOBILE.Character.ActorView.Gender", "Gender"],
-    ["age", "VEMOBILE.Character.ActorView.Age", "Age"],
-    ["height", "VEMOBILE.Character.ActorView.Height", "Height"],
-    ["weight", "VEMOBILE.Character.ActorView.Weight", "Weight"],
-    ["eyes", "VEMOBILE.Character.ActorView.Eyes", "Eyes"],
-    ["hair", "VEMOBILE.Character.ActorView.Hair", "Hair"],
-    ["skin", "VEMOBILE.Character.ActorView.Skin", "Skin"]
+    ["alignment", "MIKELANDIA_CONTROLS.Character.ActorView.Alignment", "Alignment"],
+    ["faith", "MIKELANDIA_CONTROLS.Character.ActorView.Faith", "Faith"],
+    ["gender", "MIKELANDIA_CONTROLS.Character.ActorView.Gender", "Gender"],
+    ["age", "MIKELANDIA_CONTROLS.Character.ActorView.Age", "Age"],
+    ["height", "MIKELANDIA_CONTROLS.Character.ActorView.Height", "Height"],
+    ["weight", "MIKELANDIA_CONTROLS.Character.ActorView.Weight", "Weight"],
+    ["eyes", "MIKELANDIA_CONTROLS.Character.ActorView.Eyes", "Eyes"],
+    ["hair", "MIKELANDIA_CONTROLS.Character.ActorView.Hair", "Hair"],
+    ["skin", "MIKELANDIA_CONTROLS.Character.ActorView.Skin", "Skin"]
   ].map(([key, labelKey, fallback]) => ({
     key,
     label: localizeFoundry(labelKey, fallback),
@@ -839,7 +839,7 @@ function spellPreparationStatus(value, method) {
   const states = globalThis.CONFIG?.DND5E?.spellPreparationStates ?? {};
   const normalized = spellPreparationState(value);
   const state = Object.values(states).find((entry) => entry?.value === normalized);
-  if (normalized === 2 || normalized === states.always?.value) return localized(state?.label) || localizeFoundry("VEMOBILE.Character.ActorView.AlwaysPrepared", "Always Prepared");
+  if (normalized === 2 || normalized === states.always?.value) return localized(state?.label) || localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.AlwaysPrepared", "Always Prepared");
   if (!method?.prepares) return "";
   return localized(state?.label) || (normalized === 1 ? "Prepared" : "Unprepared");
 }
@@ -1176,15 +1176,15 @@ function traitRecords(system, items) {
   const weapons = simpleTraitRecords(system.traits?.weaponProf, "weaponProficiencies", items);
   const languages = languageRecords(system.traits?.languages);
   return [
-    { key: "senses", label: localizeFoundry("VEMOBILE.Character.ActorView.Senses", "Senses"), icon: "fa-eye", entries: senses },
-    { key: "resistances", label: localizeFoundry("VEMOBILE.Character.ActorView.Resistances", "Resistances"), icon: "fa-shield", entries: resistance },
-    { key: "immunities", label: localizeFoundry("VEMOBILE.Character.ActorView.DamageImmunities", "Damage Immunities"), icon: "fa-shield", entries: immunity },
-    { key: "condition-immunities", label: localizeFoundry("VEMOBILE.Character.ActorView.ConditionImmunities", "Condition Immunities"), icon: "fa-shield", entries: conditionImmunity },
-    { key: "vulnerabilities", label: localizeFoundry("VEMOBILE.Character.ActorView.Vulnerabilities", "Vulnerabilities"), icon: "fa-heart-crack", entries: vulnerability },
-    { key: "damage-modification", label: localizeFoundry("VEMOBILE.Character.ActorView.DamageModification", "Damage Modification"), icon: "fa-heart-circle-minus", entries: damageModification },
-    { key: "armor", label: localizeFoundry("VEMOBILE.Character.ActorView.Armor", "Armor"), icon: "fa-shield-halved", entries: armor },
-    { key: "weapons", label: localizeFoundry("VEMOBILE.Character.ActorView.Weapons", "Weapons"), icon: "fa-swords", entries: weapons },
-    { key: "languages", label: localizeFoundry("VEMOBILE.Character.ActorView.Languages", "Languages"), icon: "fa-flag", entries: languages }
+    { key: "senses", label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.Senses", "Senses"), icon: "fa-eye", entries: senses },
+    { key: "resistances", label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.Resistances", "Resistances"), icon: "fa-shield", entries: resistance },
+    { key: "immunities", label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.DamageImmunities", "Damage Immunities"), icon: "fa-shield", entries: immunity },
+    { key: "condition-immunities", label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.ConditionImmunities", "Condition Immunities"), icon: "fa-shield", entries: conditionImmunity },
+    { key: "vulnerabilities", label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.Vulnerabilities", "Vulnerabilities"), icon: "fa-heart-crack", entries: vulnerability },
+    { key: "damage-modification", label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.DamageModification", "Damage Modification"), icon: "fa-heart-circle-minus", entries: damageModification },
+    { key: "armor", label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.Armor", "Armor"), icon: "fa-shield-halved", entries: armor },
+    { key: "weapons", label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.Weapons", "Weapons"), icon: "fa-swords", entries: weapons },
+    { key: "languages", label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.Languages", "Languages"), icon: "fa-flag", entries: languages }
   ].filter((trait) => trait.entries.length);
 }
 
@@ -1281,17 +1281,17 @@ function resourceRecords(system, items, hitDice) {
     if (max <= 0) continue;
     resources.push({
       id: `spell-slot:${key}`,
-      label: level ? localizeFoundry("VEMOBILE.Character.ActorView.LevelSpellSlots", "Level {level} spell slots", { level: (level) }) : localizeFoundry("VEMOBILE.Character.ActorView.PactSpellSlots", "Pact spell slots"),
+      label: level ? localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.LevelSpellSlots", "Level {level} spell slots", { level: (level) }) : localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.PactSpellSlots", "Pact spell slots"),
       value: clamp(number(slot?.value), 0, max),
       max,
-      detail: level ? localizeFoundry("VEMOBILE.Character.ActorView.Level", "Level {level}", { level: (level) }) : localizeFoundry("VEMOBILE.Character.ActorView.Pact", "Pact"),
+      detail: level ? localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.Level", "Level {level}", { level: (level) }) : localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.Pact", "Pact"),
       slotLevel: level ? Number(level) : Math.max(0, number(slot?.level)),
       kind: "spell-slot"
     });
   }
 
   if (hitDice?.max > 0) {
-    resources.push({ id: "hit-dice", label: localizeFoundry("VEMOBILE.Character.ActorView.HitDice", "Hit Dice"), value: hitDice.value, max: hitDice.max, detail: hitDice.pools.length === 1 ? hitDice.pools[0].denomination : hitDice.pools.length > 1 ? localizeFoundry("VEMOBILE.Character.ActorView.Mixed", "Mixed") : "", kind: "hit-dice" });
+    resources.push({ id: "hit-dice", label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.HitDice", "Hit Dice"), value: hitDice.value, max: hitDice.max, detail: hitDice.pools.length === 1 ? hitDice.pools[0].denomination : hitDice.pools.length > 1 ? localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.Mixed", "Mixed") : "", kind: "hit-dice" });
   }
 
   for (const [key, resource] of Object.entries(system.resources ?? {})) {
@@ -1344,7 +1344,7 @@ function hitDiceRecord(system, classes) {
 }
 
 function movementRecord(movement = {}) {
-  const configured = globalThis.CONFIG?.DND5E?.movementTypes ?? { walk: { label: localizeFoundry("VEMOBILE.Character.ActorView.Walk", "Walk") }, burrow: { label: localizeFoundry("VEMOBILE.Character.ActorView.Burrow", "Burrow") }, climb: { label: localizeFoundry("VEMOBILE.Character.ActorView.Climb", "Climb") }, fly: { label: localizeFoundry("VEMOBILE.Character.ActorView.Fly", "Fly") }, swim: { label: localizeFoundry("VEMOBILE.Character.ActorView.Swim", "Swim") } };
+  const configured = globalThis.CONFIG?.DND5E?.movementTypes ?? { walk: { label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.Walk", "Walk") }, burrow: { label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.Burrow", "Burrow") }, climb: { label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.Climb", "Climb") }, fly: { label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.Fly", "Fly") }, swim: { label: localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.Swim", "Swim") } };
   const modes = Object.entries(configured).flatMap(([key, config]) => {
     const value = numericOrNull(movement[key]);
     if (config?.hidden || value === null || value <= 0) return [];

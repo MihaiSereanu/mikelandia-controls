@@ -1,3 +1,4 @@
+import { readMigratedFlags } from "../../foundry/branding-migration.mjs";
 import { readProfilePath } from "../profile-view.mjs";
 import { isShadowdarkPlayer, shadowdarkContext } from "./context.mjs";
 import { CommandError } from "../../foundry/command-error.mjs";
@@ -6,12 +7,12 @@ import { localizeFoundry } from "../../foundry/localization.mjs";
 export const customResources = Object.freeze({ def: "DEF", grit: "Grit" });
 const coinPaths = Object.freeze({ "coin-gp": "system.coins.gp", "coin-sp": "system.coins.sp", "coin-cp": "system.coins.cp" });
 export const readCustomResource = (actor, id) => {
-  const value = actor.flags?.["ve-mobile"]?.shadowdarkResources?.[id];
+  const value = readMigratedFlags(actor)?.shadowdarkResources?.[id];
   return Number.isSafeInteger(value) && value >= 0 ? value : 0;
 };
 
 const integer = n => Number.isSafeInteger(n) && n >= 0;
-const error = (code, key, fallback) => new CommandError(code, localizeFoundry(`VEMOBILE.Panels.${key}`, fallback));
+const error = (code, key, fallback) => new CommandError(code, localizeFoundry(`MIKELANDIA_CONTROLS.Panels.${key}`, fallback));
 export function shadowdarkResourceEdits(actor, game, user = game?.user) {
   const context = shadowdarkContext(game);
   if (!context || !isShadowdarkPlayer(actor, user) || typeof actor.update !== "function") return [];
@@ -39,7 +40,7 @@ export async function editShadowdarkResource(payload, context, game) {
   if (edit.kind === "boolean" ? typeof payload.value !== "boolean" : !integer(payload.value) || (edit.max !== undefined && payload.value > edit.max)) throw error("INVALID_INPUT", "InvalidResourceValue", "Enter a valid value within this resource's limits.");
   assertCurrent();
   if (payload.value === edit.value) return { ok: true, unchanged: true, actorSourceUuid: sourceUuid };
-  const path = Object.hasOwn(coinPaths, edit.id) ? coinPaths[edit.id] : Object.hasOwn(customResources, edit.id) ? `flags.ve-mobile.shadowdarkResources.${edit.id}` : edit.id === "hp" ? "system.attributes.hp.value" : edit.id === "xp" ? "system.level.xp" : shadowdarkContext(game).pulp ? "system.luck.remaining" : "system.luck.available";
+  const path = Object.hasOwn(coinPaths, edit.id) ? coinPaths[edit.id] : Object.hasOwn(customResources, edit.id) ? `flags.mikelandia-controls.shadowdarkResources.${edit.id}` : edit.id === "hp" ? "system.attributes.hp.value" : edit.id === "xp" ? "system.level.xp" : shadowdarkContext(game).pulp ? "system.luck.remaining" : "system.luck.available";
   const updated = await actor.update({ [path]: payload.value });
   return { ok: true, actorSourceUuid: sourceUuid, cancelled: !updated };
 }

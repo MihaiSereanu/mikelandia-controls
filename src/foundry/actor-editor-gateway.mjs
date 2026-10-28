@@ -19,11 +19,11 @@ export function createActorEditorGateway({ getGame = () => globalThis.game, isAc
       || (expected.worldId !== undefined && expected.worldId !== game.world?.id)
       || (expected.userId !== undefined && expected.userId !== game.user.id)
       || (expected.connectionGeneration !== undefined && expected.connectionGeneration !== getConnectionGeneration())) {
-      throw new Error(localizeFoundry("VEMOBILE.Character.ActorEditorGateway.ThisNativeEditorSessionIsNoLongerActive", "This native editor session is no longer active."));
+      throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorEditorGateway.ThisNativeEditorSessionIsNoLongerActive", "This native editor session is no longer active."));
     }
     const actor = resolveActorSource(validSourceUuid(sourceUuid), { game });
     if (!actor || (original && actor !== original)
-      || !getSystemIntegration().canOpenNativeActor(actor, game.user)) throw new Error(localizeFoundry("VEMOBILE.Character.ActorEditorGateway.ThisActorIsNoLongerEditable", "This actor is no longer editable."));
+      || !getSystemIntegration().canOpenNativeActor(actor, game.user)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorEditorGateway.ThisActorIsNoLongerEditable", "This actor is no longer editable."));
     return actor;
   };
   return Object.freeze({
@@ -32,7 +32,7 @@ export function createActorEditorGateway({ getGame = () => globalThis.game, isAc
     async open({ actorSourceUuid: sourceUuid }, expected = {}, owner) {
       const actor = requireActor(sourceUuid, expected, owner);
       if (pending.has(sourceUuid)) {
-        throw new Error(localizeFoundry("VEMOBILE.Character.ActorEditorGateway.ThisNativeEditorIsAlreadyOpen", "This native editor is already open."));
+        throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorEditorGateway.ThisNativeEditorIsAlreadyOpen", "This native editor is already open."));
       }
       const existing = [...sessions].find(([, session]) => session.sourceUuid === sourceUuid);
       if (existing) {
@@ -53,7 +53,7 @@ export function createActorEditorGateway({ getGame = () => globalThis.game, isAc
         const candidates = [application.element, application.element?.[0]];
         const element = candidates.find(candidate => candidate?.nodeType === 1);
         const EventType = element?.ownerDocument?.defaultView?.Event;
-        if (EventType) element.dispatchEvent(new EventType("ve-mobile-reveal-native", { bubbles: true }));
+        if (EventType) element.dispatchEvent(new EventType("mc-mobile-reveal-native", { bubbles: true }));
         return Object.freeze({ actorSourceUuid: sourceUuid, opened: true, existing: true });
       }
       pending.add(sourceUuid);
@@ -71,8 +71,8 @@ export function createActorEditorGateway({ getGame = () => globalThis.game, isAc
       scope.own(close);
       try {
         const assigned = actor.sheet;
-        if (!assigned?.constructor || typeof assigned.render !== "function") throw new Error(localizeFoundry("VEMOBILE.Character.ActorEditorGateway.TheNativeActorEditorIsUnavailable", "The native Actor editor is unavailable."));
-        const id = `ve-mobile-native-sheet-${++nextNativeSheetId}`;
+        if (!assigned?.constructor || typeof assigned.render !== "function") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorEditorGateway.TheNativeActorEditorIsUnavailable", "The native Actor editor is unavailable."));
+        const id = `mc-mobile-native-sheet-${++nextNativeSheetId}`;
         const ApplicationV1 = globalThis.foundry?.appv1?.sheets?.ActorSheet;
         const legacy = assigned.isV2 === false || (typeof ApplicationV1 === "function" && assigned instanceof ApplicationV1);
         application = legacy
@@ -86,8 +86,8 @@ export function createActorEditorGateway({ getGame = () => globalThis.game, isAc
           const candidates = [app.element, app.element?.[0], html, html?.[0]];
           // HTMLFormElement[0] is its first control, not a jQuery root.
           const element = candidates.find(candidate => candidate?.nodeType === 1) ?? candidates.find(candidate => candidate?.classList);
-          element?.classList?.add("ve-mobile-native-editor");
-          if (element?.dataset) element.dataset.veNativeSystem = getGame()?.system?.id ?? "";
+          element?.classList?.add("mc-mobile-native-editor");
+          if (element?.dataset) element.dataset.mcNativeSystem = getGame()?.system?.id ?? "";
         };
         for (const hook of ["renderApplication", "renderApplicationV1", "renderApplicationV2", "renderActorSheet"]) scope.hook(hook, markEditor);
         for (const hook of ["closeApplication", "closeApplicationV1", "closeApplicationV2", "closeActorSheet"]) scope.hook(hook, app => {
@@ -116,7 +116,7 @@ export function createActorEditorGateway({ getGame = () => globalThis.game, isAc
           }
         }
         requireActor(sourceUuid, expected, scope, actor);
-        if (closed) throw new Error(localizeFoundry("VEMOBILE.Character.ActorEditorGateway.ThisNativeEditorWasClosedWhileOpening", "This native editor was closed while opening."));
+        if (closed) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorEditorGateway.ThisNativeEditorWasClosedWhileOpening", "This native editor was closed while opening."));
         return Object.freeze({ actorSourceUuid: sourceUuid, opened: true });
       } catch (error) {
         scope.dispose();

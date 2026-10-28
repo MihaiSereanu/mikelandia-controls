@@ -8,7 +8,7 @@ import { shadowdarkResourceEdits, editShadowdarkResource } from "./resources.mjs
 
 import { inventoryEdits, inventoryAvailable, executeInventory } from "./inventory.mjs";
 
-const unavailable = () => new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Panels.ActionUnavailable", "This game action is no longer available."));
+const unavailable = () => new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Panels.ActionUnavailable", "This game action is no longer available."));
 function actionsFor(actor, game, hooks, user = game?.user) {
   const context = shadowdarkContext(game);
   if (!context || !isShadowdarkPlayer(actor, user)) return [];
@@ -52,10 +52,10 @@ export function createShadowdarkCommands({ getGame = () => globalThis.game, getH
       const actions = actionsFor(actor, game, hooks);
       if (name !== ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION || !actions.length) throw unavailable();
       if (Object.keys(payload).some(key => !["actorSourceUuid", "actorId", "actionId", "actionRevision"].includes(key))
-        || typeof payload.actionId !== "string" || typeof payload.actionRevision !== "string") throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Panels.InvalidAction", "Invalid game action request."));
+        || typeof payload.actionId !== "string" || typeof payload.actionRevision !== "string") throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Panels.InvalidAction", "Invalid game action request."));
       const action = actions.find(action => action.id === payload.actionId);
       if (!action) throw unavailable();
-      if (action.revision !== payload.actionRevision) throw new CommandError("STALE_STATE", localizeFoundry("VEMOBILE.Panels.ActionUnavailable", "This game action is no longer available."));
+      if (action.revision !== payload.actionRevision) throw new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Panels.ActionUnavailable", "This game action is no longer available."));
       const [kind, id] = action.id.split(":");
       const model = actor.system;
       const item = kind === "stat" ? null : ownedItem(actor, id);

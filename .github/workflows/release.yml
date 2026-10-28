@@ -32,10 +32,7 @@ jobs:
         run: |
           VERSION="$(python3 -c 'import json,os; m=json.load(open("module.json")); print(".".join(m["version"].split(".")[:2])+"."+os.environ["GITHUB_RUN_NUMBER"])')"
           RELEASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/latest"
-          python3 scripts/build_release.py --version "$VERSION" --manifest-url "$RELEASE/module.json" --download-url "$RELEASE/ve-mobile.zip"
-          python3 scripts/build_release.py --version "$VERSION" --experimental-fallback --manifest-url "$RELEASE/module-experimental.json" --download-url "$RELEASE/ve-mobile-experimental.zip"
-          cp dist/experimental/module.json dist/module-experimental.json
-          cp dist/experimental/ve-mobile.zip dist/ve-mobile-experimental.zip
+          python3 scripts/build_release.py --version "$VERSION" --manifest-url "$RELEASE/module.json" --download-url "$RELEASE/mikelandia-controls.zip"
           echo "RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
       - name: Publish rolling latest release
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
@@ -52,8 +49,7 @@ jobs:
           Phone and Tablet hide unrelated module widgets while retaining module-launched native workflows, roll dialogs, feedback and Dice So Nice.
           UI isolation is covered by browser fixtures with and without Common Display Hide UI.
 
-          Both module.json and module-experimental.json support all systems without metadata filtering.
-          Use module-experimental.json for the experimental cross-system description; both channels share the same module ID.
+          Install module.json for the single release channel; it supports all systems without metadata filtering.
 
           Automated source/browser checks do not establish physical-device or live-world compatibility for this revision.
           Existing native WFRP ammunition behavior is unchanged.
@@ -63,7 +59,8 @@ jobs:
           else
             gh release create latest --verify-tag --title "Latest Build" --notes-file dist/release-notes.md --latest
           fi
-          gh release upload latest dist/module.json dist/ve-mobile.zip dist/module-experimental.json dist/ve-mobile-experimental.zip --clobber
+          gh release upload latest dist/module.json dist/mikelandia-controls.zip --clobber
+          python3 scripts/retire_legacy_assets.py --tag latest
       - name: Verify public Foundry installation files
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         run: python3 scripts/check_release.py --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/latest" --version "$RELEASE_VERSION" --build "$GITHUB_SHA"

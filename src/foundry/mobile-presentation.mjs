@@ -8,7 +8,7 @@ const RESOLUTION_MESSAGE_KEYS = new Set([
 ]);
 const APPLICATION_LINEAGE_MS = 1000;
 const NATIVE_APPLICATION_LAYER = 5100;
-const NATIVE_APPLICATION_LAYER_PROPERTY = "--ve-mobile-native-app-layer";
+const NATIVE_APPLICATION_LAYER_PROPERTY = "--mc-mobile-native-app-layer";
 const APPLICATION_CONTROL_SELECTOR = [
   "button",
   "[role='button']",
@@ -23,10 +23,10 @@ const APPLICATION_CONTROL_SELECTOR = [
   "summary"
 ].join(", ");
 const APPLICATION_ORIGIN_SELECTOR = [
-  ".ve-mobile-app",
-  ".ve-mobile-bootstrap",
-  ".ve-mobile-dialog",
-  ".ve-mobile-transient-app",
+  ".mc-mobile-app",
+  ".mc-mobile-bootstrap",
+  ".mc-mobile-dialog",
+  ".mc-mobile-transient-app",
   "#context-menu",
   "#prosemirror-dropdown"
 ].join(", ");
@@ -58,19 +58,19 @@ export function enableMobilePresentation(scope, { isPersistentOverlay = () => fa
   return applications;
 }
 
-/** Own presentation only on VE-rendered roots; native windows keep their CSS. */
-export function enableVeStyleAuthority(scope, {
+/** Own presentation only on Mikelandia Controls-rendered roots; native windows keep their CSS. */
+export function enableMcStyleAuthority(scope, {
   document = globalThis.document,
   enabled: initialEnabled = true,
   trace = () => {}
 } = {}) {
   let enabled = Boolean(initialEnabled);
-  const roots = () => [...(document?.querySelectorAll?.(".ve-mobile-app") ?? [])];
+  const roots = () => [...(document?.querySelectorAll?.(".mc-mobile-app") ?? [])];
   const reconcile = () => {
     const activeRoots = roots();
     for (const root of activeRoots) {
-      if (enabled) root.setAttribute("data-ve-style-authority", "");
-      else root.removeAttribute("data-ve-style-authority");
+      if (enabled) root.setAttribute("data-mc-style-authority", "");
+      else root.removeAttribute("data-mc-style-authority");
     }
     trace({ enabled, authorityRoots: enabled ? activeRoots.length : 0, mode: "scoped-css", exceptionalSuppression: false });
   };
@@ -85,7 +85,7 @@ export function enableVeStyleAuthority(scope, {
       reconcile();
     },
     snapshot() {
-      return Object.freeze({ enabled, authorityRoots: roots().filter((root) => root.hasAttribute("data-ve-style-authority")).length,
+      return Object.freeze({ enabled, authorityRoots: roots().filter((root) => root.hasAttribute("data-mc-style-authority")).length,
         mode: "scoped-css", exceptionalSuppression: false });
     }
   });
@@ -116,15 +116,15 @@ export function enableMobileApplications(scope, {
   const controls = new Map();
   const reconcileControls = () => {
     for (const [element, layer] of controls) if (!element.isConnected || !admissions.size) {
-      layer.restore(); element.classList.remove("ve-mobile-native-control"); controls.delete(element);
+      layer.restore(); element.classList.remove("mc-mobile-native-control"); controls.delete(element);
     }
     if (!admissions.size) return;
     for (const element of document?.querySelectorAll?.("#context-menu, #prosemirror-dropdown") ?? []) {
-      if (controls.has(element) || element.closest(".ve-mobile-admitted-app")) continue;
-      element.classList.add("ve-mobile-native-control");
+      if (controls.has(element) || element.closest(".mc-mobile-admitted-app")) continue;
+      element.classList.add("mc-mobile-native-control");
       const layer = promoteNativeWindow(element);
       if (layer) controls.set(element, layer);
-      else element.classList.remove("ve-mobile-native-control");
+      else element.classList.remove("mc-mobile-native-control");
     }
   };
   const pendingApplications = new Map();
@@ -194,11 +194,11 @@ export function enableMobileApplications(scope, {
   scope.hook?.("closeApplicationV2", release);
   for (const application of existingApplications) admit(application, null, { preExisting: true });
   for (const element of mobileDialogElements(document.body)) {
-    if (!admissions.hasElement(element) && !element.closest?.(".ve-mobile-admitted-app, .ve-mobile-settings-app")) admit(null, element, { preExisting: baselineElements.has(element) });
+    if (!admissions.hasElement(element) && !element.closest?.(".mc-mobile-admitted-app, .mc-mobile-settings-app")) admit(null, element, { preExisting: baselineElements.has(element) });
   }
   // Foundry's registries can retain an already-closed Application while a
   // presentation switch is starting. Enforce the backdrop invariant before
-  // the new VE root becomes interactive rather than waiting for another DOM
+  // the new Mikelandia Controls root becomes interactive rather than waiting for another DOM
   // mutation to trigger observer cleanup.
   admissions.reconcile();
 
@@ -211,7 +211,7 @@ export function enableMobileApplications(scope, {
     }
     for (const mutation of mutations) for (const node of mutation.addedNodes ?? []) {
       for (const element of mobileDialogElements(node)) {
-        if (!admissions.hasElement(element) && !element.closest?.(".ve-mobile-admitted-app, .ve-mobile-settings-app")) admit(null, element);
+        if (!admissions.hasElement(element) && !element.closest?.(".mc-mobile-admitted-app, .mc-mobile-settings-app")) admit(null, element);
       }
     }
     reconcileControls();
@@ -226,16 +226,16 @@ export function enableMobileApplications(scope, {
   observer?.observe(document.body, { childList: true, subtree: true });
   scope.own(() => observer?.disconnect?.());
   scope.listen(document, "pointerdown", (event) => {
-    const top = event?.target?.closest?.(".ve-mobile-admitted-app");
+    const top = event?.target?.closest?.(".mc-mobile-admitted-app");
     if (top) admissions.raise(top);
   }, { capture: true, passive: true });
-  scope.listen(document, "ve-mobile-reveal-native", event => {
-    const element = event.target?.closest?.(".ve-mobile-admitted-app");
+  scope.listen(document, "mc-mobile-reveal-native", event => {
+    const element = event.target?.closest?.(".mc-mobile-admitted-app");
     if (element) admissions.raise(element, true);
   });
 
   const visualViewport = browser?.visualViewport;
-  const viewportProperties = ["--ve-mobile-viewport-height", "--ve-mobile-viewport-width", "--ve-mobile-viewport-top", "--ve-mobile-viewport-left"];
+  const viewportProperties = ["--mc-mobile-viewport-height", "--mc-mobile-viewport-width", "--mc-mobile-viewport-top", "--mc-mobile-viewport-left"];
   const previousViewport = viewportProperties.map(name => [name, document.body.style.getPropertyValue(name), document.body.style.getPropertyPriority(name)]);
   const updateViewport = () => {
     const values = [visualViewport?.height ?? browser?.innerHeight ?? 0, visualViewport?.width ?? browser?.innerWidth ?? 0,
@@ -251,7 +251,7 @@ export function enableMobileApplications(scope, {
     lineage.dispose();
     pendingApplications.clear();
     admissions.clear();
-    for (const [element, layer] of controls) { layer.restore(); element.classList.remove("ve-mobile-native-control"); }
+    for (const [element, layer] of controls) { layer.restore(); element.classList.remove("mc-mobile-native-control"); }
     controls.clear();
     for (const [name, value, priority] of previousViewport) {
       if (value) document.body.style.setProperty(name, value, priority);
@@ -295,7 +295,7 @@ export function createMobileApplicationAdmissions(body) {
   const publish = () => { for (const listener of listeners) listener(); };
   const clearClasses = (element, record) => {
     record?.topLayer?.restore();
-    element?.classList?.remove?.("ve-mobile-admitted-app", "ve-mobile-dialog", "ve-mobile-transient-app");
+    element?.classList?.remove?.("mc-mobile-admitted-app", "mc-mobile-dialog", "mc-mobile-transient-app");
     if (!element?.style || !record) return;
     if (record.priorLayer) element.style.setProperty(NATIVE_APPLICATION_LAYER_PROPERTY, record.priorLayer, record.priorLayerPriority);
     else element.style.removeProperty(NATIVE_APPLICATION_LAYER_PROPERTY);
@@ -315,7 +315,7 @@ export function createMobileApplicationAdmissions(body) {
       removed = true;
     }
     if (removed || forceLayers) refreshLayers();
-    body?.classList?.toggle?.("ve-mobile-dialog-open", [...records.values()].some((record) => record.modal));
+    body?.classList?.toggle?.("mc-mobile-dialog-open", [...records.values()].some((record) => record.modal));
   };
   return Object.freeze({
     get size() { return records.size; },
@@ -341,7 +341,7 @@ export function createMobileApplicationAdmissions(body) {
           if (control?.click) control.click();
           else {
             const EventClass = top.element?.ownerDocument?.defaultView?.Event ?? globalThis.Event;
-            top.element?.dispatchEvent?.(typeof EventClass === "function" ? new EventClass("ve-close") : { type: "ve-close" });
+            top.element?.dispatchEvent?.(typeof EventClass === "function" ? new EventClass("mc-close") : { type: "mc-close" });
           }
         }
       } catch {
@@ -375,9 +375,9 @@ export function createMobileApplicationAdmissions(body) {
       const priorLayer = previous?.element === element ? previous.priorLayer : style?.getPropertyValue?.(NATIVE_APPLICATION_LAYER_PROPERTY) ?? "";
       const priorLayerPriority = previous?.element === element ? previous.priorLayerPriority : style?.getPropertyPriority?.(NATIVE_APPLICATION_LAYER_PROPERTY) ?? "";
       records.delete(key);
-      element.classList.add("ve-mobile-admitted-app");
-      element.classList.remove("ve-mobile-dialog", "ve-mobile-transient-app");
-      element.classList.add(modal ? "ve-mobile-dialog" : "ve-mobile-transient-app");
+      element.classList.add("mc-mobile-admitted-app");
+      element.classList.remove("mc-mobile-dialog", "mc-mobile-transient-app");
+      element.classList.add(modal ? "mc-mobile-dialog" : "mc-mobile-transient-app");
       const topLayer = previous?.element === element ? previous.topLayer : promoteNativeWindow(element);
       records.set(key, Object.freeze({ element, application, modal: Boolean(modal), lineage, priorLayer, priorLayerPriority, topLayer }));
       reconcileBackdrop(true);
@@ -400,7 +400,7 @@ export function createMobileApplicationAdmissions(body) {
       for (const record of records.values()) clearClasses(record.element, record);
       records.clear();
       closing.clear();
-      body?.classList?.remove?.("ve-mobile-dialog-open");
+      body?.classList?.remove?.("mc-mobile-dialog-open");
       publish();
     }
   });
@@ -428,11 +428,11 @@ export function mobileDialogElements(root) {
 /** Native windows require an explicit mobile workflow, approved parent, or
  * recognized roll UI. A render hook alone never grants admission. */
 export function classifyMobileApplication(element, application = null, { preExisting = false, retained = false, activeBaseline = false, deliberate = false, owned = mobileApplicationOwned(application), approvedParent = false, isPersistentOverlay = () => false, isSettingsApplication = () => false, isActorEditor = () => false, isNativeDialog = () => false } = {}) {
-  if (!element?.matches || element.closest?.(".ve-mobile-app, .ve-mobile-bootstrap")) return Object.freeze({ admitted: false, modal: false, reason: "Mikelandia Controls-owned" });
-  if (element.isConnected === false) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.DisconnectedApplicationRoot", "disconnected application root") });
-  if (isSettingsApplication(application, element) || element.matches(".ve-mobile-settings-app")) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.NativeSettingsSessionOwnsApplication", "native Settings session owns application") });
+  if (!element?.matches || element.closest?.(".mc-mobile-app, .mc-mobile-bootstrap")) return Object.freeze({ admitted: false, modal: false, reason: "Mikelandia Controls-owned" });
+  if (element.isConnected === false) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobilePresentation.DisconnectedApplicationRoot", "disconnected application root") });
+  if (isSettingsApplication(application, element) || element.matches(".mc-mobile-settings-app")) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobilePresentation.NativeSettingsSessionOwnsApplication", "native Settings session owns application") });
   if (element.matches("#interface, #sidebar, #hud, #players, #scene-controls, #scene-navigation, #hotbar")) {
-    return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.PersistentShellOrOverlay", "persistent shell or overlay") });
+    return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobilePresentation.PersistentShellOrOverlay", "persistent shell or overlay") });
   }
   const modal = element.matches("dialog, [role='dialog'], #sd-roll-dialog, .dialog, .activity-choice, .activity-usage, .roll-configuration, .midi-targeting, #midi-qol-targetConfirmation")
     || application?.options?.modal === true || isNativeDialog(application);
@@ -440,10 +440,10 @@ export function classifyMobileApplication(element, application = null, { preExis
   // Application lifecycle. Admitting that child as a native window would
   // stretch it across the viewport and make its transparent area eat taps.
   if (isPersistentOverlay(element, application) || (!modal && hasPersistentOverlayAncestor(element, isPersistentOverlay))) {
-    return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.PersistentOverlay", "persistent overlay") });
+    return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobilePresentation.PersistentOverlay", "persistent overlay") });
   }
-  if (actorSheetApplication(application) && !isActorEditor(application)) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.ActorSheetReplacedByCharacter", "Actor sheet replaced by Character") });
-  if (desktopSidebarApplication(application, element)) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.DesktopSidebarWorkspaceReplacedByVENavigation", "desktop sidebar workspace replaced by Mikelandia Controls navigation") });
+  if (actorSheetApplication(application) && !isActorEditor(application)) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobilePresentation.ActorSheetReplacedByCharacter", "Actor sheet replaced by Character") });
+  if (desktopSidebarApplication(application, element)) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobilePresentation.DesktopSidebarWorkspaceReplacedByMCNavigation", "desktop sidebar workspace replaced by Mikelandia Controls navigation") });
   const nativeRollTypes = [globalThis.warhammer?.apps?.WarhammerRollDialogV2, globalThis.warhammer?.apps?.WarhammerRollDialog];
   const roll = isNativeDialog(application) || nativeRollTypes.some(Type => typeof Type === "function" && application instanceof Type)
     || element.matches("#sd-roll-dialog, .roll-configuration, .activity-choice, .activity-usage, .midi-targeting, #midi-qol-targetConfirmation");
@@ -453,9 +453,9 @@ export function classifyMobileApplication(element, application = null, { preExis
   if (!retained && !owned && !isActorEditor(application) && !roll && !approvedParent && !workflowDialog && !(deliberate && (modal || framed))) {
     return Object.freeze({ admitted: false, modal: false, reason: "outside an approved mobile workflow" });
   }
-  if (preExisting && !retained && !modal && !activeBaseline && !owned && !isActorEditor(application)) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.MobileActivationBaselineWorkspace", "mobile activation baseline workspace") });
-  if (!application && !modal) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("VEMOBILE.Interface.MobilePresentation.NoApplicationLifecycle", "no application lifecycle") });
-  return Object.freeze({ admitted: true, modal, reason: modal ? localizeFoundry("VEMOBILE.Interface.MobilePresentation.NativeModalApplication", "native modal application") : activeBaseline ? localizeFoundry("VEMOBILE.Interface.MobilePresentation.ActiveBaselineWorkflow", "active baseline workflow") : preExisting ? localizeFoundry("VEMOBILE.Interface.MobilePresentation.RetainedApplicationLifecycle", "retained application lifecycle") : localizeFoundry("VEMOBILE.Interface.MobilePresentation.NewNativeApplicationLifecycle", "new native application lifecycle") });
+  if (preExisting && !retained && !modal && !activeBaseline && !owned && !isActorEditor(application)) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobilePresentation.MobileActivationBaselineWorkspace", "mobile activation baseline workspace") });
+  if (!application && !modal) return Object.freeze({ admitted: false, modal: false, reason: localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobilePresentation.NoApplicationLifecycle", "no application lifecycle") });
+  return Object.freeze({ admitted: true, modal, reason: modal ? localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobilePresentation.NativeModalApplication", "native modal application") : activeBaseline ? localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobilePresentation.ActiveBaselineWorkflow", "active baseline workflow") : preExisting ? localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobilePresentation.RetainedApplicationLifecycle", "retained application lifecycle") : localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobilePresentation.NewNativeApplicationLifecycle", "new native application lifecycle") });
 }
 
 function hasPersistentOverlayAncestor(element, isPersistentOverlay) {
@@ -472,7 +472,7 @@ function hasPersistentOverlayAncestor(element, isPersistentOverlay) {
 function actorSheetApplication(application) {
   if (!application) return false;
   // Ownership/configuration forms can also own an Actor document. Only the
-  // native sheet hierarchy identifies the persistent presentation VE replaces.
+  // native sheet hierarchy identifies the persistent presentation Mikelandia Controls replaces.
   const types = [globalThis.foundry?.applications?.sheets?.ActorSheetV2, globalThis.foundry?.appv1?.sheets?.ActorSheet];
   return types.some(type => typeof type === "function" && application instanceof type);
 }
@@ -489,12 +489,6 @@ function desktopSidebarApplication(application, element) {
     || types.some(type => typeof type === "function" && application instanceof type);
 }
 
-/** Deliberate controls can open a native child window; unrelated renders and
- * navigation taps cannot grant admission to automatic module widgets. */
-export function interactionStartsApplicationLineage(event) {
-  return Boolean(applicationInteractionOrigin(event));
-}
-
 /** A shared, conservative definition of activation which can create native UI. */
 export function deliberateApplicationControl(event) {
   const target = event?.target;
@@ -507,7 +501,7 @@ export function deliberateApplicationControl(event) {
   if (target.closest("[data-action='close'], .header-button.close, .window-header .close")) return null;
   const control = event.type === "submit" ? target.closest("form") : target.closest(APPLICATION_CONTROL_SELECTOR);
   if (!control || control.disabled === true || control.getAttribute?.("aria-disabled") === "true") return null;
-  if (control.matches?.(".ve-main-nav-item, [data-route]")) return null;
+  if (control.matches?.(".mc-main-nav-item, [data-route]")) return null;
   return control;
 }
 
@@ -516,7 +510,7 @@ export function applicationInteractionOrigin(event) {
   if (!control) return null;
   // Native Settings has its own explicit session and child-window owner. Do
   // not let the generic policy apply a second, competing admission class.
-  if (event.target.closest(".ve-mobile-settings-app")) return null;
+  if (event.target.closest(".mc-mobile-settings-app")) return null;
   const root = event.target.closest(APPLICATION_ORIGIN_SELECTOR);
   if (!root) return null;
   return Object.freeze({ root, control, source: interactionSource(root), controlName: interactionControlName(control) });
@@ -649,7 +643,7 @@ function traceApplication(trace, result, application, element, lineage, classifi
     baseline,
     paint,
     renderedAt: timestamp,
-    mode: body?.dataset?.veMobileFormFactor ?? (body?.classList?.contains?.("ve-mobile-split-screen") ? "tablet-split" : "mobile"),
+    mode: body?.dataset?.mcMobileFormFactor ?? (body?.classList?.contains?.("mc-mobile-split-screen") ? "tablet-split" : "mobile"),
     lineage: lineage?.generation ?? null,
     classification: classification?.reason ?? "unknown",
     result: String(result).toUpperCase()
@@ -657,10 +651,10 @@ function traceApplication(trace, result, application, element, lineage, classifi
 }
 
 function interactionSource(root) {
-  if (root?.matches?.("#hud.ve-mobile-native-hud-host")) return "native HUD";
-  if (root?.matches?.(".ve-mobile-transient-app, .ve-mobile-dialog")) return "admitted transient application";
+  if (root?.matches?.("#hud.mc-mobile-native-hud-host")) return "native HUD";
+  if (root?.matches?.(".mc-mobile-transient-app, .mc-mobile-dialog")) return "admitted transient application";
   if (root?.matches?.("#context-menu, #prosemirror-dropdown")) return "admitted native control";
-  if (root?.matches?.(".ve-mobile-bootstrap")) return "Mikelandia Controls bootstrap";
+  if (root?.matches?.(".mc-mobile-bootstrap")) return "Mikelandia Controls bootstrap";
   return "Mikelandia Controls";
 }
 

@@ -129,12 +129,12 @@ try {
     execute: (name, payload) => commandGateway.execute(name, payload, {
       isCurrent: () => !scope.disposed && state.snapshot.selectedActorSourceUuid === payload.actorSourceUuid
     }),
-    selectCharacterTab: tab => { state = { ...state, characterTab: tab }; screen.__veUpdateCharacter({ state, commands }); },
-    selectActor: uuid => { state = { ...state, snapshot: session.selectCharacterSource(uuid) }; screen.__veUpdateCharacter({ state, commands }); }
+    selectCharacterTab: tab => { state = { ...state, characterTab: tab }; screen.__mcUpdateCharacter({ state, commands }); },
+    selectActor: uuid => { state = { ...state, snapshot: session.selectCharacterSource(uuid) }; screen.__mcUpdateCharacter({ state, commands }); }
   };
   state = { characterTab: "overview", snapshot: session.watch(scope, snapshot => {
     state = { ...state, snapshot };
-    screen.__veUpdateCharacter({ state, commands });
+    screen.__mcUpdateCharacter({ state, commands });
   }, error => { watchError = error; }) };
   screen = renderCharacters({ state, commands, scope });
   document.querySelector("main").append(screen);
@@ -160,14 +160,14 @@ try {
   check("prepared characteristic totals are used", field("ws")?.textContent === "Weapon Skill41");
   check("zero Fortune remains visible", field("fortune")?.textContent === "Fortune0");
   check("edition-specific Resolve visibility matches native sheet", !!field("resolve") === !use5e);
-  check("resource inputs open only on deliberate Edit", !screen.querySelector('.ve-profile-content input, .ve-profile-content textarea, .ve-profile-content [contenteditable]'));
+  check("resource inputs open only on deliberate Edit", !screen.querySelector('.mc-profile-content input, .mc-profile-content textarea, .mc-profile-content [contenteditable]'));
   check("D&D terminology is absent", !/Hit Points|Death Saves|Spell Slots|Attunement|Long Rest/.test(screen.textContent));
   check("Main fits the emulated viewport", screen.getBoundingClientRect().right <= innerWidth + 1);
   check("embedded chooser does not scroll the profile on mount", window.scrollY === 0);
   const characteristicButton = screen.querySelector('[data-profile-action="characteristic:ws"]');
   characteristicButton.click();
   await tick();
-  check("Characteristic button opens an admitted native test dialog", nativeDialog?.element.classList.contains("ve-mobile-admitted-app") && nativeSetups.at(-1).target === "ws");
+  check("Characteristic button opens an admitted native test dialog", nativeDialog?.element.classList.contains("mc-mobile-admitted-app") && nativeSetups.at(-1).target === "ws");
   check("pending test prevents duplicate taps", characteristicButton.disabled && characteristicButton.getAttribute("aria-busy") === "true");
   check("native test dialog fits the viewport", nativeDialog.element.getBoundingClientRect().left >= -1 && nativeDialog.element.getBoundingClientRect().right <= innerWidth + 1);
   nativeDialog.element.querySelector("input").focus();
@@ -175,7 +175,7 @@ try {
   nativeDialog.element.querySelector("[data-native-roll]").click();
   await tick();
   check("native dialog input reaches the native roll", nativeRolls.length === 1 && nativeRolls[0].modifier === 7 && nativeRolls[0].use5e === use5e);
-  check("native result stays in Chat", game.messages.length === 1 && !screen.querySelector(".ve-roll-result"));
+  check("native result stays in Chat", game.messages.length === 1 && !screen.querySelector(".mc-roll-result"));
   characteristicButton.click();
   await tick();
   nativeDialog.element.querySelector("[data-native-cancel]").click();
@@ -192,7 +192,7 @@ try {
   }
   await clickTab("combat");
   check("combat resource follows the edition", use5e ? field("momentum")?.textContent === "MomentumActive" : field("advantage")?.textContent === "Advantage4");
-  check("Combat starts with native Encumbrance current/max", screen.querySelector('.ve-profile-content [data-profile-section]').dataset.profileSection === "encumbrance"
+  check("Combat starts with native Encumbrance current/max", screen.querySelector('.mc-profile-content [data-profile-section]').dataset.profileSection === "encumbrance"
     && field("encumbrance")?.textContent === "Encumbrance4.5 / 8");
   check("Encumbrance is read-only", !screen.querySelector('[data-profile-field="encumbrance"] [data-profile-resource]'));
   check("Combat Encumbrance label and value fit on one line", encumbranceFits());
@@ -202,7 +202,7 @@ try {
   Hooks.emit("updateActor", actor, { "system.status.encumbrance.current": "9.75" }); await tick();
   check("Combat encumbrance refreshes prepared decimal strings", field("encumbrance")?.textContent === "Encumbrance9.75 / 10");
   await clickTab("trappings");
-  check("Trappings starts with the same native Encumbrance counter", screen.querySelector('.ve-profile-content [data-profile-section]').dataset.profileSection === "encumbrance"
+  check("Trappings starts with the same native Encumbrance counter", screen.querySelector('.mc-profile-content [data-profile-section]').dataset.profileSection === "encumbrance"
     && field("encumbrance")?.textContent === "Encumbrance9.75 / 10");
   check("Encumbrance fits the viewport", document.documentElement.scrollWidth <= innerWidth + 1);
   check("Trappings Encumbrance label and value fit on one line", encumbranceFits());
@@ -270,7 +270,7 @@ try {
   screen.querySelector('[data-profile-action="spell:lore"]').click();
   await tick();
   if (!use5e) {
-    check("4e opens an admitted native Cast/Channel choice", !!nativeDialog.element.querySelector('[data-choice="channel"]') && nativeDialog.element.classList.contains("ve-mobile-admitted-app"));
+    check("4e opens an admitted native Cast/Channel choice", !!nativeDialog.element.querySelector('[data-choice="channel"]') && nativeDialog.element.classList.contains("mc-mobile-admitted-app"));
     nativeDialog.element.querySelector('[data-choice="channel"]').click();
     await tick();
   }
@@ -318,7 +318,7 @@ try {
   await clickTab("main");
   const edit = async id => { screen.querySelector(`[data-profile-edit="${id}"]`).click(); await tick(); return screen.querySelector(`[data-profile-resource-input="${id}"]`); };
   const saveResource = async input => { input.dispatchEvent(new Event("input", { bubbles: true })); input.closest("form").querySelector("[data-profile-resource-save]").click(); await tick(); };
-  check("native rolls did not cause VE resource writes", nativeWrites.length === 0);
+  check("native rolls did not cause Mikelandia Controls resource writes", nativeWrites.length === 0);
   let resourceInput = await edit("wounds");
   check("Wounds editor retains native limits, selectable text and keyboard focus", resourceInput.max === "13" && resourceInput.min === "0" && resourceInput.type === "text" && document.activeElement === resourceInput && resourceInput.selectionStart === 0 && resourceInput.selectionEnd === resourceInput.value.length);
   resourceInput.value = "0";
@@ -432,7 +432,7 @@ try {
   check("native-sheet fallback uses the exact actor source", openedSource === actor.uuid);
   screen.querySelector('[data-actor-source="Actor.npc"]').click();
   await tick();
-  check("unmapped NPCs retain safe native access", !screen.querySelector(".ve-profile-content") && screen.querySelector("h2").textContent === "Guard Captain");
+  check("unmapped NPCs retain safe native access", !screen.querySelector(".mc-profile-content") && screen.querySelector("h2").textContent === "Guard Captain");
   screen.querySelector('[data-actor-source="Actor.hero"]').click();
   await tick();
   use5e = initial5e;

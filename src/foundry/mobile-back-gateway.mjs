@@ -1,5 +1,5 @@
-const HISTORY_KEY = "__veMobileBackGuard";
-const MARKER_KIND = "ve-mobile-back";
+const HISTORY_KEY = "__mcMobileBackGuard";
+const MARKER_KIND = "mc-mobile-back";
 
 /** Install during Foundry's init hook, before its own Window popstate listener. */
 export function createFoundryMobileBackGateway({
@@ -118,13 +118,13 @@ export function createFoundryMobileBackGateway({
     const history = browser()?.history;
     // Only the base Character view may fall through to Foundry. Its handler
     // pushes its own history entry, then calls the localized native confirm.
-    // The native confirmation remains visible. Cancel re-arms VE; Confirm
+    // The native confirmation remains visible. Cancel re-arms Mikelandia Controls; Confirm
     // leaves Foundry's own navigation sequence unimpeded.
     const passedToFoundry = lastAction === "root" && permitFoundryRootBack(browser(), history);
     if (!passedToFoundry) {
       event?.stopImmediatePropagation?.();
       // Back moved to the predecessor. Pushing here truncates the forward
-      // marker, so repeated VE-handled Back presses do not grow history.
+      // marker, so repeated Mikelandia Controls-handled Back presses do not grow history.
       arm(browser()?.history);
     }
     // Chromium can skip script-created entries without fresh user activation;

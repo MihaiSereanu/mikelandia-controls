@@ -38,9 +38,9 @@ export function renderCharacters({ state, commands, scope, overlayHost = null, r
   if (!actor) {
     const chooser = createCharacterMenuController({ actors, selectedActor: null, commands, onClose: () => {}, scope, embedded: true });
     chooser.mount();
-    return node("section", { className: "ve-character-screen ve-character-unselected", children: [
-      node("header", { className: "ve-character-selection-notice", children: [icon("fa-user"), node("h2", { text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.PleaseSelectACharacter", "Please select a character") })] }),
-      actors.length ? chooser.element : node("p", { className: "ve-empty", text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.NoSupportedCharactersAreAvailableToThisUser", "No supported characters are available to this user.") })
+    return node("section", { className: "mc-character-screen mc-character-unselected", children: [
+      node("header", { className: "mc-character-selection-notice", children: [icon("fa-user"), node("h2", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.PleaseSelectACharacter", "Please select a character") })] }),
+      actors.length ? chooser.element : node("p", { className: "mc-empty", text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NoSupportedCharactersAreAvailableToThisUser", "No supported characters are available to this user.") })
     ] });
   }
 
@@ -67,7 +67,7 @@ export function renderCharacters({ state, commands, scope, overlayHost = null, r
     });
     return true;
   } };
-  const status = shell.status ??= node("p", { className: "ve-action-status", attrs: { role: "status", "aria-live": "polite" } });
+  const status = shell.status ??= node("p", { className: "mc-action-status", attrs: { role: "status", "aria-live": "polite" } });
   const selectedItem = actorItemById(actor, state.characterItemId);
   const openItem = (item) => commands.openCharacterItem(item.id);
   const itemModal = itemDetailModal(selectedItem, commands.closeCharacterItem, shell.overlayScope, commands);
@@ -93,11 +93,11 @@ export function renderCharacters({ state, commands, scope, overlayHost = null, r
     shell.navScope?.dispose();
     shell.navScope = ownerScope.child("character-tabs");
     const tabBar = node("div", {
-      className: "ve-sheet-tabs",
-      attrs: { role: "tablist", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.CharacterSheetSections", "Character sheet sections") },
+      className: "mc-sheet-tabs",
+      attrs: { role: "tablist", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.CharacterSheetSections", "Character sheet sections") },
       dataset: { count: String(visibleTabs.length) },
       children: visibleTabs.map(([key, iconName, label]) => {
-        const localizedLabel = commands.localize?.(`${collectiveTabs ? "VEMOBILE.Collective" : "VEMOBILE.Character.Tabs"}.${label}`, label) ?? label;
+        const localizedLabel = commands.localize?.(`${collectiveTabs ? "MIKELANDIA_CONTROLS.Collective" : "MIKELANDIA_CONTROLS.Character.Tabs"}.${label}`, label) ?? label;
         return node("button", {
           className: key === activeTab ? "is-active" : "",
           attrs: { type: "button", role: "tab", "aria-label": localizedLabel, title: localizedLabel, "data-character-tab": key, "aria-selected": String(key === activeTab) },
@@ -118,7 +118,7 @@ export function renderCharacters({ state, commands, scope, overlayHost = null, r
     button.setAttribute("aria-selected", String(active));
   }
   updateCharacterSharedHeader(shell, { actors, actor, state, commands, status, settings, ownerScope, overlayHost });
-  const panel = node("div", { className: "ve-sheet-panel", children: [collectiveTabs ? renderCollectivePanel(actor, activePage, { commands, status, scope, state }, {
+  const panel = node("div", { className: "mc-sheet-panel", children: [collectiveTabs ? renderCollectivePanel(actor, activePage, { commands, status, scope, state }, {
       inventory: () => inventoryPanel(actor, commands, status, openItem, state.expandedCharacterItemId, state.characterOpenSections, scope, settings),
       biography: () => biographyPanel(actor, commands, status, scope),
       features: excluded => {
@@ -131,19 +131,19 @@ export function renderCharacters({ state, commands, scope, overlayHost = null, r
       effects: owner => effectsPanel(actor, commands, status, state.characterOpenSections, owner, settings)
     }) : renderSheetPanel(activePage, actor, commands, status, openItem, state.expandedCharacterItemId, state.characterOpenSections, scope, settings, shell.spellcastingSelection)] });
   const screen = shell.screen ??= node("section", {
-    className: "ve-character-screen ve-character-shared-shell",
+    className: "mc-character-screen mc-character-shared-shell",
     dataset: { characterTheme, actorType: actor.type },
-    children: [actorOriginBack(state, commands, ownerScope), node("div", { className: "ve-character-heading", children: [shell.selector, tabBar] }), status,
-      node("div", { className: "ve-character-content-scroller", attrs: { tabindex: "0" } })]
+    children: [actorOriginBack(state, commands, ownerScope), node("div", { className: "mc-character-heading", children: [shell.selector, tabBar] }), status,
+      node("div", { className: "mc-character-content-scroller", attrs: { tabindex: "0" } })]
   });
   screen.classList.toggle("has-roll-result", Boolean(state.rollResult));
   screen.classList.toggle("has-action-session", Boolean(state.actionSession));
   screen.dataset.characterTheme = characterTheme;
   screen.dataset.actorType = actor.type;
-  const contentHost = screen.querySelector(".ve-character-content-scroller");
+  const contentHost = screen.querySelector(".mc-character-content-scroller");
   contentHost.replaceChildren(panel);
   if (!overlayHost) screen.append(...overlays);
-  screen.__veUpdateCharacterHeader = ({ state: nextState, commands: nextCommands }) => {
+  screen.__mcUpdateCharacterHeader = ({ state: nextState, commands: nextCommands }) => {
     const nextActors = nextState.snapshot?.actors ?? [];
     const nextActor = Object.hasOwn(nextState.snapshot ?? {}, "selectedActor")
       ? nextState.snapshot.selectedActor : nextActors.find(entry => entry.id === nextState.selectedActorId);
@@ -151,9 +151,9 @@ export function renderCharacters({ state, commands, scope, overlayHost = null, r
     return updateCharacterSharedHeader(shell, { actors: nextActors, actor: nextActor, state: nextState,
       commands: nextCommands, status, settings: nextCommands.readCharacterPreferences(), ownerScope, overlayHost });
   };
-  screen.__veUpdateCharacter = next => renderCharacters({ ...next, scope: ownerScope, overlayHost, retained: shell });
+  screen.__mcUpdateCharacter = next => renderCharacters({ ...next, scope: ownerScope, overlayHost, retained: shell });
 
-  screen.__veCharacterOverlayHost = overlayHost;
+  screen.__mcCharacterOverlayHost = overlayHost;
 
   return screen;
 }
@@ -191,37 +191,37 @@ function characterSelector(actors, actor, state, commands, status, scope, settin
   const menu = menuController.element;
 
   const trigger = node("button", {
-    className: "ve-character-select-trigger",
-    attrs: { type: "button", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.SelectCharacterCurrentCharacter", "Select character. Current character: {name}", { name: (actor.name) }) },
+    className: "mc-character-select-trigger",
+    attrs: { type: "button", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.SelectCharacterCurrentCharacter", "Select character. Current character: {name}", { name: (actor.name) }) },
     on: { click: () => setOpen(!open) },
     children: [arrow]
   }, scope);
   const characterName = node("h2", { text: actor.name, attrs: { title: actor.name } });
   if (!actor.collective) bindCharacterNameLines(characterName, actor.name, scope);
-  const portraitTitle = localizedText(commands.localize, "VEMOBILE.Character.PortraitOf", "{name}'s portrait", { name: (actor.name) });
-  const portraitButton = node("button", { className: "ve-character-portrait-button", attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.ViewPortrait", "View {name} portrait", { name: (actor.name) }) }, on: { click: () => commands.openCharacterPortrait({ src: actor.img, name: portraitTitle }) }, children: [node("img", { attrs: { src: actor.img, alt: portraitTitle } })] }, scope);
+  const portraitTitle = localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.PortraitOf", "{name}'s portrait", { name: (actor.name) });
+  const portraitButton = node("button", { className: "mc-character-portrait-button", attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.ViewPortrait", "View {name} portrait", { name: (actor.name) }) }, on: { click: () => commands.openCharacterPortrait({ src: actor.img, name: portraitTitle }) }, children: [node("img", { attrs: { src: actor.img, alt: portraitTitle } })] }, scope);
   const deathSave = actor.collective ? null : deathSaveControl(actor, commands, status, scope);
   const header = node("article", {
-    className: actor.collective ? "ve-sheet-identity ve-collective-header" : "ve-sheet-identity ve-compact-header",
+    className: actor.collective ? "mc-sheet-identity mc-collective-header" : "mc-sheet-identity mc-compact-header",
     dataset: { classArt: "fallback" },
     children: actor.collective ? collectiveHeaderContent(actor, { portraitButton, characterName, trigger, commands, scope, status }) : [
-      node("div", { className: "ve-character-identity-band", children: [
-        node("div", { className: `ve-sheet-portrait-frame${shouldRenderDeathSaves(actor) ? " is-downed" : ""}`, children: [
+      node("div", { className: "mc-character-identity-band", children: [
+        node("div", { className: `mc-sheet-portrait-frame${shouldRenderDeathSaves(actor) ? " is-downed" : ""}`, children: [
           portraitButton,
           deathSave?.roll
         ] }),
-        node("div", { className: "ve-sheet-identity-copy", children: [
+        node("div", { className: "mc-sheet-identity-copy", children: [
           characterName,
           actor.type === "npc" ? null : node("p", { children: [classIconNode(actor), node("span", { text: characterClassLine(actor) })] }),
           characterOriginLine(actor, commands),
-          node("p", { className: "ve-character-compact-summary", attrs: { "aria-hidden": "true" }, children: [node("span", { className: "ve-character-compact-level", text: `${actor.type === "npc" ? `${localizedText(commands.localize, "DND5E.AbbreviationCR", "CR")} ${actor.npc?.challengeRatingLabel ?? "—"}` : characterClassLine(actor)}${Number.isFinite(actor.proficiency) ? ` · ${headerLabel(actor, "proficiencyAbbr", "PB")} ${formatModifier(actor.proficiency)}` : ""}` }), actor.type === "npc" ? node("span", { className: "ve-character-compact-npc", text: npcIdentityLines(actor, commands).join(" · ") }) : null] })
+          node("p", { className: "mc-character-compact-summary", attrs: { "aria-hidden": "true" }, children: [node("span", { className: "mc-character-compact-level", text: `${actor.type === "npc" ? `${localizedText(commands.localize, "DND5E.AbbreviationCR", "CR")} ${actor.npc?.challengeRatingLabel ?? "—"}` : characterClassLine(actor)}${Number.isFinite(actor.proficiency) ? ` · ${headerLabel(actor, "proficiencyAbbr", "PB")} ${formatModifier(actor.proficiency)}` : ""}` }), actor.type === "npc" ? node("span", { className: "mc-character-compact-npc", text: npcIdentityLines(actor, commands).join(" · ") }) : null] })
         ] }),
-        node("div", { className: "ve-character-identity-controls", children: [trigger,
-          node("div", { className: "ve-character-badge-group", children: [characterLevelBadge(actor), heroicInspirationControl(actor, commands, status, scope)] })
+        node("div", { className: "mc-character-identity-controls", children: [trigger,
+          node("div", { className: "mc-character-badge-group", children: [characterLevelBadge(actor), heroicInspirationControl(actor, commands, status, scope)] })
         ] }),
         deathSave?.row
       ] }),
-      node("div", { className: "ve-character-vitals-group", children: [
+      node("div", { className: "mc-character-vitals-group", children: [
         characterHitPoints(actor, commands, status, scope),
         characterHealthTrack(actor, commands.localize)
       ] }),
@@ -231,7 +231,7 @@ function characterSelector(actors, actor, state, commands, status, scope, settin
   });
   loadBannerArtwork(header, bannerResolution.candidates, scope);
   if (overlayHost) { overlayHost.append(menu); scope.own(() => menu.remove()); }
-  const selector = node("div", { className: "ve-character-selector", children: [header, ...(overlayHost ? [] : [menu])] });
+  const selector = node("div", { className: "mc-character-selector", children: [header, ...(overlayHost ? [] : [menu])] });
   function setOpen(next) {
     open = Boolean(next);
     selector.classList.toggle("is-open", open);
@@ -279,7 +279,7 @@ export function loadBannerArtwork(header, candidates, scope) {
   let cancelled = false;
   scope.own(() => { cancelled = true; });
   const apply = (url) => {
-    header.style.setProperty("--ve-class-art", `url("${url}")`);
+    header.style.setProperty("--mc-class-art", `url("${url}")`);
     header.dataset.bannerCatalogue = "true";
   };
   const first = bannerImageCache.get(candidates[0].url);
@@ -319,8 +319,8 @@ export function splitCharacterName(name, width, measure) {
 }
 
 function bindCharacterNameLines(heading, name, scope) {
-  const first = node("span", { className: "ve-character-name-first", text: name, attrs: { "aria-hidden": "true" } });
-  const second = node("span", { className: "ve-character-name-second", attrs: { "aria-hidden": "true", hidden: true } });
+  const first = node("span", { className: "mc-character-name-first", text: name, attrs: { "aria-hidden": "true" } });
+  const second = node("span", { className: "mc-character-name-second", attrs: { "aria-hidden": "true", hidden: true } });
   heading.setAttribute("aria-label", name);
   heading.replaceChildren(first, second);
   let previousWidth = -1;
@@ -355,20 +355,20 @@ function deathSaveControl(actor, commands, status, scope) {
   if (!shouldRenderDeathSaves(actor)) return null;
   const { successes, failures, outcome } = presentation;
   const enabled = Boolean(actor.capabilities?.rollDeathSave) && !outcome;
-  const outcomeLabel = outcome === "stabilised" ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.Stabilised", "Stabilized") : outcome === "dead" ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.Dead", "Dead") : localizedText(commands.localize, "VEMOBILE.Character.Presenter.DeathSaves", "Death Saves");
+  const outcomeLabel = outcome === "stabilised" ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Stabilised", "Stabilized") : outcome === "dead" ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Dead", "Dead") : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.DeathSaves", "Death Saves");
   return {
     roll: node("button", {
-      className: "ve-death-save-roll",
-      attrs: { type: "button", disabled: !enabled, "aria-label": outcome ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.DeathSavingThrowsConcluded", "{outcomeLabel}; death saving throws concluded", { outcomeLabel: (outcomeLabel) }) : enabled ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.RollDeathSavingThrow", "Roll death saving throw") : localizedText(commands.localize, "VEMOBILE.Character.Presenter.DeathSavingThrowUnavailable", "Death saving throw unavailable") },
-      on: { click: (event) => runActorCommand(event.currentTarget, ACTOR_COMMANDS.ROLL_DEATH_SAVE, actor, {}, commands, status, localizedText(commands.localize, "VEMOBILE.Character.Presenter.RollingDeathSave", "Rolling death save…"), localizedText(commands.localize, "VEMOBILE.Character.Presenter.DeathSave", "Death save"), scope) },
-      children: [node("span", { className: "ve-death-save-d20", attrs: { "aria-hidden": "true" } })]
+      className: "mc-death-save-roll",
+      attrs: { type: "button", disabled: !enabled, "aria-label": outcome ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.DeathSavingThrowsConcluded", "{outcomeLabel}; death saving throws concluded", { outcomeLabel: (outcomeLabel) }) : enabled ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.RollDeathSavingThrow", "Roll death saving throw") : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.DeathSavingThrowUnavailable", "Death saving throw unavailable") },
+      on: { click: (event) => runActorCommand(event.currentTarget, ACTOR_COMMANDS.ROLL_DEATH_SAVE, actor, {}, commands, status, localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.RollingDeathSave", "Rolling death save…"), localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.DeathSave", "Death save"), scope) },
+      children: [node("span", { className: "mc-death-save-d20", attrs: { "aria-hidden": "true" } })]
     }, scope),
-    row: node("section", { className: `ve-death-saves${outcome ? ` is-concluded is-${outcome}` : ""}`, attrs: { "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.DeathSavesSuccessesAndFailures", "Death saves: {successes} successes and {failures} failures{outcome}", { successes, failures, outcome: outcome ? `; ${outcomeLabel}` : "" }) }, children: [
-    node("div", { className: "ve-death-save-pips", attrs: { "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.SuccessesAndFailures", "{successes} successes and {failures} failures", { successes: (successes), failures: (failures) }) }, children: [
+    row: node("section", { className: `mc-death-saves${outcome ? ` is-concluded is-${outcome}` : ""}`, attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.DeathSavesSuccessesAndFailures", "Death saves: {successes} successes and {failures} failures{outcome}", { successes, failures, outcome: outcome ? `; ${outcomeLabel}` : "" }) }, children: [
+    node("div", { className: "mc-death-save-pips", attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.SuccessesAndFailures", "{successes} successes and {failures} failures", { successes: (successes), failures: (failures) }) }, children: [
       deathPips("Successes", successes, "success"),
       deathPips("Failures", failures, "failure")
     ] }),
-    outcome ? node("strong", { className: "ve-death-save-outcome", text: outcomeLabel }) : null
+    outcome ? node("strong", { className: "mc-death-save-outcome", text: outcomeLabel }) : null
   ] })
   };
 }
@@ -402,7 +402,7 @@ export function deathSavePresentation(actor) {
 }
 
 function deathPips(label, count, kind) {
-  return node("span", { className: `is-${kind}`, attrs: { title: label }, children: [node("small", { text: label }), node("span", { className: "ve-death-save-kind", text: kind === "success" ? "✓" : "×", attrs: { "aria-hidden": "true" } }), ...Array.from({ length: 3 }, (_, index) => node("i", { className: index < count ? "is-filled" : "", attrs: { "aria-hidden": "true" } }))] });
+  return node("span", { className: `is-${kind}`, attrs: { title: label }, children: [node("small", { text: label }), node("span", { className: "mc-death-save-kind", text: kind === "success" ? "✓" : "×", attrs: { "aria-hidden": "true" } }), ...Array.from({ length: 3 }, (_, index) => node("i", { className: index < count ? "is-filled" : "", attrs: { "aria-hidden": "true" } }))] });
 }
 
 export function buildCharacterMenuTree(actors) {
@@ -423,8 +423,8 @@ export function createCharacterMenuController({ actors, selectedActor, commands,
   const expandedFolderIds = new Set();
   const selectedDirectoryActor = actors.find((entry) => characterRecordSourceUuid(entry) === characterRecordSourceUuid(selectedActor)) ?? null;
   const element = node("div", {
-    className: `ve-character-menu${embedded ? " ve-character-menu-inline" : ""}`,
-    attrs: { role: "menu", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.AvailableCharacters", "Available characters"), hidden: !embedded }
+    className: `mc-character-menu${embedded ? " mc-character-menu-inline" : ""}`,
+    attrs: { role: "menu", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.AvailableCharacters", "Available characters"), hidden: !embedded }
   });
   let bodyScope = null;
 
@@ -440,9 +440,9 @@ export function createCharacterMenuController({ actors, selectedActor, commands,
     bodyScope = scope.child("character-menu-body");
     const owner = bodyScope;
     const context = { selectedActor, commands, onClose, expandedFolderIds };
-    const heading = node("header", { className: "ve-character-menu-heading", children: [
-      node("strong", { text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.SelectCharacter", "Select character") }),
-      node("button", { className: "ve-character-menu-close", attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.CloseCharacterSelector", "Close character selector") }, on: { click: onClose }, children: [icon("fa-xmark")] }, owner)
+    const heading = node("header", { className: "mc-character-menu-heading", children: [
+      node("strong", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.SelectCharacter", "Select character") }),
+      node("button", { className: "mc-character-menu-close", attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.CloseCharacterSelector", "Close character selector") }, on: { click: onClose }, children: [icon("fa-xmark")] }, owner)
     ] });
     element.replaceChildren(...(embedded ? [] : [heading]), ...renderCharacterMenuBranch(root, context, owner));
     afterCharacterMenuLayout(owner, () => {
@@ -501,7 +501,7 @@ function characterMenuFolder(branch, context, scope) {
     children: [chevron, icon("fa-folder"), node("strong", { text: branch.folder.name }), node("small", { text: characterFolderCount(branch) })]
   });
   const details = node("details", {
-    className: "ve-character-menu-folder",
+    className: "mc-character-menu-folder",
     attrs: { open: initiallyOpen, "data-folder-id": folderId },
     children: [summary]
   });
@@ -518,7 +518,7 @@ function characterMenuFolder(branch, context, scope) {
     if (contents || folderScope.disposed) return;
     contentsScope = folderScope.child("contents");
     contents = node("div", {
-      className: "ve-character-menu-folder-contents",
+      className: "mc-character-menu-folder-contents",
       children: renderCharacterMenuBranch(branch, context, contentsScope)
     });
     details.append(contents);
@@ -541,15 +541,15 @@ function characterMenuFolder(branch, context, scope) {
 function characterMenuActor(entry, selectedActor, commands, setOpen, scope) {
   const active = characterRecordSourceUuid(entry) === characterRecordSourceUuid(selectedActor);
   return node("button", {
-    className: `ve-character-menu-actor${active ? " is-active" : ""}`,
+    className: `mc-character-menu-actor${active ? " is-active" : ""}`,
     attrs: { type: "button", role: "menuitem", "aria-current": active ? "true" : undefined, "data-actor-source": characterRecordSourceUuid(entry) },
     on: { click: () => {
       setOpen(false);
       commands.selectActor(characterRecordSourceUuid(entry));
     } },
     children: [
-      node("span", { className: "ve-character-menu-portrait", children: [node("img", { attrs: { src: entry.img, alt: "", loading: "lazy", decoding: "async" } })] }),
-      node("span", { className: "ve-character-menu-copy", children: [node("strong", { text: entry.name }), node("small", { text: characterIdentityLine(entry, commands) })] }),
+      node("span", { className: "mc-character-menu-portrait", children: [node("img", { attrs: { src: entry.img, alt: "", loading: "lazy", decoding: "async" } })] }),
+      node("span", { className: "mc-character-menu-copy", children: [node("strong", { text: entry.name }), node("small", { text: characterIdentityLine(entry, commands) })] }),
       active ? icon("fa-check") : null
     ]
   }, scope);
@@ -561,13 +561,13 @@ export function characterFolderCount(branch) {
 
 export function characterIdentityLine(actor, commands = null) {
   if (["native", "profile"].includes(actor.presentation)) return actor.typeLabel ?? "";
-  if (actor.type === "group") return commands?.localize?.("VEMOBILE.Collective.Group", "Group") ?? "Group";
-  if (actor.type === "vehicle") return commands?.localize?.("VEMOBILE.Collective.Vehicle", "Vehicle") ?? "Vehicle";
+  if (actor.type === "group") return commands?.localize?.("MIKELANDIA_CONTROLS.Collective.Group", "Group") ?? "Group";
+  if (actor.type === "vehicle") return commands?.localize?.("MIKELANDIA_CONTROLS.Collective.Vehicle", "Vehicle") ?? "Vehicle";
   if (actor.type === "npc") {
     return actor.npc?.creatureType || "NPC";
   }
   const classNames = actor.classes?.length ? actor.classes.map((entry) => entry.name).join(" / ") : "Character";
-  return `${headerLabel(actor, "level", localizedText(commands?.localize, "VEMOBILE.Character.Header.level", "Level"))} ${actor.level || "—"} ${classNames}`;
+  return `${headerLabel(actor, "level", localizedText(commands?.localize, "MIKELANDIA_CONTROLS.Character.Header.level", "Level"))} ${actor.level || "—"} ${classNames}`;
 }
 
 function characterClassLine(actor) {
@@ -600,26 +600,26 @@ function characterClassIcon(actor) {
 
 function classIconNode(actor) {
   const classIcon = characterClassIcon(actor);
-  return themedSymbol(classIcon, "ve-character-class-symbol");
+  return themedSymbol(classIcon, "mc-character-class-symbol");
 }
 
 function characterOriginLine(actor, commands) {
   if (actor.type === "npc") {
     const lines = npcIdentityLines(actor, commands);
     return node("p", {
-      className: "ve-character-origin ve-npc-metadata",
-      children: lines.map((line) => node("span", { className: "ve-npc-metadata-line", attrs: { title: line }, text: line }))
+      className: "mc-character-origin mc-npc-metadata",
+      children: lines.map((line) => node("span", { className: "mc-npc-metadata-line", attrs: { title: line }, text: line }))
     });
   }
   if (!actor.species && !actor.background) return null;
   const originIcon = characterSpeciesIcon(actor);
   return node("p", {
-    className: "ve-character-origin",
+    className: "mc-character-origin",
     children: [
-      themedSymbol(originIcon, "ve-character-origin-symbol"),
-      node("span", { className: "ve-character-origin-copy", children: [
-        actor.species ? node("span", { className: "ve-character-species-name", text: actor.species }) : null,
-        actor.background ? node("span", { className: "ve-character-background-name", text: `${actor.species ? " " : ""}${actor.background}` }) : null
+      themedSymbol(originIcon, "mc-character-origin-symbol"),
+      node("span", { className: "mc-character-origin-copy", children: [
+        actor.species ? node("span", { className: "mc-character-species-name", text: actor.species }) : null,
+        actor.background ? node("span", { className: "mc-character-background-name", text: `${actor.species ? " " : ""}${actor.background}` }) : null
       ] })
     ]
   });
@@ -711,13 +711,13 @@ function characterHitPoints(actor, commands, status, scope) {
   const value = healthValue(actor.hp?.value);
   const temporary = healthValue(actor.hp?.temp);
   const editable = Boolean(actor.capabilities?.editHitPoints);
-  return node("section", { className: "ve-character-header-hp", attrs: { "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.HitPointsOfTemporaryHitPoints", "Hit points {value} of {maximum}; temporary hit points {temporary}", { value: (value), maximum: (maximum), temporary: (temporary) }) }, children: [
-    node("button", { className: "ve-character-header-hp-main", attrs: { type: "button", disabled: !editable, "aria-label": editable ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.EditHitPointsOf", "Edit hit points. {value} of {maximum}", { value: (value), maximum: (maximum) }) : localizedText(commands.localize, "VEMOBILE.Character.Presenter.HitPointsOf", "Hit points {value} of {maximum}", { value: (value), maximum: (maximum) }) }, on: { click: () => commands.openHitPointEditor("hp") }, children: [
-      node("small", { text: headerLabel(actor, "hitPoints", localizedText(commands.localize, "VEMOBILE.Character.Header.hitPoints", "Hit Points")) }),
-      node("div", { className: "ve-character-header-hp-value", children: [node("i", { className: "fa-sharp fa-solid fa-heart", attrs: { "aria-hidden": "true" } }), node("strong", { text: value }), node("span", { text: `/ ${maximum}` })] })
+  return node("section", { className: "mc-character-header-hp", attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.HitPointsOfTemporaryHitPoints", "Hit points {value} of {maximum}; temporary hit points {temporary}", { value: (value), maximum: (maximum), temporary: (temporary) }) }, children: [
+    node("button", { className: "mc-character-header-hp-main", attrs: { type: "button", disabled: !editable, "aria-label": editable ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.EditHitPointsOf", "Edit hit points. {value} of {maximum}", { value: (value), maximum: (maximum) }) : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.HitPointsOf", "Hit points {value} of {maximum}", { value: (value), maximum: (maximum) }) }, on: { click: () => commands.openHitPointEditor("hp") }, children: [
+      node("small", { text: headerLabel(actor, "hitPoints", localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Header.hitPoints", "Hit Points")) }),
+      node("div", { className: "mc-character-header-hp-value", children: [node("i", { className: "fa-sharp fa-solid fa-heart", attrs: { "aria-hidden": "true" } }), node("strong", { text: value }), node("span", { text: `/ ${maximum}` })] })
     ] }, scope),
-    node("button", { className: "ve-character-header-temp-hp", attrs: { type: "button", disabled: !editable, "aria-label": editable ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.EditTemporaryHitPointsCurrentValue", "Edit temporary hit points. Current value {temporary}", { temporary: (temporary) }) : localizedText(commands.localize, "VEMOBILE.Character.Presenter.TemporaryHitPoints", "Temporary hit points {temporary}", { temporary: (temporary) }) }, on: { click: () => commands.openHitPointEditor("temp") }, children: [
-      node("small", { text: headerLabel(actor, "tempHp", localizedText(commands.localize, "VEMOBILE.Character.Header.tempHp", "Temp HP")) }),
+    node("button", { className: "mc-character-header-temp-hp", attrs: { type: "button", disabled: !editable, "aria-label": editable ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.EditTemporaryHitPointsCurrentValue", "Edit temporary hit points. Current value {temporary}", { temporary: (temporary) }) : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.TemporaryHitPoints", "Temporary hit points {temporary}", { temporary: (temporary) }) }, on: { click: () => commands.openHitPointEditor("temp") }, children: [
+      node("small", { text: headerLabel(actor, "tempHp", localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Header.tempHp", "Temp HP")) }),
       node("div", { children: [node("i", { className: "fa-sharp fa-solid fa-shield-heart", attrs: { "aria-hidden": "true" } }), node("strong", { text: temporary })] })
     ] }, scope)
   ] });
@@ -733,13 +733,13 @@ export function characterHealthTrack(actor, localize = null) {
   const proportional = typeof max === "number" && Number.isFinite(max) && max > 0;
   const percent = value => proportional && typeof value === "number" && Number.isFinite(value)
     ? Math.max(0, Math.min(100, value / max * 100)) : 0;
-  const fill = node("i", { className: "ve-character-health-current" });
+  const fill = node("i", { className: "mc-character-health-current" });
   fill.style.width = `${percent(value)}%`;
-  const temporary = proportional && percent(temp) > 0 ? node("i", { className: "ve-character-health-temp" }) : null;
+  const temporary = proportional && percent(temp) > 0 ? node("i", { className: "mc-character-health-temp" }) : null;
   if (temporary) temporary.style.width = `${percent(temp)}%`;
   return node("div", {
-    className: `ve-character-header-health-track${proportional ? "" : " is-neutral"}`,
-    attrs: { role: "img", "aria-label": localizedText(localize, "VEMOBILE.Character.Presenter.HealthTrack", "Hit points {value}; maximum hit points {maximum}; temporary hit points {temporary}", { value: healthValue(value), maximum: healthValue(max), temporary: healthValue(temp) }) },
+    className: `mc-character-header-health-track${proportional ? "" : " is-neutral"}`,
+    attrs: { role: "img", "aria-label": localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.HealthTrack", "Hit points {value}; maximum hit points {maximum}; temporary hit points {temporary}", { value: healthValue(value), maximum: healthValue(max), temporary: healthValue(temp) }) },
     children: [fill, temporary]
   });
 }
@@ -748,11 +748,11 @@ export function characterLevelBadge(actor) {
   const value = actor.type === "character" ? actor.header?.level : actor.type === "npc" ? actor.npc?.challengeRatingLabel : null;
   if (value === null || value === undefined || value === "") return null;
   const label = actor.type === "npc" ? "CR" : headerLabel(actor, "level", "Level");
-  return node("div", { className: "ve-character-level-badge", attrs: { "aria-label": `${label} ${value}` }, children: [
+  return node("div", { className: "mc-character-level-badge", attrs: { "aria-label": `${label} ${value}` }, children: [
     actor.type === "npc" ? node("small", { text: label }) : null,
     node("strong", { text: value }),
     typeof actor.proficiency === "number" && Number.isFinite(actor.proficiency)
-      ? node("small", { className: "ve-character-proficiency", attrs: { "aria-label": `${headerLabel(actor, "proficiency", "Proficiency bonus")} ${formatModifier(actor.proficiency)}` }, children: [
+      ? node("small", { className: "mc-character-proficiency", attrs: { "aria-label": `${headerLabel(actor, "proficiency", "Proficiency bonus")} ${formatModifier(actor.proficiency)}` }, children: [
         node("span", { text: `${headerLabel(actor, "proficiencyAbbr", "PB")} ` }),
         node("b", { text: formatModifier(actor.proficiency) })
       ] }) : null
@@ -764,16 +764,16 @@ function heroicInspirationControl(actor, commands, status, scope) {
   const active = Boolean(actor.inspiration);
   const editable = Boolean(actor.capabilities?.editInspiration);
   return node("button", {
-    className: `ve-character-inspiration${active ? " is-active" : ""}`,
+    className: `mc-character-inspiration${active ? " is-active" : ""}`,
     attrs: {
       type: "button",
       disabled: !editable,
       "aria-pressed": String(active),
-      "aria-label": editable ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.HeroicInspiration", "{action} Heroic Inspiration", { action: localizedText(commands.localize, active ? "VEMOBILE.Character.Presenter.Remove" : "VEMOBILE.Character.Presenter.Grant", active ? "Remove" : "Grant") }) : localizedText(commands.localize, "VEMOBILE.Character.Presenter.HeroicInspiration2", "Heroic Inspiration {state}", { state: localizedText(commands.localize, active ? "VEMOBILE.Character.Presenter.ActiveState" : "VEMOBILE.Character.Presenter.InactiveState", active ? "active" : "inactive") }),
-      title: localizedText(commands.localize, "VEMOBILE.Character.Header.inspiration", "Heroic Inspiration")
+      "aria-label": editable ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.HeroicInspiration", "{action} Heroic Inspiration", { action: localizedText(commands.localize, active ? "MIKELANDIA_CONTROLS.Character.Presenter.Remove" : "MIKELANDIA_CONTROLS.Character.Presenter.Grant", active ? "Remove" : "Grant") }) : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.HeroicInspiration2", "Heroic Inspiration {state}", { state: localizedText(commands.localize, active ? "MIKELANDIA_CONTROLS.Character.Presenter.ActiveState" : "MIKELANDIA_CONTROLS.Character.Presenter.InactiveState", active ? "active" : "inactive") }),
+      title: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Header.inspiration", "Heroic Inspiration")
     },
     on: { click: (event) => setHeroicInspiration(event.currentTarget, actor, !active, commands) },
-    children: [node("span", { className: "ve-inspiration-emblem", attrs: { "aria-hidden": "true" } })]
+    children: [node("span", { className: "mc-inspiration-emblem", attrs: { "aria-hidden": "true" } })]
   }, scope);
 }
 
@@ -805,15 +805,15 @@ export function characterExperience(actor, commands = null, scope = null) {
   if (!xp) return null;
   const locale = actor.header?.locale ?? commands?.readLocale?.() ?? "en";
   const values = xp.next === null ? localizedNumber(xp.value, locale) : `${localizedNumber(xp.value, locale)} / ${localizedNumber(xp.next, locale)}`;
-  const label = headerLabel(actor, "experience", localizedText(commands?.localize, "VEMOBILE.Character.Header.experience", "Experience progress"));
+  const label = headerLabel(actor, "experience", localizedText(commands?.localize, "MIKELANDIA_CONTROLS.Character.Header.experience", "Experience progress"));
   const boons = xp.boonsEarned === null ? "" : `${headerLabel(actor, "boons", "Epic boons earned")}: ${localizedNumber(xp.boonsEarned, locale)}`;
   const fill = node("i");
   fill.style.width = `${xp.percent}%`;
   const editable = Boolean(commands && actor.capabilities?.editExperience);
-  return node(editable ? "button" : "div", { className: "ve-character-header-xp", attrs: { type: editable ? "button" : undefined, title: boons || label, "aria-label": editable ? commands.localize?.("VEMOBILE.Character.AddExperience", "Add experience") ?? localizedText(commands.localize, "VEMOBILE.Character.AddExperience", "Add experience") : undefined }, on: editable ? { click: () => commands.openExperienceEditor() } : undefined, children: [
-    node("small", { children: [icon("fa-star"), node("span", { text: headerLabel(actor, "xp", localizedText(commands?.localize, "VEMOBILE.Character.Header.xp", "XP")) })] }),
-    node("span", { className: "ve-character-xp-track", attrs: { role: "progressbar", "aria-label": label, "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": xp.percent, "aria-valuetext": `${values}; ${localizedNumber(xp.percent, locale)}%${boons ? `; ${boons}` : ""}` }, children: [fill] }),
-    node("span", { className: "ve-character-xp-values", text: values })
+  return node(editable ? "button" : "div", { className: "mc-character-header-xp", attrs: { type: editable ? "button" : undefined, title: boons || label, "aria-label": editable ? commands.localize?.("MIKELANDIA_CONTROLS.Character.AddExperience", "Add experience") ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.AddExperience", "Add experience") : undefined }, on: editable ? { click: () => commands.openExperienceEditor() } : undefined, children: [
+    node("small", { children: [icon("fa-star"), node("span", { text: headerLabel(actor, "xp", localizedText(commands?.localize, "MIKELANDIA_CONTROLS.Character.Header.xp", "XP")) })] }),
+    node("span", { className: "mc-character-xp-track", attrs: { role: "progressbar", "aria-label": label, "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": xp.percent, "aria-valuetext": `${values}; ${localizedNumber(xp.percent, locale)}%${boons ? `; ${boons}` : ""}` }, children: [fill] }),
+    node("span", { className: "mc-character-xp-values", text: values })
   ] }, scope);
 }
 
@@ -823,27 +823,27 @@ function experienceEditor(actor, open, commands, scope) {
   const current = Math.max(0, Math.trunc(Number(actor.header?.experience?.value) || 0));
   const locale = actor.header?.locale ?? commands.readLocale?.() ?? "en";
   const localize = (key, fallback, data) => commands.localize?.(key, fallback, data) ?? fallback;
-  const status = node("p", { className: "ve-hp-editor-status", attrs: { role: "status", "aria-live": "polite" } });
-  const input = node("input", { className: "ve-hp-editor-amount", attrs: { type: "number", inputmode: "numeric", pattern: "[0-9]*", min: "0", max: "1000000000", step: "1", autocomplete: "off", required: true, placeholder: "0", "aria-label": localize("VEMOBILE.Character.ExperienceAmount", "Experience to add") } });
-  const close = node("button", { className: "ve-hp-editor-close", attrs: { type: "button", "aria-label": localize("VEMOBILE.Character.CloseExperience", "Close experience editor") }, on: { click: () => { if (!pending) commands.closeExperienceEditor(); } }, children: [icon("fa-xmark")] }, scope);
-  const submit = node("button", { className: "ve-hp-editor-submit", attrs: { type: "submit" }, children: [icon("fa-plus"), node("span", { text: localize("VEMOBILE.Character.AddXp", "Add XP") })] });
+  const status = node("p", { className: "mc-hp-editor-status", attrs: { role: "status", "aria-live": "polite" } });
+  const input = node("input", { className: "mc-hp-editor-amount", attrs: { type: "number", inputmode: "numeric", pattern: "[0-9]*", min: "0", max: "1000000000", step: "1", autocomplete: "off", required: true, placeholder: "0", "aria-label": localize("MIKELANDIA_CONTROLS.Character.ExperienceAmount", "Experience to add") } });
+  const close = node("button", { className: "mc-hp-editor-close", attrs: { type: "button", "aria-label": localize("MIKELANDIA_CONTROLS.Character.CloseExperience", "Close experience editor") }, on: { click: () => { if (!pending) commands.closeExperienceEditor(); } }, children: [icon("fa-xmark")] }, scope);
+  const submit = node("button", { className: "mc-hp-editor-submit", attrs: { type: "submit" }, children: [icon("fa-plus"), node("span", { text: localize("MIKELANDIA_CONTROLS.Character.AddXp", "Add XP") })] });
   const form = node("form", {
-    className: "ve-hp-editor ve-xp-editor",
-    attrs: { role: "dialog", "aria-modal": "true", "aria-labelledby": "ve-xp-editor-title" },
+    className: "mc-hp-editor mc-xp-editor",
+    attrs: { role: "dialog", "aria-modal": "true", "aria-labelledby": "mc-xp-editor-title" },
     on: { submit: async (event) => {
       event.preventDefault();
       if (pending || !input.reportValidity()) return;
       const amount = Number(input.value);
       if (!Number.isSafeInteger(amount) || amount < 0) {
         status.classList.add("is-error");
-        status.textContent = localize("VEMOBILE.Character.ValidExperience", "Enter a whole, non-negative XP amount.");
+        status.textContent = localize("MIKELANDIA_CONTROLS.Character.ValidExperience", "Enter a whole, non-negative XP amount.");
         return;
       }
       pending = true;
       form.setAttribute("aria-busy", "true");
       input.disabled = submit.disabled = close.disabled = true;
       status.classList.remove("is-error");
-      status.textContent = localize("VEMOBILE.Character.AddingExperience", "Adding experience…");
+      status.textContent = localize("MIKELANDIA_CONTROLS.Character.AddingExperience", "Adding experience…");
       try {
         await commands.execute(ACTOR_COMMANDS.ADD_EXPERIENCE, { actorSourceUuid: characterRecordSourceUuid(actor), amount });
         if (!scope.disposed) commands.closeExperienceEditor();
@@ -853,20 +853,20 @@ function experienceEditor(actor, open, commands, scope) {
           form.removeAttribute("aria-busy");
           input.disabled = submit.disabled = close.disabled = false;
           status.classList.add("is-error");
-          status.textContent = error?.message ?? localize("VEMOBILE.Character.ExperienceFailed", "Foundry could not add that experience.");
+          status.textContent = error?.message ?? localize("MIKELANDIA_CONTROLS.Character.ExperienceFailed", "Foundry could not add that experience.");
         }
       }
     } },
     children: [
-      node("header", { children: [node("span", { className: "ve-hp-editor-heading-icon", children: [icon("fa-star")] }), node("div", { children: [node("small", { text: actor.name }), node("h2", { attrs: { id: "ve-xp-editor-title" }, text: localize("VEMOBILE.Character.AddExperience", "Add experience") })] }), close] }),
-      node("div", { className: "ve-hp-editor-summary", children: [node("span", { children: [node("small", { text: localize("VEMOBILE.Character.CurrentXp", "Current XP") }), node("strong", { text: localizedNumber(current, locale) })] })] }),
-      node("label", { className: "ve-hp-editor-amount-label", children: [node("span", { text: localize("VEMOBILE.Character.ExperienceAmount", "Experience to add") }), input] }),
+      node("header", { children: [node("span", { className: "mc-hp-editor-heading-icon", children: [icon("fa-star")] }), node("div", { children: [node("small", { text: actor.name }), node("h2", { attrs: { id: "mc-xp-editor-title" }, text: localize("MIKELANDIA_CONTROLS.Character.AddExperience", "Add experience") })] }), close] }),
+      node("div", { className: "mc-hp-editor-summary", children: [node("span", { children: [node("small", { text: localize("MIKELANDIA_CONTROLS.Character.CurrentXp", "Current XP") }), node("strong", { text: localizedNumber(current, locale) })] })] }),
+      node("label", { className: "mc-hp-editor-amount-label", children: [node("span", { text: localize("MIKELANDIA_CONTROLS.Character.ExperienceAmount", "Experience to add") }), input] }),
       status,
       submit
     ]
   }, scope);
   queueMicrotask(() => input.focus?.());
-  return node("div", { className: "ve-hp-editor-layer", attrs: { role: "presentation" }, children: [form] });
+  return node("div", { className: "mc-hp-editor-layer", attrs: { role: "presentation" }, children: [form] });
 }
 
 function hitPointEditor(actor, requestedEditor, commands, scope) {
@@ -878,10 +878,10 @@ function hitPointEditor(actor, requestedEditor, commands, scope) {
   };
   let operation = requestedEditor === "temp" ? "set-temp" : "damage";
   let pending = false;
-  const modalStatus = node("p", { className: "ve-hp-editor-status", attrs: { role: "status", "aria-live": "polite" } });
+  const modalStatus = node("p", { className: "mc-hp-editor-status", attrs: { role: "status", "aria-live": "polite" } });
   const amountInput = node("input", {
-    className: "ve-hp-editor-amount",
-    attrs: { type: "number", inputmode: "numeric", pattern: "[0-9]*", step: "1", autocomplete: "off", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Amount", "Amount") },
+    className: "mc-hp-editor-amount",
+    attrs: { type: "number", inputmode: "numeric", pattern: "[0-9]*", step: "1", autocomplete: "off", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Amount", "Amount") },
     on: { input: () => updateSubmitLabel() }
   }, scope);
   const submitLabel = node("span");
@@ -895,8 +895,8 @@ function hitPointEditor(actor, requestedEditor, commands, scope) {
     ["set-temp", "Temp HP", "fa-shield"]
   ];
   const operationPicker = node("div", {
-    className: "ve-hp-editor-modes",
-    attrs: { role: "tablist", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.HitPointOperation", "Hit point operation") },
+    className: "mc-hp-editor-modes",
+    attrs: { role: "tablist", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.HitPointOperation", "Hit point operation") },
     children: operationChoices.map(([key, label, iconName]) => {
       const button = node("button", {
         attrs: { type: "button", role: "tab" },
@@ -908,22 +908,22 @@ function hitPointEditor(actor, requestedEditor, commands, scope) {
       return button;
     })
   });
-  const decrement = node("button", { className: "ve-hp-editor-step", attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.DecreaseAmount", "Decrease amount") }, on: { click: () => stepAmount(-1) }, children: [icon("fa-minus")] }, scope);
-  const increment = node("button", { className: "ve-hp-editor-step", attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.IncreaseAmount", "Increase amount") }, on: { click: () => stepAmount(1) }, children: [icon("fa-plus")] }, scope);
+  const decrement = node("button", { className: "mc-hp-editor-step", attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.DecreaseAmount", "Decrease amount") }, on: { click: () => stepAmount(-1) }, children: [icon("fa-minus")] }, scope);
+  const increment = node("button", { className: "mc-hp-editor-step", attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.IncreaseAmount", "Increase amount") }, on: { click: () => stepAmount(1) }, children: [icon("fa-plus")] }, scope);
   editableControls.push(decrement, amountInput, increment);
-  const quickAmounts = node("div", { className: "ve-hp-editor-quick", attrs: { "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.QuickAmounts", "Quick amounts") }, children: [1, 5, 10].map((amount) => {
-    const decrease = node("button", { attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.DecreaseAmountBy", "Decrease amount by {amount}", { amount: (amount) }) }, on: { click: () => stepAmount(-amount) }, children: [icon("fa-minus")] }, scope);
-    const increase = node("button", { attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.IncreaseAmountBy", "Increase amount by {amount}", { amount: (amount) }) }, on: { click: () => stepAmount(amount) }, children: [icon("fa-plus")] }, scope);
+  const quickAmounts = node("div", { className: "mc-hp-editor-quick", attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.QuickAmounts", "Quick amounts") }, children: [1, 5, 10].map((amount) => {
+    const decrease = node("button", { attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.DecreaseAmountBy", "Decrease amount by {amount}", { amount: (amount) }) }, on: { click: () => stepAmount(-amount) }, children: [icon("fa-minus")] }, scope);
+    const increase = node("button", { attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.IncreaseAmountBy", "Increase amount by {amount}", { amount: (amount) }) }, on: { click: () => stepAmount(amount) }, children: [icon("fa-plus")] }, scope);
     editableControls.push(decrease, increase);
-    return node("div", { className: "ve-hp-editor-quick-step", attrs: { role: "group", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.AdjustAmountBy", "Adjust amount by {amount}", { amount: (amount) }) }, children: [decrease, node("span", { text: amount, attrs: { "aria-hidden": "true" } }), increase] });
+    return node("div", { className: "mc-hp-editor-quick-step", attrs: { role: "group", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.AdjustAmountBy", "Adjust amount by {amount}", { amount: (amount) }) }, children: [decrease, node("span", { text: amount, attrs: { "aria-hidden": "true" } }), increase] });
   }) });
-  const submit = node("button", { className: "ve-hp-editor-submit", attrs: { type: "submit" }, children: [icon("fa-check"), submitLabel] });
+  const submit = node("button", { className: "mc-hp-editor-submit", attrs: { type: "submit" }, children: [icon("fa-check"), submitLabel] });
   editableControls.push(submit);
-  const closeButton = node("button", { className: "ve-hp-editor-close", attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.CloseHitPointEditor", "Close hit point editor") }, on: { click: () => { if (!pending) commands.closeHitPointEditor(); } }, children: [icon("fa-xmark")] }, scope);
+  const closeButton = node("button", { className: "mc-hp-editor-close", attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.CloseHitPointEditor", "Close hit point editor") }, on: { click: () => { if (!pending) commands.closeHitPointEditor(); } }, children: [icon("fa-xmark")] }, scope);
 
   const form = node("form", {
-    className: "ve-hp-editor",
-    attrs: { role: "dialog", "aria-modal": "true", "aria-labelledby": "ve-hp-editor-title" },
+    className: "mc-hp-editor",
+    attrs: { role: "dialog", "aria-modal": "true", "aria-labelledby": "mc-hp-editor-title" },
     on: { submit: async (event) => {
       event.preventDefault();
       if (pending || !amountInput.reportValidity()) return;
@@ -942,7 +942,7 @@ function hitPointEditor(actor, requestedEditor, commands, scope) {
       } catch (error) {
         if (!scope.disposed) {
           modalStatus.classList.add("is-error");
-          modalStatus.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Character.Presenter.FoundryCouldNotUpdateTheseHitPoints", "Foundry could not update these hit points.");
+          modalStatus.textContent = error?.message ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.FoundryCouldNotUpdateTheseHitPoints", "Foundry could not update these hit points.");
         }
       } finally {
         if (!scope.disposed) {
@@ -956,16 +956,16 @@ function hitPointEditor(actor, requestedEditor, commands, scope) {
     } },
     children: [
       node("header", { children: [
-        node("span", { className: "ve-hp-editor-heading-icon", children: [icon("fa-heart-pulse")] }),
-        node("div", { children: [node("small", { text: actor.name }), node("h2", { attrs: { id: "ve-hp-editor-title" }, text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.EditHitPoints", "Edit Hit Points") })] }),
+        node("span", { className: "mc-hp-editor-heading-icon", children: [icon("fa-heart-pulse")] }),
+        node("div", { children: [node("small", { text: actor.name }), node("h2", { attrs: { id: "mc-hp-editor-title" }, text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.EditHitPoints", "Edit Hit Points") })] }),
         closeButton
       ] }),
-      node("div", { className: "ve-hp-editor-summary", children: [
-        node("span", { children: [node("small", { text: localizedText(commands.localize, "VEMOBILE.Character.Header.hitPoints", "Hit Points") }), node("strong", { text: `${hp.value} / ${hp.max}` })] }),
-        node("span", { children: [node("small", { text: localizedText(commands.localize, "VEMOBILE.Character.Header.tempHp", "Temp HP") }), node("strong", { text: hp.temp })] })
+      node("div", { className: "mc-hp-editor-summary", children: [
+        node("span", { children: [node("small", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Header.hitPoints", "Hit Points") }), node("strong", { text: `${hp.value} / ${hp.max}` })] }),
+        node("span", { children: [node("small", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Header.tempHp", "Temp HP") }), node("strong", { text: hp.temp })] })
       ] }),
       operationPicker,
-      node("label", { className: "ve-hp-editor-amount-label", children: [node("span", { text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.Amount", "Amount") }), node("div", { children: [decrement, amountInput, increment] })] }),
+      node("label", { className: "mc-hp-editor-amount-label", children: [node("span", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Amount", "Amount") }), node("div", { children: [decrement, amountInput, increment] })] }),
       quickAmounts,
       modalStatus,
       submit
@@ -973,7 +973,7 @@ function hitPointEditor(actor, requestedEditor, commands, scope) {
   }, scope);
 
   setOperation(operation, true);
-  return node("div", { className: "ve-hp-editor-layer", attrs: { role: "presentation" }, children: [form] });
+  return node("div", { className: "mc-hp-editor-layer", attrs: { role: "presentation" }, children: [form] });
 
   function setOperation(next, reset) {
     operation = next;
@@ -1010,17 +1010,17 @@ function hitPointEditor(actor, requestedEditor, commands, scope) {
 }
 
 function operationSubmitLabel(operation, amount, localize) {
-  if (operation === "damage") return localizedText(localize, "VEMOBILE.Character.Presenter.ApplyDamage", "Apply {amount} Damage", { amount });
-  if (operation === "heal") return localizedText(localize, "VEMOBILE.Character.Presenter.HealHitPoints", "Heal {amount} HP", { amount });
-  if (operation === "set-temp") return localizedText(localize, "VEMOBILE.Character.Presenter.SetTemporaryHitPoints", "Set Temp HP to {amount}", { amount });
-  return localizedText(localize, "VEMOBILE.Character.Presenter.SetHitPoints", "Set HP to {amount}", { amount });
+  if (operation === "damage") return localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.ApplyDamage", "Apply {amount} Damage", { amount });
+  if (operation === "heal") return localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.HealHitPoints", "Heal {amount} HP", { amount });
+  if (operation === "set-temp") return localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.SetTemporaryHitPoints", "Set Temp HP to {amount}", { amount });
+  return localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.SetHitPoints", "Set HP to {amount}", { amount });
 }
 
 function operationStatus(operation, amount, localize) {
-  if (operation === "damage") return localizedText(localize, "VEMOBILE.Character.Presenter.ApplyingDamage", "Applying {amount} damage…", { amount });
-  if (operation === "heal") return localizedText(localize, "VEMOBILE.Character.Presenter.ApplyingHealing", "Applying {amount} healing…", { amount });
-  if (operation === "set-temp") return localizedText(localize, "VEMOBILE.Character.Presenter.UpdatingTemporaryHitPoints", "Updating temporary hit points…");
-  return localizedText(localize, "VEMOBILE.Character.Presenter.UpdatingHitPoints", "Updating hit points…");
+  if (operation === "damage") return localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.ApplyingDamage", "Applying {amount} damage…", { amount });
+  if (operation === "heal") return localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.ApplyingHealing", "Applying {amount} healing…", { amount });
+  if (operation === "set-temp") return localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.UpdatingTemporaryHitPoints", "Updating temporary hit points…");
+  return localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.UpdatingHitPoints", "Updating hit points…");
 }
 
 function hitDiceRestEditor(actor, open, commands, scope) {
@@ -1033,54 +1033,54 @@ function hitDiceRestEditor(actor, open, commands, scope) {
   let selected = pools[0]?.denomination ?? "";
   let pending = false;
   const canAdjust = Boolean(actor.capabilities?.adjustHitDice && pools.length);
-  const modalStatus = node("p", { className: "ve-rest-editor-status", attrs: { role: "status", "aria-live": "polite" } });
+  const modalStatus = node("p", { className: "mc-rest-editor-status", attrs: { role: "status", "aria-live": "polite" } });
   const value = node("strong");
   const select = node("select", {
-    className: "ve-rest-editor-select",
-    attrs: { "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.HitDieType", "Hit die type"), disabled: pools.length < 2 },
+    className: "mc-rest-editor-select",
+    attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.HitDieType", "Hit die type"), disabled: pools.length < 2 },
     children: pools.map(pool => node("option", { attrs: { value: pool.denomination }, text: poolLabel(pool) })),
     on: { change: event => { selected = event.currentTarget.value; refreshPool(); } }
   }, scope);
   const decrease = node("button", {
-    className: "ve-rest-editor-step",
-    attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.UseOneHitDie", "Use one hit die") },
+    className: "mc-rest-editor-step",
+    attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.UseOneHitDie", "Use one hit die") },
     on: { click: () => adjust("decrease") },
     children: [icon("fa-minus")]
   }, scope);
   const increase = node("button", {
-    className: "ve-rest-editor-step",
-    attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.RestoreOneHitDie", "Restore one hit die") },
+    className: "mc-rest-editor-step",
+    attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.RestoreOneHitDie", "Restore one hit die") },
     on: { click: () => adjust("increase") },
     children: [icon("fa-plus")]
   }, scope);
-  const shortRest = restButton(localizedText(commands.localize, "VEMOBILE.Character.Copy.ShortRest", "Short Rest"), "fa-campground", "short", Boolean(actor.capabilities?.shortRest));
-  const longRest = restButton(localizedText(commands.localize, "VEMOBILE.Character.Copy.LongRest", "Long Rest"), "fa-moon", "long", Boolean(actor.capabilities?.longRest));
+  const shortRest = restButton(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.ShortRest", "Short Rest"), "fa-campground", "short", Boolean(actor.capabilities?.shortRest));
+  const longRest = restButton(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.LongRest", "Long Rest"), "fa-moon", "long", Boolean(actor.capabilities?.longRest));
   const close = node("button", {
-    className: "ve-hp-editor-close",
-    attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.CloseHitDiceAndRest", "Close hit dice and rest") },
+    className: "mc-hp-editor-close",
+    attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.CloseHitDiceAndRest", "Close hit dice and rest") },
     on: { click: () => { if (!pending) commands.closeRestEditor(); } },
     children: [icon("fa-xmark")]
   }, scope);
   const panel = node("section", {
-    className: "ve-hp-editor ve-rest-editor",
-    attrs: { role: "dialog", "aria-modal": "true", "aria-labelledby": "ve-rest-editor-title" },
+    className: "mc-hp-editor mc-rest-editor",
+    attrs: { role: "dialog", "aria-modal": "true", "aria-labelledby": "mc-rest-editor-title" },
     children: [
       node("header", { children: [
-        node("span", { className: "ve-hp-editor-heading-icon", children: [icon("fa-dice-d20")] }),
-        node("div", { children: [node("small", { text: actor.name }), node("h2", { attrs: { id: "ve-rest-editor-title" }, text: localizedText(commands.localize, "VEMOBILE.Character.Header.hitDice", "Hit Dice & Rest") })] }),
+        node("span", { className: "mc-hp-editor-heading-icon", children: [icon("fa-dice-d20")] }),
+        node("div", { children: [node("small", { text: actor.name }), node("h2", { attrs: { id: "mc-rest-editor-title" }, text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Header.hitDice", "Hit Dice & Rest") })] }),
         close
       ] }),
-      pools.length ? node("div", { className: "ve-rest-editor-pool", children: [
-        node("label", { children: [node("span", { text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.HitDieType2", "Hit Die Type") }), select] }),
-        node("div", { className: "ve-rest-editor-adjust", children: [decrease, value, increase] }),
-        node("small", { text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.UseOrToCorrectTheAvailableTotalManually", "Use − or + to correct the available total manually.") })
-      ] }) : node("p", { className: "ve-rest-editor-empty", text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.ThisCharacterHasNoHitDiePoolsAvailableTo", "This character has no hit-die pools available to edit.") }),
-      node("div", { className: "ve-rest-editor-actions", children: [shortRest, longRest] }),
+      pools.length ? node("div", { className: "mc-rest-editor-pool", children: [
+        node("label", { children: [node("span", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.HitDieType2", "Hit Die Type") }), select] }),
+        node("div", { className: "mc-rest-editor-adjust", children: [decrease, value, increase] }),
+        node("small", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.UseOrToCorrectTheAvailableTotalManually", "Use − or + to correct the available total manually.") })
+      ] }) : node("p", { className: "mc-rest-editor-empty", text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.ThisCharacterHasNoHitDiePoolsAvailableTo", "This character has no hit-die pools available to edit.") }),
+      node("div", { className: "mc-rest-editor-actions", children: [shortRest, longRest] }),
       modalStatus
     ]
   });
   refreshPool();
-  return node("div", { className: "ve-hp-editor-layer", attrs: { role: "presentation" }, children: [panel] });
+  return node("div", { className: "mc-hp-editor-layer", attrs: { role: "presentation" }, children: [panel] });
 
   function poolLabel(pool) {
     return `${pool.denomination} — ${pool.value} / ${pool.max}`;
@@ -1106,19 +1106,19 @@ function hitDiceRestEditor(actor, open, commands, scope) {
     if (pending || !pool) return;
     pending = true;
     modalStatus.classList.remove("is-error");
-    modalStatus.textContent = localizedText(commands.localize, "VEMOBILE.Character.Presenter.UpdatingHitDice", "Updating hit dice…");
+    modalStatus.textContent = localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.UpdatingHitDice", "Updating hit dice…");
     refreshPool();
     try {
       const outcome = await commands.execute(ACTOR_COMMANDS.ADJUST_HIT_DICE, { actorSourceUuid: characterRecordSourceUuid(actor), denomination: selected, direction });
       const updated = outcome?.hitDice;
       if (updated && !scope.disposed) {
         pool.value = Math.max(0, Math.min(pool.max, Number(updated.value) || 0));
-        modalStatus.textContent = localizedText(commands.localize, "VEMOBILE.Character.Presenter.HitDiceUpdated", "Hit dice updated.");
+        modalStatus.textContent = localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.HitDiceUpdated", "Hit dice updated.");
       }
     } catch (error) {
       if (!scope.disposed) {
         modalStatus.classList.add("is-error");
-        modalStatus.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Character.Presenter.FoundryCouldNotUpdateThoseHitDice", "Foundry could not update those hit dice.");
+        modalStatus.textContent = error?.message ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.FoundryCouldNotUpdateThoseHitDice", "Foundry could not update those hit dice.");
       }
     } finally {
       if (!scope.disposed) {
@@ -1135,7 +1135,7 @@ function hitDiceRestEditor(actor, open, commands, scope) {
         if (pending) return;
         pending = true;
         modalStatus.classList.remove("is-error");
-        modalStatus.textContent = localizedText(commands.localize, "VEMOBILE.Character.Presenter.OpeningOptions", "Opening {label} options…", { label: label.toLowerCase() });
+        modalStatus.textContent = localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.OpeningOptions", "Opening {label} options…", { label: label.toLowerCase() });
         refreshPool();
         try {
           await commands.execute(ACTOR_COMMANDS.TAKE_REST, { actorSourceUuid: characterRecordSourceUuid(actor), type });
@@ -1144,7 +1144,7 @@ function hitDiceRestEditor(actor, open, commands, scope) {
           if (!scope.disposed) {
             pending = false;
             modalStatus.classList.add("is-error");
-            modalStatus.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Character.Presenter.FoundryCouldNotStartTheWorkflow", "Foundry could not start the {label} workflow.", { label: label.toLowerCase() });
+            modalStatus.textContent = error?.message ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.FoundryCouldNotStartTheWorkflow", "Foundry could not start the {label} workflow.", { label: label.toLowerCase() });
             refreshPool();
           }
         }
@@ -1157,7 +1157,7 @@ function hitDiceRestEditor(actor, open, commands, scope) {
 function characterHeaderVitals(actor, commands, status, scope) {
   const hitDice = actor.resources?.find((resource) => resource.kind === "hit-dice");
   const hitDiceAvailable = hitDice ? `${hitDice.value} / ${hitDice.max}` : "—";
-  return node("div", { className: "ve-character-header-vitals", attrs: { "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.CharacterVitals", "Character vitals") }, children: [
+  return node("div", { className: "mc-character-header-vitals", attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.CharacterVitals", "Character vitals") }, children: [
     headerArmorClass(actor, commands, status, scope),
     headerSpeedVital(actor, commands, scope),
     headerInitiative(actor, commands, status, scope),
@@ -1172,31 +1172,31 @@ function headerSpeedVital(actor, commands, scope) {
   const selected = modes.find((entry) => entry.key === saved)
     ?? modes.find((entry) => entry.key === "walk") ?? modes[0] ?? null;
   if (selected && saved && selected.key !== saved) SPEED_SELECTION_BY_ACTOR.set(source, selected.key);
-  const label = headerLabel(actor, "speed", localizedText(commands.localize, "VEMOBILE.Character.Header.speed", "Speed"));
-  const hoverLabel = commands.localize?.("DND5E.MOVEMENT.Hover", "Hover") ?? localizedText(commands.localize, "VEMOBILE.Collective.Hover", "Hover");
+  const label = headerLabel(actor, "speed", localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Header.speed", "Speed"));
+  const hoverLabel = commands.localize?.("DND5E.MOVEMENT.Hover", "Hover") ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Collective.Hover", "Hover");
   const movementLabel = entry => entry && entry.key !== "walk" ? `${label} · ${entry.label}` : label;
   const movementValue = entry => entry ? `${entry.value} ${actor.speed.units}` : "—";
   const value = movementValue(selected);
   if (modes.length < 2) return headerVital(movementLabel(selected), value, movementIcon(selected?.key), "is-speed");
   let open = false;
-  const extension = node("div", { className: "ve-speed-extension", attrs: {
-    hidden: true, "data-ve-back-dismissable": "true", "data-ve-back-kind": "speed-selector"
+  const extension = node("div", { className: "mc-speed-extension", attrs: {
+    hidden: true, "data-mc-back-dismissable": "true", "data-mc-back-kind": "speed-selector"
   } });
   const valueNode = node("strong", { text: value });
   const labelNode = node("small", { text: movementLabel(selected) });
   const symbol = movementIcon(selected.key);
   const button = node("button", {
-    className: "ve-speed-trigger", attrs: { type: "button", "aria-haspopup": "true", "aria-expanded": "false",
+    className: "mc-speed-trigger", attrs: { type: "button", "aria-haspopup": "true", "aria-expanded": "false",
       "aria-label": `${label}: ${selected.label}${selected.hover ? ` (${hoverLabel})` : ""}, ${selected.value} ${actor.speed.units}` },
     on: { click: () => setOpen(!open) },
-    children: [labelNode, node("span", { className: "ve-header-vital-value", children: [symbol, valueNode] })]
+    children: [labelNode, node("span", { className: "mc-header-vital-value", children: [symbol, valueNode] })]
   }, scope);
-  const control = node("div", { className: "ve-character-header-vital is-speed is-interactive", children: [button, extension] });
+  const control = node("div", { className: "mc-character-header-vital is-speed is-interactive", children: [button, extension] });
   const draw = () => {
     const current = SPEED_SELECTION_BY_ACTOR.get(source) || selected.key;
     extension.replaceChildren(...modes.filter((entry) => entry.key !== current).map((entry) => {
       const itemLabel = `${entry.label}${entry.hover ? ` (${hoverLabel})` : ""}: ${entry.value} ${actor.speed.units}`;
-      return node("button", { className: "ve-speed-option", attrs: { type: "button", "aria-label": itemLabel, title: itemLabel },
+      return node("button", { className: "mc-speed-option", attrs: { type: "button", "aria-label": itemLabel, title: itemLabel },
         on: { click: (event) => {
           event.stopPropagation();
           SPEED_SELECTION_BY_ACTOR.set(source, entry.key);
@@ -1206,7 +1206,7 @@ function headerSpeedVital(actor, commands, scope) {
           button.setAttribute("aria-label", `${label}: ${itemLabel}`);
           setOpen(false);
           draw();
-        } }, children: [movementIcon(entry.key), node("span", { className: "ve-speed-option-name", text: `${entry.label}${entry.hover ? ` (${hoverLabel})` : ""}` }), node("strong", { text: `${entry.value} ${actor.speed.units}` })]
+        } }, children: [movementIcon(entry.key), node("span", { className: "mc-speed-option-name", text: `${entry.label}${entry.hover ? ` (${hoverLabel})` : ""}` }), node("strong", { text: `${entry.value} ${actor.speed.units}` })]
       }, scope);
     }));
   };
@@ -1217,7 +1217,7 @@ function headerSpeedVital(actor, commands, scope) {
     button.setAttribute("aria-expanded", String(open));
     if (open) {
       const rect = control.getBoundingClientRect();
-      const pane = control.closest(".ve-character-screen")?.getBoundingClientRect();
+      const pane = control.closest(".mc-character-screen")?.getBoundingClientRect();
       const visual = globalThis.visualViewport;
       const placement = speedExtensionGeometry(rect, pane, visual, extension.getBoundingClientRect().width,
         globalThis.innerWidth ?? Infinity);
@@ -1234,7 +1234,7 @@ function headerSpeedVital(actor, commands, scope) {
   };
   draw();
   scope.listen(document, "pointerdown", (event) => { if (open && !control.contains(event.target)) setOpen(false); }, { passive: true });
-  scope.listen(extension, "ve-close", () => setOpen(false));
+  scope.listen(extension, "mc-close", () => setOpen(false));
   return control;
 }
 
@@ -1248,7 +1248,7 @@ export function speedExtensionGeometry(control, pane, viewport, preferredWidth, 
 }
 
 function movementIconClass(key) {
-  return `fas fa-shoe-prints ve-movement-icon is-${String(key || "walk").replace(/[^a-z0-9-]/gu, "")}`;
+  return `fas fa-shoe-prints mc-movement-icon is-${String(key || "walk").replace(/[^a-z0-9-]/gu, "")}`;
 }
 
 function movementIcon(key) {
@@ -1257,10 +1257,10 @@ function movementIcon(key) {
 
 function headerArmorClass(actor, commands, status, scope) {
   const enabled = Boolean(actor.capabilities?.configureArmorClass);
-  const actionLabel = commands.localize?.("VEMOBILE.Character.ConfigureArmourClass", "Configure Armor Class") ?? localizedText(commands.localize, "VEMOBILE.Character.ConfigureArmourClass", "Configure Armor Class");
-  const unavailableLabel = commands.localize?.("VEMOBILE.Character.ArmourClassUnavailable", "Unavailable") ?? localizedText(commands.localize, "VEMOBILE.Character.ArmourClassUnavailable", "Unavailable");
+  const actionLabel = commands.localize?.("MIKELANDIA_CONTROLS.Character.ConfigureArmourClass", "Configure Armor Class") ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.ConfigureArmourClass", "Configure Armor Class");
+  const unavailableLabel = commands.localize?.("MIKELANDIA_CONTROLS.Character.ArmourClassUnavailable", "Unavailable") ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.ArmourClassUnavailable", "Unavailable");
   return node("button", {
-    className: "ve-character-header-vital is-armour",
+    className: "mc-character-header-vital is-armour",
     attrs: {
       type: "button", disabled: !enabled,
       "aria-label": `${headerLabel(actor, "armourClass", "Armor Class")} ${actor.ac ?? "—"}. ${enabled ? actionLabel : unavailableLabel}`
@@ -1270,29 +1270,29 @@ function headerArmorClass(actor, commands, status, scope) {
       if (button.disabled) return;
       button.disabled = true;
       try { await commands.openArmorClass(characterRecordSourceUuid(actor)); }
-      catch (error) { status.textContent = error?.message ?? (commands.localize?.("VEMOBILE.Character.ArmourClassFailed", "Armor Class configuration could not open.") ?? localizedText(commands.localize, "VEMOBILE.Character.ArmourClassFailed", "Armor Class configuration could not open.")); }
+      catch (error) { status.textContent = error?.message ?? (commands.localize?.("MIKELANDIA_CONTROLS.Character.ArmourClassFailed", "Armor Class configuration could not open.") ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.ArmourClassFailed", "Armor Class configuration could not open.")); }
       finally { if (!scope.disposed) button.disabled = false; }
     } },
-    children: [node("small", { text: headerLabel(actor, "armourClass", localizedText(commands.localize, "VEMOBILE.Character.Header.armourClass", "Armor Class")) }), headerVitalValue(icon("fa-shield-halved", "sharp fa-solid"), actor.ac ?? "—")]
+    children: [node("small", { text: headerLabel(actor, "armourClass", localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Header.armourClass", "Armor Class")) }), headerVitalValue(icon("fa-shield-halved", "sharp fa-solid"), actor.ac ?? "—")]
   }, scope);
 }
 
 function headerRestVital(actor, value, commands, scope) {
   const enabled = Boolean(actor.capabilities?.adjustHitDice || actor.capabilities?.shortRest || actor.capabilities?.longRest);
   return node("button", {
-    className: "ve-character-header-vital is-hit-dice",
-    attrs: { type: "button", disabled: !enabled, "aria-label": enabled ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.HitDiceOpenHitDiceAndRestControls", "Hit Dice {value}. Open hit dice and rest controls", { value: (value) }) : localizedText(commands.localize, "VEMOBILE.Character.Presenter.HitDice", "Hit Dice {value}", { value: (value) }) },
+    className: "mc-character-header-vital is-hit-dice",
+    attrs: { type: "button", disabled: !enabled, "aria-label": enabled ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.HitDiceOpenHitDiceAndRestControls", "Hit Dice {value}. Open hit dice and rest controls", { value: (value) }) : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.HitDice", "Hit Dice {value}", { value: (value) }) },
     on: { click: () => commands.openRestEditor() },
-    children: [node("small", { text: headerLabel(actor, "hitDice", localizedText(commands.localize, "VEMOBILE.Character.Header.hitDice", "Hit Dice & Rest")) }), headerVitalValue(characterHitDieIcon(actor, scope), value)]
+    children: [node("small", { text: headerLabel(actor, "hitDice", localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Header.hitDice", "Hit Dice & Rest")) }), headerVitalValue(characterHitDieIcon(actor, scope), value)]
   }, scope);
 }
 
 function headerVital(label, value, symbol, className) {
-  return node("span", { className: `ve-character-header-vital ${className}`, children: [node("small", { text: label }), headerVitalValue(symbol, value)] });
+  return node("span", { className: `mc-character-header-vital ${className}`, children: [node("small", { text: label }), headerVitalValue(symbol, value)] });
 }
 
 function headerVitalValue(symbol, value) {
-  return node("span", { className: "ve-header-vital-value", children: [symbol, node("strong", { text: value })] });
+  return node("span", { className: "mc-header-vital-value", children: [symbol, node("strong", { text: value })] });
 }
 
 export function characterHitDieIcon(actor, scope) {
@@ -1300,7 +1300,7 @@ export function characterHitDieIcon(actor, scope) {
   const denomination = /^d(?:4|6|8|10|12|20)$/u.test(requested ?? "") ? requested : "d8";
   const fallback = "systems/dnd5e/icons/svg/dice/d8.svg";
   return node("img", {
-    className: "ve-header-hit-die",
+    className: "mc-header-hit-die",
     attrs: { src: `systems/dnd5e/icons/svg/dice/${denomination}.svg`, alt: "", "aria-hidden": "true" },
     on: { error: (event) => {
       const image = event.currentTarget;
@@ -1312,10 +1312,10 @@ export function characterHitDieIcon(actor, scope) {
 function headerInitiative(actor, commands, status, scope) {
   const enabled = Boolean(actor.capabilities?.rollInitiative);
   return node("button", {
-    className: "ve-character-header-vital is-initiative",
-    attrs: { type: "button", disabled: !enabled, title: enabled ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.RollInitiative", "Roll initiative") : localizedText(commands.localize, "VEMOBILE.Character.Presenter.InitiativeRollUnavailable", "Initiative roll unavailable") },
-    on: { click: (event) => runActorCommand(event.currentTarget, ACTOR_COMMANDS.ROLL_INITIATIVE, actor, {}, commands, status, localizedText(commands.localize, "VEMOBILE.Character.Presenter.RollingInitiative", "Rolling initiative…"), localizedText(commands.localize, "VEMOBILE.Character.Presenter.Initiative", "Initiative")) },
-    children: [node("small", { text: headerLabel(actor, "initiative", localizedText(commands.localize, "VEMOBILE.Character.Header.initiative", "Initiative")) }), headerVitalValue(icon("fa-bolt", "sharp fa-solid"), formatModifier(actor.initiative))]
+    className: "mc-character-header-vital is-initiative",
+    attrs: { type: "button", disabled: !enabled, title: enabled ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.RollInitiative", "Roll initiative") : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.InitiativeRollUnavailable", "Initiative roll unavailable") },
+    on: { click: (event) => runActorCommand(event.currentTarget, ACTOR_COMMANDS.ROLL_INITIATIVE, actor, {}, commands, status, localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.RollingInitiative", "Rolling initiative…"), localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Initiative", "Initiative")) },
+    children: [node("small", { text: headerLabel(actor, "initiative", localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Header.initiative", "Initiative")) }), headerVitalValue(icon("fa-bolt", "sharp fa-solid"), formatModifier(actor.initiative))]
   }, scope);
 }
 
@@ -1335,19 +1335,19 @@ function favouritesPanel(actor, commands, status, openItem, expandedItemId, open
   let sortMode = settings.characterCollections?.favouritesSort ?? "manual";
   let renderScope = null;
   const openSections = new Set(openSectionIds ?? []);
-  const body = node("div", { className: "ve-sheet-collection-body ve-favourites-body" });
-  const controls = collectionControls(localizedText(commands.localize, "VEMOBILE.Character.Tabs.Favourites", "Favorites"), sortMode, () => {
+  const body = node("div", { className: "mc-sheet-collection-body mc-favourites-body" });
+  const controls = collectionControls(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Favourites", "Favorites"), sortMode, () => {
     sortMode = sortMode === "alphabetical" ? "manual" : "alphabetical";
     persistCollectionPreference(commands, "favouritesSort", sortMode, status);
     draw();
-  }, () => body.querySelectorAll("details.ve-sheet-collection-section"), (sectionIds, expanded) => {
+  }, () => body.querySelectorAll("details.mc-sheet-collection-section"), (sectionIds, expanded) => {
     openSections.clear();
     for (const sectionId of sectionIds) openSections.add(sectionId);
     if (!expanded) commands.setExpandedCharacterItem("");
     commands.setCharacterSectionsExpanded(sectionIds);
   }, scope, { localize: commands.localize });
-  const card = collectionCard(localizedText(commands.localize, "VEMOBILE.Character.Tabs.Favourites", "Favorites"), sheetTabIcon("favourites"), [body], controls.element);
-  card.classList.add("ve-favourites-card");
+  const card = collectionCard(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Favourites", "Favorites"), sheetTabIcon("favourites"), [body], controls.element);
+  card.classList.add("mc-favourites-card");
   card.dataset.sourceMode = sourceMode;
 
   const draw = () => {
@@ -1359,7 +1359,7 @@ function favouritesPanel(actor, commands, status, openItem, expandedItemId, open
     const inventoryGroups = groupInventory(actor.inventory ?? [], sortMode, commands.localize);
     body.replaceChildren(...(sections.length ? sections.map((section) => {
       const key = `favourites:${section.key}`;
-      const heading = node("span", { className: "ve-favourite-section-heading", children: [icon(section.icon), node("span", { text: section.label }), section.resource ? favouriteSpellSlotIndicator(section.resource, commands.localize) : null] });
+      const heading = node("span", { className: "mc-favourite-section-heading", children: [icon(section.icon), node("span", { text: section.label }), section.resource ? favouriteSpellSlotIndicator(section.resource, commands.localize) : null] });
       return collectionSection(key, heading, section.items.length, section.items.map((item) => {
         const containerEntry = ["backpack", "container"].includes(item.type) ? findInventoryEntry(inventoryGroups, item.id) : null;
         return containerEntry
@@ -1370,7 +1370,7 @@ function favouritesPanel(actor, commands, status, openItem, expandedItemId, open
         else openSections.delete(key);
         commands.setCharacterSectionExpanded(key, open);
       }, renderScope);
-    }) : [node("div", { className: "ve-favourites-empty", children: [icon("fa-star", "regular"), node("strong", { text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.NoFavouritesYet", "No favorites yet.") }), node("p", { text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.FavouriteItemsFromInventorySpellsOrFeaturesToKeep", "Favorite items from Inventory, Spells, or Features to keep them close at hand.") })] })]));
+    }) : [node("div", { className: "mc-favourites-empty", children: [icon("fa-star", "regular"), node("strong", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NoFavouritesYet", "No favorites yet.") }), node("p", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.FavouriteItemsFromInventorySpellsOrFeaturesToKeep", "Favorite items from Inventory, Spells, or Features to keep them close at hand.") })] })]));
     controls.updateSort(sortMode);
     controls.updateExpansion();
   };
@@ -1402,8 +1402,8 @@ function favouriteSpellSlotIndicator(resource, localize) {
   const maximum = Number(resource?.max);
   if (!Number.isInteger(value) || !Number.isInteger(maximum) || maximum <= 0) return null;
   return node("span", {
-    className: "ve-favourite-slot-indicator",
-    attrs: { "aria-label": localizedText(localize, "VEMOBILE.Character.Presenter.SpellSlotsRemaining", "{value} of {maximum} spell slots remaining", { value, maximum }), title: localizedText(localize, "VEMOBILE.Character.Presenter.SpellSlotsRemainingShort", "{value} / {maximum} spell slots remaining", { value, maximum }) },
+    className: "mc-favourite-slot-indicator",
+    attrs: { "aria-label": localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.SpellSlotsRemaining", "{value} of {maximum} spell slots remaining", { value, maximum }), title: localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.SpellSlotsRemainingShort", "{value} / {maximum} spell slots remaining", { value, maximum }) },
     children: [capacityIndicator(value, maximum), node("small", { text: `${value}/${maximum}` })]
   });
 }
@@ -1411,22 +1411,22 @@ function favouriteSpellSlotIndicator(resource, localize) {
 function favouriteRow(item, actor, commands, status, openItem, expandedItemId, sourceMode, scope) {
   let detail;
   const metadata = favouriteItemMetadata(item, commands.localize);
-  const copy = node("span", { className: "ve-sheet-item-copy", children: [node("strong", { text: characterItemDisplayName(item) })] });
+  const copy = node("span", { className: "mc-sheet-item-copy", children: [node("strong", { text: characterItemDisplayName(item) })] });
   const immediate = node("span", {
-    className: "ve-favourite-immediate",
+    className: "mc-favourite-immediate",
     attrs: metadata.values.length
       ? { "aria-label": metadata.values.map((entry) => `${entry.label}: ${entry.value}`).join(", ") }
       : { "aria-hidden": "true" },
     children: metadata.columns.map((entry) => node("span", {
-      className: `ve-favourite-metadata is-${entry.key}${entry.value ? "" : " is-empty"}`,
+      className: `mc-favourite-metadata is-${entry.key}${entry.value ? "" : " is-empty"}`,
       attrs: entry.value ? { title: `${entry.label}: ${entry.value}` } : { "aria-hidden": "true" },
       text: entry.value
     }))
   });
-  const middle = node("span", { className: "ve-sheet-item-middle ve-favourite-middle", children: [copy, immediate] });
+  const middle = node("span", { className: "mc-sheet-item-middle mc-favourite-middle", children: [copy, immediate] });
   const overflow = node("button", {
-    className: "ve-favourite-overflow",
-    attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.ActionsFor", "Actions for {name}", { name: (item.name) }), "aria-haspopup": "menu" },
+    className: "mc-favourite-overflow",
+    attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.ActionsFor", "Actions for {name}", { name: (item.name) }), "aria-haspopup": "menu" },
     on: { click: (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -1435,12 +1435,12 @@ function favouriteRow(item, actor, commands, status, openItem, expandedItemId, s
     children: [icon("fa-ellipsis-vertical")]
   }, scope);
   const summary = node("summary", {
-    className: "ve-sheet-item-row ve-favourite-row",
+    className: "mc-sheet-item-row mc-favourite-row",
     attrs: { "aria-expanded": String(expandedItemId === item.id), "aria-label": `${expandedItemId === item.id ? "Collapse" : "Expand"} ${item.name}` },
     on: { click: (event) => {
       event.preventDefault();
       const willOpen = !detail.open;
-      for (const other of detail.closest(".ve-character-screen")?.querySelectorAll("details.ve-sheet-item-detail[open], details.ve-sheet-container[open]") ?? []) {
+      for (const other of detail.closest(".mc-character-screen")?.querySelectorAll("details.mc-sheet-item-detail[open], details.mc-sheet-container[open]") ?? []) {
         if (other !== detail && !other.contains(detail)) {
           other.open = false;
           other.querySelector(":scope > summary")?.setAttribute("aria-expanded", "false");
@@ -1455,7 +1455,7 @@ function favouriteRow(item, actor, commands, status, openItem, expandedItemId, s
   }, scope);
   bindCharacterItemMenu(summary, item, actor, commands, status, scope);
   detail = node("details", {
-    className: "ve-sheet-item-detail ve-favourite-detail",
+    className: "mc-sheet-item-detail mc-favourite-detail",
     attrs: { open: expandedItemId === item.id },
     dataset: { itemId: item.id, favouriteSource: sourceMode },
     children: [summary, itemInlineSummary(item, actor, commands, status, openItem, scope)]
@@ -1464,53 +1464,36 @@ function favouriteRow(item, actor, commands, status, openItem, expandedItemId, s
 }
 
 function overviewPanel(actor, commands, status, scope) {
-  return node("div", { className: "ve-sheet-stack", children: [
+  return node("div", { className: "mc-sheet-stack", children: [
     activeEffectsPreview(actor, () => commands.selectCharacterTab("effects"), commands, scope),
     abilitiesSavesPreview(actor, () => commands.selectCharacterTab("abilities"), commands, status, scope),
     traitsPanel(actor, commands.localize)
   ] });
 }
 
-function overviewActions(actor, commands, status, scope) {
-  const proficient = actor.skills?.filter((skill) => skill.proficiency > 0).sort((first, second) => second.modifier - first.modifier).slice(0, 3) ?? [];
-  return node("section", { className: "ve-sheet-card", children: [sectionHeading(localizedText(commands.localize, "VEMOBILE.Character.Presenter.QuickRolls", "Quick rolls"), "fa-bolt"), proficient.length ? node("div", { className: "ve-quick-rolls", children: proficient.map((skill) => rollButton({ label: skill.label, meta: `${skill.ability} ${localizedText(commands.localize, "VEMOBILE.Character.Presenter.Skill", "skill")}`, value: formatModifier(skill.modifier), enabled: actor.capabilities?.rollSkill?.includes(skill.key), onClick: (button) => runActorCommand(button, ACTOR_COMMANDS.ROLL_SKILL, actor, { skill: skill.key }, commands, status, localizedText(commands.localize, "VEMOBILE.Character.Presenter.RollingSkill", "Rolling {label}…", { label: skill.label }), skill.label), scope })) }) : node("p", { className: "ve-sheet-empty", text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.NoProficientSkillsAreVisible", "No proficient skills are visible.") })] });
-}
-
-function abilitiesPanel(actor, commands, status, scope) {
-  return node("section", { className: "ve-sheet-card", children: [sectionHeading(localizedText(commands.localize, "VEMOBILE.Character.Presenter.AbilitiesAndSaves", "Abilities and saves"), "fa-dumbbell"), node("p", { className: "ve-section-intro", text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.TapCheckOrSaveToSubmitANativeD", "Tap Check or Save to submit a native D&D5e roll to Foundry.") }), node("div", { className: "ve-ability-grid", children: (actor.abilities ?? []).map((ability) => {
-    const canCheck = actor.capabilities?.rollAbility?.includes(ability.key);
-    const canSave = actor.capabilities?.rollSave?.includes(ability.key);
-    return node("article", { className: "ve-ability-card", children: [
-      node("div", { className: "ve-ability-heading", children: [node("span", { text: ability.short }), node("small", { text: ability.label })] }),
-      node("div", { className: "ve-ability-numbers", children: [node("strong", { text: ability.score }), node("b", { text: formatModifier(ability.modifier) })] }),
-      node("div", { className: "ve-ability-actions", children: [compactAction(localizedText(commands.localize, "VEMOBILE.Character.Presenter.Check", "Check"), formatModifier(ability.modifier), canCheck, (button) => runActorCommand(button, ACTOR_COMMANDS.ROLL_ABILITY, actor, { ability: ability.key }, commands, status, localizedText(commands.localize, "VEMOBILE.Character.Presenter.RollingAbilityCheck", "Rolling {label} check…", { label: ability.label }), localizedText(commands.localize, "VEMOBILE.Character.Presenter.AbilityCheck", "{label} check", { label: ability.label })), scope, false, commands.localize), compactAction(localizedText(commands.localize, "VEMOBILE.Character.Presenter.SavingThrowShort", "Save"), formatModifier(ability.saveModifier), canSave, (button) => runActorCommand(button, ACTOR_COMMANDS.ROLL_SAVE, actor, { ability: ability.key }, commands, status, localizedText(commands.localize, "VEMOBILE.Character.Presenter.RollingAbilitySave", "Rolling {label} save…", { label: ability.label }), localizedText(commands.localize, "VEMOBILE.Character.Presenter.AbilitySave", "{label} save", { label: ability.label })), scope, Number(ability.proficiency) > 0, commands.localize, localizedText(commands.localize, "VEMOBILE.Character.Presenter.SavingThrow", "Saving throw"))] })
-    ] });
-  }) })] });
-}
-
 function skillsPanel(actor, commands, status, scope, compact = false) {
-  return node("section", { className: "ve-sheet-card", children: [sectionHeading(localizedText(commands.localize, "VEMOBILE.Character.Presenter.Skills", "Skills"), "fa-list-check"), node("div", { className: `ve-skill-list${compact ? " ve-skill-list-compact" : ""}`, children: (actor.skills ?? []).map((skill) => {
+  return node("section", { className: "mc-sheet-card", children: [sectionHeading(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Skills", "Skills"), "fa-list-check"), node("div", { className: `mc-skill-list${compact ? " mc-skill-list-compact" : ""}`, children: (actor.skills ?? []).map((skill) => {
     const enabled = actor.capabilities?.rollSkill?.includes(skill.key);
     const proficiency = skillProficiencyLabel(skill.proficiency, commands.localize);
     return node("button", {
-          className: `ve-skill-row is-${proficiency.key}`,
-      attrs: { type: "button", disabled: !enabled, title: proficiency.label, "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Roll", "Roll {label} {modifier}; {proficiency}", { label: skill.label, modifier: formatModifier(skill.modifier), proficiency: proficiency.label }),  },
-      on: { click: (event) => runActorCommand(event.currentTarget, ACTOR_COMMANDS.ROLL_SKILL, actor, { skill: skill.key }, commands, status, localizedText(commands.localize, "VEMOBILE.Character.Presenter.RollingSkill", "Rolling {label}…", { label: skill.label }), skill.label) },
-      children: [node("span", { className: "ve-proficiency-mark" }), compact ? node("span", { text: skill.label }) : node("span", { children: [node("strong", { text: skill.label }), node("small", { text: [skill.ability, skill.passive === null ? "" : localizedText(commands.localize, "VEMOBILE.Character.Presenter.Passive", "Passive {passive}", { passive: (skill.passive) })].filter(Boolean).join(" · ") })] }), node("b", { text: formatModifier(skill.modifier) }), icon("fa-dice-d20")]
+          className: `mc-skill-row is-${proficiency.key}`,
+      attrs: { type: "button", disabled: !enabled, title: proficiency.label, "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Roll", "Roll {label} {modifier}; {proficiency}", { label: skill.label, modifier: formatModifier(skill.modifier), proficiency: proficiency.label }),  },
+      on: { click: (event) => runActorCommand(event.currentTarget, ACTOR_COMMANDS.ROLL_SKILL, actor, { skill: skill.key }, commands, status, localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.RollingSkill", "Rolling {label}…", { label: skill.label }), skill.label) },
+      children: [node("span", { className: "mc-proficiency-mark" }), compact ? node("span", { text: skill.label }) : node("span", { children: [node("strong", { text: skill.label }), node("small", { text: [skill.ability, skill.passive === null ? "" : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Passive", "Passive {passive}", { passive: (skill.passive) })].filter(Boolean).join(" · ") })] }), node("b", { text: formatModifier(skill.modifier) }), icon("fa-dice-d20")]
     }, scope);
   }) })] });
 }
 
 function compactAbilitiesPanel(actor, commands, status, scope) {
-  return node("section", { className: "ve-sheet-card ve-abilities-saves-preview", children: [
-    sectionHeading(localizedText(commands.localize, "VEMOBILE.Character.Presenter.AbilitiesAndSaves", "Abilities and saves"), "fa-dumbbell"),
+  return node("section", { className: "mc-sheet-card mc-abilities-saves-preview", children: [
+    sectionHeading(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.AbilitiesAndSaves", "Abilities and saves"), "fa-dumbbell"),
     abilityScoresPreview(actor, commands, status, scope)
   ] });
 }
 
 function abilitiesFullPanel(actor, commands, status, scope) {
-  return node("div", { className: "ve-sheet-stack", children: [
-    node("button", { className: "ve-sheet-back", attrs: { type: "button" }, on: { click: () => commands.selectCharacterTab("overview") }, children: [icon("fa-chevron-left"), node("span", { text: localizedText(commands.localize, "VEMOBILE.Character.Tabs.Overview", "Overview") })] }, scope),
+  return node("div", { className: "mc-sheet-stack", children: [
+    node("button", { className: "mc-sheet-back", attrs: { type: "button" }, on: { click: () => commands.selectCharacterTab("overview") }, children: [icon("fa-chevron-left"), node("span", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Overview", "Overview") })] }, scope),
     compactAbilitiesPanel(actor, commands, status, scope),
     skillsPanel(actor, commands, status, scope, true)
   ] });
@@ -1519,11 +1502,11 @@ function abilitiesFullPanel(actor, commands, status, scope) {
 function traitsPanel(actor, localize = null) {
   const traits = actor.traits ?? [];
   if (!traits.length) return null;
-  return node("section", { className: "ve-sheet-card ve-traits-preview", children: [
-    sectionHeading(localizedText(localize, "VEMOBILE.Character.Labels.Traits", "Traits"), "fa-flag"),
-    node("div", { className: "ve-traits-list", children: traits.map((trait) => node("article", { className: "ve-trait-group", children: [
+  return node("section", { className: "mc-sheet-card mc-traits-preview", children: [
+    sectionHeading(localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Traits", "Traits"), "fa-flag"),
+    node("div", { className: "mc-traits-list", children: traits.map((trait) => node("article", { className: "mc-trait-group", children: [
       node("h4", { children: [icon(trait.icon), node("span", { text: trait.label })] }),
-      node("div", { className: "ve-trait-pills", children: trait.entries.map((entry) => node("span", { text: entry.value ? `${entry.label} · ${entry.value}` : entry.label })) })
+      node("div", { className: "mc-trait-pills", children: trait.entries.map((entry) => node("span", { text: entry.value ? `${entry.label} · ${entry.value}` : entry.label })) })
     ] })) })
   ] });
 }
@@ -1532,18 +1515,18 @@ function inventoryPanel(actor, commands, status, openItem, expandedItemId, openS
   let sortMode = settings.characterCollections?.inventorySort ?? "manual";
   let renderScope = null;
   const openSections = new Set(openSectionIds ?? []);
-  const body = node("div", { className: "ve-sheet-collection-body" });
-  const controls = collectionControls(localizedText(commands.localize, "VEMOBILE.Character.Tabs.Inventory", "Inventory"), sortMode, () => {
+  const body = node("div", { className: "mc-sheet-collection-body" });
+  const controls = collectionControls(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Inventory", "Inventory"), sortMode, () => {
     sortMode = sortMode === "alphabetical" ? "manual" : "alphabetical";
     persistCollectionPreference(commands, "inventorySort", sortMode, status);
     draw();
-  }, () => body.querySelectorAll("details.ve-sheet-collection-section, details.ve-sheet-container"), (sectionIds, expanded) => {
+  }, () => body.querySelectorAll("details.mc-sheet-collection-section, details.mc-sheet-container"), (sectionIds, expanded) => {
     openSections.clear();
     for (const sectionId of sectionIds) openSections.add(sectionId);
     if (!expanded) commands.setExpandedCharacterItem("");
     commands.setCharacterSectionsExpanded(sectionIds);
   }, scope, { localize: commands.localize });
-  const card = collectionCard(localizedText(commands.localize, "VEMOBILE.Character.Tabs.Inventory", "Inventory"), sheetTabIcon("inventory"), [
+  const card = collectionCard(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Inventory", "Inventory"), sheetTabIcon("inventory"), [
     currencyStrip(actor, commands, status, scope),
     encumbranceMeter(actor.encumbrance, commands.readLocale?.() ?? "en", commands.localize),
     body
@@ -1561,7 +1544,7 @@ function inventoryPanel(actor, commands, status, openItem, expandedItemId, openS
         else openSections.delete(group.key);
         commands.setCharacterSectionExpanded(group.key, open);
       }, renderScope))
-      : [emptyCollection(localizedText(commands.localize, "VEMOBILE.Character.Presenter.NoInventoryItemsAreVisible", "No inventory items are visible."))]));
+      : [emptyCollection(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NoInventoryItemsAreVisible", "No inventory items are visible."))]));
     controls.updateSort(sortMode);
     controls.updateExpansion();
   };
@@ -1582,7 +1565,7 @@ function inventoryNode(entry, actor, commands, status, openItem, expandedItemId,
   let container;
   const setContainerOpen = (open) => {
     if (open) {
-      for (const other of container.closest(".ve-character-screen")?.querySelectorAll("details.ve-sheet-item-detail[open], details.ve-sheet-container[open]") ?? []) {
+      for (const other of container.closest(".mc-character-screen")?.querySelectorAll("details.mc-sheet-item-detail[open], details.mc-sheet-container[open]") ?? []) {
         if (other !== container && !other.contains(container)) other.open = false;
       }
     }
@@ -1590,7 +1573,7 @@ function inventoryNode(entry, actor, commands, status, openItem, expandedItemId,
     commands.setExpandedCharacterItem(open ? item.id : "");
   };
   const toggle = node("button", {
-    className: "ve-sheet-container-toggle",
+    className: "mc-sheet-container-toggle",
     attrs: { type: "button", "aria-label": `${initiallyOpen ? "Collapse" : "Expand"} ${item.name}`, "aria-expanded": initiallyOpen },
     on: { click: (event) => {
       event.preventDefault();
@@ -1600,7 +1583,7 @@ function inventoryNode(entry, actor, commands, status, openItem, expandedItemId,
     children: [toggleIcon]
   }, scope);
   container = node("details", {
-    className: "ve-sheet-container",
+    className: "mc-sheet-container",
     attrs: { open: initiallyOpen },
     dataset: { container: item.id },
     children: [
@@ -1609,9 +1592,9 @@ function inventoryNode(entry, actor, commands, status, openItem, expandedItemId,
           event.preventDefault();
           setContainerOpen(!container.open);
         } },
-        children: [itemActionButton(item, actor, commands, status, scope), itemMiddle(item, actor, commands, status, scope, contents ? localizedCount(commands.localize, "VEMOBILE.Character.Copy.ItemCount", { one: "{count} item", other: "{count} items" }, contents, commands.readLocale?.() ?? "en") : localizedText(commands.localize, "VEMOBILE.Character.Copy.Emptycontainer", "Empty container")), capacityText ? node("b", { text: capacityText }) : null, toggle]
+        children: [itemActionButton(item, actor, commands, status, scope), itemMiddle(item, actor, commands, status, scope, contents ? localizedCount(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.ItemCount", { one: "{count} item", other: "{count} items" }, contents, commands.readLocale?.() ?? "en") : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Emptycontainer", "Empty container")), capacityText ? node("b", { text: capacityText }) : null, toggle]
       }, scope),
-      node("div", { className: "ve-sheet-container-contents", children: entry.children.map((child) => inventoryNode(child, actor, commands, status, openItem, expandedItemId, scope, depth + 1, openContainers)) })
+      node("div", { className: "mc-sheet-container-contents", children: entry.children.map((child) => inventoryNode(child, actor, commands, status, openItem, expandedItemId, scope, depth + 1, openContainers)) })
     ]
   });
   bindCharacterItemMenu(container.querySelector(":scope > summary"), item, actor, commands, status, scope);
@@ -1628,12 +1611,12 @@ function spellsPanel(actor, commands, status, openItem, expandedItemId, openSect
   let filterMode = preferences.spellFilter ?? "all";
   let renderScope = null;
   const openSections = new Set(openSectionIds ?? []);
-  const body = node("div", { className: "ve-sheet-collection-body" });
-  const controls = collectionControls(localizedText(commands.localize, "VEMOBILE.Character.Tabs.Spells", "Spells"), sortMode, () => {
+  const body = node("div", { className: "mc-sheet-collection-body" });
+  const controls = collectionControls(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Spells", "Spells"), sortMode, () => {
     sortMode = sortMode === "alphabetical" ? "manual" : "alphabetical";
     persistCollectionPreference(commands, "spellSort", sortMode, status);
     draw();
-  }, () => body.querySelectorAll("details.ve-sheet-collection-section"), (sectionIds, expanded) => {
+  }, () => body.querySelectorAll("details.mc-sheet-collection-section"), (sectionIds, expanded) => {
     openSections.clear();
     for (const sectionId of sectionIds) openSections.add(sectionId);
     if (!expanded) commands.setExpandedCharacterItem("");
@@ -1645,7 +1628,7 @@ function spellsPanel(actor, commands, status, openItem, expandedItemId, openSect
     draw();
   }, scope, commands.localize);
   controls.element.prepend(filterButton.element);
-  const card = collectionCard(localizedText(commands.localize, "VEMOBILE.Character.Tabs.Spells", "Spells"), sheetTabIcon("spells"), [body], controls.element);
+  const card = collectionCard(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Spells", "Spells"), sheetTabIcon("spells"), [body], controls.element);
 
   const draw = () => {
     renderScope?.dispose();
@@ -1657,15 +1640,15 @@ function spellsPanel(actor, commands, status, openItem, expandedItemId, openSect
       || groupSpells(actor.spells, sortMode, commands.localize).some((section) => section.group === "spellcasting");
     let priorGroup = "";
     const children = [];
-    const castingHeading = () => spellGroupDivider(localizedText(commands.localize, "VEMOBILE.Character.Copy.Spellcasting", "Spellcasting"), actor.spellcasting, commands.localize, selection, renderScope);
+    const castingHeading = () => spellGroupDivider(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Spellcasting", "Spellcasting"), actor.spellcasting, commands.localize, selection, renderScope);
     if (hasSpellcasting && !sections.some((section) => section.group === "spellcasting")) children.push(castingHeading());
     for (const section of sections) {
         if (section.group !== priorGroup) {
-          children.push(section.group === "spellcasting" ? castingHeading() : spellGroupDivider(localizedText(commands.localize, "VEMOBILE.Character.Collections.Spells.Other", "Other Spells")));
+          children.push(section.group === "spellcasting" ? castingHeading() : spellGroupDivider(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Collections.Spells.Other", "Other Spells")));
           priorGroup = section.group;
         }
         const slots = section.level > 0 ? actor.resources?.find((resource) => resource.id === `spell-slot:spell${section.level}`) : null;
-        const heading = slots ? node("span", { className: "ve-sheet-collection-heading", children: [
+        const heading = slots ? node("span", { className: "mc-sheet-collection-heading", children: [
           node("span", { text: section.label }),
           spellSlotTrigger(slots, actor, commands, renderScope)
         ] }) : section.label;
@@ -1675,7 +1658,7 @@ function spellsPanel(actor, commands, status, openItem, expandedItemId, openSect
           commands.setCharacterSectionExpanded(section.key, open);
         }, renderScope));
     }
-    if (!sections.length) children.push(emptyCollection(filterMode === "prepared" ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.NoPreparedOrAlwaysAvailableSpellsAreVisible", "No prepared or always-available spells are visible.") : localizedText(commands.localize, "VEMOBILE.Character.Presenter.NoSpellsAreVisible", "No spells are visible.")));
+    if (!sections.length) children.push(emptyCollection(filterMode === "prepared" ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NoPreparedOrAlwaysAvailableSpellsAreVisible", "No prepared or always-available spells are visible.") : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NoSpellsAreVisible", "No spells are visible.")));
     body.replaceChildren(...children);
     controls.updateSort(sortMode);
     filterButton.update(filterMode);
@@ -1690,19 +1673,19 @@ function featuresPanel(actor, commands, status, openItem, expandedItemId, openSe
   let sortMode = settings.characterCollections?.featureSort ?? "manual";
   let renderScope = null;
   const openSections = new Set(openSectionIds ?? []);
-  const body = node("div", { className: "ve-sheet-collection-body" });
-  const controls = collectionControls(localizedText(commands.localize, "VEMOBILE.Character.Tabs.Features", "Features"), sortMode, () => {
+  const body = node("div", { className: "mc-sheet-collection-body" });
+  const controls = collectionControls(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Features", "Features"), sortMode, () => {
     sortMode = sortMode === "alphabetical" ? "manual" : "alphabetical";
     persistCollectionPreference(commands, "featureSort", sortMode, status);
     draw();
-  }, () => body.querySelectorAll("details.ve-sheet-collection-section"), (sectionIds, expanded) => {
+  }, () => body.querySelectorAll("details.mc-sheet-collection-section"), (sectionIds, expanded) => {
     openSections.clear();
     for (const sectionId of sectionIds) openSections.add(sectionId);
     if (!expanded) commands.setExpandedCharacterItem("");
     commands.setCharacterSectionsExpanded(sectionIds);
   }, scope, { localize: commands.localize });
   const resourceStrip = actor.type === "npc" ? npcResourceStrip(actor, commands) : null;
-  const card = collectionCard(localizedText(commands.localize, "VEMOBILE.Character.Tabs.Features", "Features"), sheetTabIcon("features"), [resourceStrip, body].filter(Boolean), controls.element);
+  const card = collectionCard(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Features", "Features"), sheetTabIcon("features"), [resourceStrip, body].filter(Boolean), controls.element);
 
   const draw = () => {
     renderScope?.dispose();
@@ -1715,7 +1698,7 @@ function featuresPanel(actor, commands, status, openItem, expandedItemId, openSe
         else openSections.delete(section.key);
         commands.setCharacterSectionExpanded(section.key, open);
       }, renderScope))
-      : [emptyCollection(localizedText(commands.localize, "VEMOBILE.Character.Presenter.NoFeaturesAreVisible", "No features are visible."))]));
+      : [emptyCollection(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NoFeaturesAreVisible", "No features are visible."))]));
     controls.updateSort(sortMode);
     controls.updateExpansion();
   };
@@ -1729,14 +1712,14 @@ function npcResourceStrip(actor, commands) {
   const lair = actor.npcResources?.lair;
   if (!legendary && !lair) return null;
   const localize = (key, fallback, data) => commands.localize?.(key, fallback, data) ?? fallback;
-  return node("div", { className: "ve-npc-resource-strip", children: [
+  return node("div", { className: "mc-npc-resource-strip", children: [
     legendary ? node("div", {
-      className: "ve-npc-resource-block",
-      attrs: { "aria-label": localize("VEMOBILE.Character.LegendaryRemaining", `${legendary.remaining} of ${legendary.max} Legendary Actions remaining`, { remaining: legendary.remaining, max: legendary.max }) },
+      className: "mc-npc-resource-block",
+      attrs: { "aria-label": localize("MIKELANDIA_CONTROLS.Character.LegendaryRemaining", `${legendary.remaining} of ${legendary.max} Legendary Actions remaining`, { remaining: legendary.remaining, max: legendary.max }) },
       children: [node("small", { text: localize("DND5E.LegendaryAction.LabelPl", "Legendary Actions") }),
-        node("span", { className: "ve-npc-resource-pips", attrs: { "aria-hidden": "true" }, children: Array.from({ length: legendary.max }, (_, index) => node("i", { className: index < legendary.remaining ? "is-available" : "is-spent" })) })]
+        node("span", { className: "mc-npc-resource-pips", attrs: { "aria-hidden": "true" }, children: Array.from({ length: legendary.max }, (_, index) => node("i", { className: index < legendary.remaining ? "is-available" : "is-spent" })) })]
     }) : null,
-    lair ? node("div", { className: "ve-npc-resource-block ve-npc-lair", children: [
+    lair ? node("div", { className: "mc-npc-resource-block mc-npc-lair", children: [
       node("small", { text: localize("DND5E.LAIR.Action.Label", "Lair Action") }),
       node("strong", { text: lair.initiative ?? "—" })
     ] }) : null
@@ -1748,12 +1731,12 @@ function biographyPanel(actor, commands, status, scope) {
   const sourceUuid = characterRecordSourceUuid(actor);
   const canEdit = Boolean(actor.capabilities?.editBiography);
   let storyEditor = null;
-  const storyEdit = biographyEditAction(localizedText(commands.localize, "VEMOBILE.Character.Tabs.Biography", "Biography"), false, (anchor) => {
+  const storyEdit = biographyEditAction(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Biography", "Biography"), false, (anchor) => {
     if (!storyEditor) return;
     openBiographyEditor(anchor, {
       actor,
       section: "biography",
-      label: localizedText(commands.localize, "VEMOBILE.Character.Tabs.Biography", "Biography"),
+      label: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Biography", "Biography"),
       iconName: "fa-feather-pointed",
       value: storyEditor.editorText,
       originalValue: storyEditor.originalSource,
@@ -1762,9 +1745,9 @@ function biographyPanel(actor, commands, status, scope) {
     }, commands, status, scope);
   }, scope, commands.localize);
   const description = node("div", {
-    className: "ve-character-biography-prose is-loading",
+    className: "mc-character-biography-prose is-loading",
     attrs: { "aria-busy": "true", "data-actor-source-uuid": sourceUuid },
-    children: [node("p", { className: "ve-sheet-empty", text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.LoadingBiography", "Loading biography…") })]
+    children: [node("p", { className: "mc-sheet-empty", text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.LoadingBiography", "Loading biography…") })]
   });
   scope.listen(description, "click", (event) => {
     const roll = event.target.closest?.("a.inline-roll:not(.inline-result)");
@@ -1773,7 +1756,7 @@ function biographyPanel(actor, commands, status, scope) {
     event.stopImmediatePropagation();
     if (roll.getAttribute("aria-disabled") === "true") {
       status.classList.add("is-error");
-      status.textContent = localizedText(commands.localize, "VEMOBILE.Character.Presenter.InlineRollsRequireCurrentOWNERPermissionForThisExact", "Inline rolls require current OWNER permission for this exact actor.");
+      status.textContent = localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.InlineRollsRequireCurrentOWNERPermissionForThisExact", "Inline rolls require current OWNER permission for this exact actor.");
       return;
     }
     void commands.rollCharacterBiographyInline({
@@ -1784,7 +1767,7 @@ function biographyPanel(actor, commands, status, scope) {
     }).catch((error) => {
       if (scope.disposed) return;
       status.classList.add("is-error");
-      status.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Character.Presenter.FoundryCouldNotCompleteThatInlineRoll", "Foundry could not complete that inline roll.");
+      status.textContent = error?.message ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.FoundryCouldNotCompleteThatInlineRoll", "Foundry could not complete that inline roll.");
     });
   }, { capture: true });
   void commands.readCharacterBiography(sourceUuid).then((result) => {
@@ -1792,7 +1775,7 @@ function biographyPanel(actor, commands, status, scope) {
     description.classList.remove("is-loading");
     description.removeAttribute("aria-busy");
     if (result.html) description.innerHTML = result.html;
-    else description.replaceChildren(node("p", { className: "ve-sheet-empty", text: localizedText(commands.localize, "VEMOBILE.Character.Copy.Nobiographyhasbeenrecorded", "No biography has been recorded.") }));
+    else description.replaceChildren(node("p", { className: "mc-sheet-empty", text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Nobiographyhasbeenrecorded", "No biography has been recorded.") }));
     storyEditor = result.editable && result.editField ? result : null;
     storyEdit.disabled = !(canEdit && storyEditor);
     storyEdit.setAttribute("aria-disabled", String(storyEdit.disabled));
@@ -1801,30 +1784,30 @@ function biographyPanel(actor, commands, status, scope) {
       for (const roll of description.querySelectorAll("a.inline-roll:not(.inline-result)")) {
         roll.classList.add("is-disabled");
         roll.setAttribute("aria-disabled", "true");
-        roll.setAttribute("title", localizedText(commands.localize, "VEMOBILE.Character.Presenter.InlineRollUnavailable", "Inline roll unavailable without OWNER permission"));
+        roll.setAttribute("title", localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.InlineRollUnavailable", "Inline roll unavailable without OWNER permission"));
       }
     }
   }).catch((error) => {
     if (scope.disposed || description.dataset.actorSourceUuid !== sourceUuid) return;
     description.classList.remove("is-loading");
     description.removeAttribute("aria-busy");
-    description.replaceChildren(node("p", { className: "ve-sheet-empty", text: error?.message ?? "Biography could not be loaded." }));
+    description.replaceChildren(node("p", { className: "mc-sheet-empty", text: error?.message ?? "Biography could not be loaded." }));
   });
   if (["npc", "group", "vehicle"].includes(actor.type)) {
-    return node("div", { className: "ve-sheet-stack ve-character-biography", children: [
-      node("section", { className: "ve-sheet-card ve-character-biography-story", children: [sectionHeading(localizedText(commands.localize, "VEMOBILE.Character.Tabs.Biography", "Biography"), "fa-feather-pointed", storyEdit), description] })
+    return node("div", { className: "mc-sheet-stack mc-character-biography", children: [
+      node("section", { className: "mc-sheet-card mc-character-biography-story", children: [sectionHeading(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Biography", "Biography"), "fa-feather-pointed", storyEdit), description] })
     ] });
   }
   const textBlocks = [
-    ["ideal", "VEMOBILE.Character.Presenter.BiographyIdeals", "Ideals", "fa-seedling", biography.ideal],
-    ["bond", "VEMOBILE.Character.Presenter.BiographyBonds", "Bonds", "fa-link", biography.bond],
-    ["flaw", "VEMOBILE.Character.Presenter.BiographyFlaws", "Flaws", "fa-heart-crack", biography.flaw],
-    ["trait", "VEMOBILE.Character.Presenter.BiographyPersonalityTraits", "Personality traits", "fa-puzzle-piece", biography.trait],
-    ["appearance", "VEMOBILE.Character.Presenter.BiographyAppearance", "Appearance", "fa-image-portrait", biography.appearance]
+    ["ideal", "MIKELANDIA_CONTROLS.Character.Presenter.BiographyIdeals", "Ideals", "fa-seedling", biography.ideal],
+    ["bond", "MIKELANDIA_CONTROLS.Character.Presenter.BiographyBonds", "Bonds", "fa-link", biography.bond],
+    ["flaw", "MIKELANDIA_CONTROLS.Character.Presenter.BiographyFlaws", "Flaws", "fa-heart-crack", biography.flaw],
+    ["trait", "MIKELANDIA_CONTROLS.Character.Presenter.BiographyPersonalityTraits", "Personality traits", "fa-puzzle-piece", biography.trait],
+    ["appearance", "MIKELANDIA_CONTROLS.Character.Presenter.BiographyAppearance", "Appearance", "fa-image-portrait", biography.appearance]
   ];
   const characteristics = biography.characteristics ?? [];
   const characteristicValues = Object.fromEntries(characteristics.map((entry) => [entry.key, entry.value ?? ""]));
-  const characteristicsLabel = localizedText(commands.localize, "VEMOBILE.Character.Presenter.Characteristics", "Characteristics");
+  const characteristicsLabel = localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Characteristics", "Characteristics");
   const characteristicsEdit = biographyEditAction(characteristicsLabel, canEdit, (anchor) => openBiographyEditor(anchor, {
     actor,
     section: "characteristics",
@@ -1834,17 +1817,17 @@ function biographyPanel(actor, commands, status, scope) {
     values: characteristicValues,
     originalValues: characteristicValues
   }, commands, status, scope), scope, commands.localize);
-  return node("div", { className: "ve-sheet-stack ve-character-biography", children: [
-    node("section", { className: "ve-sheet-card", children: [
+  return node("div", { className: "mc-sheet-stack mc-character-biography", children: [
+    node("section", { className: "mc-sheet-card", children: [
       sectionHeading(characteristicsLabel, "fa-address-card", characteristicsEdit),
-      node("dl", { className: "ve-character-biography-characteristics", children: characteristics.flatMap((entry) => [
+      node("dl", { className: "mc-character-biography-characteristics", children: characteristics.flatMap((entry) => [
         node("div", { children: [node("dt", { text: entry.label }), node("dd", { text: entry.value || "—" })] })
       ]) })
     ] }),
-    node("div", { className: "ve-character-biography-blocks", children: textBlocks.map(([section, key, fallback, iconName, value]) => {
+    node("div", { className: "mc-character-biography-blocks", children: textBlocks.map(([section, key, fallback, iconName, value]) => {
       const label = localizedText(commands.localize, key, fallback);
       return node("section", {
-      className: `ve-sheet-card ve-character-biography-block${section === "appearance" ? " is-appearance" : ""}`,
+      className: `mc-sheet-card mc-character-biography-block${section === "appearance" ? " is-appearance" : ""}`,
       children: [sectionHeading(label, iconName, biographyEditAction(label, canEdit, (anchor) => openBiographyEditor(anchor, {
         actor,
         section,
@@ -1852,28 +1835,28 @@ function biographyPanel(actor, commands, status, scope) {
         iconName,
         value: value ?? "",
         originalValue: value ?? ""
-      }, commands, status, scope), scope, commands.localize)), node("p", { text: value || localizedText(commands.localize, "VEMOBILE.Character.Presenter.NotRecorded", "Not recorded.") })]
+      }, commands, status, scope), scope, commands.localize)), node("p", { text: value || localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NotRecorded", "Not recorded.") })]
     }); }) }),
-    node("section", { className: "ve-sheet-card ve-character-biography-story", children: [sectionHeading(localizedText(commands.localize, "VEMOBILE.Character.Tabs.Biography", "Biography"), "fa-feather-pointed", storyEdit), description] })
+    node("section", { className: "mc-sheet-card mc-character-biography-story", children: [sectionHeading(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Biography", "Biography"), "fa-feather-pointed", storyEdit), description] })
   ] });
 }
 
 function biographyEditAction(label, enabled, onEdit, scope, localize) {
   return node("button", {
-    className: "ve-biography-edit",
-    attrs: { type: "button", disabled: !enabled, "aria-label": localizedText(localize, "VEMOBILE.Character.Presenter.Edit", "Edit {label}", { label }), title: localizedText(localize, "VEMOBILE.Character.Presenter.Edit", "Edit {label}", { label }) },
+    className: "mc-biography-edit",
+    attrs: { type: "button", disabled: !enabled, "aria-label": localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.Edit", "Edit {label}", { label }), title: localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.Edit", "Edit {label}", { label }) },
     on: { click: (event) => onEdit(event.currentTarget) },
     children: [icon("fa-pen-to-square")]
   }, scope);
 }
 
 function openBiographyEditor(anchor, config, commands, pageStatus, scope) {
-  const screen = anchor.closest(".ve-character-screen");
-  const host = screen?.__veCharacterOverlayHost ?? screen ?? anchor.ownerDocument?.body;
+  const screen = anchor.closest(".mc-character-screen");
+  const host = screen?.__mcCharacterOverlayHost ?? screen ?? anchor.ownerDocument?.body;
   if (!host) return;
-  host.querySelector?.(".ve-biography-editor-layer")?.dispatchEvent(new Event("ve-close"));
+  host.querySelector?.(".mc-biography-editor-layer")?.dispatchEvent(new Event("mc-close"));
   const editorScope = scope.child(`biography-editor:${config.section}`);
-  const editorStatus = node("p", { className: "ve-biography-editor-status", attrs: { role: "status", "aria-live": "polite" } });
+  const editorStatus = node("p", { className: "mc-biography-editor-status", attrs: { role: "status", "aria-live": "polite" } });
   let pending = false;
   let layer;
   let close = () => {};
@@ -1890,7 +1873,7 @@ function openBiographyEditor(anchor, config, commands, pageStatus, scope) {
       maxlength: config.richText ? "100000" : "20000",
       rows: config.richText ? "12" : "8",
       spellcheck: "true",
-      "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Text", "{label} text", { label: (config.label) })
+      "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Text", "{label} text", { label: (config.label) })
     }
   }, editorScope);
   if (composer) {
@@ -1898,20 +1881,20 @@ function openBiographyEditor(anchor, config, commands, pageStatus, scope) {
     controls.push(composer);
   }
   const cancel = node("button", {
-    className: "ve-modal-button is-secondary",
+    className: "mc-modal-button is-secondary",
     attrs: { type: "button" },
     on: { click: () => { if (!pending) close(); } },
-    children: [icon("fa-xmark"), node("span", { text: localizedText(commands.localize, "VEMOBILE.Action.Cancel", "Cancel") })]
+    children: [icon("fa-xmark"), node("span", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Action.Cancel", "Cancel") })]
   }, editorScope);
   const save = node("button", {
-    className: "ve-modal-button is-primary",
+    className: "mc-modal-button is-primary",
     attrs: { type: "submit" },
-    children: [icon("fa-check"), node("span", { text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.Save", "Save") })]
+    children: [icon("fa-check"), node("span", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Save", "Save") })]
   });
   controls.push(cancel, save);
   const form = node("form", {
-    className: "ve-biography-editor",
-    attrs: { role: "dialog", "aria-modal": "true", "aria-labelledby": "ve-biography-editor-title" },
+    className: "mc-biography-editor",
+    attrs: { role: "dialog", "aria-modal": "true", "aria-labelledby": "mc-biography-editor-title" },
     on: { submit: async (event) => {
       event.preventDefault();
       if (pending || !form.reportValidity()) return;
@@ -1920,7 +1903,7 @@ function openBiographyEditor(anchor, config, commands, pageStatus, scope) {
       form.setAttribute("aria-busy", "true");
       for (const control of controls) control.disabled = true;
       editorStatus.classList.remove("is-error");
-      editorStatus.textContent = localizedText(commands.localize, "VEMOBILE.Character.Presenter.Saving", "Saving…");
+      editorStatus.textContent = localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Saving", "Saving…");
       const payload = config.section === "characteristics"
         ? {
             actorSourceUuid: characterRecordSourceUuid(config.actor),
@@ -1952,29 +1935,29 @@ function openBiographyEditor(anchor, config, commands, pageStatus, scope) {
         form.removeAttribute("aria-busy");
         for (const control of controls) control.disabled = false;
         editorStatus.classList.add("is-error");
-        editorStatus.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Character.Presenter.CouldNotBeSaved", "{label} could not be saved.", { label: (config.label) });
+        editorStatus.textContent = error?.message ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.CouldNotBeSaved", "{label} could not be saved.", { label: (config.label) });
       }
     } },
     children: [
       node("header", { children: [
-        node("span", { className: "ve-hp-editor-heading-icon", children: [icon(config.iconName)] }),
-        node("div", { children: [node("small", { text: config.actor.name }), node("h2", { attrs: { id: "ve-biography-editor-title" }, text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.Edit", "Edit {label}", { label: (config.label) }) })] }),
-        node("button", { className: "ve-hp-editor-close", attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.CloseEditor", "Close {label} editor", { label: (config.label) }) }, on: { click: () => { if (!pending) close(); } }, children: [icon("fa-xmark")] }, editorScope)
+        node("span", { className: "mc-hp-editor-heading-icon", children: [icon(config.iconName)] }),
+        node("div", { children: [node("small", { text: config.actor.name }), node("h2", { attrs: { id: "mc-biography-editor-title" }, text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Edit", "Edit {label}", { label: (config.label) }) })] }),
+        node("button", { className: "mc-hp-editor-close", attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.CloseEditor", "Close {label} editor", { label: (config.label) }) }, on: { click: () => { if (!pending) close(); } }, children: [icon("fa-xmark")] }, editorScope)
       ] }),
       config.section === "characteristics"
-        ? node("div", { className: "ve-biography-editor-fields", children: fields })
-        : node("label", { className: "ve-biography-editor-composer", children: [node("span", { text: config.richText ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.TextAndFoundryRichHTML", "Text and Foundry-rich HTML") : config.label }), composer] }),
+        ? node("div", { className: "mc-biography-editor-fields", children: fields })
+        : node("label", { className: "mc-biography-editor-composer", children: [node("span", { text: config.richText ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.TextAndFoundryRichHTML", "Text and Foundry-rich HTML") : config.label }), composer] }),
       editorStatus,
-      node("div", { className: "ve-modal-actions", children: [cancel, save] })
+      node("div", { className: "mc-modal-actions", children: [cancel, save] })
     ]
   }, editorScope);
-  layer = node("div", { className: `ve-biography-editor-layer${host === screen ? "" : " is-pane-scoped"}`, attrs: { role: "presentation" }, children: [form] });
+  layer = node("div", { className: `mc-biography-editor-layer${host === screen ? "" : " is-pane-scoped"}`, attrs: { role: "presentation" }, children: [form] });
   close = () => {
     if (editorScope.disposed) return;
     layer.remove();
     editorScope.dispose();
   };
-  editorScope.listen(layer, "ve-close", close);
+  editorScope.listen(layer, "mc-close", close);
   editorScope.listen(layer, "pointerdown", (event) => { if (event.target === layer && !pending) close(); });
   editorScope.listen(anchor.ownerDocument ?? document, "keydown", (event) => { if (event.key === "Escape" && !pending) close(); });
   editorScope.own(() => layer.remove());
@@ -1984,26 +1967,26 @@ function openBiographyEditor(anchor, config, commands, pageStatus, scope) {
 
 function effectsPanel(actor, commands, status, openSectionIds, scope, settings) {
   const definitions = [
-    ["temporary", localizedText(commands.localize, "VEMOBILE.Character.Copy.TemporaryEffects", "Temporary Effects"), (effect) => !effect.isCondition && effect.isTemporary && !effect.disabled && !effect.isSuppressed],
-    ["passive", localizedText(commands.localize, "VEMOBILE.Character.Copy.PassiveEffects", "Passive Effects"), (effect) => !effect.isCondition && !effect.isTemporary && !effect.disabled && !effect.isSuppressed],
-    ["inactive", localizedText(commands.localize, "VEMOBILE.Character.Copy.InactiveEffects", "Inactive Effects"), (effect) => !effect.isCondition && effect.disabled && !effect.isSuppressed],
-    ["unavailable", localizedText(commands.localize, "VEMOBILE.Character.Copy.UnavailableEffects", "Unavailable Effects"), (effect) => !effect.isCondition && effect.isSuppressed]
+    ["temporary", localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.TemporaryEffects", "Temporary Effects"), (effect) => !effect.isCondition && effect.isTemporary && !effect.disabled && !effect.isSuppressed],
+    ["passive", localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.PassiveEffects", "Passive Effects"), (effect) => !effect.isCondition && !effect.isTemporary && !effect.disabled && !effect.isSuppressed],
+    ["inactive", localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.InactiveEffects", "Inactive Effects"), (effect) => !effect.isCondition && effect.disabled && !effect.isSuppressed],
+    ["unavailable", localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.UnavailableEffects", "Unavailable Effects"), (effect) => !effect.isCondition && effect.isSuppressed]
   ];
   const emptyMessages = { temporary: "No temporary effects.", passive: "No passive effects.", inactive: "No inactive effects.", unavailable: "No unavailable effects." };
   let sortMode = settings.characterCollections?.effectsSort ?? "manual";
   let renderScope = null;
   const openSections = new Set(openSectionIds ?? []);
-  const body = node("div", { className: "ve-sheet-collection-body ve-effects-body" });
-  const controls = collectionControls(localizedText(commands.localize, "VEMOBILE.Character.Copy.Effects", "Effects"), sortMode, () => {
+  const body = node("div", { className: "mc-sheet-collection-body mc-effects-body" });
+  const controls = collectionControls(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Effects", "Effects"), sortMode, () => {
     sortMode = sortMode === "alphabetical" ? "manual" : "alphabetical";
     persistCollectionPreference(commands, "effectsSort", sortMode, status);
     draw();
-  }, () => body.querySelectorAll("details.ve-sheet-collection-section"), (sectionIds) => {
+  }, () => body.querySelectorAll("details.mc-sheet-collection-section"), (sectionIds) => {
     openSections.clear();
     for (const sectionId of sectionIds) openSections.add(sectionId);
     commands.setCharacterSectionsExpanded(sectionIds);
   }, scope, { localize: commands.localize });
-  const card = collectionCard(localizedText(commands.localize, "VEMOBILE.Collective.EffectsConditions", "Effects & conditions"), "fa-sparkles", [body], controls.element);
+  const card = collectionCard(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Collective.EffectsConditions", "Effects & conditions"), "fa-sparkles", [body], controls.element);
   scope.own(() => { void commands.closeActiveEffectContextMenu?.(); });
   scope.own(() => renderScope?.dispose());
 
@@ -2018,7 +2001,7 @@ function effectsPanel(actor, commands, status, openSectionIds, scope, settings) 
     const first = sections.find(section => section.effects.length)?.key ?? "conditions";
     if (commands.claimDefaultCharacterSection?.(first)) openSections.add(first);
     body.replaceChildren(
-      ...sections.map((section) => collectionSection(section.key, section.label, section.effects.length, section.effects.length ? section.effects.map((effect) => effectRow(effect, actor, commands, renderScope)) : [emptyCollection(localizedText(commands.localize, `VEMOBILE.Character.EffectsEmpty.${section.key}`, emptyMessages[section.key]))], openSections.has(section.key), (open) => {
+      ...sections.map((section) => collectionSection(section.key, section.label, section.effects.length, section.effects.length ? section.effects.map((effect) => effectRow(effect, actor, commands, renderScope)) : [emptyCollection(localizedText(commands.localize, `MIKELANDIA_CONTROLS.Character.EffectsEmpty.${section.key}`, emptyMessages[section.key]))], openSections.has(section.key), (open) => {
         if (open) openSections.add(section.key);
         else openSections.delete(section.key);
         commands.setCharacterSectionExpanded(section.key, open);
@@ -2030,8 +2013,8 @@ function effectsPanel(actor, commands, status, openSectionIds, scope, settings) 
   };
   scope.listen(body, "click", () => queueMicrotask(controls.updateExpansion));
   draw();
-  return node("div", { className: "ve-sheet-stack", children: [
-    node("button", { className: "ve-sheet-back", attrs: { type: "button" }, on: { click: () => commands.selectCharacterTab("overview") }, children: [icon("fa-chevron-left"), node("span", { text: localizedText(commands.localize, "VEMOBILE.Character.Tabs.Overview", "Overview") })] }, scope),
+  return node("div", { className: "mc-sheet-stack", children: [
+    node("button", { className: "mc-sheet-back", attrs: { type: "button" }, on: { click: () => commands.selectCharacterTab("overview") }, children: [icon("fa-chevron-left"), node("span", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Overview", "Overview") })] }, scope),
     card
   ] });
 }
@@ -2039,65 +2022,65 @@ function effectsPanel(actor, commands, status, openSectionIds, scope, settings) 
 function conditionsSection(actor, commands, status, openSections, scope) {
   const conditions = actor.conditions ?? [];
   const activeCount = conditions.filter((condition) => condition.active).length;
-  const label = node("span", { className: "ve-condition-section-label", children: [icon("fa-heart-pulse"), node("span", { text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.Conditions", "Conditions") }), node("small", { className: "ve-condition-count", text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.Active", "{activeCount} Active", { activeCount: (activeCount) }) })] });
-  const details = collectionSection("conditions", label, conditions.length, [conditions.length ? node("div", { className: "ve-condition-grid", children: conditions.map((condition) => conditionControl(condition, actor, commands, status, scope)) }) : emptyCollection(localizedText(commands.localize, "VEMOBILE.Character.Presenter.NoNativeDDEConditionsAreAvailable", "No native D&D5e conditions are available."))], openSections.has("conditions"), (open) => {
+  const label = node("span", { className: "mc-condition-section-label", children: [icon("fa-heart-pulse"), node("span", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Conditions", "Conditions") }), node("small", { className: "mc-condition-count", text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Active", "{activeCount} Active", { activeCount: (activeCount) }) })] });
+  const details = collectionSection("conditions", label, conditions.length, [conditions.length ? node("div", { className: "mc-condition-grid", children: conditions.map((condition) => conditionControl(condition, actor, commands, status, scope)) }) : emptyCollection(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NoNativeDDEConditionsAreAvailable", "No native D&D5e conditions are available."))], openSections.has("conditions"), (open) => {
     if (open) openSections.add("conditions");
     else openSections.delete("conditions");
     commands.setCharacterSectionExpanded("conditions", open);
   }, scope);
-  details.classList.add("ve-conditions-panel");
-  details.setAttribute("aria-label", localizedText(commands.localize, "VEMOBILE.Character.Presenter.Conditions", "Conditions"));
+  details.classList.add("mc-conditions-panel");
+  details.setAttribute("aria-label", localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Conditions", "Conditions"));
   return details;
 }
 
 function conditionControl(condition, actor, commands, status, scope) {
   if (condition.id === "exhaustion" && condition.maximumLevel) return exhaustionControl(condition, actor, commands, status, scope);
   const editable = Boolean(actor.capabilities?.toggleConditions);
-  const label = condition.active && condition.level ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.Level", "{label} · Level {level}", { label: (condition.label), level: (condition.level) }) : condition.label;
+  const label = condition.active && condition.level ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Level", "{label} · Level {level}", { label: (condition.label), level: (condition.level) }) : condition.label;
   return node("button", {
-    className: `ve-condition-control${condition.active ? " is-active" : ""}`,
+    className: `mc-condition-control${condition.active ? " is-active" : ""}`,
     attrs: {
       type: "button",
       disabled: !editable,
       "aria-pressed": String(Boolean(condition.active)),
       "aria-label": `${condition.active ? "Remove" : "Apply"} ${label}`,
-      title: condition.maximumLevel ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.LevelledConditionLevels", "{label}; leveled condition ({maximumLevel} levels)", { label: (label), maximumLevel: (condition.maximumLevel) }) : label
+      title: condition.maximumLevel ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.LevelledConditionLevels", "{label}; leveled condition ({maximumLevel} levels)", { label: (label), maximumLevel: (condition.maximumLevel) }) : label
     },
-    on: { click: (event) => runActorCommand(event.currentTarget, ACTOR_COMMANDS.TOGGLE_CONDITION, actor, { conditionId: condition.id, active: !condition.active }, commands, status, localizedText(commands.localize, condition.active ? "VEMOBILE.Character.Presenter.RemovingCondition" : "VEMOBILE.Character.Presenter.ApplyingCondition", condition.active ? "Removing {label}…" : "Applying {label}…", { label: condition.label }), "") },
+    on: { click: (event) => runActorCommand(event.currentTarget, ACTOR_COMMANDS.TOGGLE_CONDITION, actor, { conditionId: condition.id, active: !condition.active }, commands, status, localizedText(commands.localize, condition.active ? "MIKELANDIA_CONTROLS.Character.Presenter.RemovingCondition" : "MIKELANDIA_CONTROLS.Character.Presenter.ApplyingCondition", condition.active ? "Removing {label}…" : "Applying {label}…", { label: condition.label }), "") },
     children: [
-      node("span", { className: "ve-condition-art", children: condition.img ? [node("img", { attrs: { src: condition.img, alt: "", draggable: "false" } })] : [icon("fa-circle-exclamation")] }),
-      node("span", { className: "ve-condition-label", text: label }),
-      node("span", { className: "ve-condition-switch", attrs: { "aria-hidden": "true" }, children: [node("i")] })
+      node("span", { className: "mc-condition-art", children: condition.img ? [node("img", { attrs: { src: condition.img, alt: "", draggable: "false" } })] : [icon("fa-circle-exclamation")] }),
+      node("span", { className: "mc-condition-label", text: label }),
+      node("span", { className: "mc-condition-switch", attrs: { "aria-hidden": "true" }, children: [node("i")] })
     ]
   }, scope);
 }
 
 function effectRow(effect, actor, commands, scope) {
-  const source = effect.source ? localizedText(commands.localize, "VEMOBILE.Character.Copy.Sourcesource", "Source: {source}", { source: effect.source }) : "";
-  const meta = [source, effect.duration].filter(Boolean).join(" · ") || (effect.disabled ? localizedText(commands.localize, "VEMOBILE.Character.Copy.Inactive", "Inactive") : effect.isSuppressed ? localizedText(commands.localize, "VEMOBILE.Settings.UI.AssetStatus.Unavailable", "Unavailable") : localizedText(commands.localize, "VEMOBILE.Settings.UI.AssetStatus.Active", "Active"));
+  const source = effect.source ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Sourcesource", "Source: {source}", { source: effect.source }) : "";
+  const meta = [source, effect.duration].filter(Boolean).join(" · ") || (effect.disabled ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Inactive", "Inactive") : effect.isSuppressed ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Settings.UI.AssetStatus.Unavailable", "Unavailable") : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Settings.UI.AssetStatus.Active", "Active"));
   const summary = node("summary", {
     attrs: { "data-effect-id": effect.id },
-    children: [node("span", { className: "ve-effect-art", children: effect.img ? [node("img", { attrs: { src: effect.img, alt: "", draggable: "false" } })] : [icon("fa-wand-magic-sparkles")] }), node("span", { className: "ve-sheet-item-copy", children: [node("strong", { text: effect.name }), node("small", { text: meta })] }), icon("fa-chevron-right")]
+    children: [node("span", { className: "mc-effect-art", children: effect.img ? [node("img", { attrs: { src: effect.img, alt: "", draggable: "false" } })] : [icon("fa-wand-magic-sparkles")] }), node("span", { className: "mc-sheet-item-copy", children: [node("strong", { text: effect.name }), node("small", { text: meta })] }), icon("fa-chevron-right")]
   });
   bindEffectContextMenu(summary, effect, actor, commands, scope);
-  return node("details", { className: "ve-effect-detail", children: [
+  return node("details", { className: "mc-effect-detail", children: [
     summary,
-    effect.description ? node("p", { className: "ve-effect-description", text: effect.description }) : null,
-    node("p", { className: "ve-effect-metadata", text: meta })
+    effect.description ? node("p", { className: "mc-effect-description", text: effect.description }) : null,
+    node("p", { className: "mc-effect-metadata", text: meta })
   ] });
 }
 
 function collectionCard(title, iconName, children, action = null) {
-  return node("section", { className: "ve-sheet-card ve-sheet-collection", children: [sectionHeading(title, iconName, action), ...children] });
+  return node("section", { className: "mc-sheet-card mc-sheet-collection", children: [sectionHeading(title, iconName, action), ...children] });
 }
 
 function collectionSection(key, label, count, children, expanded = false, onChange = null, scope = null) {
   const summary = node("summary", { attrs: { "aria-expanded": String(expanded) }, children: [icon("fa-chevron-right"), label instanceof Node ? label : node("span", { text: label }), node("b", { text: count })] });
   const details = node("details", {
-    className: "ve-sheet-collection-section",
+    className: "mc-sheet-collection-section",
     attrs: { open: expanded },
     dataset: { section: key },
-    children: [summary, node("div", { className: "ve-sheet-collection-list", children })]
+    children: [summary, node("div", { className: "mc-sheet-collection-list", children })]
   });
   if (onChange && scope) bindDetailsDisclosure(details, summary, onChange, scope);
   return details;
@@ -2109,15 +2092,15 @@ function exhaustionControl(condition, actor, commands, status, scope) {
   let pending = false;
   const buttons = [];
   const adjustButton = (direction) => {
-    const label = localizedText(commands.localize, direction < 0 ? "VEMOBILE.Character.Presenter.Decrease2" : "VEMOBILE.Character.Presenter.Increase2", direction < 0 ? "Decrease {label}" : "Increase {label}", { label: condition.label });
+    const label = localizedText(commands.localize, direction < 0 ? "MIKELANDIA_CONTROLS.Character.Presenter.Decrease2" : "MIKELANDIA_CONTROLS.Character.Presenter.Increase2", direction < 0 ? "Decrease {label}" : "Increase {label}", { label: condition.label });
     const button = node("button", {
-      className: "ve-exhaustion-step",
+      className: "mc-exhaustion-step",
       attrs: { type: "button", "aria-label": label, title: label, disabled: !editable || level + direction < 0 || level + direction > condition.maximumLevel },
       children: [icon(direction < 0 ? "fa-minus" : "fa-plus")],
       on: { click: async () => {
         if (pending || scope.disposed || button.disabled) return;
         pending = true;
-        const action = runActorCommand(button, ACTOR_COMMANDS.SET_EXHAUSTION_LEVEL, actor, { originalLevel: level, level: level + direction }, commands, status, localizedText(commands.localize, "VEMOBILE.Character.Presenter.UpdatingExhaustion", "Updating exhaustion…"), "");
+        const action = runActorCommand(button, ACTOR_COMMANDS.SET_EXHAUSTION_LEVEL, actor, { originalLevel: level, level: level + direction }, commands, status, localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.UpdatingExhaustion", "Updating exhaustion…"), "");
         for (const entry of buttons) entry.disabled = true;
         try { await action; }
         finally {
@@ -2130,13 +2113,13 @@ function exhaustionControl(condition, actor, commands, status, scope) {
     return button;
   };
   return node("div", {
-    className: `ve-condition-control ve-exhaustion-control${level > 0 ? " is-active" : ""}`,
+    className: `mc-condition-control mc-exhaustion-control${level > 0 ? " is-active" : ""}`,
     children: [
-      node("span", { className: "ve-condition-art", children: condition.img ? [node("img", { attrs: { src: condition.img, alt: "", draggable: "false" } })] : [icon("fa-circle-exclamation")] }),
-      node("span", { className: "ve-condition-label", text: condition.label }),
-      node("span", { className: "ve-exhaustion-controls", attrs: { role: "group", "aria-label": condition.label }, children: [
+      node("span", { className: "mc-condition-art", children: condition.img ? [node("img", { attrs: { src: condition.img, alt: "", draggable: "false" } })] : [icon("fa-circle-exclamation")] }),
+      node("span", { className: "mc-condition-label", text: condition.label }),
+      node("span", { className: "mc-exhaustion-controls", attrs: { role: "group", "aria-label": condition.label }, children: [
         adjustButton(-1),
-        node("span", { className: "ve-exhaustion-level", attrs: { "aria-live": "polite" }, text: localizedNumber(level, actor.header?.locale) }),
+        node("span", { className: "mc-exhaustion-level", attrs: { "aria-live": "polite" }, text: localizedNumber(level, actor.header?.locale) }),
         adjustButton(1)
       ] })
     ]
@@ -2152,27 +2135,27 @@ function spellGroupDivider(label, spellcasting = null, localize, selection = { c
   }
   const current = classes.find(entry => entry.id === selection.classId) ?? spellcasting;
   const selector = classes.length > 1 ? node("select", {
-    className: "ve-spellcasting-class",
-    attrs: { "aria-label": localizedText(localize, "VEMOBILE.Character.Presenter.SpellcastingClass", "Spellcasting class") },
+    className: "mc-spellcasting-class",
+    attrs: { "aria-label": localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.SpellcastingClass", "Spellcasting class") },
     children: classes.map(entry => node("option", { attrs: { value: entry.id, selected: selection.classId === entry.id }, text: entry.label })),
     on: { change: () => { selection.classId = selector.value; updateStats(); } }
   }, scope) : null;
-  const stats = node("span", { className: "ve-spellcasting-stats", attrs: { "aria-live": "polite" } });
+  const stats = node("span", { className: "mc-spellcasting-stats", attrs: { "aria-live": "polite" } });
   function updateStats() {
     const casting = classes.find(entry => entry.id === selection.classId) ?? spellcasting;
     stats.replaceChildren(...spellcastingStats(casting, localize));
   }
   stats.append(...spellcastingStats(current, localize));
-  return node("h3", { className: "ve-spell-group-divider", children: [
-    node("span", { className: "ve-spellcasting-heading", text: label }),
-    spellcasting ? node("span", { className: "ve-spellcasting-summary", children: [selector, stats] }) : null
+  return node("h3", { className: "mc-spell-group-divider", children: [
+    node("span", { className: "mc-spellcasting-heading", text: label }),
+    spellcasting ? node("span", { className: "mc-spellcasting-summary", children: [selector, stats] }) : null
   ] });
 }
 
 function spellcastingStats(spellcasting, localize) {
   const stats = [];
-  if (spellcasting?.attackBonus != null) stats.push(node("span", { text: localizedText(localize, "VEMOBILE.Character.Presenter.SpellAttackBonus", "Spell attack {modifier}", { modifier: formatModifier(spellcasting.attackBonus) }) }));
-  if (spellcasting?.saveDC != null) stats.push(node("span", { text: localizedText(localize, "VEMOBILE.Character.Presenter.SpellSaveDC", "Save DC {dc}", { dc: spellcasting.saveDC }) }));
+  if (spellcasting?.attackBonus != null) stats.push(node("span", { text: localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.SpellAttackBonus", "Spell attack {modifier}", { modifier: formatModifier(spellcasting.attackBonus) }) }));
+  if (spellcasting?.saveDC != null) stats.push(node("span", { text: localizedText(localize, "MIKELANDIA_CONTROLS.Character.Presenter.SpellSaveDC", "Save DC {dc}", { dc: spellcasting.saveDC }) }));
   return stats;
 }
 
@@ -2180,12 +2163,12 @@ function itemRow(item, actor, commands, status, openItem, expandedItemId, scope,
   let detail;
   const chevron = icon("fa-chevron-right");
   const summary = node("summary", {
-    className: `ve-sheet-item-row${muted ? " is-muted" : ""}`,
+    className: `mc-sheet-item-row${muted ? " is-muted" : ""}`,
     attrs: { "aria-expanded": String(expandedItemId === item.id), "aria-label": `${expandedItemId === item.id ? "Collapse" : "Expand"} ${item.name}` },
     on: { click: (event) => {
       event.preventDefault();
       const willOpen = !detail.open;
-      for (const other of detail.closest(".ve-character-screen")?.querySelectorAll("details.ve-sheet-item-detail[open], details.ve-sheet-container[open]") ?? []) {
+      for (const other of detail.closest(".mc-character-screen")?.querySelectorAll("details.mc-sheet-item-detail[open], details.mc-sheet-container[open]") ?? []) {
         if (other !== detail && !other.contains(detail)) {
           other.open = false;
           other.querySelector(":scope > summary")?.setAttribute("aria-expanded", "false");
@@ -2205,7 +2188,7 @@ function itemRow(item, actor, commands, status, openItem, expandedItemId, scope,
   if (depth) summary.style.paddingLeft = `${12 + depth * 18}px`;
   bindCharacterItemMenu(summary, item, actor, commands, status, scope);
   detail = node("details", {
-    className: "ve-sheet-item-detail",
+    className: "mc-sheet-item-detail",
     attrs: { open: expandedItemId === item.id },
     dataset: { itemId: item.id },
     children: [summary, itemInlineSummary(item, actor, commands, status, openItem, scope)]
@@ -2213,19 +2196,19 @@ function itemRow(item, actor, commands, status, openItem, expandedItemId, scope,
   return detail;
 }
 
-function itemMiddle(item, actor, commands, status, scope, subtitle = itemSubtitle(item) || localizedText(commands.localize, "VEMOBILE.Character.Labels.Noadditionaldetails", "No additional details")) {
+function itemMiddle(item, actor, commands, status, scope, subtitle = itemSubtitle(item) || localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Labels.Noadditionaldetails", "No additional details")) {
   if (actor.type === "npc" && item.npcGroup && item.activation) subtitle = [subtitle, item.activation].filter(Boolean).join(" · ");
   const displayName = characterItemDisplayName(item);
-  const copy = node("span", { className: "ve-sheet-item-copy", children: [node("strong", { text: displayName }), node("small", { text: subtitle })] });
-  const middle = node("span", { className: "ve-sheet-item-middle", children: [copy, itemStatusCluster(item, commands.localize)] });
+  const copy = node("span", { className: "mc-sheet-item-copy", children: [node("strong", { text: displayName }), node("small", { text: subtitle })] });
+  const middle = node("span", { className: "mc-sheet-item-middle", children: [copy, itemStatusCluster(item, commands.localize)] });
   return middle;
 }
 
 function itemStatusCluster(item, localize = null) {
   const statuses = characterItemStatuses(item, localize).map((entry) => entry.id === "uses"
-    ? node("span", { className: "ve-item-uses", attrs: { title: entry.label, "aria-label": entry.label }, text: entry.text })
+    ? node("span", { className: "mc-item-uses", attrs: { title: entry.label, "aria-label": entry.label }, text: entry.text })
     : statusIcon(entry.icon, entry.label, entry.active, entry.className, entry.inactiveStyle));
-  return statuses.length ? node("span", { className: "ve-item-status-cluster", children: statuses }) : null;
+  return statuses.length ? node("span", { className: "mc-item-status-cluster", children: statuses }) : null;
 }
 
 export function characterItemDisplayName(item) {
@@ -2236,24 +2219,24 @@ export function characterItemDisplayName(item) {
 
 export function characterItemStatuses(item, localize = null) {
   const statuses = [];
-  if (item.uses) statuses.push({ id: "uses", label: localizedText(localize, "VEMOBILE.Character.Labels.UsesRemaining", "{value} of {maximum} uses remaining", { value: item.uses.value, maximum: item.uses.max }), text: `${item.uses.value}/${item.uses.max}` });
+  if (item.uses) statuses.push({ id: "uses", label: localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.UsesRemaining", "{value} of {maximum} uses remaining", { value: item.uses.value, maximum: item.uses.max }), text: `${item.uses.value}/${item.uses.max}` });
   if (item.type === "spell") {
-    if (item.alwaysPrepared) statuses.push({ id: "preparation", icon: "fa-book", label: localizedText(localize, "VEMOBILE.Character.Labels.AlwaysPrepared", "Always Prepared"), active: true, className: "is-preparation is-always" });
+    if (item.alwaysPrepared) statuses.push({ id: "preparation", icon: "fa-book", label: localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.AlwaysPrepared", "Always Prepared"), active: true, className: "is-preparation is-always" });
     else if (item.preparationEligible) {
       const prepared = item.preparationState === 1;
-      statuses.push({ id: "preparation", icon: "fa-book", label: prepared ? localizedText(localize, "VEMOBILE.Character.Labels.Prepared", "Prepared") : localizedText(localize, "VEMOBILE.Character.Labels.Unprepared", "Unprepared"), active: prepared, className: "is-preparation" });
+      statuses.push({ id: "preparation", icon: "fa-book", label: prepared ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Prepared", "Prepared") : localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Unprepared", "Unprepared"), active: prepared, className: "is-preparation" });
     }
   } else {
-    if (item.attunementApplicable) statuses.push({ id: "attunement", icon: "fa-sun", label: item.attuned ? localizedText(localize, "VEMOBILE.Character.Labels.Attuned", "Attuned") : item.attunement === "required" ? localizedText(localize, "VEMOBILE.Character.Labels.RequiresAttunement", "Requires Attunement") : localizedText(localize, "VEMOBILE.Character.Labels.OptionalAttunement", "Optional Attunement"), active: item.attuned, className: "is-attunement" });
-    if (item.equippedApplicable) statuses.push({ id: "equipped", icon: "fa-shield-halved", label: item.equipped ? localizedText(localize, "VEMOBILE.Character.Labels.Equipped", "Equipped") : localizedText(localize, "VEMOBILE.Character.Labels.Notequipped", "Not equipped"), active: item.equipped, className: "is-equipped", inactiveStyle: "solid" });
+    if (item.attunementApplicable) statuses.push({ id: "attunement", icon: "fa-sun", label: item.attuned ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Attuned", "Attuned") : item.attunement === "required" ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.RequiresAttunement", "Requires Attunement") : localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.OptionalAttunement", "Optional Attunement"), active: item.attuned, className: "is-attunement" });
+    if (item.equippedApplicable) statuses.push({ id: "equipped", icon: "fa-shield-halved", label: item.equipped ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Equipped", "Equipped") : localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Notequipped", "Not equipped"), active: item.equipped, className: "is-equipped", inactiveStyle: "solid" });
   }
-  if (item.favoriteApplicable) statuses.push({ id: "favorite", icon: "fa-bookmark", label: item.favorite ? localizedText(localize, "VEMOBILE.Character.Labels.Favorite", "Favorite") : localizedText(localize, "VEMOBILE.Character.Labels.Notfavorite", "Not favorite"), active: item.favorite, className: "is-favorite" });
+  if (item.favoriteApplicable) statuses.push({ id: "favorite", icon: "fa-bookmark", label: item.favorite ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Favorite", "Favorite") : localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Notfavorite", "Not favorite"), active: item.favorite, className: "is-favorite" });
   return Object.freeze(statuses.map((entry) => Object.freeze(entry)));
 }
 
 function statusIcon(iconName, label, active, extraClass = "", inactiveStyle = "regular") {
   return node("span", {
-    className: `ve-item-status ${active ? "is-active" : "is-inactive"} ${extraClass}`.trim(),
+    className: `mc-item-status ${active ? "is-active" : "is-inactive"} ${extraClass}`.trim(),
     attrs: { title: label, "aria-label": label, role: "img" },
     children: [icon(iconName, active ? "solid" : inactiveStyle)]
   });
@@ -2261,12 +2244,12 @@ function statusIcon(iconName, label, active, extraClass = "", inactiveStyle = "r
 
 export function characterItemActions(item, {   localize = null } = {}) {
   const actions = [];
-  if (item.type === "spell" && item.canPrepare) actions.push({ id: "prepare", label: item.preparationState === 0 ? localizedText(localize, "VEMOBILE.Character.Labels.Prepare", "Prepare") : localizedText(localize, "VEMOBILE.Character.Labels.Unprepare", "Unprepare"), icon: "fa-book", command: ACTOR_COMMANDS.SET_SPELL_PREPARED, valueKey: "prepared", value: item.preparationState === 0 ? 1 : 0 });
-  if (item.type !== "spell" && item.canEquip) actions.push({ id: "equip", label: item.equipped ? localizedText(localize, "VEMOBILE.Character.Labels.Unequip", "Unequip") : localizedText(localize, "VEMOBILE.Character.Labels.Equip", "Equip"), icon: "fa-shield-halved", command: ACTOR_COMMANDS.SET_ITEM_EQUIPPED, valueKey: "equipped", value: !item.equipped });
-  if (item.type !== "spell" && item.canAttune) actions.push({ id: "attune", label: item.attuned ? localizedText(localize, "VEMOBILE.Character.Labels.EndAttunement", "End Attunement") : localizedText(localize, "VEMOBILE.Character.Labels.Attune", "Attune"), icon: "fa-sun", command: ACTOR_COMMANDS.SET_ITEM_ATTUNED, valueKey: "attuned", value: !item.attuned });
-  if (item.favoriteApplicable) actions.push({ id: "favorite", label: item.favorite ? localizedText(localize, "VEMOBILE.Character.Labels.Unfavorite", "Unfavorite") : localizedText(localize, "VEMOBILE.Character.Labels.Favorite", "Favorite"), icon: "fa-bookmark", command: ACTOR_COMMANDS.SET_ITEM_FAVORITE, valueKey: "favorite", value: !item.favorite });
+  if (item.type === "spell" && item.canPrepare) actions.push({ id: "prepare", label: item.preparationState === 0 ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Prepare", "Prepare") : localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Unprepare", "Unprepare"), icon: "fa-book", command: ACTOR_COMMANDS.SET_SPELL_PREPARED, valueKey: "prepared", value: item.preparationState === 0 ? 1 : 0 });
+  if (item.type !== "spell" && item.canEquip) actions.push({ id: "equip", label: item.equipped ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Unequip", "Unequip") : localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Equip", "Equip"), icon: "fa-shield-halved", command: ACTOR_COMMANDS.SET_ITEM_EQUIPPED, valueKey: "equipped", value: !item.equipped });
+  if (item.type !== "spell" && item.canAttune) actions.push({ id: "attune", label: item.attuned ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.EndAttunement", "End Attunement") : localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Attune", "Attune"), icon: "fa-sun", command: ACTOR_COMMANDS.SET_ITEM_ATTUNED, valueKey: "attuned", value: !item.attuned });
+  if (item.favoriteApplicable) actions.push({ id: "favorite", label: item.favorite ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Unfavorite", "Unfavorite") : localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Favorite", "Favorite"), icon: "fa-bookmark", command: ACTOR_COMMANDS.SET_ITEM_FAVORITE, valueKey: "favorite", value: !item.favorite });
 
-  if (item.canEdit) actions.push({ id: "edit", label: localizedText(localize, "VEMOBILE.Character.Labels.EditinFoundry", "Edit in Foundry"), icon: "fa-pen-to-square", command: ACTOR_COMMANDS.OPEN_ITEM_SHEET });
+  if (item.canEdit) actions.push({ id: "edit", label: localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.EditinFoundry", "Edit in Foundry"), icon: "fa-pen-to-square", command: ACTOR_COMMANDS.OPEN_ITEM_SHEET });
   return Object.freeze(actions.map((action) => Object.freeze(action)));
 }
 
@@ -2280,7 +2263,7 @@ export function resolveCharacterItemMenu(item, actor, commands) {
 }
 
 function bindCharacterItemMenu(target, item, actor, commands, status, scope) {
-  target.dataset.veItemActions = "true";
+  target.dataset.mcItemActions = "true";
   const open = event => showCharacterItemActionMenu(target, event, item, actor, commands, status, scope);
   bindLongPress(target, scope, open);
   scope.listen(target, "keydown", event => {
@@ -2296,19 +2279,19 @@ function showCharacterItemActionMenu(anchor, event, item, actor, commands, statu
   try { ({ item, actions } = resolveCharacterItemMenu(item, actor, commands)); }
   catch (error) {
     status.classList.add("is-error");
-    status.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Character.Presenter.ThisItemIsNoLongerAvailable", "This item is no longer available.");
+    status.textContent = error?.message ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.ThisItemIsNoLongerAvailable", "This item is no longer available.");
     return;
   }
   if (!actions.length) return;
-  const screen = anchor.closest(".ve-character-screen");
-  const host = screen?.__veCharacterOverlayHost ?? screen ?? anchor.ownerDocument?.body;
+  const screen = anchor.closest(".mc-character-screen");
+  const host = screen?.__mcCharacterOverlayHost ?? screen ?? anchor.ownerDocument?.body;
   if (!host) return;
-  host.querySelector?.(".ve-character-item-menu")?.dispatchEvent(new Event("ve-close"));
+  host.querySelector?.(".mc-character-item-menu")?.dispatchEvent(new Event("mc-close"));
   const menuScope = scope.child(`item-actions-${item.id}`);
   let close = () => {};
   const menu = node("div", {
-    className: `ve-character-item-menu${host === screen ? "" : " is-pane-scoped"}`,
-    attrs: { role: "menu", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Actions", "{name} actions", { name: (item.name) }) },
+    className: `mc-character-item-menu${host === screen ? "" : " is-pane-scoped"}`,
+    attrs: { role: "menu", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Actions", "{name} actions", { name: (item.name) }) },
     children: actions.map((action) => node("button", {
       attrs: { type: "button", role: "menuitem", "aria-label": `${action.label} ${item.name}` },
       on: { click: async (clickEvent) => {
@@ -2324,7 +2307,7 @@ function showCharacterItemActionMenu(anchor, event, item, actor, commands, statu
           await commands.execute(action.command, payload);
         } catch (error) {
           status.classList.add("is-error");
-          status.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Character.Presenter.FailedFor", "{label} failed for {name}.", { label: (action.label), name: (item.name) });
+          status.textContent = error?.message ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.FailedFor", "{label} failed for {name}.", { label: (action.label), name: (item.name) });
         }
       } },
       children: [icon(action.icon), node("span", { text: action.label })]
@@ -2337,7 +2320,7 @@ function showCharacterItemActionMenu(anchor, event, item, actor, commands, statu
     menu.remove();
     menuScope.dispose();
   };
-  menuScope.listen(menu, "ve-close", close);
+  menuScope.listen(menu, "mc-close", close);
   menuScope.listen(menu, "keydown", event => {
     if (event.key === "Escape") { event.preventDefault(); close(); anchor.focus?.({ preventScroll: true }); }
   });
@@ -2361,13 +2344,13 @@ function positionCharacterMenu(menu, host, event) {
 
 function currencyStrip(actor, commands, status, scope) {
   const edit = node("button", {
-    className: "ve-currency-edit",
-    attrs: { type: "button", disabled: !actor.capabilities?.updateCurrency, "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.EditCurrency", "Edit {name} currency", { name: (actor.name) }) },
-    children: [icon("fa-pen"), node("span", { text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.Edit2", "Edit") })]
+    className: "mc-currency-edit",
+    attrs: { type: "button", disabled: !actor.capabilities?.updateCurrency, "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.EditCurrency", "Edit {name} currency", { name: (actor.name) }) },
+    children: [icon("fa-pen"), node("span", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Edit2", "Edit") })]
   }, scope);
   const strip = node("div", {
-    className: "ve-currency-strip",
-    attrs: { "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Currency", "Currency") },
+    className: "mc-currency-strip",
+    attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Currency", "Currency") },
     children: [
       ...CURRENCY_DENOMINATIONS.map((denomination) => node("span", {
         className: `is-${denomination}`,
@@ -2383,29 +2366,29 @@ function currencyStrip(actor, commands, status, scope) {
 
 function openCurrencyEditor(anchor, actor, commands, pageStatus, scope) {
   if (anchor.disabled) return;
-  const screen = anchor.closest(".ve-character-screen");
-  const host = screen?.__veCharacterOverlayHost ?? screen ?? anchor.ownerDocument?.body;
-  host?.querySelector?.(".ve-currency-editor-layer")?.dispatchEvent(new Event("ve-close"));
+  const screen = anchor.closest(".mc-character-screen");
+  const host = screen?.__mcCharacterOverlayHost ?? screen ?? anchor.ownerDocument?.body;
+  host?.querySelector?.(".mc-currency-editor-layer")?.dispatchEvent(new Event("mc-close"));
   const editorScope = scope.child("currency-editor");
   const initial = Object.fromEntries(CURRENCY_DENOMINATIONS.map((key) => [key, Number(actor.currency?.[key]) || 0]));
   const inputs = {};
-  const editorStatus = node("p", { className: "ve-currency-editor-status", attrs: { role: "status", "aria-live": "polite" } });
+  const editorStatus = node("p", { className: "mc-currency-editor-status", attrs: { role: "status", "aria-live": "polite" } });
   let pending = false;
   const close = () => editorScope.dispose();
   const rows = CURRENCY_DENOMINATIONS.map((denomination) => {
-    const input = node("input", { attrs: { type: "number", inputmode: "numeric", min: "0", step: "1", value: initial[denomination], "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Value", "{denomination} value", { denomination: denomination.toUpperCase() }) } });
+    const input = node("input", { attrs: { type: "number", inputmode: "numeric", min: "0", step: "1", value: initial[denomination], "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Value", "{denomination} value", { denomination: denomination.toUpperCase() }) } });
     inputs[denomination] = input;
     const step = (delta) => { input.value = String(Math.max(0, Math.trunc(Number(input.value) || 0) + delta)); };
-    return node("label", { className: `ve-currency-editor-row is-${denomination}`, children: [
+    return node("label", { className: `mc-currency-editor-row is-${denomination}`, children: [
       node("span", { children: [icon("fa-coins"), node("strong", { text: denomination.toUpperCase() })] }),
-      node("button", { attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Decrease", "Decrease {denomination}", { denomination: denomination.toUpperCase() }) }, on: { click: () => step(-1) }, children: [icon("fa-minus")] }, editorScope),
+      node("button", { attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Decrease", "Decrease {denomination}", { denomination: denomination.toUpperCase() }) }, on: { click: () => step(-1) }, children: [icon("fa-minus")] }, editorScope),
       input,
-      node("button", { attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Increase", "Increase {denomination}", { denomination: denomination.toUpperCase() }) }, on: { click: () => step(1) }, children: [icon("fa-plus")] }, editorScope)
+      node("button", { attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Increase", "Increase {denomination}", { denomination: denomination.toUpperCase() }) }, on: { click: () => step(1) }, children: [icon("fa-plus")] }, editorScope)
     ] });
   });
   const form = node("form", {
-    className: "ve-currency-editor",
-    attrs: { role: "dialog", "aria-modal": "true", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.EditCurrency", "Edit {name} currency", { name: (actor.name) }) },
+    className: "mc-currency-editor",
+    attrs: { role: "dialog", "aria-modal": "true", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.EditCurrency", "Edit {name} currency", { name: (actor.name) }) },
     on: { submit: async (event) => {
       event.preventDefault();
       if (pending) return;
@@ -2414,7 +2397,7 @@ function openCurrencyEditor(anchor, actor, commands, pageStatus, scope) {
         const value = Number(inputs[denomination].value);
         if (!Number.isSafeInteger(value) || value < 0) {
           editorStatus.classList.add("is-error");
-          editorStatus.textContent = localizedText(commands.localize, "VEMOBILE.Character.Presenter.MustBeANonNegativeWholeNumber", "{denomination} must be a non-negative whole number.", { denomination: denomination.toUpperCase() });
+          editorStatus.textContent = localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.MustBeANonNegativeWholeNumber", "{denomination} must be a non-negative whole number.", { denomination: denomination.toUpperCase() });
           return;
         }
         if (value !== initial[denomination]) values[denomination] = value;
@@ -2423,7 +2406,7 @@ function openCurrencyEditor(anchor, actor, commands, pageStatus, scope) {
       pending = true;
       for (const control of form.querySelectorAll("button, input")) control.disabled = true;
       editorStatus.classList.remove("is-error");
-      editorStatus.textContent = localizedText(commands.localize, "VEMOBILE.Character.Presenter.UpdatingCurrency", "Updating currency…");
+      editorStatus.textContent = localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.UpdatingCurrency", "Updating currency…");
       try {
         await commands.execute(ACTOR_COMMANDS.UPDATE_CURRENCY, { actorSourceUuid: characterRecordSourceUuid(actor), values });
         pageStatus.textContent = "";
@@ -2433,19 +2416,19 @@ function openCurrencyEditor(anchor, actor, commands, pageStatus, scope) {
         pending = false;
         for (const control of form.querySelectorAll("button, input")) control.disabled = false;
         editorStatus.classList.add("is-error");
-        editorStatus.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Character.Presenter.CurrencyCouldNotBeUpdated", "Currency could not be updated.");
+        editorStatus.textContent = error?.message ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.CurrencyCouldNotBeUpdated", "Currency could not be updated.");
       }
     } },
     children: [
-      node("header", { children: [node("span", { className: "ve-hp-editor-heading-icon", children: [icon("fa-coins")] }), node("div", { children: [node("small", { text: localizedText(commands.localize, "VEMOBILE.Character.Tabs.Inventory", "Inventory") }), node("h2", { text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.EditCurrency2", "Edit Currency") })] }), node("button", { className: "ve-hp-editor-close", attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.CloseCurrencyEditor", "Close currency editor") }, on: { click: close }, children: [icon("fa-xmark")] }, editorScope)] }),
-      node("div", { className: "ve-currency-editor-rows", children: rows }),
+      node("header", { children: [node("span", { className: "mc-hp-editor-heading-icon", children: [icon("fa-coins")] }), node("div", { children: [node("small", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Inventory", "Inventory") }), node("h2", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.EditCurrency2", "Edit Currency") })] }), node("button", { className: "mc-hp-editor-close", attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.CloseCurrencyEditor", "Close currency editor") }, on: { click: close }, children: [icon("fa-xmark")] }, editorScope)] }),
+      node("div", { className: "mc-currency-editor-rows", children: rows }),
       editorStatus,
-      node("button", { className: "ve-currency-editor-submit", attrs: { type: "submit" }, children: [icon("fa-check"), node("span", { text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.SaveChanges", "Save Changes") })] })
+      node("button", { className: "mc-currency-editor-submit", attrs: { type: "submit" }, children: [icon("fa-check"), node("span", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.SaveChanges", "Save Changes") })] })
     ]
   }, editorScope);
-  const layer = node("div", { className: `ve-currency-editor-layer${host === screen ? "" : " is-pane-scoped"}`, children: [form] });
+  const layer = node("div", { className: `mc-currency-editor-layer${host === screen ? "" : " is-pane-scoped"}`, children: [form] });
   host?.append(layer);
-  editorScope.listen(layer, "ve-close", close);
+  editorScope.listen(layer, "mc-close", close);
   editorScope.listen(layer, "pointerdown", (event) => { if (event.target === layer) close(); });
   editorScope.own(() => layer.remove());
 }
@@ -2457,17 +2440,17 @@ function encumbranceMeter(encumbrance = {}, locale = "en", localize = null) {
   const validValue = Number.isFinite(value) ? value : 0;
   const validMaximum = Number.isFinite(maximum) && maximum > 0 ? maximum : 0;
   const validPct = Number.isFinite(pct) ? Math.max(0, Math.min(100, pct)) : 0;
-  const fill = node("i", { className: "ve-encumbrance-fill", attrs: { "aria-hidden": "true" } });
+  const fill = node("i", { className: "mc-encumbrance-fill", attrs: { "aria-hidden": "true" } });
   fill.style.width = `${validPct}%`;
   const meter = node("div", {
-    className: "ve-encumbrance-meter",
+    className: "mc-encumbrance-meter",
     attrs: { role: "meter", "aria-valuenow": validValue, "aria-valuemin": "0", "aria-valuemax": validMaximum, "aria-valuetext": `${formatCapacity(validValue, locale)} of ${validMaximum ? formatCapacity(validMaximum, locale) : "unknown"} weight` },
     children: [
-      node("span", { className: "ve-encumbrance-label", children: [icon("fa-weight-hanging"), node("strong", { text: `${formatCapacity(validValue, locale)} / ${validMaximum ? formatCapacity(validMaximum, locale) : "—"}` })] }),
-      node("span", { className: "ve-encumbrance-track", children: [
+      node("span", { className: "mc-encumbrance-label", children: [icon("fa-weight-hanging"), node("strong", { text: `${formatCapacity(validValue, locale)} / ${validMaximum ? formatCapacity(validMaximum, locale) : "—"}` })] }),
+      node("span", { className: "mc-encumbrance-track", children: [
         fill,
-        thresholdMarker(encumbrance.stops?.encumbered, localizedText(localize, "VEMOBILE.Character.Copy.Encumberedthreshold", "Encumbered threshold")),
-        thresholdMarker(encumbrance.stops?.heavilyEncumbered, localizedText(localize, "VEMOBILE.Character.Copy.Heavilyencumberedthreshold", "Heavily encumbered threshold"))
+        thresholdMarker(encumbrance.stops?.encumbered, localizedText(localize, "MIKELANDIA_CONTROLS.Character.Copy.Encumberedthreshold", "Encumbered threshold")),
+        thresholdMarker(encumbrance.stops?.heavilyEncumbered, localizedText(localize, "MIKELANDIA_CONTROLS.Character.Copy.Heavilyencumberedthreshold", "Heavily encumbered threshold"))
       ] })
     ]
   });
@@ -2480,45 +2463,45 @@ function encumbranceMeter(encumbrance = {}, locale = "en", localize = null) {
 function thresholdMarker(stop, label) {
   const value = Number(stop);
   if (!Number.isFinite(value)) return null;
-  const marker = node("i", { className: "ve-encumbrance-stop", attrs: { title: label, "aria-label": label } });
+  const marker = node("i", { className: "mc-encumbrance-stop", attrs: { title: label, "aria-label": label } });
   marker.style.left = `${Math.max(0, Math.min(100, value))}%`;
   return marker;
 }
 
 function itemInlineSummary(item, actor, commands, status, openItem, scope) {
-  const description = node("div", { className: "ve-sheet-item-inline-description" });
+  const description = node("div", { className: "mc-sheet-item-inline-description" });
   if (item.descriptionHtml) {
     description.innerHTML = item.descriptionHtml;
     scope.listen(description, "click", (event) => {
       if (event.target.closest?.("a")) event.preventDefault();
     });
   } else {
-    description.append(node("p", { text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.NoDescriptionIsAvailableForThisItem", "No description is available for this item.") }));
+    description.append(node("p", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NoDescriptionIsAvailableForThisItem", "No description is available for this item.") }));
   }
 
   const enabled = actor.capabilities?.useItem?.includes(item.id) ?? false;
-  const actionLabel = item.type === "spell" ? localizedText(commands.localize, "VEMOBILE.Character.Presenter.Cast", "Cast") : localizedText(commands.localize, "VEMOBILE.Character.Presenter.Use", "Use");
-  return node("div", { className: "ve-sheet-item-inline", children: [
-    item.properties?.length ? node("div", { className: "ve-sheet-item-inline-tags", children: item.properties.slice(0, 8).map((property) => node("span", { text: property })) }) : null,
+  const actionLabel = item.type === "spell" ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Cast", "Cast") : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Use", "Use");
+  return node("div", { className: "mc-sheet-item-inline", children: [
+    item.properties?.length ? node("div", { className: "mc-sheet-item-inline-tags", children: item.properties.slice(0, 8).map((property) => node("span", { text: property })) }) : null,
     item.details?.length ? node("dl", {
-      className: "ve-sheet-item-inline-facts",
+      className: "mc-sheet-item-inline-facts",
       children: item.details.slice(0, 6).flatMap((detail) => [node("dt", { text: detail.label }), node("dd", { text: detail.value })])
     }) : null,
     description,
-    node("div", { className: "ve-sheet-item-inline-actions", children: [
+    node("div", { className: "mc-sheet-item-inline-actions", children: [
       node("button", {
         className: "is-primary",
-        attrs: { type: "button", disabled: !enabled, title: enabled ? `${actionLabel} ${item.name}` : localizedText(commands.localize, "VEMOBILE.Character.Presenter.YouDoNotHavePermissionToUse", "You do not have permission to use {name}", { name: (item.name) }),  },
+        attrs: { type: "button", disabled: !enabled, title: enabled ? `${actionLabel} ${item.name}` : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.YouDoNotHavePermissionToUse", "You do not have permission to use {name}", { name: (item.name) }),  },
         on: { click: (event) => runItemAction(event.currentTarget, item, actor, commands, status) },
         children: [icon(item.type === "spell" ? "fa-wand-magic-sparkles" : "fa-play"), node("span", { text: actionLabel })]
       }, scope),
       node("button", {
-        attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.ViewFullDetailsFor", "View full details for {name}", { name: (item.name) }) },
+        attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.ViewFullDetailsFor", "View full details for {name}", { name: (item.name) }) },
         on: { click: () => {
           commands.setExpandedCharacterItem(item.id);
           openItem(item);
         } },
-        children: [icon("fa-circle-info"), node("span", { text: localizedText(commands.localize, "VEMOBILE.Collective.Details", "Details") })]
+        children: [icon("fa-circle-info"), node("span", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Collective.Details", "Details") })]
       }, scope)
     ] })
   ] });
@@ -2549,18 +2532,18 @@ function collectionControls(label, initialSortMode, onToggleSort, getExpandable,
     children: [expansionIcon]
   }, scope);
   const controls = {
-    element: node("div", { className: "ve-collection-controls", children: [showSort ? sortButton : null, expansionButton] }),
+    element: node("div", { className: "mc-collection-controls", children: [showSort ? sortButton : null, expansionButton] }),
     updateSort(sortMode) {
       const alphabetical = sortMode === "alphabetical";
       sortIcon.className = `fa-solid ${alphabetical ? "fa-arrow-down-a-z" : "fa-arrow-down-short-wide"}`;
-      sortButton.title = alphabetical ? localizedText(localize, "VEMOBILE.Character.Copy.SortedAtoZswitchtoFoundryorder", "Sorted A to Z; switch to Foundry order") : localizedText(localize, "VEMOBILE.Character.Copy.UsingFoundryorderswitchtoAtoZ", "Using Foundry order; switch to A to Z");
-      sortButton.setAttribute("aria-label", alphabetical ? localizedText(localize, "VEMOBILE.Character.Copy.collectionsortedAtoZSwitchtoFoundryorder", "{collection}: sorted A to Z. Switch to Foundry order", { collection: label }) : localizedText(localize, "VEMOBILE.Character.Copy.collectionusingFoundryorderSwitchtoAtoZ", "{collection}: using Foundry order. Switch to A to Z", { collection: label }));
+      sortButton.title = alphabetical ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Copy.SortedAtoZswitchtoFoundryorder", "Sorted A to Z; switch to Foundry order") : localizedText(localize, "MIKELANDIA_CONTROLS.Character.Copy.UsingFoundryorderswitchtoAtoZ", "Using Foundry order; switch to A to Z");
+      sortButton.setAttribute("aria-label", alphabetical ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Copy.collectionsortedAtoZSwitchtoFoundryorder", "{collection}: sorted A to Z. Switch to Foundry order", { collection: label }) : localizedText(localize, "MIKELANDIA_CONTROLS.Character.Copy.collectionusingFoundryorderSwitchtoAtoZ", "{collection}: using Foundry order. Switch to A to Z", { collection: label }));
     },
     updateExpansion() {
       const entries = Array.from(getExpandable());
       const anyOpen = entries.some((entry) => entry.open);
       expansionIcon.className = `fa-solid ${anyOpen ? "fa-angles-down" : "fa-angles-right"}`;
-      expansionButton.title = anyOpen ? localizedText(localize, "VEMOBILE.Character.Copy.Collapseallcollectionsections", "Collapse all {collection} sections", { collection: label }) : localizedText(localize, "VEMOBILE.Character.Copy.Expandallcollectionsections", "Expand all {collection} sections", { collection: label });
+      expansionButton.title = anyOpen ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Copy.Collapseallcollectionsections", "Collapse all {collection} sections", { collection: label }) : localizedText(localize, "MIKELANDIA_CONTROLS.Character.Copy.Expandallcollectionsections", "Expand all {collection} sections", { collection: label });
       expansionButton.setAttribute("aria-label", expansionButton.title);
     }
   };
@@ -2571,15 +2554,15 @@ function collectionControls(label, initialSortMode, onToggleSort, getExpandable,
 function collectionFilterButton(initialFilter, onToggle, scope, localize = null) {
   const label = node("span");
   const element = node("button", {
-    className: "ve-collection-filter",
+    className: "mc-collection-filter",
     attrs: { type: "button" },
     on: { click: onToggle },
     children: [icon("fa-filter"), label]
   }, scope);
   const update = (filter) => {
     const prepared = filter === "prepared";
-    label.textContent = prepared ? localizedText(localize, "VEMOBILE.Character.Labels.Prepared", "Prepared") : localizedText(localize, "VEMOBILE.Settings.UI.AssetAll", "All");
-    element.title = prepared ? localizedText(localize, "VEMOBILE.Character.Copy.Showingpreparedandalwaysavailablespellsshowallspells", "Showing prepared and always-available spells; show all spells") : localizedText(localize, "VEMOBILE.Character.Copy.Showingallspellsshowpreparedandalwaysavailablespells", "Showing all spells; show prepared and always-available spells");
+    label.textContent = prepared ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Prepared", "Prepared") : localizedText(localize, "MIKELANDIA_CONTROLS.Settings.UI.AssetAll", "All");
+    element.title = prepared ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Copy.Showingpreparedandalwaysavailablespellsshowallspells", "Showing prepared and always-available spells; show all spells") : localizedText(localize, "MIKELANDIA_CONTROLS.Character.Copy.Showingallspellsshowpreparedandalwaysavailablespells", "Showing all spells; show prepared and always-available spells");
     element.setAttribute("aria-label", element.title);
     element.setAttribute("aria-pressed", String(prepared));
   };
@@ -2590,21 +2573,21 @@ function collectionFilterButton(initialFilter, onToggle, scope, localize = null)
 function persistCollectionPreference(commands, key, value, status) {
   void Promise.resolve(commands.updateCharacterCollectionPreference?.(key, value)).catch((error) => {
     status.classList.add("is-error");
-    status.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Character.Presenter.ThatDisplayPreferenceCouldNotBeSaved", "That display preference could not be saved.");
+    status.textContent = error?.message ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.ThatDisplayPreferenceCouldNotBeSaved", "That display preference could not be saved.");
   });
 }
 
 function itemDetailModal(item, close, scope, commands) {
   if (!item) return null;
   const element = node("div", {
-    className: "ve-item-modal",
-    attrs: { role: "dialog", "aria-modal": "true", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.ItemDetails", "{name} details", { name: item.name }) },
+    className: "mc-item-modal",
+    attrs: { role: "dialog", "aria-modal": "true", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.ItemDetails", "{name} details", { name: item.name }) },
     children: [itemDetailContent(item, close, scope, commands)]
   });
   scope.listen(document, "keydown", (event) => {
     if (event.key === "Escape") close();
   });
-  queueMicrotask(() => element.querySelector(".ve-item-modal-close")?.focus());
+  queueMicrotask(() => element.querySelector(".mc-item-modal-close")?.focus());
   return element;
 }
 
@@ -2617,77 +2600,77 @@ function actorItemById(actor, itemId) {
 function itemDetailContent(item, close, scope, commands) {
   const subtitle = [
     item.typeLabel || item.type,
-    item.type === "spell" ? (Number(item.level) === 0 ? localizedText(commands.localize, "VEMOBILE.Character.Copy.Cantrip", "Cantrip") : localizedText(commands.localize, "VEMOBILE.Character.ActorView.Level", "Level {level}", { level: localizedNumber(Number(item.level) || 0, commands.readLocale?.() ?? "en") })) : null,
-    item.equipped ? localizedText(commands.localize, "VEMOBILE.Character.Labels.Equipped", "Equipped") : null,
-    Number(item.quantity) > 1 ? localizedText(commands.localize, "VEMOBILE.Character.Copy.Quantityquantity", "Quantity {quantity}", { quantity: localizedNumber(item.quantity, commands.readLocale?.() ?? "en") }) : null
+    item.type === "spell" ? (Number(item.level) === 0 ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Cantrip", "Cantrip") : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.ActorView.Level", "Level {level}", { level: localizedNumber(Number(item.level) || 0, commands.readLocale?.() ?? "en") })) : null,
+    item.equipped ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Labels.Equipped", "Equipped") : null,
+    Number(item.quantity) > 1 ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Quantityquantity", "Quantity {quantity}", { quantity: localizedNumber(item.quantity, commands.readLocale?.() ?? "en") }) : null
   ].filter(Boolean).join(" / ");
   const sections = [];
 
   if (item.descriptionHtml) {
-    const description = node("div", { className: "ve-item-modal-description" });
+    const description = node("div", { className: "mc-item-modal-description" });
     description.innerHTML = item.descriptionHtml;
     scope.listen(description, "click", (event) => {
       if (event.target.closest?.("a")) event.preventDefault();
     });
-    sections.push(itemModalSection(localizedText(commands.localize, "VEMOBILE.Character.Copy.Description", "Description"), [description]));
+    sections.push(itemModalSection(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Description", "Description"), [description]));
   }
 
   if (item.details?.length) {
-    sections.push(itemModalSection(localizedText(commands.localize, "VEMOBILE.Collective.Details", "Details"), [node("dl", {
-      className: "ve-item-modal-facts",
+    sections.push(itemModalSection(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Collective.Details", "Details"), [node("dl", {
+      className: "mc-item-modal-facts",
       children: item.details.flatMap((detail) => [node("dt", { text: detail.label }), node("dd", { text: detail.value })])
     })]));
   }
 
   if (item.properties?.length) {
-    sections.push(itemModalSection(localizedText(commands.localize, "VEMOBILE.Character.Copy.Properties", "Properties"), [node("div", {
-      className: "ve-item-modal-properties",
+    sections.push(itemModalSection(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Properties", "Properties"), [node("div", {
+      className: "mc-item-modal-properties",
       children: item.properties.map((property) => node("span", { text: property }))
     })]));
   }
 
   if (item.activities?.length) {
-    sections.push(itemModalSection(localizedText(commands.localize, "VEMOBILE.Character.Copy.Activitiescount", "Activities ({count})", { count: localizedNumber(item.activities.length, commands.readLocale?.() ?? "en") }), item.activities.map((activity) => activityDetail(activity))));
+    sections.push(itemModalSection(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Activitiescount", "Activities ({count})", { count: localizedNumber(item.activities.length, commands.readLocale?.() ?? "en") }), item.activities.map((activity) => activityDetail(activity))));
   }
 
   if (item.effects?.length) {
-    sections.push(itemModalSection(localizedText(commands.localize, "VEMOBILE.Character.Copy.Effectscount", "Effects ({count})", { count: localizedNumber(item.effects.length, commands.readLocale?.() ?? "en") }), item.effects.map((effect) => embeddedEffectDetail(effect, commands.localize))));
+    sections.push(itemModalSection(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Effectscount", "Effects ({count})", { count: localizedNumber(item.effects.length, commands.readLocale?.() ?? "en") }), item.effects.map((effect) => embeddedEffectDetail(effect, commands.localize))));
   }
 
-  return node("div", { className: "ve-item-modal-screen", children: [
-    node("header", { className: "ve-item-modal-header", children: [
+  return node("div", { className: "mc-item-modal-screen", children: [
+    node("header", { className: "mc-item-modal-header", children: [
       node("div", { children: [node("small", { text: item.typeLabel || item.type }), node("h2", { text: item.name })] }),
-      node("button", { className: "ve-item-modal-close", attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.CloseItemDetails", "Close item details") }, on: { click: close }, children: [icon("fa-xmark")] }, scope)
+      node("button", { className: "mc-item-modal-close", attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.CloseItemDetails", "Close item details") }, on: { click: close }, children: [icon("fa-xmark")] }, scope)
     ] }),
-    node("main", { className: "ve-item-modal-content", children: [
-      node("section", { className: "ve-item-modal-hero", children: [
-        node("span", { className: "ve-item-modal-art", children: item.img ? [node("img", { attrs: { src: item.img, alt: "" } })] : [icon(item.type === "spell" ? "fa-sparkles" : "fa-diamond")] }),
+    node("main", { className: "mc-item-modal-content", children: [
+      node("section", { className: "mc-item-modal-hero", children: [
+        node("span", { className: "mc-item-modal-art", children: item.img ? [node("img", { attrs: { src: item.img, alt: "" } })] : [icon(item.type === "spell" ? "fa-sparkles" : "fa-diamond")] }),
         node("div", { children: [node("h3", { text: item.name }), node("p", { text: subtitle }), item.source ? node("small", { text: item.source }) : null] })
       ] }),
       ...sections,
-      !sections.length ? node("p", { className: "ve-item-modal-empty", text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.NoAdditionalItemInformation", "No additional information is available for this item.") }) : null
+      !sections.length ? node("p", { className: "mc-item-modal-empty", text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NoAdditionalItemInformation", "No additional information is available for this item.") }) : null
     ] })
   ] });
 }
 
 function itemModalSection(title, children) {
-  return node("section", { className: "ve-item-modal-section", children: [node("h3", { text: title }), ...children] });
+  return node("section", { className: "mc-item-modal-section", children: [node("h3", { text: title }), ...children] });
 }
 
 function activityDetail(activity) {
-  return node("article", { className: "ve-item-activity", children: [
+  return node("article", { className: "mc-item-activity", children: [
     node("header", { children: [
-      node("span", { className: "ve-item-activity-art", children: activity.img ? [node("img", { attrs: { src: activity.img, alt: "" } })] : [icon("fa-bolt")] }),
+      node("span", { className: "mc-item-activity-art", children: activity.img ? [node("img", { attrs: { src: activity.img, alt: "" } })] : [icon("fa-bolt")] }),
       node("span", { children: [node("strong", { text: activity.name }), activity.type ? node("small", { text: activity.type }) : null] })
     ] }),
     activity.details?.length ? node("dl", { children: activity.details.flatMap((detail) => [node("dt", { text: detail.label }), node("dd", { text: detail.value })]) }) : null,
-    activity.damage?.length ? node("div", { className: "ve-item-activity-damage", children: activity.damage.map((damage) => node("span", { text: damage })) }) : null
+    activity.damage?.length ? node("div", { className: "mc-item-activity-damage", children: activity.damage.map((damage) => node("span", { text: damage })) }) : null
   ] });
 }
 
 function embeddedEffectDetail(effect, localize = null) {
-  const state = effect.isSuppressed ? localizedText(localize, "VEMOBILE.Settings.UI.AssetStatus.Unavailable", "Unavailable") : effect.disabled ? localizedText(localize, "VEMOBILE.Character.Copy.Inactive", "Inactive") : localizedText(localize, "VEMOBILE.Settings.UI.AssetStatus.Active", "Active");
-  return node("article", { className: `ve-item-effect${!effect.isSuppressed && !effect.disabled ? "" : " is-muted"}`, children: [
+  const state = effect.isSuppressed ? localizedText(localize, "MIKELANDIA_CONTROLS.Settings.UI.AssetStatus.Unavailable", "Unavailable") : effect.disabled ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Copy.Inactive", "Inactive") : localizedText(localize, "MIKELANDIA_CONTROLS.Settings.UI.AssetStatus.Active", "Active");
+  return node("article", { className: `mc-item-effect${!effect.isSuppressed && !effect.disabled ? "" : " is-muted"}`, children: [
     node("span", { children: effect.img ? [node("img", { attrs: { src: effect.img, alt: "" } })] : [icon("fa-wand-magic-sparkles")] }),
     node("strong", { text: effect.name }),
     node("small", { text: state })
@@ -2698,15 +2681,15 @@ function itemActionButton(item, actor, commands, status, scope) {
   const hasActivity = item.useMode === "activity";
   const enabled = actor.capabilities?.useItem?.includes(item.id) ?? false;
   const actionLabel = hasActivity
-    ? (item.type === "spell" ? localizedText(commands.localize, "VEMOBILE.Character.Copy.Castname", "Cast {name}", { name: item.name }) : localizedText(commands.localize, "VEMOBILE.Character.Copy.Usename", "Use {name}", { name: item.name }))
-    : localizedText(commands.localize, "VEMOBILE.Character.Presenter.ShowInChat", "Show {name} in chat", { name: (item.name) });
+    ? (item.type === "spell" ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Castname", "Cast {name}", { name: item.name }) : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Usename", "Use {name}", { name: item.name }))
+    : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.ShowInChat", "Show {name} in chat", { name: (item.name) });
   return node("button", {
-    className: "ve-sheet-item-art ve-sheet-item-use",
+    className: "mc-sheet-item-art mc-sheet-item-use",
     attrs: {
       type: "button",
       disabled: !enabled,
-      title: enabled ? actionLabel : localizedText(commands.localize, "VEMOBILE.Character.Presenter.YouDoNotHavePermissionToUse", "You do not have permission to use {name}", { name: (item.name) }),
-      "aria-label": enabled ? actionLabel : localizedText(commands.localize, "VEMOBILE.Character.Presenter.Unavailable", "{actionLabel}; unavailable", { actionLabel: (actionLabel) }),
+      title: enabled ? actionLabel : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.YouDoNotHavePermissionToUse", "You do not have permission to use {name}", { name: (item.name) }),
+      "aria-label": enabled ? actionLabel : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Unavailable", "{actionLabel}; unavailable", { actionLabel: (actionLabel) }),
 
     },
     on: { click: (event) => {
@@ -2722,26 +2705,22 @@ function runItemAction(button, item, actor, commands, status) {
   const hasActivity = item.useMode === "activity";
   return runActorCommand(button, ACTOR_COMMANDS.USE_ITEM, actor,
     { itemId: item.id, ...(item.activityId ? { activityId: item.activityId } : {}) },
-    commands, status, localizedText(commands.localize, hasActivity ? "VEMOBILE.Character.Presenter.UsingItem" : "VEMOBILE.Character.Presenter.SharingItem", hasActivity ? "Using {name}…" : "Sharing {name}…", { name: item.name }), item.name);
+    commands, status, localizedText(commands.localize, hasActivity ? "MIKELANDIA_CONTROLS.Character.Presenter.UsingItem" : "MIKELANDIA_CONTROLS.Character.Presenter.SharingItem", hasActivity ? "Using {name}…" : "Sharing {name}…", { name: item.name }), item.name);
 }
 
 function emptyCollection(message) {
-  return node("p", { className: "ve-sheet-empty", text: message });
-}
-
-function resourcesPanel(actor, commands) {
-  return node("section", { className: "ve-sheet-card", children: [sectionHeading(localizedText(commands.localize, "VEMOBILE.Character.Presenter.Resources", "Resources"), "fa-flask"), node("p", { className: "ve-section-intro", text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.ResourceDescription", "Spell slots, hit dice, character resources, and limited-use items.") }), actor.resources?.length ? node("div", { className: "ve-resource-list", children: actor.resources.map(resourceRow) }) : node("p", { className: "ve-sheet-empty", text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.NoLimitedResources", "No limited resources are visible for this character.") })] });
+  return node("p", { className: "mc-sheet-empty", text: message });
 }
 
 function activeEffectsPreview(actor, onViewAll, commands, scope) {
   const effects = (actor.effects ?? []).filter((effect) => !effect.disabled && !effect.isSuppressed && (effect.isTemporary || effect.isCondition)).slice(0, 6);
-  return node("section", { className: "ve-sheet-card ve-active-effects-preview", children: [
-    sectionHeading(localizedText(commands.localize, "VEMOBILE.Character.Presenter.ActiveEffects", "Active effects"), "fa-sparkles", cardAction(localizedText(commands.localize, "VEMOBILE.Character.Presenter.ViewAll", "View All"), onViewAll, scope)),
-    effects.length ? node("div", { className: "ve-effect-preview", attrs: { "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.ActiveEffects", "Active effects") }, children: effects.map((effect) => {
-      const entry = node("article", { attrs: { title: effect.name, "aria-label": effect.name }, children: [node("span", { className: "ve-effect-art", children: effect.img ? [node("img", { attrs: { src: effect.img, alt: "" } })] : [icon("fa-wand-magic-sparkles")] }), node("strong", { text: effect.name })] });
+  return node("section", { className: "mc-sheet-card mc-active-effects-preview", children: [
+    sectionHeading(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.ActiveEffects", "Active effects"), "fa-sparkles", cardAction(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.ViewAll", "View All"), onViewAll, scope)),
+    effects.length ? node("div", { className: "mc-effect-preview", attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.ActiveEffects", "Active effects") }, children: effects.map((effect) => {
+      const entry = node("article", { attrs: { title: effect.name, "aria-label": effect.name }, children: [node("span", { className: "mc-effect-art", children: effect.img ? [node("img", { attrs: { src: effect.img, alt: "" } })] : [icon("fa-wand-magic-sparkles")] }), node("strong", { text: effect.name })] });
       bindEffectContextMenu(entry, effect, actor, commands, scope);
       return entry;
-    }) }) : node("p", { className: "ve-effect-preview-empty", text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.NoTemporaryActiveEffects", "No temporary active effects.") })
+    }) }) : node("p", { className: "mc-effect-preview-empty", text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NoTemporaryActiveEffects", "No temporary active effects.") })
   ] });
 }
 
@@ -2752,7 +2731,7 @@ function bindEffectContextMenu(element, effect, actor, commands, scope) {
     effectUuid: effect.effectUuid || "",
     parentId: effect.effectParentId || ""
   };
-  element.dataset.veActiveEffect = "true";
+  element.dataset.mcActiveEffect = "true";
   element.dataset.actorSourceUuid = identity.actorSourceUuid;
   element.dataset.effectId = String(identity.effectId);
   bindLongPress(element, scope, (event) => {
@@ -2772,24 +2751,24 @@ function bindEffectContextMenu(element, effect, actor, commands, scope) {
 }
 
 function renderEffectContextMenu(anchor, menuRecord, commands, scope) {
-  const surface = anchor.closest?.(".ve-character-screen, .ve-mobile-app") ?? anchor.ownerDocument?.body;
-  surface?.__veEffectMenuCleanup?.();
+  const surface = anchor.closest?.(".mc-character-screen, .mc-mobile-app") ?? anchor.ownerDocument?.body;
+  surface?.__mcEffectMenuCleanup?.();
   const menu = node("nav", {
-    className: "ve-effect-context-menu",
-    attrs: { role: "menu", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.ActiveEffectActions", "Active Effect actions") }
+    className: "mc-effect-context-menu",
+    attrs: { role: "menu", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.ActiveEffectActions", "Active Effect actions") }
   });
   let closed = false;
   const dismiss = (closeGateway = true) => {
     if (closed) return;
     closed = true;
     menu.remove?.();
-    if (surface?.__veEffectMenuCleanup === dismiss) delete surface.__veEffectMenuCleanup;
+    if (surface?.__mcEffectMenuCleanup === dismiss) delete surface.__mcEffectMenuCleanup;
     if (closeGateway) void commands.closeActiveEffectContextMenu?.();
   };
-  if (surface) surface.__veEffectMenuCleanup = dismiss;
+  if (surface) surface.__mcEffectMenuCleanup = dismiss;
   for (const option of menuRecord.options ?? []) {
     const button = node("button", {
-      className: "ve-effect-context-option",
+      className: "mc-effect-context-option",
       attrs: { type: "button", role: "menuitem", "data-group": option.group ?? "" }
     });
     if (option.icon) button.insertAdjacentHTML?.("afterbegin", option.icon);
@@ -2826,38 +2805,38 @@ function positionEffectContextMenu(menu, surface, record) {
 function abilitiesSavesPreview(actor, onViewAll, commands, status, scope) {
   const trainedSkills = (actor.skills ?? []).filter((skill) => Number(skill.proficiency) > 0).sort((first, second) => first.label.localeCompare(second.label));
   const toolProficiencies = actor.toolProficiencies ?? [];
-  return node("section", { className: "ve-sheet-card ve-abilities-saves-preview", children: [
-    sectionHeading(localizedText(commands.localize, "VEMOBILE.Character.Presenter.AbilitiesAndSaves", "Abilities and saves"), "fa-dumbbell", cardAction(localizedText(commands.localize, "VEMOBILE.Character.Presenter.ViewAll", "View All"), onViewAll, scope)),
+  return node("section", { className: "mc-sheet-card mc-abilities-saves-preview", children: [
+    sectionHeading(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.AbilitiesAndSaves", "Abilities and saves"), "fa-dumbbell", cardAction(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.ViewAll", "View All"), onViewAll, scope)),
     abilityScoresPreview(actor, commands, status, scope),
-    node("div", { className: "ve-trained-skills-preview", children: [
-      node("p", { className: "ve-trained-skills-heading", text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.SkillProficiencies", "Skill Proficiencies") }),
-      trainedSkills.length ? node("div", { className: "ve-trained-skills-list", children: trainedSkills.map((skill) => {
+    node("div", { className: "mc-trained-skills-preview", children: [
+      node("p", { className: "mc-trained-skills-heading", text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.SkillProficiencies", "Skill Proficiencies") }),
+      trainedSkills.length ? node("div", { className: "mc-trained-skills-list", children: trainedSkills.map((skill) => {
         const enabled = actor.capabilities?.rollSkill?.includes(skill.key);
         const proficiency = skillProficiencyLabel(skill.proficiency, commands.localize);
         return node("button", {
-          className: `ve-trained-skill is-${proficiency.key}`,
-          attrs: { type: "button", disabled: !enabled, title: `${proficiency.label} · ${skill.ability}`, "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Roll", "Roll {label} {modifier}; {proficiency}", { label: skill.label, modifier: formatModifier(skill.modifier), proficiency: proficiency.label }),  },
-          on: { click: (event) => runActorCommand(event.currentTarget, ACTOR_COMMANDS.ROLL_SKILL, actor, { skill: skill.key }, commands, status, localizedText(commands.localize, "VEMOBILE.Character.Presenter.RollingSkill", "Rolling {label}…", { label: skill.label }), skill.label) },
+          className: `mc-trained-skill is-${proficiency.key}`,
+          attrs: { type: "button", disabled: !enabled, title: `${proficiency.label} · ${skill.ability}`, "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Roll", "Roll {label} {modifier}; {proficiency}", { label: skill.label, modifier: formatModifier(skill.modifier), proficiency: proficiency.label }),  },
+          on: { click: (event) => runActorCommand(event.currentTarget, ACTOR_COMMANDS.ROLL_SKILL, actor, { skill: skill.key }, commands, status, localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.RollingSkill", "Rolling {label}…", { label: skill.label }), skill.label) },
           children: [node("span", { text: skill.label }), node("b", { text: formatModifier(skill.modifier) }), icon("fa-dice-d20")]
         }, scope);
-      }) }) : node("p", { className: "ve-trained-skills-empty", text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.NoSkillProficiencies", "No skill proficiencies.") })
+      }) }) : node("p", { className: "mc-trained-skills-empty", text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NoSkillProficiencies", "No skill proficiencies.") })
     ] }),
-    node("div", { className: "ve-trained-skills-preview ve-tool-proficiencies-preview", children: [
-      node("p", { className: "ve-trained-skills-heading", text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.ToolProficiencies", "Tool Proficiencies") }),
-      toolProficiencies.length ? node("div", { className: "ve-trained-skills-list", children: toolProficiencies.map((tool) => toolProficiencyButton(tool, actor, commands, status, scope)) }) : node("p", { className: "ve-trained-skills-empty", text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.NoToolProficiencies", "No tool proficiencies.") })
+    node("div", { className: "mc-trained-skills-preview mc-tool-proficiencies-preview", children: [
+      node("p", { className: "mc-trained-skills-heading", text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.ToolProficiencies", "Tool Proficiencies") }),
+      toolProficiencies.length ? node("div", { className: "mc-trained-skills-list", children: toolProficiencies.map((tool) => toolProficiencyButton(tool, actor, commands, status, scope)) }) : node("p", { className: "mc-trained-skills-empty", text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NoToolProficiencies", "No tool proficiencies.") })
     ] })
   ] });
 }
 
 function abilityScoresPreview(actor, commands, status, scope) {
-  return node("div", { className: "ve-abilities-saves-grid", children: (actor.abilities ?? []).map((ability) => {
+  return node("div", { className: "mc-abilities-saves-grid", children: (actor.abilities ?? []).map((ability) => {
     const canCheck = actor.capabilities?.rollAbility?.includes(ability.key);
     const canSave = actor.capabilities?.rollSave?.includes(ability.key);
-    return node("article", { attrs: { "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Score", "{label}: score {score}", { label: (ability.label), score: (ability.score) }) }, children: [
-      node("div", { className: "ve-ability-preview-score", children: [node("strong", { text: ability.short }), node("span", { text: ability.score })] }),
-      node("div", { className: "ve-ability-preview-actions", children: [
-        abilityPreviewRoll(localizedText(commands.localize, "VEMOBILE.Character.Presenter.Check", "Check"), ability.modifier, canCheck, (button) => runActorCommand(button, ACTOR_COMMANDS.ROLL_ABILITY, actor, { ability: ability.key }, commands, status, localizedText(commands.localize, "VEMOBILE.Character.Presenter.RollingAbilityCheck", "Rolling {label} check…", { label: ability.label }), localizedText(commands.localize, "VEMOBILE.Character.Presenter.AbilityCheck", "{label} check", { label: ability.label })), scope, false, commands.localize),
-        abilityPreviewRoll(localizedText(commands.localize, "VEMOBILE.Character.Presenter.SavingThrowShort", "Save"), ability.saveModifier, canSave, (button) => runActorCommand(button, ACTOR_COMMANDS.ROLL_SAVE, actor, { ability: ability.key }, commands, status, localizedText(commands.localize, "VEMOBILE.Character.Presenter.RollingAbilitySave", "Rolling {label} save…", { label: ability.label }), localizedText(commands.localize, "VEMOBILE.Character.Presenter.AbilitySave", "{label} save", { label: ability.label })), scope, Number(ability.proficiency) > 0, commands.localize, localizedText(commands.localize, "VEMOBILE.Character.Presenter.SavingThrow", "Saving throw"))
+    return node("article", { attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Score", "{label}: score {score}", { label: (ability.label), score: (ability.score) }) }, children: [
+      node("div", { className: "mc-ability-preview-score", children: [node("strong", { text: ability.short }), node("span", { text: ability.score })] }),
+      node("div", { className: "mc-ability-preview-actions", children: [
+        abilityPreviewRoll(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Check", "Check"), ability.modifier, canCheck, (button) => runActorCommand(button, ACTOR_COMMANDS.ROLL_ABILITY, actor, { ability: ability.key }, commands, status, localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.RollingAbilityCheck", "Rolling {label} check…", { label: ability.label }), localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.AbilityCheck", "{label} check", { label: ability.label })), scope, false, commands.localize),
+        abilityPreviewRoll(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.SavingThrowShort", "Save"), ability.saveModifier, canSave, (button) => runActorCommand(button, ACTOR_COMMANDS.ROLL_SAVE, actor, { ability: ability.key }, commands, status, localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.RollingAbilitySave", "Rolling {label} save…", { label: ability.label }), localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.AbilitySave", "{label} save", { label: ability.label })), scope, Number(ability.proficiency) > 0, commands.localize, localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.SavingThrow", "Saving throw"))
       ] })
     ] });
   }) });
@@ -2867,43 +2846,39 @@ function toolProficiencyButton(tool, actor, commands, status, scope) {
   const enabled = actor.capabilities?.rollTool?.includes(tool.key);
   const proficiency = skillProficiencyLabel(tool.proficiency, commands.localize);
   return node("button", {
-    className: `ve-trained-skill is-${proficiency.key}`,
-    attrs: { type: "button", disabled: !enabled, title: localizedText(commands.localize, "VEMOBILE.Character.Presenter.Tool", "{label} · tool", { label: proficiency.label }), "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Roll", "Roll {label} {modifier}; {proficiency}", { label: tool.label, modifier: formatModifier(tool.modifier), proficiency: proficiency.label }) },
-    on: { click: (event) => runActorCommand(event.currentTarget, ACTOR_COMMANDS.ROLL_TOOL, actor, { tool: tool.key }, commands, status, localizedText(commands.localize, "VEMOBILE.Character.Presenter.RollingTool", "Rolling {label}…", { label: tool.label }), tool.label) },
+    className: `mc-trained-skill is-${proficiency.key}`,
+    attrs: { type: "button", disabled: !enabled, title: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Tool", "{label} · tool", { label: proficiency.label }), "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Roll", "Roll {label} {modifier}; {proficiency}", { label: tool.label, modifier: formatModifier(tool.modifier), proficiency: proficiency.label }) },
+    on: { click: (event) => runActorCommand(event.currentTarget, ACTOR_COMMANDS.ROLL_TOOL, actor, { tool: tool.key }, commands, status, localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.RollingTool", "Rolling {label}…", { label: tool.label }), tool.label) },
     children: [node("span", { text: tool.label }), node("b", { text: formatModifier(tool.modifier) }), icon("fa-dice-d20")]
   }, scope);
 }
 
 function skillProficiencyLabel(value, localize = null) {
   const multiplier = Number(value) || 0;
-  if (multiplier >= 2) return { key: "expertise", label: localizedText(localize, "VEMOBILE.Character.Labels.Expertise", "Expertise") };
-  if (multiplier >= 1) return { key: "proficient", label: localizedText(localize, "VEMOBILE.Character.Labels.Proficient", "Proficient") };
-  if (multiplier > 0) return { key: "half", label: localizedText(localize, "VEMOBILE.Character.Labels.Halfproficient", "Half proficient") };
-  return { key: "none", label: localizedText(localize, "VEMOBILE.Character.Labels.Notproficient", "Not proficient") };
+  if (multiplier >= 2) return { key: "expertise", label: localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Expertise", "Expertise") };
+  if (multiplier >= 1) return { key: "proficient", label: localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Proficient", "Proficient") };
+  if (multiplier > 0) return { key: "half", label: localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Halfproficient", "Half proficient") };
+  return { key: "none", label: localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Notproficient", "Not proficient") };
 }
 
 function abilityPreviewRoll(label, modifier, enabled, onClick, scope, proficientSave = false, localize = null, accessibleLabel = label) {
   return node("button", {
     className: proficientSave ? "is-save-proficient" : "",
-    attrs: { type: "button", disabled: !enabled, title: proficientSave ? localizedText(localize, "VEMOBILE.Character.Labels.Proficientsavingthrow", "Proficient saving throw") : undefined, "aria-label": localizedText(localize, proficientSave ? "VEMOBILE.Character.Labels.ProficientRoll" : "VEMOBILE.Character.Labels.Roll", proficientSave ? "{label} {value}; proficient" : "{label} {value}", { label: accessibleLabel, value: formatModifier(modifier) }) },
+    attrs: { type: "button", disabled: !enabled, title: proficientSave ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Proficientsavingthrow", "Proficient saving throw") : undefined, "aria-label": localizedText(localize, proficientSave ? "MIKELANDIA_CONTROLS.Character.Labels.ProficientRoll" : "MIKELANDIA_CONTROLS.Character.Labels.Roll", proficientSave ? "{label} {value}; proficient" : "{label} {value}", { label: accessibleLabel, value: formatModifier(modifier) }) },
     on: { click: (event) => onClick(event.currentTarget) },
     children: [abilityActionLabel(label, proficientSave), node("b", { text: formatModifier(modifier) }), icon("fa-dice-d20")]
   }, scope);
-}
-
-function resourceRow(resource) {
-  return node("div", { className: `ve-resource-row is-${resource.kind}`, children: [icon(resourceIcon(resource.kind)), node("span", { className: "ve-resource-copy", children: [node("strong", { text: resource.label }), resource.detail ? node("small", { text: resource.detail }) : null] }), capacityIndicator(resource.value, resource.max), node("b", { text: `${resource.value} / ${resource.max}` })] });
 }
 
 function spellSlotTrigger(resource, actor, commands, scope) {
   const slotKey = String(resource.id ?? "").replace(/^spell-slot:/u, "");
   const editable = actor.capabilities?.editSpellSlots?.includes(slotKey) ?? false;
   return node("button", {
-    className: "ve-spell-slot-trigger",
+    className: "mc-spell-slot-trigger",
     attrs: {
       type: "button",
       disabled: !editable,
-      "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.OfAvailable", "{label}, {value} of {max} available", { label: (resource.label), value: (resource.value), max: (resource.max) })
+      "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.OfAvailable", "{label}, {value} of {max} available", { label: (resource.label), value: (resource.value), max: (resource.max) })
     },
     on: { click: (event) => {
       event.preventDefault();
@@ -2923,16 +2898,16 @@ function spellSlotEditor(actor, requestedEditor, commands, scope) {
   const maximum = Math.max(0, Math.trunc(Number(resource.max) || 0));
   let value = Math.max(0, Math.min(maximum, Math.trunc(Number(resource.value) || 0)));
   let pending = false;
-  const modalStatus = node("p", { className: "ve-spell-slot-editor-status", attrs: { role: "status", "aria-live": "polite" } });
+  const modalStatus = node("p", { className: "mc-spell-slot-editor-status", attrs: { role: "status", "aria-live": "polite" } });
   const pips = capacityIndicator(value, maximum);
-  pips.classList.add("ve-spell-slot-editor-pips");
-  const fraction = node("strong", { className: "ve-spell-slot-editor-fraction", text: `${value} / ${maximum}` });
-  const current = node("strong", { className: "ve-spell-slot-editor-current", text: value });
-  const minus = node("button", { attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Decrease2", "Decrease {label}", { label: (resource.label) }) }, children: [icon("fa-minus")] });
-  const plus = node("button", { attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.Increase2", "Increase {label}", { label: (resource.label) }) }, children: [icon("fa-plus")] });
+  pips.classList.add("mc-spell-slot-editor-pips");
+  const fraction = node("strong", { className: "mc-spell-slot-editor-fraction", text: `${value} / ${maximum}` });
+  const current = node("strong", { className: "mc-spell-slot-editor-current", text: value });
+  const minus = node("button", { attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Decrease2", "Decrease {label}", { label: (resource.label) }) }, children: [icon("fa-minus")] });
+  const plus = node("button", { attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Increase2", "Increase {label}", { label: (resource.label) }) }, children: [icon("fa-plus")] });
   const closeButton = node("button", {
-    className: "ve-hp-editor-close",
-    attrs: { type: "button", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.CloseSpellSlotEditor", "Close spell-slot editor") },
+    className: "mc-hp-editor-close",
+    attrs: { type: "button", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.CloseSpellSlotEditor", "Close spell-slot editor") },
     on: { click: () => { if (!pending) commands.closeSpellSlotEditor(); } },
     children: [icon("fa-xmark")]
   }, scope);
@@ -2940,7 +2915,7 @@ function spellSlotEditor(actor, requestedEditor, commands, scope) {
     value = Math.max(0, Math.min(maximum, value + delta));
     fraction.textContent = `${value} / ${maximum}`;
     current.textContent = String(value);
-    pips.setAttribute("aria-label", localizedText(commands.localize, "VEMOBILE.Character.Presenter.OfAvailable2", "{value} of {maximum} available", { value: (value), maximum: (maximum) }));
+    pips.setAttribute("aria-label", localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.OfAvailable2", "{value} of {maximum} available", { value: (value), maximum: (maximum) }));
     for (const [index, pip] of Array.from(pips.querySelectorAll("i")).entries()) pip.classList.toggle("is-filled", index < value);
     minus.disabled = pending || value <= 0;
     plus.disabled = pending || value >= maximum;
@@ -2949,8 +2924,8 @@ function spellSlotEditor(actor, requestedEditor, commands, scope) {
   scope.listen(plus, "click", () => update(1));
 
   const form = node("form", {
-    className: "ve-spell-slot-editor",
-    attrs: { role: "dialog", "aria-modal": "true", "aria-labelledby": "ve-spell-slot-editor-title" },
+    className: "mc-spell-slot-editor",
+    attrs: { role: "dialog", "aria-modal": "true", "aria-labelledby": "mc-spell-slot-editor-title" },
     on: { submit: async (event) => {
       event.preventDefault();
       if (pending) return;
@@ -2960,7 +2935,7 @@ function spellSlotEditor(actor, requestedEditor, commands, scope) {
       confirm.disabled = true;
       form.setAttribute("aria-busy", "true");
       modalStatus.classList.remove("is-error");
-      modalStatus.textContent = localizedText(commands.localize, "VEMOBILE.Character.Presenter.UpdatingSpellSlots", "Updating spell slots…");
+      modalStatus.textContent = localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.UpdatingSpellSlots", "Updating spell slots…");
       try {
         await commands.execute(ACTOR_COMMANDS.SET_SPELL_SLOT_VALUE, {
           actorSourceUuid: requestedEditor.actorSourceUuid,
@@ -2976,7 +2951,7 @@ function spellSlotEditor(actor, requestedEditor, commands, scope) {
           confirm.disabled = false;
           form.removeAttribute("aria-busy");
           modalStatus.classList.add("is-error");
-          modalStatus.textContent = error?.message ?? localizedText(commands.localize, "VEMOBILE.Character.Presenter.SpellSlotsCouldNotBeUpdated", "Spell slots could not be updated.");
+          modalStatus.textContent = error?.message ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.SpellSlotsCouldNotBeUpdated", "Spell slots could not be updated.");
           update();
         }
       }
@@ -2984,39 +2959,39 @@ function spellSlotEditor(actor, requestedEditor, commands, scope) {
     children: []
   }, scope);
   const confirm = node("button", {
-    className: "ve-spell-slot-editor-confirm",
-    attrs: { type: "submit", "aria-label": localizedText(commands.localize, "VEMOBILE.Character.Presenter.ConfirmValue", "Confirm {label} value", { label: (resource.label) }) },
-    children: [icon("fa-check"), node("span", { text: localizedText(commands.localize, "VEMOBILE.Character.Presenter.Confirm", "Confirm") })]
+    className: "mc-spell-slot-editor-confirm",
+    attrs: { type: "submit", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.ConfirmValue", "Confirm {label} value", { label: (resource.label) }) },
+    children: [icon("fa-check"), node("span", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.Confirm", "Confirm") })]
   });
   form.append(
     node("header", { children: [
-      node("span", { className: "ve-hp-editor-heading-icon", children: [icon("fa-sparkles")] }),
-      node("div", { children: [node("small", { text: localizedText(commands.localize, "VEMOBILE.Character.Tabs.Spells", "Spells") }), node("h2", { attrs: { id: "ve-spell-slot-editor-title" }, text: resource.label })] }),
+      node("span", { className: "mc-hp-editor-heading-icon", children: [icon("fa-sparkles")] }),
+      node("div", { children: [node("small", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Spells", "Spells") }), node("h2", { attrs: { id: "mc-spell-slot-editor-title" }, text: resource.label })] }),
       closeButton
     ] }),
-    node("div", { className: "ve-spell-slot-editor-summary", children: [pips, fraction] }),
-    node("div", { className: "ve-spell-slot-editor-controls", children: [minus, current, plus] }),
+    node("div", { className: "mc-spell-slot-editor-summary", children: [pips, fraction] }),
+    node("div", { className: "mc-spell-slot-editor-controls", children: [minus, current, plus] }),
     modalStatus,
     confirm
   );
   update();
-  return node("div", { className: "ve-spell-slot-editor-layer", attrs: { role: "presentation" }, children: [form] });
+  return node("div", { className: "mc-spell-slot-editor-layer", attrs: { role: "presentation" }, children: [form] });
 }
 
 function capacityIndicator(value, max) {
-  if (max <= 10) return node("span", { className: "ve-capacity-dots", children: Array.from({ length: max }, (_, index) => node("i", { className: index < value ? "is-filled" : "" })) });
+  if (max <= 10) return node("span", { className: "mc-capacity-dots", children: Array.from({ length: max }, (_, index) => node("i", { className: index < value ? "is-filled" : "" })) });
   const fill = node("i");
   fill.style.width = `${Math.max(0, Math.min(100, value / max * 100))}%`;
-  return node("span", { className: "ve-capacity-track", children: [fill] });
+  return node("span", { className: "mc-capacity-track", children: [fill] });
 }
 
 function sectionHeading(title, iconOrElement, action = null) {
   const headingIcon = iconOrElement instanceof Node ? iconOrElement : icon(iconOrElement);
-  return node("header", { className: "ve-sheet-card-heading", children: [headingIcon, node("h3", { text: title }), action] });
+  return node("header", { className: "mc-sheet-card-heading", children: [headingIcon, node("h3", { text: title }), action] });
 }
 
 function cardAction(label, onClick, scope) {
-  return node("button", { className: "ve-sheet-card-action", attrs: { type: "button" }, on: { click: onClick }, children: [node("span", { text: label }), icon("fa-chevron-right")] }, scope);
+  return node("button", { className: "mc-sheet-card-action", attrs: { type: "button" }, on: { click: onClick }, children: [node("span", { text: label }), icon("fa-chevron-right")] }, scope);
 }
 
 function formatCapacity(value, locale = "en") {
@@ -3024,25 +2999,21 @@ function formatCapacity(value, locale = "en") {
   return Number.isInteger(rounded) ? localizedNumber(rounded, locale) : localizedNumber(rounded, locale, 1);
 }
 
-function rollButton({ label, meta, value, enabled, onClick, scope }) {
-  return node("button", { className: "ve-quick-roll", attrs: { type: "button", disabled: !enabled }, on: { click: (event) => onClick(event.currentTarget) }, children: [icon("fa-dice-d20"), node("span", { children: [node("strong", { text: label }), node("small", { text: meta })] }), node("b", { text: value })] }, scope);
-}
-
 function compactAction(label, value, enabled, onClick, scope, proficientSave = false, localize = null, accessibleLabel = label) {
   return node("button", {
     className: proficientSave ? "is-save-proficient" : "",
-    attrs: { type: "button", disabled: !enabled, title: proficientSave ? localizedText(localize, "VEMOBILE.Character.Labels.Proficientsavingthrow", "Proficient saving throw") : undefined, "aria-label": localizedText(localize, proficientSave ? "VEMOBILE.Character.Labels.ProficientRoll" : "VEMOBILE.Character.Labels.Roll", proficientSave ? "{label} {value}; proficient" : "{label} {value}", { label: accessibleLabel, value }) },
+    attrs: { type: "button", disabled: !enabled, title: proficientSave ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Proficientsavingthrow", "Proficient saving throw") : undefined, "aria-label": localizedText(localize, proficientSave ? "MIKELANDIA_CONTROLS.Character.Labels.ProficientRoll" : "MIKELANDIA_CONTROLS.Character.Labels.Roll", proficientSave ? "{label} {value}; proficient" : "{label} {value}", { label: accessibleLabel, value }) },
     on: { click: (event) => onClick(event.currentTarget) },
     children: [abilityActionLabel(label, proficientSave), node("b", { text: value })]
   }, scope);
 }
 
 function abilityActionLabel(label, proficientSave) {
-  return node("span", { className: "ve-ability-action-label", children: [label, proficientSave ? saveProficiencyMarker() : null] });
+  return node("span", { className: "mc-ability-action-label", children: [label, proficientSave ? saveProficiencyMarker() : null] });
 }
 
 function saveProficiencyMarker() {
-  return node("span", { className: "ve-save-proficiency", attrs: { "aria-hidden": "true" }, children: [icon("fa-shield")] });
+  return node("span", { className: "mc-save-proficiency", attrs: { "aria-hidden": "true" }, children: [icon("fa-shield")] });
 }
 
 async function runActorCommand(button, command, actor, payload, commands, status, pendingMessage, resultLabel) {
@@ -3081,13 +3052,6 @@ async function runActorCommand(button, command, actor, payload, commands, status
     button.classList.remove("is-pending");
     button.removeAttribute("aria-busy");
   }
-}
-
-function resourceIcon(kind) {
-  if (kind === "spell-slot") return "fa-sparkles";
-  if (kind === "hit-dice") return "fa-dice-d20";
-  if (kind === "item") return "fa-gem";
-  return "fa-bolt";
 }
 
 function formatModifier(value) {

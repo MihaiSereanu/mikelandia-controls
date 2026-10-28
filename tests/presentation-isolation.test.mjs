@@ -23,8 +23,8 @@ function setup(t, system = "wfrp4e", initial = {}) {
 }
 for (const system of ["wfrp4e", "shadowdark", "custom"]) {
   test(`${system} exposes effective shared preferences without changing saved D&D choices`, t => {
-    const initial = { "ve-mobile.colorScheme": "class", "ve-mobile.headerArtwork": "obsolete", "ve-mobile.quickbarSource": "character",
-      "ve-mobile.showActionSummaries": true, "ve-mobile.compactActionSummaries": true, "ve-mobile.characterFavouritesSource": "tidy" };
+    const initial = { "mikelandia-controls.colorScheme": "class", "mikelandia-controls.headerArtwork": "obsolete", "mikelandia-controls.quickbarSource": "character",
+      "mikelandia-controls.showActionSummaries": true, "mikelandia-controls.compactActionSummaries": true, "mikelandia-controls.characterFavouritesSource": "tidy" };
     const f = setup(t, system, initial);
     const snapshot = f.gateway.snapshot();
     assert.equal(snapshot.colorScheme, "neutral"); assert.equal(snapshot.headerArtwork, "off");
@@ -34,9 +34,9 @@ for (const system of ["wfrp4e", "shadowdark", "custom"]) {
     assert.equal(color.value, "neutral"); assert.equal(color.choices.some(choice => choice.value === "class"), false);
     for (const key of ["headerArtwork", "headerArtworkOpacity", "showActionSummaries", "compactActionSummaries", "characterFavouritesSource"]) {
       assert.equal(snapshot.fields.some(field => field.key === key), false);
-      assert.equal(f.registered.get(`ve-mobile.${key}`).config, false);
+      assert.equal(f.registered.get(`mikelandia-controls.${key}`).config, false);
     }
-    assert.equal(f.registered.get("ve-mobile.colorScheme").config, false, "native class picker stays hidden; shared mobile colors remain available");
+    assert.equal(f.registered.get("mikelandia-controls.colorScheme").config, false, "native class picker stays hidden; shared mobile colors remain available");
     assert.deepEqual(f.writes, []); for (const [key, value] of Object.entries(initial)) assert.equal(f.stored.get(key), value);
   });
   test(`${system} direct preference writes cannot enable D&D-only features`, async t => {
@@ -50,8 +50,8 @@ for (const system of ["wfrp4e", "shadowdark", "custom"]) {
     assert.equal(f.gateway.frame().colorScheme, "red");
   });
   test(`${system} Restore Defaults preserves unsupported game preferences`, async t => {
-    const initial = { "ve-mobile.colorScheme": "class", "ve-mobile.headerArtwork": "race", "ve-mobile.quickbarSource": "character",
-      "ve-mobile.characterSpellFilter": "prepared", "ve-mobile.characterFavouritesSource": "tidy", "ve-mobile.showActionSummaries": true };
+    const initial = { "mikelandia-controls.colorScheme": "class", "mikelandia-controls.headerArtwork": "race", "mikelandia-controls.quickbarSource": "character",
+      "mikelandia-controls.characterSpellFilter": "prepared", "mikelandia-controls.characterFavouritesSource": "tidy", "mikelandia-controls.showActionSummaries": true };
     const f = setup(t, system, initial);
     await f.gateway.restoreDefaults();
     for (const [key, value] of Object.entries(initial)) assert.equal(f.stored.get(key), value);
@@ -64,7 +64,7 @@ test("D&D keeps its native appearance and summary settings", async t => {
   assert.equal(snapshot.colorScheme, "class"); assert.equal(snapshot.headerArtwork, "automatic");
   assert.equal(snapshot.showActionSummaries, true);
   for (const key of ["headerArtwork", "headerArtworkOpacity", "showActionSummaries", "compactActionSummaries"]) {
-    assert.equal(snapshot.fields.some(field => field.key === key), true); assert.equal(f.registered.get(`ve-mobile.${key}`).config, true);
+    assert.equal(snapshot.fields.some(field => field.key === key), true); assert.equal(f.registered.get(`mikelandia-controls.${key}`).config, true);
   }
   await f.gateway.set({ key: "headerArtwork", value: "race" });
   assert.equal(f.gateway.character().headerArtwork, "race"); assert.equal(f.gateway.controls().characterPresentation, "legacy");

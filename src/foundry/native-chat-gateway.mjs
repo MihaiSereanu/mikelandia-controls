@@ -27,7 +27,7 @@ export function createFoundryNativeChatGateway({
       const theme = readFoundryTheme(documentRef);
 
       if (!host?.append || !scope?.own || !scope?.listen || !element || !chatForm || !input || !controls || !originalParent) {
-        return Object.freeze({ ok: false, reason: localizeFoundry("VEMOBILE.Interface.NativeChatGateway.FoundryChatIsNotAvailable", "Foundry chat is not available.") });
+        return Object.freeze({ ok: false, reason: localizeFoundry("MIKELANDIA_CONTROLS.Interface.NativeChatGateway.FoundryChatIsNotAvailable", "Foundry chat is not available.") });
       }
 
       const elementPlacement = placementOf(element);
@@ -55,12 +55,12 @@ export function createFoundryNativeChatGateway({
           if (originalToggleDescriptor) Object.defineProperty(chat, "_toggleNotifications", originalToggleDescriptor);
           else delete chat._toggleNotifications;
         }
-        element.classList.remove("ve-native-chat");
+        element.classList.remove("mc-native-chat");
         if (!wasActive) element.classList.remove("active");
         if (dockScope !== scope) dockScope?.dispose?.();
         restorePlacement(controls, controlsPlacement);
         restorePlacement(input, inputPlacement);
-        // The module may replace its tray while VE is open. Restore the live
+        // The module may replace its tray while Mikelandia Controls is open. Restore the live
         // replacement rather than resurrecting its removed node.
         const liveTray = chatForm.querySelector?.(".dice-tray") ?? (diceTray?.isConnected !== false ? diceTray : null);
         if (liveTray) {
@@ -84,7 +84,7 @@ export function createFoundryNativeChatGateway({
         // without involving the desktop sidebar lifecycle.
         chat._toggleNotifications = mobileToggle;
         host.classList?.add(theme);
-        element.classList.add("active", "ve-native-chat");
+        element.classList.add("active", "mc-native-chat");
         host.append(element);
         chatDomGateway?.activate?.(chat);
         scope.own(() => chatDomGateway?.deactivate?.(chat));
@@ -92,7 +92,7 @@ export function createFoundryNativeChatGateway({
         if (diceTray) chatForm.append(diceTray);
         dockScope = scope.child?.("chat-composer-dock") ?? scope;
         mountChatComposerDock({ form: chatForm, input, host: element, document: documentRef, scope: dockScope });
-        dockContent = chatForm.querySelector?.(".ve-chat-composer-content") ?? null;
+        dockContent = chatForm.querySelector?.(".mc-chat-composer-content") ?? null;
         mountChatVisualViewport({ host, input, document: documentRef, scope });
         bindManualChatFocus(host, input, scope);
         bindChatEditorInteraction({ input, document: documentRef, scope });
@@ -106,7 +106,7 @@ export function createFoundryNativeChatGateway({
       } catch (error) {
         restore();
         console.error("Mikelandia Controls | Native chat mount failed", error);
-        return Object.freeze({ ok: false, reason: localizeFoundry("VEMOBILE.Interface.NativeChatGateway.FoundryChatCouldNotBeMounted", "Foundry chat could not be mounted.") });
+        return Object.freeze({ ok: false, reason: localizeFoundry("MIKELANDIA_CONTROLS.Interface.NativeChatGateway.FoundryChatCouldNotBeMounted", "Foundry chat could not be mounted.") });
       }
 
       try {
@@ -137,7 +137,7 @@ export function createFoundryNativeChatGateway({
 export function mountChatVisualViewport({ host, input, document, scope }) {
   const browser = document?.defaultView;
   if (!host || !browser || !scope?.own || !scope?.listen) return;
-  const names = ["--ve-chat-viewport-top", "--ve-chat-viewport-left", "--ve-chat-viewport-width", "--ve-chat-viewport-height"];
+  const names = ["--mc-chat-viewport-top", "--mc-chat-viewport-left", "--mc-chat-viewport-width", "--mc-chat-viewport-height"];
   let root = null;
   let previous = null;
   let disposed = false;
@@ -148,14 +148,14 @@ export function mountChatVisualViewport({ host, input, document, scope }) {
   let splitViewportBaseline = null;
   const restorePane = () => {
     if (!panePrevious) return;
-    host.classList.remove("ve-chat-visual-pane");
-    if (panePrevious.value) host.style.setProperty("--ve-chat-pane-height", panePrevious.value, panePrevious.priority);
-    else host.style.removeProperty("--ve-chat-pane-height");
+    host.classList.remove("mc-chat-visual-pane");
+    if (panePrevious.value) host.style.setProperty("--mc-chat-pane-height", panePrevious.value, panePrevious.priority);
+    else host.style.removeProperty("--mc-chat-pane-height");
     panePrevious = null;
   };
   const restore = () => {
     if (!root) return;
-    root.classList.remove("ve-chat-visual-viewport");
+    root.classList.remove("mc-chat-visual-viewport");
     for (const [name, value, priority] of previous) {
       if (value) root.style.setProperty(name, value, priority);
       else root.style.removeProperty(name);
@@ -165,7 +165,7 @@ export function mountChatVisualViewport({ host, input, document, scope }) {
   };
   const reconcile = () => {
     if (disposed || scope.disposed || host.isConnected === false) return;
-    const currentRoot = host.closest?.(".ve-mobile-app");
+    const currentRoot = host.closest?.(".mc-mobile-app");
     if (!currentRoot || currentRoot.dataset?.route !== "chat") return;
     if (observedRoot !== currentRoot && typeof browser.MutationObserver === "function") {
       rootObserver ??= new browser.MutationObserver(update);
@@ -191,10 +191,10 @@ export function mountChatVisualViewport({ host, input, document, scope }) {
       // Clip only for a substantial drop from the keyboard-free viewport.
       const keyboardInset = splitViewportBaseline.height - bounds.height;
       if (!focused || keyboardInset < Math.max(100, splitViewportBaseline.height * 0.15)) { restorePane(); return; }
-      panePrevious ??= { value: host.style.getPropertyValue("--ve-chat-pane-height"), priority: host.style.getPropertyPriority("--ve-chat-pane-height") };
+      panePrevious ??= { value: host.style.getPropertyValue("--mc-chat-pane-height"), priority: host.style.getPropertyPriority("--mc-chat-pane-height") };
       const height = Math.max(1, Math.min(pane.height, bounds.top + bounds.height - pane.top - (Number(browser.scrollY) || 0)));
-      host.style.setProperty("--ve-chat-pane-height", `${height}px`);
-      host.classList.add("ve-chat-visual-pane");
+      host.style.setProperty("--mc-chat-pane-height", `${height}px`);
+      host.classList.add("mc-chat-visual-pane");
       return;
     }
     splitViewportBaseline = null;
@@ -209,7 +209,7 @@ export function mountChatVisualViewport({ host, input, document, scope }) {
       const pixels = `${value}px`;
       if (root.style.getPropertyValue(name) !== pixels) root.style.setProperty(name, pixels);
     }
-    root.classList.add("ve-chat-visual-viewport");
+    root.classList.add("mc-chat-visual-viewport");
   };
   const update = () => {
     reconcile();
@@ -263,7 +263,7 @@ export function mountPolyglotChatSelector({ chat, chatForm, controls, input, doc
     if (!container || !select) return null;
     container.id = "polyglot";
     container.className = "polyglot polyglot-lang-select flexrow";
-    container.dataset.veMobilePolyglotFallback = "true";
+    container.dataset.mcMobilePolyglotFallback = "true";
     select.id = "polyglot-language";
     select.name = "polyglot-language";
     container.append?.(select);
@@ -292,12 +292,12 @@ export function mountPolyglotChatSelector({ chat, chatForm, controls, input, doc
     }
     game.polyglot.renderChatLog = true;
     selector.hidden = false;
-    const phone = document?.body?.dataset?.veMobileFormFactor !== "tablet";
+    const phone = document?.body?.dataset?.mcMobileFormFactor !== "tablet";
     if (phone && document?.createElement && input?.insertAdjacentElement) {
       if (!mobileRow?.isConnected) {
         mobileRow = document.createElement("div");
-        mobileRow.className = "ve-polyglot-chat-row";
-        mobileRow.setAttribute?.("aria-label", localizeFoundry("VEMOBILE.Interface.NativeChatGateway.ChatLanguage", "Chat language"));
+        mobileRow.className = "mc-polyglot-chat-row";
+        mobileRow.setAttribute?.("aria-label", localizeFoundry("MIKELANDIA_CONTROLS.Interface.NativeChatGateway.ChatLanguage", "Chat language"));
         input.insertAdjacentElement("beforebegin", mobileRow);
       }
       mobileRow.append(selector);
@@ -328,7 +328,7 @@ export function mountPolyglotChatSelector({ chat, chatForm, controls, input, doc
     }
   };
   reconcile();
-  // renderChat mounts this live ChatLog before its VE host is inserted.
+  // renderChat mounts this live ChatLog before its Mikelandia Controls host is inserted.
   // Polyglot's TomSelect constructor queries document by selector ID, so it
   // must run after the host becomes connected in the same render turn.
   queueMicrotask(refreshLanguages);
@@ -383,13 +383,13 @@ export function bindManualChatFocus(host, input, scope, { now = defaultNow, allo
     const active = input.ownerDocument?.activeElement;
     return active && typingTarget(active) ? active : null;
   };
-  const ownedMenu = target => target?.closest?.("#prosemirror-dropdown.ve-chat-editor-menu");
+  const ownedMenu = target => target?.closest?.("#prosemirror-dropdown.mc-chat-editor-menu");
   const noteIntent = (event) => {
     const directInputTap = typingTarget(event.target);
     const formattingTap = Boolean(ownedMenu(event.target)
       || (input.contains?.(event.target) && event.target?.closest?.(".menu-container, .editor-menu")));
     const promptTap = formattingTap && EDITOR_PROMPT_ACTIONS.has(event.target?.closest?.("[data-action]")?.dataset?.action);
-    const diceButtonTap = Boolean(event.target?.closest?.(".ve-chat-dice-layer .dice-tray button"));
+    const diceButtonTap = Boolean(event.target?.closest?.(".mc-chat-dice-layer .dice-tray button"));
     const focused = focusedInput();
     const focusedDiceTap = diceButtonTap && Boolean(focused);
     directInputTapAt = directInputTap || focusedDiceTap || (formattingTap && !promptTap) ? now() : Number.NEGATIVE_INFINITY;
@@ -427,7 +427,7 @@ export function bindChatEditorInteraction({ input, document, scope }) {
     if (menu?.isConnected === false) release();
     if (!input.contains(event.target) && !menu?.contains(event.target)) return;
     touch = event.pointerType === "touch" || event.pointerType === "pen";
-    menu?.classList.toggle("ve-chat-editor-touch-menu", touch);
+    menu?.classList.toggle("mc-chat-editor-touch-menu", touch);
   }, { capture: true, passive: true });
   scope.listen(input, "click", () => {
     beforeClick = document.getElementById("prosemirror-dropdown");
@@ -443,13 +443,13 @@ export function bindChatEditorInteraction({ input, document, scope }) {
     const owner = scope.child("chat-editor-menu");
     menuScope = owner;
     const anchor = event.target.closest("button") ?? event.target;
-    const properties = ["--ve-chat-menu-left", "--ve-chat-menu-top", "--ve-chat-menu-width", "--ve-chat-menu-height"];
+    const properties = ["--mc-chat-menu-left", "--mc-chat-menu-top", "--mc-chat-menu-width", "--mc-chat-menu-height"];
     const previous = properties.map(name => [name, current.style.getPropertyValue(name), current.style.getPropertyPriority(name)]);
     const expanded = new Map();
     owner.own(() => {
-      current.classList.remove("ve-chat-editor-menu", "ve-chat-editor-touch-menu");
+      current.classList.remove("mc-chat-editor-menu", "mc-chat-editor-touch-menu");
       for (const [element, value] of expanded) {
-        element.classList.remove("ve-chat-menu-expanded");
+        element.classList.remove("mc-chat-menu-expanded");
         if (value === null) element.removeAttribute("aria-expanded");
         else element.setAttribute("aria-expanded", value);
       }
@@ -458,8 +458,8 @@ export function bindChatEditorInteraction({ input, document, scope }) {
         else current.style.removeProperty(name);
       }
     });
-    current.classList.add("ve-chat-editor-menu");
-    current.classList.toggle("ve-chat-editor-touch-menu", touch);
+    current.classList.add("mc-chat-editor-menu");
+    current.classList.toggle("mc-chat-editor-touch-menu", touch);
     const update = () => {
       if (owner.disposed || menu !== current || current.isConnected === false || !touch) return;
       const viewport = browser.visualViewport;
@@ -467,12 +467,12 @@ export function bindChatEditorInteraction({ input, document, scope }) {
       const top = viewport?.offsetTop ?? 0;
       const width = Math.max(1, (viewport?.width ?? browser.innerWidth) - 16);
       const height = Math.max(1, (viewport?.height ?? browser.innerHeight) - 16);
-      current.style.setProperty("--ve-chat-menu-width", `${width}px`);
-      current.style.setProperty("--ve-chat-menu-height", `${height}px`);
+      current.style.setProperty("--mc-chat-menu-width", `${width}px`);
+      current.style.setProperty("--mc-chat-menu-height", `${height}px`);
       const rect = current.getBoundingClientRect();
       const origin = anchor.getBoundingClientRect();
-      current.style.setProperty("--ve-chat-menu-left", `${Math.max(left + 8, Math.min(origin.left, left + width + 8 - rect.width))}px`);
-      current.style.setProperty("--ve-chat-menu-top", `${Math.max(top + 8, Math.min(origin.bottom, top + height + 8 - rect.height))}px`);
+      current.style.setProperty("--mc-chat-menu-left", `${Math.max(left + 8, Math.min(origin.left, left + width + 8 - rect.width))}px`);
+      current.style.setProperty("--mc-chat-menu-top", `${Math.max(top + 8, Math.min(origin.bottom, top + height + 8 - rect.height))}px`);
     };
     owner.listen(current, "click", event => {
       if (!touch) return;
@@ -481,7 +481,7 @@ export function bindChatEditorInteraction({ input, document, scope }) {
       event.preventDefault();
       event.stopImmediatePropagation();
       if (!expanded.has(item)) expanded.set(item, item.getAttribute("aria-expanded"));
-      const open = item.classList.toggle("ve-chat-menu-expanded");
+      const open = item.classList.toggle("mc-chat-menu-expanded");
       item.setAttribute("aria-expanded", String(open));
       update();
     }, { capture: true });

@@ -1,9 +1,9 @@
 /**
- * Give Android's close request one VE layer per user-opened surface. Unlike a
+ * Give Android's close request one Mikelandia Controls layer per user-opened surface. Unlike a
  * script-created history entry, a CloseWatcher receives Back before history
  * traversal. Browsers still limit how many requests a page may intercept.
  */
-export function createVeCloseWatcherBack({
+export function createMcCloseWatcherBack({
   scope,
   getWindow = () => globalThis.window,
   isAndroid = () => /\bAndroid\b/u.test(globalThis.navigator?.userAgent ?? ""),
@@ -34,7 +34,7 @@ export function createVeCloseWatcherBack({
           if (disposed || pendingClose !== null) return;
           // A browser may group watchers created without separate user
           // activations. Let the entire close request finish, then unwind
-          // only one VE layer and recreate any still-visible watchers.
+          // only one Mikelandia Controls layer and recreate any still-visible watchers.
           pendingClose = setTimeout(() => {
             pendingClose = null;
             if (disposed) return;
@@ -75,7 +75,7 @@ export function createVeCloseWatcherBack({
 }
 
 /** Bottom-to-top state-owned Back surfaces; the dispatcher handles DOM layers. */
-export function veCloseWatcherLayers(state = {}, { nativeLayers = [] } = {}) {
+export function mcCloseWatcherLayers(state = {}, { nativeLayers = [] } = {}) {
 
   const layers = [];
   if (state.route && state.route !== "characters") layers.push(`route:${state.route}`);

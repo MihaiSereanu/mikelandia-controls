@@ -59,10 +59,6 @@ export function resolveOrientation({ window = globalThis.window, navigator = glo
   return viewportWidth > viewportHeight ? "landscape" : "portrait";
 }
 
-export function evaluateActivation(preferences) {
-  return createActivationPolicyResolver().resolve(preferences);
-}
-
 export function classifyRuntimeMode({ window = globalThis.window, navigator = globalThis.navigator } = {}) {
   const userAgent = String(navigator.userAgent ?? "");
   const platform = String(navigator.userAgentData?.platform ?? navigator.platform ?? "");

@@ -1,3 +1,4 @@
+import { migrateBrowserBranding, registerBrandingMigration, migrateWorldBranding } from "./foundry/branding-migration.mjs";
 import { createSystemIntegrationResolver } from "./systems/registry.mjs";
 import { localizeFoundry } from "./foundry/localization.mjs";
 import { createControlsGuideGateway } from "./foundry/controls-guide-gateway.mjs";
@@ -13,12 +14,12 @@ import {
   readKeepScreenAwake,
   readLocale,
   readLoggingLevel,
-  readProtectVeStyling,
+  readProtectMcStyling,
   readPreferences,
   registerPreferences
 } from "./foundry/preferences.mjs";
 import { createFoundrySessionGateway } from "./foundry/session-gateway.mjs";
-import { enableMobilePresentation, enableVeStyleAuthority } from "./foundry/mobile-presentation.mjs";
+import { enableMobilePresentation, enableMcStyleAuthority } from "./foundry/mobile-presentation.mjs";
 import { createFoundryCommandGateway } from "./foundry/command-gateway.mjs";
 import { createRollTimingGateway } from "./foundry/roll-timing.mjs";
 import { enableMobileDiceGuard } from "./foundry/mobile-dice-guard.mjs";
@@ -48,7 +49,7 @@ import { createMobileStartupGateway } from "./foundry/mobile-startup-gateway.mjs
 import { showDesktopRestorationRecovery } from "./ui/desktop-restoration-recovery.mjs";
 import { createFoundryBiographyGateway } from "./foundry/biography-gateway.mjs";
 import { enableMobileJournalReader } from "./foundry/mobile-journal-reader-gateway.mjs";
-import { createChatDomGateway, installVeChatWindowClass } from "./foundry/chat-dom-gateway.mjs";
+import { createChatDomGateway, installMcChatWindowClass } from "./foundry/chat-dom-gateway.mjs";
 import { createFoundryMobileBackGateway } from "./foundry/mobile-back-gateway.mjs";
 import { createActorEditorGateway } from "./foundry/actor-editor-gateway.mjs";
 import { createMobileModuleCompatibilityGateway } from "./foundry/mobile-module-compatibility.mjs";
@@ -56,7 +57,16 @@ import { createMobileModuleCompatibilityGateway } from "./foundry/mobile-module-
 import { createLegacyClientRestoration } from "./foundry/legacy-client-restoration.mjs";
 const isGamePage = /\/game\/?$/.test(window.location.pathname);
 
-if (isGamePage) {
+const migrateBrowserState = () => {
+  try { migrateBrowserBranding(); return true; }
+  catch (error) {
+    console.error("Mikelandia Controls | Browser preferences could not finish migrating; originals are retained.", error);
+    Hooks.once("ready", () => ui.notifications.error("Mikelandia Controls could not copy saved browser settings. Enable browser storage and reload; original settings are retained."));
+    return false;
+  }
+};
+
+if (isGamePage && migrateBrowserState()) {
   const getSystemIntegration = createSystemIntegrationResolver();
   const fullLoadStartedAt = navigationStartAt();
   const loadTimingGateway = createClientLoadTimingGateway();
@@ -76,7 +86,7 @@ if (isGamePage) {
   const controlsGuideGateway = createControlsGuideGateway();
   const desktopSettingsVisibility = createFoundryDesktopSettingsVisibilityGateway({ readPolicy });
   const legacyClientRestoration = createLegacyClientRestoration();
-  const resolvedGraphicsPolicy = () => resolveMobileGraphicsPolicy({ graphicsSafety: "off", diceRendering: preferencesGateway.snapshot().diceRendering, getCanvas: () => null });
+  const resolvedGraphicsPolicy = () => resolveMobileGraphicsPolicy({ diceRendering: preferencesGateway.snapshot().diceRendering });
   let performanceEnabled = false;
   const performanceObserver = createPerformanceObserver({ enabled: () => performanceEnabled });
   let mobileAudioController = null, visualIsolationController = null;
@@ -125,14 +135,14 @@ if (isGamePage) {
     if (startupComplete || !bootstrap.mounted) return;
     bootstrapRecoveryReason = reason;
     const message = reason === "backgrounded"
-      ? localizeFoundry("VEMOBILE.Boot.BrowserSuspended", "The browser was suspended before Foundry finished loading. Refresh the game to restart the session safely.")
+      ? localizeFoundry("MIKELANDIA_CONTROLS.Boot.BrowserSuspended", "The browser was suspended before Foundry finished loading. Refresh the game to restart the session safely.")
       : reason === "startup-error"
-        ? localizeFoundry("VEMOBILE.Boot.StartupFailed", "The mobile interface could not finish starting. Refresh the game to try again.")
-        : localizeFoundry("VEMOBILE.Boot.StartupStalled", "Foundry has stopped reporting startup progress. Refresh the game to try again.");
+        ? localizeFoundry("MIKELANDIA_CONTROLS.Boot.StartupFailed", "The mobile interface could not finish starting. Refresh the game to try again.")
+        : localizeFoundry("MIKELANDIA_CONTROLS.Boot.StartupStalled", "Foundry has stopped reporting startup progress. Refresh the game to try again.");
     bootstrap.showRecovery({
-      title: localizeFoundry("VEMOBILE.Boot.Interrupted", "Loading interrupted"),
+      title: localizeFoundry("MIKELANDIA_CONTROLS.Boot.Interrupted", "Loading interrupted"),
       message,
-      actionLabel: localizeFoundry("VEMOBILE.Boot.Refresh", "Refresh game")
+      actionLabel: localizeFoundry("MIKELANDIA_CONTROLS.Boot.Refresh", "Refresh game")
     });
   };
 
@@ -144,12 +154,12 @@ if (isGamePage) {
   };
   const renderBootstrapPhase = stage => {
     const labels = {
-      init: localizeFoundry("VEMOBILE.Boot.Phase.init", "Preparing game settings…"), world: localizeFoundry("VEMOBILE.Boot.Phase.world", "Preparing world data…"),
-      theme: localizeFoundry("VEMOBILE.Boot.Phase.theme", "Preparing mobile appearance…"),
-      recovery: localizeFoundry("VEMOBILE.Boot.Phase.recovery", "Checking session…"), session: localizeFoundry("VEMOBILE.Boot.Phase.session", "Restoring your session…"),
-      interface: localizeFoundry("VEMOBILE.Boot.Phase.interface", "Restoring mobile interface…")
+      init: localizeFoundry("MIKELANDIA_CONTROLS.Boot.Phase.init", "Preparing game settings…"), world: localizeFoundry("MIKELANDIA_CONTROLS.Boot.Phase.world", "Preparing world data…"),
+      theme: localizeFoundry("MIKELANDIA_CONTROLS.Boot.Phase.theme", "Preparing mobile appearance…"),
+      recovery: localizeFoundry("MIKELANDIA_CONTROLS.Boot.Phase.recovery", "Checking session…"), session: localizeFoundry("MIKELANDIA_CONTROLS.Boot.Phase.session", "Restoring your session…"),
+      interface: localizeFoundry("MIKELANDIA_CONTROLS.Boot.Phase.interface", "Restoring mobile interface…")
     };
-    bootstrap.setPhase?.({ label: labels[stage] ?? localizeFoundry("VEMOBILE.Boot.Phase.Default", "Loading Foundry…") });
+    bootstrap.setPhase?.({ label: labels[stage] ?? localizeFoundry("MIKELANDIA_CONTROLS.Boot.Phase.Default", "Loading Foundry…") });
   };
 
   const updateBootstrapWake = async (fromGesture = false) => {
@@ -372,14 +382,6 @@ if (isGamePage) {
     performanceObserver,
     wakeLockController: wakeLock,
     readPolicy,
-    readGraphicsPolicy: resolvedGraphicsPolicy,
-    watchGraphicsPolicy: (scope, listener) => {
-
-      const unsubscribe = () => {};
-      scope?.own?.(unsubscribe);
-      listener(resolvedGraphicsPolicy());
-      return unsubscribe;
-    },
     disable: () => preferencesGateway.set({ key: KEYS.MODE, value: "desktop" }),
     preparePresentation: (scope) => {
       mobileAudioController = enableMobileAudio(scope, { enabled: game.settings.get(MODULE_ID, KEYS.MUTE_MOBILE_AUDIO) !== false });
@@ -392,8 +394,8 @@ if (isGamePage) {
         isSettingsApplication: (application, element) => settingsCompatibilityGateway.ownsApplication(application, element),
         trace: (event) => diagnostics.record(event.paint?.display === "none" ? "warn" : "debug", `Application admission ${JSON.stringify(event)}`)
       });
-      const isolation = enableVeStyleAuthority(scope, {
-        enabled: readProtectVeStyling(),
+      const isolation = enableMcStyleAuthority(scope, {
+        enabled: readProtectMcStyling(),
         trace: (state) => diagnostics.record("debug", `Mikelandia Controls style authority ${JSON.stringify(state)}`)
       });
       visualIsolationController = isolation;
@@ -452,16 +454,17 @@ if (isGamePage) {
     recoveryScope = createTaskScope("desktop-restoration-recovery", performanceObserver);
     recoveryScope.listen(window, "pagehide", () => recoveryScope?.dispose(), { once: true });
     const keys = ["title", "detail", "pending", "saved", "retry", "working", "failed"];
-    const labels = Object.fromEntries(keys.map(key => [key, game.i18n.localize(`VEMOBILE.RestorationRecovery.${key}`)]));
+    const labels = Object.fromEntries(keys.map(key => [key, game.i18n.localize(`MIKELANDIA_CONTROLS.RestorationRecovery.${key}`)]));
     showDesktopRestorationRecovery({ scope: recoveryScope, labels, keys: recoveryRecord?.keys ?? [], retry: async () => {
       const result = await startupGate.retry();
       if (result.state === "ready") reloadForModeChange();
-      else { showRestorationRecovery(); throw new Error(localizeFoundry("VEMOBILE.Recovery.DesktopPending", "Desktop restoration remains pending.")); }
+      else { showRestorationRecovery(); throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Recovery.DesktopPending", "Desktop restoration remains pending.")); }
     } });
   };
   let modeTransitionQueue = Promise.resolve();
 
   Hooks.once("init", () => {
+    registerBrandingMigration();
     const compatibilityScope = createTaskScope("mobile-module-compatibility", performanceObserver);
     compatibilityScope.listen(window, "pagehide", () => compatibilityScope.dispose(), { once: true, passive: true });
     const mobilePresentationSelected = () => ["phone", "tablet"].includes(readRequestedPolicy().runtimeMode);
@@ -472,7 +475,7 @@ if (isGamePage) {
       });
     });
     // Foundry installs its Window popstate listener after init returns.
-    // Only a mobile page registers VE's earlier Back listener.
+    // Only a mobile page registers Mikelandia Controls's earlier Back listener.
     if (isMobilePerformanceAuthorityActive(readPolicy)) {
       const backScope = createTaskScope("mobile-back-page", performanceObserver);
       if (!mobileBackGateway.install(backScope)) diagnostics.record("warn", "Browser Back protection could not install before Foundry's history listener.");
@@ -490,7 +493,7 @@ if (isGamePage) {
       reconcileMediaGuard();
       kernel.reconcile();
       // Foundry's ready hook is one-shot. If this page began in Desktop mode,
-      // a later Phone/Tablet preference mounts VE after ready has already
+      // a later Phone/Tablet preference mounts Mikelandia Controls after ready has already
       // fired, so that live activation owns its own authoritative completion.
       if (globalThis.game?.ready && readPolicy().active) {
         finishBootstrap({ animate: false, reason: "desktop-exit" });
@@ -544,7 +547,7 @@ if (isGamePage) {
     lastSelectedRuntimeMode = readPolicy().runtimeMode;
     if (isMobilePerformanceAuthorityActive(readPolicy)) {
       authoritativeGateway.captureInitialSources();
-      installVeChatWindowClass();
+      installMcChatWindowClass();
     }
     const startupScope = createTaskScope("client-startup", performanceObserver);
     startupScope.own(() => rollTiming.setEnabled(false));
@@ -556,6 +559,11 @@ if (isGamePage) {
   });
   Hooks.once("setup", () => { authoritativeGateway.bindInitialDocuments(); advanceBootstrap("world"); });
   Hooks.once("ready", async () => {
+    try { await migrateWorldBranding(game, () => bootstrapWatchdog?.progress()); }
+    catch (error) {
+      console.error("Mikelandia Controls | Legacy data migration is incomplete; originals are retained.", error);
+      ui.notifications?.warn?.("Mikelandia Controls could not finish migrating old data. Original values are retained; a GM can retry by reloading.");
+    }
     const startup = await startupGate.prepare();
     if (startup.state !== "ready") { showRestorationRecovery(); return; }
     advanceBootstrap("theme");

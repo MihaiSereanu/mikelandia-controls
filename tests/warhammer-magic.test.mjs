@@ -31,9 +31,9 @@ function setup(t, use5e) {
 for (const use5e of [false, true]) {
   test(`${use5e ? "5e" : "4e"} spells use native edition workflow and exactly one native roll`, async t => {
     const { actor, game, gateway, calls } = setup(t, use5e);
-    Object.defineProperty(game, "messages", { get() { throw new Error("VE must not parse magic results"); } });
-    actor.update = () => { throw new Error("VE must not write channelled power"); };
-    for (const item of actor.items) item.update = () => { throw new Error("VE must not consume ingredients or write SL"); };
+    Object.defineProperty(game, "messages", { get() { throw new Error("Mikelandia Controls must not parse magic results"); } });
+    actor.update = () => { throw new Error("Mikelandia Controls must not write channelled power"); };
+    for (const item of actor.items) item.update = () => { throw new Error("Mikelandia Controls must not consume ingredients or write SL"); };
     for (const id of ["petty", "lore"]) {
       calls.length = 0;
       const outcome = await gateway.execute(command, request(use5e, `spell:${id}`));
@@ -138,7 +138,7 @@ test("4e native 10.1.2 lore arrays project spells; legacy string assumptions can
   assert.equal(gateway.capabilitiesForActor(actor).profileActions.some(action => action.id === "spell:lore"), false);
 });
 
-test("5e channels the Wind key with no spell argument or VE resource writes", async t => {
+test("5e channels the Wind key with no spell argument or Mikelandia Controls resource writes", async t => {
   const { actor, gateway, calls } = setup(t, true);
   const before = actor.system.status.channelling.value;
   await gateway.execute(command, request(true, "wind:aqshy"));

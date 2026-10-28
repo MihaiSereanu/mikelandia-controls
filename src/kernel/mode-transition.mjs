@@ -65,17 +65,17 @@ export function createModeTransitionCoordinator({
       }, watchdogMs);
       onStart({ generation, policy, preserved, startedAt });
       mark("apply", "started");
-      onProgress({ generation, phase: "applying", detail: localizedText(localize, "VEMOBILE.Presentation.Applying", "Applying {mode} presentation", { mode: presentationLabel(policy, localize) }) });
+      onProgress({ generation, phase: "applying", detail: localizedText(localize, "MIKELANDIA_CONTROLS.Presentation.Applying", "Applying {mode} presentation", { mode: presentationLabel(policy, localize) }) });
       await Promise.resolve(apply(policy, { generation, isCurrent }));
       mark("apply");
       if (!isCurrent()) return mark("apply", "superseded");
       mark("viewport-settle", "started");
-      onProgress({ generation, phase: "settling", detail: localizedText(localize, "VEMOBILE.Presentation.Settling", "Settling the rendered viewport") });
+      onProgress({ generation, phase: "settling", detail: localizedText(localize, "MIKELANDIA_CONTROLS.Presentation.Settling", "Settling the rendered viewport") });
       const bounds = await settle({ generation, policy, isCurrent });
       mark("viewport-settle", "complete", { bounds });
       if (!isCurrent()) return mark("viewport-settle", "superseded", { bounds });
       mark("restore", "started");
-      onProgress({ generation, phase: "restoring", detail: localizedText(localize, "VEMOBILE.Presentation.Restoring", "Restoring position and interactions") });
+      onProgress({ generation, phase: "restoring", detail: localizedText(localize, "MIKELANDIA_CONTROLS.Presentation.Restoring", "Restoring position and interactions") });
       await Promise.resolve(restore(preserved, bounds, { generation, policy, isCurrent }));
       mark("restore");
       if (!isCurrent()) return mark("restore", "superseded");
@@ -115,6 +115,6 @@ export function createModeTransitionCoordinator({
 }
 
 export function presentationLabel(policy = {}, localize = null) {
-  if (policy.formFactor === "tablet") return policy.orientation === "portrait" ? localizedText(localize, "VEMOBILE.Presentation.TabletPortrait", "Tablet portrait") : localizedText(localize, "VEMOBILE.Presentation.Tablet", "Tablet");
-  return policy.formFactor === "phone" ? localizedText(localize, "VEMOBILE.Presentation.Phone", "Phone") : localizedText(localize, "VEMOBILE.Presentation.Mobile", "mobile");
+  if (policy.formFactor === "tablet") return policy.orientation === "portrait" ? localizedText(localize, "MIKELANDIA_CONTROLS.Presentation.TabletPortrait", "Tablet portrait") : localizedText(localize, "MIKELANDIA_CONTROLS.Presentation.Tablet", "Tablet");
+  return policy.formFactor === "phone" ? localizedText(localize, "MIKELANDIA_CONTROLS.Presentation.Phone", "Phone") : localizedText(localize, "MIKELANDIA_CONTROLS.Presentation.Mobile", "mobile");
 }

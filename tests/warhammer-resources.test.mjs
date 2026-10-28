@@ -136,7 +136,7 @@ test("Group Advantage uses the native setter and retains native routing", async 
   const result = await gateway.execute(command, payload("advantage", 12));
   assert.equal(result.submitted, true);
   assert.deepEqual(calls, [["setAdvantage", 12]]);
-  assert.equal(actor.system.status.advantage.value, 4, "VE does not locally forge the shared value");
+  assert.equal(actor.system.status.advantage.value, 4, "Mikelandia Controls does not locally forge the shared value");
 });
 
 for (const change of ["combat", "combatant", "group", "shared-value", "missing-combatant", "foreign-combatant"]) {

@@ -1,10 +1,10 @@
-const STORAGE_PREFIX = "ve-mobile:chat-composer-dock:v1:";
+const STORAGE_PREFIX = "mikelandia-controls:chat-composer-dock:v1:";
 const HANDLE_HEIGHT = 44;
 
 /** Own one native Chat form as the lower dock without replacing its controls. */
 export function mountChatComposerDock({ form, input, host, document, scope, getStorage = () => globalThis.localStorage }) {
   if (!form?.append || !document?.createElement || !scope?.own) return null;
-  const mode = document.body?.dataset?.veMobileFormFactor === "tablet" ? "tablet" : "phone";
+  const mode = document.body?.dataset?.mcMobileFormFactor === "tablet" ? "tablet" : "phone";
   const key = `${STORAGE_PREFIX}${mode}`;
   const saved = readDockState(getStorage(), key);
   const original = {
@@ -13,13 +13,13 @@ export function mountChatComposerDock({ form, input, host, document, scope, getS
     hidden: form.hidden
   };
   const content = document.createElement("div");
-  content.className = "ve-chat-composer-content";
+  content.className = "mc-chat-composer-content";
   const diceLayer = document.createElement("div");
-  diceLayer.className = "ve-chat-dice-layer";
+  diceLayer.className = "mc-chat-dice-layer";
   content.append(...form.childNodes);
   const handle = document.createElement("button");
   handle.type = "button";
-  handle.className = "ve-chat-composer-handle";
+  handle.className = "mc-chat-composer-handle";
   handle.setAttribute("aria-controls", input.id || "chat-message");
   const icon = document.createElement("i");
   icon.setAttribute("aria-hidden", "true");
@@ -34,7 +34,7 @@ export function mountChatComposerDock({ form, input, host, document, scope, getS
     diceLayer.inert = false;
     diceLayer.hidden = false;
     form.replaceChildren(...diceLayer.childNodes, ...content.childNodes);
-    form.classList.remove("ve-chat-composer-dock", "ve-chat-composer-collapsed");
+    form.classList.remove("mc-chat-composer-dock", "mc-chat-composer-collapsed");
     form.style.height = original.height;
     form.style.flexBasis = original.flexBasis;
     form.hidden = original.hidden;
@@ -44,7 +44,7 @@ export function mountChatComposerDock({ form, input, host, document, scope, getS
     const tray = content.querySelector?.(".dice-tray") ?? form.querySelector?.(".dice-tray");
     if (tray && tray.parentElement !== diceLayer) diceLayer.append(tray);
   };
-  form.classList.add("ve-chat-composer-dock");
+  form.classList.add("mc-chat-composer-dock");
   let collapsed = saved.collapsed;
   placeDiceTray();
   const Observer = document.defaultView?.MutationObserver;
@@ -63,14 +63,14 @@ export function mountChatComposerDock({ form, input, host, document, scope, getS
     log.scrollTop = anchor.nearBottom ? Math.max(0, log.scrollHeight - log.clientHeight) : anchor.top;
   };
   const labels = () => ({
-    collapse: localize("VEMOBILE.Chat.ComposerCollapse", "Hide message box"),
-    expand: localize("VEMOBILE.Chat.ComposerExpand", "Show message box")
+    collapse: localize("MIKELANDIA_CONTROLS.Chat.ComposerCollapse", "Hide message box"),
+    expand: localize("MIKELANDIA_CONTROLS.Chat.ComposerExpand", "Show message box")
   });
   const refresh = (anchor = scrollAnchor()) => {
     if (disposed) return;
     const damage = Boolean(host.querySelector?.('.damage-log-nav [data-tab="damage-log"].active'));
     form.hidden = damage;
-    form.classList.toggle("ve-chat-composer-collapsed", collapsed);
+    form.classList.toggle("mc-chat-composer-collapsed", collapsed);
     content.hidden = collapsed || damage;
     content.inert = collapsed || damage;
     diceLayer.hidden = collapsed || damage;

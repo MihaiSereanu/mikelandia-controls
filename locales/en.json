@@ -1,5 +1,5 @@
 {
-  "VEMOBILE": {
+  "MIKELANDIA_CONTROLS": {
     "Panels": {
       "XP": "XP",
       "ActionUnavailable": "This game action is no longer available.",
@@ -95,7 +95,7 @@
         "Neutral": "Neutral",
         "Bestiary": "Bestiary"
       },
-      "ProtectVeStyling": {
+      "ProtectMcStyling": {
         "Name": "Protect Mikelandia Controls styling",
         "Hint": "Keep Mikelandia Controls's layout and appearance when another module's styles conflict. Other modules still work, and their own windows keep their styles. Turn this off to let other modules style Mikelandia Controls screens."
       },
@@ -262,7 +262,7 @@
         "NumberExpected": "That setting requires a number.",
         "RangeExceeded": "That setting is outside its allowed range.",
         "MobileTypeUnsupported": "That setting type is not supported on mobile.",
-        "VeSettingMissing": "That Mikelandia Controls setting does not exist."
+        "McSettingMissing": "That Mikelandia Controls setting does not exist."
       }
     },
     "Character": {
@@ -1005,14 +1005,14 @@
         "TheConnectionChangedWhileThisActionWasRunning": "The connection changed while this action was running."
       },
       "MobileDiagnostics": {
-        "VEMobileEvent": "Mikelandia Controls event"
+        "MCMobileEvent": "Mikelandia Controls event"
       },
       "MobilePresentation": {
         "DisconnectedApplicationRoot": "disconnected application root",
         "NativeSettingsSessionOwnsApplication": "native Settings session owns application",
         "PersistentShellOrOverlay": "persistent shell or overlay",
         "ActorSheetReplacedByCharacter": "Actor sheet replaced by Character",
-        "DesktopSidebarWorkspaceReplacedByVENavigation": "desktop sidebar workspace replaced by Mikelandia Controls navigation",
+        "DesktopSidebarWorkspaceReplacedByMCNavigation": "desktop sidebar workspace replaced by Mikelandia Controls navigation",
         "MobileActivationBaselineWorkspace": "mobile activation baseline workspace",
         "NoApplicationLifecycle": "no application lifecycle",
         "NativeModalApplication": "native modal application",
@@ -1052,10 +1052,10 @@
         "ThatActionMessageCouldNotBeDisplayed": "That action message could not be displayed."
       },
       "AppFrame": {
-        "VEMobile": "Mikelandia Controls",
+        "MCMobile": "Mikelandia Controls",
         "Primary": "Primary",
         "MoveNavigationToLeftSide": "Move navigation to left side",
-        "VEMobileCouldNotStart": "Mikelandia Controls could not start",
+        "MCMobileCouldNotStart": "Mikelandia Controls could not start",
         "PreparingYourMobileSession": "Preparing your mobile session…",
         "ThisScreenCouldNotOpen": "This screen could not open",
         "ReloadFoundryAndTryAgain": "Reload Foundry and try again.",
@@ -1074,7 +1074,7 @@
         "Elapsed": "Elapsed · {formatTimingelapsedMs}",
         "LastResync2": "Last resync · {hasPreviousformatTimin}",
         "ResynchronisationInterrupted": "Resynchronization interrupted",
-        "VEMobileCouldNotRestoreTheSessionReloadFoundry": "Mikelandia Controls could not restore the session. Reload Foundry to recover safely.",
+        "MCMobileCouldNotRestoreTheSessionReloadFoundry": "Mikelandia Controls could not restore the session. Reload Foundry to recover safely.",
         "FinishingRecovery": "Finishing recovery",
         "ReloadingFoundryToFinishRecovery": "Reloading Foundry to finish recovery…",
         "SynchronisingGame": "Synchronizing game…",
@@ -1106,7 +1106,7 @@
         "TheSelectedActorSourceChangedBeforeThisActionCould": "The selected Actor source changed before this action could run.",
         "TheSelectedCharacterSourceChangedBeforeThisActionCould": "The selected character source changed before this action could run.",
         "ThisSpellSlotEditorIsStaleReopenItAnd": "This spell-slot editor is stale. Reopen it and try again.",
-        "VEMobileActivationWasCancelled": "Mikelandia Controls activation was canceled.",
+        "MCMobileActivationWasCancelled": "Mikelandia Controls activation was canceled.",
         "RestoringYourSession": "Restoring your session…",
         "RestoringMobileInterface": "Restoring mobile interface…",
         "RestoringControls": "Restoring controls…",

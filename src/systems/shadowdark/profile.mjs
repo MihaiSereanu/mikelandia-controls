@@ -10,10 +10,10 @@ export function shadowdarkPlayerProfile(context) {
         field("hp", "SHADOWDARK.sheet.actor.hp", "HP", "system.attributes.hp.value", { maxPath: "system.attributes.hp.max", editId: "hp" })] },
       { id: "ac", kind: "values", labelKey: "SHADOWDARK.sheet.actor.ac", label: "AC", fields: [field("ac", "SHADOWDARK.sheet.actor.ac", "AC", "system.attributes.ac.value")] },
       ...["def", "xp", "grit"].map(id => id === "xp" ? {
-        id, kind: "values", labelKey: "VEMOBILE.Panels.XP", label: "XP", fields: [
-          field(id, "VEMOBILE.Panels.XP", "XP", "system.level.xp", { editId: id })]
-      } : { id, label: customResources[id], labelKey: `VEMOBILE.Panels.${customResources[id]}`, kind: "values", fields: [
-        field(id, `VEMOBILE.Panels.${customResources[id]}`, customResources[id], null, { editId: id, read: actor => readCustomResource(actor, id) })
+        id, kind: "values", labelKey: "MIKELANDIA_CONTROLS.Panels.XP", label: "XP", fields: [
+          field(id, "MIKELANDIA_CONTROLS.Panels.XP", "XP", "system.level.xp", { editId: id })]
+      } : { id, label: customResources[id], labelKey: `MIKELANDIA_CONTROLS.Panels.${customResources[id]}`, kind: "values", fields: [
+        field(id, `MIKELANDIA_CONTROLS.Panels.${customResources[id]}`, customResources[id], null, { editId: id, read: actor => readCustomResource(actor, id) })
       ] }),
       { id: "luck", kind: "values", labelKey: "SHADOWDARK.sheet.player.luck", label: "Luck", fields: [
         field("luck", "SHADOWDARK.sheet.player.luck", "Luck", context.pulp ? "system.luck.remaining" : "system.luck.available", { format: context.pulp ? "number" : "boolean", editId: "luck" })] },
@@ -32,7 +32,7 @@ export function shadowdarkPlayerProfile(context) {
       { id: "known-spells", kind: "items", labelKey: "SHADOWDARK.sheet.item.tab.spellsknown", label: "Spells Known", collectionPath: "items", itemTypes: ["Spell"],
         actionIdPrefix: "spell", valuePath: "system.tier", valueLabelKey: "SHADOWDARK.sheet.player.spells_tier", valueLabel: "Tier",
         include: (item, _context, actor) => knownSpell(item, actor) && item.system.lost === false },
-      { id: "lost-spells", kind: "items", labelKey: "VEMOBILE.Panels.LostSpells", label: "Lost Spells", collectionPath: "items", itemTypes: ["Spell"],
+      { id: "lost-spells", kind: "items", labelKey: "MIKELANDIA_CONTROLS.Panels.LostSpells", label: "Lost Spells", collectionPath: "items", itemTypes: ["Spell"],
         valuePath: "system.tier", valueLabelKey: "SHADOWDARK.sheet.player.spells_tier", valueLabel: "Tier",
         include: (item, _context, actor) => knownSpell(item, actor) && item.system.lost === true }
     ] },

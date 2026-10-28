@@ -4,9 +4,9 @@ import { ACTOR_COMMANDS } from "../../kernel/command-names.mjs";
 
 /** The integration supplies catalog data; the UI never reads native documents. */
 export function renderProfileInventory(actor, commands, scope) {
-  const text = (key, fallback) => localizedText(commands.localize, `VEMOBILE.Inventory.${key}`, fallback);
-  const body = node("div", { className: "ve-profile-inventory-body ve-profile-inventory-tools" });
-  const open = node("button", { className: "ve-profile-add-item", children: [icon("fa-plus")], attrs: { type: "button", "aria-label": text("AddItem", "Add item"), title: text("AddItem", "Add item"), "data-profile-add-item": true }, on: { click: () => {
+  const text = (key, fallback) => localizedText(commands.localize, `MIKELANDIA_CONTROLS.Inventory.${key}`, fallback);
+  const body = node("div", { className: "mc-profile-inventory-body mc-profile-inventory-tools" });
+  const open = node("button", { className: "mc-profile-add-item", children: [icon("fa-plus")], attrs: { type: "button", "aria-label": text("AddItem", "Add item"), title: text("AddItem", "Add item"), "data-profile-add-item": true }, on: { click: () => {
     if (scope.disposed || open.disabled || open.hidden) return;
     open.hidden = true;
     const formScope = scope.child("inventory-editor");
@@ -40,7 +40,7 @@ export function renderProfileInventory(actor, commands, scope) {
         };
         const slots = weightInput("slotsUsed", text("SlotsUsed", "Slots used"), 0);
         const per = weightInput("perQuantity", text("PerQuantity", "Per quantity"), 1);
-        const form = node("form", { className: "ve-profile-custom-item", children: [
+        const form = node("form", { className: "mc-profile-custom-item", children: [
           node("label", { children: [text("Name", "Item name"), name] }),
           slots.label, per.label,
           node("button", { text: text("Create", "Create item"), attrs: { type: "submit" } })
@@ -53,7 +53,7 @@ export function renderProfileInventory(actor, commands, scope) {
         return;
       }
       const search = node("input", { attrs: { type: "search", placeholder: text("Search", "Search gear"), "aria-label": text("Search", "Search gear") } });
-      const catalogRows = node("div", { className: "ve-profile-catalog-results", attrs: { tabindex: "0", "aria-label": text("Catalog", "Catalog") } });
+      const catalogRows = node("div", { className: "mc-profile-catalog-results", attrs: { tabindex: "0", "aria-label": text("Catalog", "Catalog") } });
       let catalog = [], resultsScope, loaded = false, unavailable = false;
       const normalize = value => value.normalize("NFKD").replace(/\p{M}/gu, "").toLocaleLowerCase();
       const renderResults = () => {
@@ -100,10 +100,10 @@ export function renderProfileInventory(actor, commands, scope) {
       node("button", { text: text("SearchCatalog", "Search catalog"), attrs: { type: "button", "data-profile-item-mode": "catalog" }, on: { click: () => choose("catalog") } }, chooserScope),
       node("button", { text: text("Cancel", "Cancel"), attrs: { type: "button" }, on: { click: close } }, chooserScope)
     ];
-    chooser = node("div", { className: "ve-profile-inventory-choice", attrs: { role: "dialog", "aria-modal": "true", "aria-label": text("AddItem", "Add item"), "data-ve-back-kind": "inventory-choice", "data-ve-back-dismissable": "true" }, children: [
-      node("section", { className: "ve-profile-inventory-choice-card", children: [node("h2", { text: text("AddItem", "Add item") }), ...choices] })
+    chooser = node("div", { className: "mc-profile-inventory-choice", attrs: { role: "dialog", "aria-modal": "true", "aria-label": text("AddItem", "Add item"), "data-mc-back-kind": "inventory-choice", "data-mc-back-dismissable": "true" }, children: [
+      node("section", { className: "mc-profile-inventory-choice-card", children: [node("h2", { text: text("AddItem", "Add item") }), ...choices] })
     ] });
-    chooserScope.listen(chooser, "ve-close", close);
+    chooserScope.listen(chooser, "mc-close", close);
     chooserScope.listen(chooser, "keydown", event => {
       if (event.key === "Escape") { event.preventDefault(); event.stopImmediatePropagation(); close(); }
       if (event.key !== "Tab") return;
@@ -112,7 +112,7 @@ export function renderProfileInventory(actor, commands, scope) {
       choices[(index + (event.shiftKey ? -1 : 1) + choices.length) % choices.length].focus();
     });
     chooserScope.own(() => chooser.remove());
-    (open.closest(".ve-mobile-app") ?? body).append(chooser);
+    (open.closest(".mc-mobile-app") ?? body).append(chooser);
     choices[0].focus();
   } } }, scope);
   return { button: open, body };

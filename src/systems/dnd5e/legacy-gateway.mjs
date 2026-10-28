@@ -65,7 +65,7 @@ export function createDnd5eCommandGateway({
     commandKey: commandFingerprint,
     emptyCapabilities: emptyActorCapabilities,
     notifyError(error) {
-      const message = error?.message ?? localizeFoundry("VEMOBILE.Character.CommandGateway.TheFoundryActionFailed", "The Foundry action failed.");
+      const message = error?.message ?? localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.TheFoundryActionFailed", "The Foundry action failed.");
       getNotifications()?.error?.(message);
       return message;
     },
@@ -78,21 +78,21 @@ export function createDnd5eCommandGateway({
       const game = getGame();
       assertSession(game, expectedSession, getConnectionGeneration);
       const actor = resolveActorSource(validSourceUuid(payload.actorSourceUuid), { game });
-      if (!actor) throw new CommandError("TARGET_MISSING", localizeFoundry("VEMOBILE.Character.BiographyGateway.TheSelectedActorIsNoLongerAvailable", "The selected actor is no longer available."));
-      if (!canOwn(actor, game.user)) throw new CommandError(localizeFoundry("VEMOBILE.Character.CommandGateway.FORBIDDEN", "FORBIDDEN"), localizeFoundry("VEMOBILE.Character.CommandGateway.YouNoLongerHavePermissionToControlThisActor", "You no longer have permission to control this actor."));
+      if (!actor) throw new CommandError("TARGET_MISSING", localizeFoundry("MIKELANDIA_CONTROLS.Character.BiographyGateway.TheSelectedActorIsNoLongerAvailable", "The selected actor is no longer available."));
+      if (!canOwn(actor, game.user)) throw new CommandError(localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.FORBIDDEN", "FORBIDDEN"), localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.YouNoLongerHavePermissionToControlThisActor", "You no longer have permission to control this actor."));
       if (!Object.hasOwn(commands.handlers, ACTOR_COMMANDS.OPEN_ITEM_SHEET)
         || !commands.canExecute(actor, ACTOR_COMMANDS.OPEN_ITEM_SHEET)) {
-        throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorTypeRequiresItsNativeWorkflowForThat", "This Actor type requires its native workflow for that operation."));
+        throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorTypeRequiresItsNativeWorkflowForThat", "This Actor type requires its native workflow for that operation."));
       }
       const item = resolveOwnedEmbeddedItem(actor, payload.itemId);
       if (payload.activityId && !collectionValues(item.system?.activities).some(activity => String(activity.id) === String(payload.activityId))) {
-        throw new CommandError("TARGET_MISSING", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActivityIsNoLongerAvailableOnTheSelected", "This Activity is no longer available on the selected item."));
+        throw new CommandError("TARGET_MISSING", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActivityIsNoLongerAvailableOnTheSelected", "This Activity is no longer available on the selected item."));
       }
       return Object.freeze({ item: createItemMenuRecord(actor, item, game.user, payload), canUse: typeof item.use === "function" });
     },
 
     async execute(name, payload = {}, expectedSession = {}, observer = {}) {
-      if (!Object.values(ACTOR_COMMANDS).includes(name)) throw new CommandError("UNKNOWN_COMMAND", localizeFoundry("VEMOBILE.Character.CommandGateway.UnsupportedCommand", "Unsupported command: {name}", { name: String(name) }));
+      if (!Object.values(ACTOR_COMMANDS).includes(name)) throw new CommandError("UNKNOWN_COMMAND", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.UnsupportedCommand", "Unsupported command: {name}", { name: String(name) }));
 
       const game = getGame();
       assertSession(game, expectedSession, getConnectionGeneration);
@@ -102,7 +102,7 @@ export function createDnd5eCommandGateway({
       catch (error) { throw new CommandError("INVALID_INPUT", error.message, { cause: error }); }
       const fingerprint = commandFingerprint(name, sourceUuid, payload);
       if (inFlight.has(fingerprint)) {
-        throw new CommandError("COMMAND_BUSY", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActionIsAlreadyRunning", "This action is already running."));
+        throw new CommandError("COMMAND_BUSY", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActionIsAlreadyRunning", "This action is already running."));
       }
 
       inFlight.add(fingerprint);
@@ -113,13 +113,13 @@ export function createDnd5eCommandGateway({
       let diceWaiter = null;
       try {
         const actor = resolveActorSource(sourceUuid, { game });
-        if (!actor) throw new CommandError("TARGET_MISSING", localizeFoundry("VEMOBILE.Character.BiographyGateway.TheSelectedActorIsNoLongerAvailable", "The selected actor is no longer available."));
+        if (!actor) throw new CommandError("TARGET_MISSING", localizeFoundry("MIKELANDIA_CONTROLS.Character.BiographyGateway.TheSelectedActorIsNoLongerAvailable", "The selected actor is no longer available."));
         if (!canOwn(actor, game.user)) {
-          throw new CommandError(localizeFoundry("VEMOBILE.Character.CommandGateway.FORBIDDEN", "FORBIDDEN"), localizeFoundry("VEMOBILE.Character.CommandGateway.YouNoLongerHavePermissionToControlThisActor", "You no longer have permission to control this actor."));
+          throw new CommandError(localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.FORBIDDEN", "FORBIDDEN"), localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.YouNoLongerHavePermissionToControlThisActor", "You no longer have permission to control this actor."));
         }
         const handler = Object.hasOwn(commands.handlers, name) ? commands.handlers[name] : null;
         if (typeof handler !== "function" || !commands.canExecute(actor, name)) {
-          throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorTypeRequiresItsNativeWorkflowForThat", "This Actor type requires its native workflow for that operation."));
+          throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorTypeRequiresItsNativeWorkflowForThat", "This Actor type requires its native workflow for that operation."));
         }
         diceWaiter = name === ACTOR_COMMANDS.USE_ITEM ? null : createDiceSoNiceWaiter(game, getHooks);
         const actorId = String(actor.id ?? "");
@@ -234,7 +234,7 @@ export function createDnd5eCommandGateway({
         return Object.freeze(response);
       } catch (error) {
         if (error instanceof CommandError) throw error;
-        throw new CommandError("COMMAND_FAILED", error?.message ?? localizeFoundry("VEMOBILE.Character.CommandGateway.TheFoundryActionFailed", "The Foundry action failed."), { cause: error });
+        throw new CommandError("COMMAND_FAILED", error?.message ?? localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.TheFoundryActionFailed", "The Foundry action failed."), { cause: error });
       } finally {
         templateUsage?.dispose();
         actionCapture?.dispose();
@@ -287,11 +287,11 @@ function canRollDeathSave(actor) {
 
 async function setInspiration(actor, payload) {
   if (actor.type !== "character" || typeof actor.update !== "function" || typeof actor.system?.attributes?.inspiration !== "boolean") {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.HeroicInspirationIsNotAvailableForThisActor", "Heroic Inspiration is not available for this actor."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.HeroicInspirationIsNotAvailableForThisActor", "Heroic Inspiration is not available for this actor."));
   }
   const intended = requiredBoolean(payload?.active, "active");
   if (actor.system.attributes.inspiration === intended) {
-    throw new CommandError("STALE_STATE", localizeFoundry("VEMOBILE.Character.CommandGateway.HeroicInspirationIsAlready", "Heroic Inspiration is already {state}.", { state: localizeFoundry(intended ? "VEMOBILE.Character.CommandGateway.Active" : "VEMOBILE.Character.CommandGateway.Inactive", intended ? "active" : "inactive") }));
+    throw new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.HeroicInspirationIsAlready", "Heroic Inspiration is already {state}.", { state: localizeFoundry(intended ? "MIKELANDIA_CONTROLS.Character.CommandGateway.Active" : "MIKELANDIA_CONTROLS.Character.CommandGateway.Inactive", intended ? "active" : "inactive") }));
   }
   await actor.update({ "system.attributes.inspiration": intended });
   return Object.freeze({ active: intended });
@@ -299,17 +299,17 @@ async function setInspiration(actor, payload) {
 
 async function updateBiographySection(actor, payload) {
   if (!["character", "npc"].includes(actor.type) || typeof actor.update !== "function" || !actor.system?.details) {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorSBiographyCannotBeEdited", "This actor's biography cannot be edited."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorSBiographyCannotBeEdited", "This actor's biography cannot be edited."));
   }
   const section = String(payload?.section ?? "");
   if (section === "characteristics") return updateBiographyCharacteristics(actor, payload);
   if (section === "biography") return updateBiographyStory(actor, payload);
   if (!BIOGRAPHY_TEXT_SECTIONS.has(section) || actor.type !== "character") {
-    throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.ChooseADisplayedBiographySection", "Choose a displayed biography section."));
+    throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ChooseADisplayedBiographySection", "Choose a displayed biography section."));
   }
   const current = biographyPlainText(actor.system.details?.[section]);
   const original = biographyText(payload?.originalValue, "originalValue", 20_000);
-  if (current !== original) throw new CommandError("STALE_STATE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisBiographySectionChangedWhileItWasBeingEdited", "This biography section changed while it was being edited."));
+  if (current !== original) throw new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisBiographySectionChangedWhileItWasBeingEdited", "This biography section changed while it was being edited."));
   const value = biographyText(payload?.value, "value", 20_000);
   const changed = value !== current;
   if (changed) await actor.update({ [`system.details.${section}`]: value });
@@ -317,12 +317,12 @@ async function updateBiographySection(actor, payload) {
 }
 
 async function updateBiographyCharacteristics(actor, payload) {
-  if (actor.type !== "character") throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.CharacteristicsAreOnlyAvailableForPlayerCharacters", "Characteristics are only available for player characters."));
+  if (actor.type !== "character") throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.CharacteristicsAreOnlyAvailableForPlayerCharacters", "Characteristics are only available for player characters."));
   const values = exactBiographyFields(payload?.values, "values");
   const originals = exactBiographyFields(payload?.originalValues, "originalValues");
   for (const field of BIOGRAPHY_CHARACTERISTICS) {
     const current = String(actor.system.details?.[field] ?? "").trim();
-    if (current !== originals[field]) throw new CommandError("STALE_STATE", localizeFoundry("VEMOBILE.Character.CommandGateway.CharacteristicsChangedWhileTheyWereBeingEdited", "Characteristics changed while they were being edited."));
+    if (current !== originals[field]) throw new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.CharacteristicsChangedWhileTheyWereBeingEdited", "Characteristics changed while they were being edited."));
   }
   const updates = {};
   for (const field of BIOGRAPHY_CHARACTERISTICS) {
@@ -335,15 +335,15 @@ async function updateBiographyCharacteristics(actor, payload) {
 async function updateBiographyStory(actor, payload) {
   const field = String(payload?.biographyField ?? "");
   if (!BIOGRAPHY_STORY_FIELDS.has(field) || (actor.type !== "npc" && field !== "value")) {
-    throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.ChooseTheBiographyFieldCurrentlyBeingDisplayed", "Choose the biography field currently being displayed."));
+    throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ChooseTheBiographyFieldCurrentlyBeingDisplayed", "Choose the biography field currently being displayed."));
   }
   const biography = actor.system.details?.biography;
-  if (!biography || typeof biography !== "object") throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorSBiographyTextIsUnavailable", "This actor's biography text is unavailable."));
+  if (!biography || typeof biography !== "object") throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorSBiographyTextIsUnavailable", "This actor's biography text is unavailable."));
   const displayedField = actor.type === "npc" && !String(biography.value ?? "") ? "public" : "value";
-  if (field !== displayedField) throw new CommandError("STALE_STATE", localizeFoundry("VEMOBILE.Character.CommandGateway.TheDisplayedBiographyFieldChangedWhileItWasBeing", "The displayed biography field changed while it was being edited."));
+  if (field !== displayedField) throw new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.TheDisplayedBiographyFieldChangedWhileItWasBeing", "The displayed biography field changed while it was being edited."));
   const current = biographyText(String(biography[field] ?? ""), "current biography", 100_000, false);
   const original = biographyText(payload?.originalValue, "originalValue", 100_000, false);
-  if (current !== original) throw new CommandError("STALE_STATE", localizeFoundry("VEMOBILE.Character.CommandGateway.TheBiographyChangedWhileItWasBeingEdited", "The biography changed while it was being edited."));
+  if (current !== original) throw new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.TheBiographyChangedWhileItWasBeingEdited", "The biography changed while it was being edited."));
   const value = biographyText(payload?.value, "value", 100_000, false);
   const changed = value !== current;
   if (changed) await actor.update({ [`system.details.biography.${field}`]: value });
@@ -351,33 +351,33 @@ async function updateBiographyStory(actor, payload) {
 }
 
 function exactBiographyFields(value, label) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.MustContainTheDisplayedCharacteristics", "{label} must contain the displayed characteristics.", { label: (label) }));
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.MustContainTheDisplayedCharacteristics", "{label} must contain the displayed characteristics.", { label: (label) }));
   const keys = Object.keys(value);
   if (keys.length !== BIOGRAPHY_CHARACTERISTICS.length || keys.some((key) => !BIOGRAPHY_CHARACTERISTICS.includes(key))) {
-    throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.MustContainOnlyTheDisplayedCharacteristics", "{label} must contain only the displayed characteristics.", { label: (label) }));
+    throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.MustContainOnlyTheDisplayedCharacteristics", "{label} must contain only the displayed characteristics.", { label: (label) }));
   }
   return Object.freeze(Object.fromEntries(BIOGRAPHY_CHARACTERISTICS.map((field) => [field, biographyText(value[field], field, 200)])));
 }
 
 function biographyText(value, label, maximum, trim = true) {
-  if (typeof value !== "string") throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.MustBeText", "{label} must be text.", { label: (label) }));
+  if (typeof value !== "string") throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.MustBeText", "{label} must be text.", { label: (label) }));
   const normalized = value.replace(/\r\n?/gu, "\n");
   const result = trim ? normalized.trim() : normalized;
-  if (result.length > maximum) throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.IsTooLong", "{label} is too long.", { label: (label) }));
+  if (result.length > maximum) throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.IsTooLong", "{label} is too long.", { label: (label) }));
   return result;
 }
 
 async function toggleCondition(actor, payload) {
   if (typeof actor.toggleStatusEffect !== "function") {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ConditionsAreNotAvailableForThisActor", "Conditions are not available for this actor."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ConditionsAreNotAvailableForThisActor", "Conditions are not available for this actor."));
   }
   const conditionId = String(payload?.conditionId ?? "").trim();
   const definition = globalThis.CONFIG?.DND5E?.conditionTypes?.[conditionId];
   if (!validKey(conditionId) || !definition || definition.pseudo) {
-    throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.ChooseANativeDDECondition", "Choose a native D&D5e condition."));
+    throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ChooseANativeDDECondition", "Choose a native D&D5e condition."));
   }
   const active = requiredBoolean(payload?.active, "active");
-  if (conditionId === "exhaustion") throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.UseExhaustionControls", "Use the exhaustion level controls."));
+  if (conditionId === "exhaustion") throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.UseExhaustionControls", "Use the exhaustion level controls."));
   await actor.toggleStatusEffect(conditionId, { active });
   return Object.freeze({ conditionId, active });
 }
@@ -387,13 +387,13 @@ async function setExhaustionLevel(actor, payload) {
   const current = actor.system?.attributes?.exhaustion;
   if (!["character", "npc"].includes(actor.type) || typeof actor.update !== "function"
     || !Number.isSafeInteger(maximum) || maximum < 1 || !Number.isSafeInteger(current) || current < 0 || current > maximum) {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ExhaustionUnavailable", "Exhaustion levels are unavailable for this Actor."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ExhaustionUnavailable", "Exhaustion levels are unavailable for this Actor."));
   }
-  if (typeof payload?.originalLevel !== "number" || typeof payload?.level !== "number") throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.UseExhaustionControls", "Use the exhaustion level controls."));
+  if (typeof payload?.originalLevel !== "number" || typeof payload?.level !== "number") throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.UseExhaustionControls", "Use the exhaustion level controls."));
   const original = wholeNumber(payload?.originalLevel, "originalLevel", 0, maximum);
   const level = wholeNumber(payload?.level, "level", 0, maximum);
-  if (current !== original) throw new CommandError("STALE_STATE", localizeFoundry("VEMOBILE.Character.CommandGateway.ExhaustionChanged", "Exhaustion changed. Try again using the current level."));
-  if (Math.abs(level - current) !== 1) throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.UseExhaustionControls", "Use the exhaustion level controls."));
+  if (current !== original) throw new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ExhaustionChanged", "Exhaustion changed. Try again using the current level."));
+  if (Math.abs(level - current) !== 1) throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.UseExhaustionControls", "Use the exhaustion level controls."));
   // Matches D&D5e's native exhaustion control: the Actor update synchronizes
   // the exhaustion ActiveEffect, including removing it when the level reaches 0.
   await actor.update({ "system.attributes.exhaustion": level });
@@ -402,7 +402,7 @@ async function setExhaustionLevel(actor, payload) {
 
 async function rollDeathSave(actor) {
   if (!canRollDeathSave(actor)) {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ADeathSavingThrowIsNotCurrentlyAvailable", "A death saving throw is not currently available."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ADeathSavingThrowIsNotCurrentlyAvailable", "A death saving throw is not currently available."));
   }
   return actor.rollDeathSave({ legacy: false });
 }
@@ -616,7 +616,7 @@ function actionSessionFromNewMessages(game, existingIds, actor, item, output, ca
     itemId: String(item.id ?? ""),
     ...(targetIds.length ? { targetIds: Object.freeze([...new Set(targetIds)]) } : {}),
     ...(targetPreviews.length ? { targetPreviews: Object.freeze(targetPreviews) } : {}),
-    label: String(item.name ?? root.title ?? localizeFoundry("VEMOBILE.Character.CommandGateway.ItemAction", "Item action")).slice(0, 160),
+    label: String(item.name ?? root.title ?? localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ItemAction", "Item action")).slice(0, 160),
     img: String(item.img ?? "")
   });
 }
@@ -694,10 +694,6 @@ function messageIdFromReference(reference) {
   return messageIdentifier(reference);
 }
 
-function speakerActorId(message) {
-  return String(message?.speaker?.actor ?? message?._source?.speaker?.actor ?? "");
-}
-
 function messageAuthorId(message) {
   return String(message?.author?.id ?? message?.user?.id ?? message?._source?.author ?? message?._source?.user ?? "");
 }
@@ -773,15 +769,15 @@ function canOwn(actor, user) {
 }
 
 function assertSession(game, expected, getConnectionGeneration = () => 0) {
-  if (!game?.user || !game?.world) throw new CommandError("SESSION_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.BiographyGateway.TheFoundrySessionIsNotReady", "The Foundry session is not ready."));
+  if (!game?.user || !game?.world) throw new CommandError("SESSION_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.BiographyGateway.TheFoundrySessionIsNotReady", "The Foundry session is not ready."));
   if (expected.worldId && expected.worldId !== game.world.id) {
-    throw new CommandError("STALE_SESSION", localizeFoundry("VEMOBILE.Character.BiographyGateway.TheActiveFoundryWorldHasChanged", "The active Foundry world has changed."));
+    throw new CommandError("STALE_SESSION", localizeFoundry("MIKELANDIA_CONTROLS.Character.BiographyGateway.TheActiveFoundryWorldHasChanged", "The active Foundry world has changed."));
   }
   if (expected.userId && expected.userId !== game.user.id) {
-    throw new CommandError("STALE_SESSION", localizeFoundry("VEMOBILE.Character.BiographyGateway.TheActiveFoundryUserHasChanged", "The active Foundry user has changed."));
+    throw new CommandError("STALE_SESSION", localizeFoundry("MIKELANDIA_CONTROLS.Character.BiographyGateway.TheActiveFoundryUserHasChanged", "The active Foundry user has changed."));
   }
   if (expected.connectionGeneration !== undefined && expected.connectionGeneration !== getConnectionGeneration()) {
-    throw new CommandError("STALE_SESSION", localizeFoundry("VEMOBILE.Character.CommandGateway.TheConnectionChangedWhileThisActionWasRunning", "The connection changed while this action was running."));
+    throw new CommandError("STALE_SESSION", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.TheConnectionChangedWhileThisActionWasRunning", "The connection changed while this action was running."));
   }
 }
 
@@ -816,14 +812,14 @@ function toolKeys(actor) {
 
 function identifier(value, field) {
   const id = String(value ?? "").trim();
-  if (!id || id.length > 128) throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.IsRequired", "{field} is required.", { field: (field) }));
+  if (!id || id.length > 128) throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.IsRequired", "{field} is required.", { field: (field) }));
   return id;
 }
 
 function commandKey(value, available, field) {
   const key = String(value ?? "").trim().toLowerCase();
   if (!validKey(key) || !Object.hasOwn(available ?? {}, key)) {
-    throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.Unknown", "Unknown {field}: {key}", { field, key: key || localizeFoundry("VEMOBILE.Character.CommandGateway.Empty", "(empty)") }));
+    throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.Unknown", "Unknown {field}: {key}", { field, key: key || localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.Empty", "(empty)") }));
   }
   return key;
 }
@@ -834,7 +830,7 @@ function validKey(value) {
 
 function spellSlotKey(value) {
   const key = String(value ?? "").trim();
-  if (!/^spell[1-9]$/u.test(key)) throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.ChooseADisplayedLevelSpellSlotResource", "Choose a displayed level spell-slot resource."));
+  if (!/^spell[1-9]$/u.test(key)) throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ChooseADisplayedLevelSpellSlotResource", "Choose a displayed level spell-slot resource."));
   return key;
 }
 
@@ -894,20 +890,20 @@ async function rollAbility(actor, requestedAbility, save) {
     if (typeof actor.rollAbilityCheck === "function") return actor.rollAbilityCheck({ ability });
     if (typeof actor.rollAbilityTest === "function") return actor.rollAbilityTest(ability);
   }
-  throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorCannotPerformThatRoll", "This actor cannot perform that roll."));
+  throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorCannotPerformThatRoll", "This actor cannot perform that roll."));
 }
 
 async function rollSkill(actor, requestedSkill) {
   const skill = commandKey(requestedSkill, actor.system?.skills, "skill");
   if (typeof actor.rollSkill !== "function") {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorCannotRollSkills", "This actor cannot roll skills."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorCannotRollSkills", "This actor cannot roll skills."));
   }
   return actor.rollSkill({ skill });
 }
 
 async function rollTool(actor, requestedTool) {
   if (typeof actor.rollToolCheck !== "function") {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorCannotRollTools", "This actor cannot roll tools."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorCannotRollTools", "This actor cannot roll tools."));
   }
   const tool = commandKey(requestedTool, availableTools(actor), "tool");
   return actor.rollToolCheck({ tool });
@@ -915,7 +911,7 @@ async function rollTool(actor, requestedTool) {
 
 function rollInitiative(actor) {
   if (typeof actor.rollInitiative !== "function") {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorCannotRollInitiative", "This actor cannot roll initiative."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorCannotRollInitiative", "This actor cannot roll initiative."));
   }
   return actor.rollInitiative();
 }
@@ -924,12 +920,12 @@ async function editHitPoints(actor, payload) {
   const operation = String(payload?.operation ?? "");
   const hp = actor.system?.attributes?.hp;
   if (!hp || (actor.type === "vehicle" && (hp.value === null || hp.value === undefined || !Number.isFinite(Number(hp.value)))) || typeof actor.update !== "function") {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorSHitPointsCannotBeEdited", "This actor's hit points cannot be edited."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorSHitPointsCannotBeEdited", "This actor's hit points cannot be edited."));
   }
 
   if (operation === "damage" || operation === "heal") {
     if (typeof actor.applyDamage !== "function") {
-      throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorCannotApplyDamageOrHealing", "This actor cannot apply damage or healing."));
+      throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorCannotApplyDamageOrHealing", "This actor cannot apply damage or healing."));
     }
     const amount = wholeNumber(payload.amount, "amount", 1, 1_000_000);
     await actor.applyDamage(operation === "damage" ? amount : -amount);
@@ -941,7 +937,7 @@ async function editHitPoints(actor, payload) {
     const amount = wholeNumber(payload.amount, "amount", 0, 1_000_000);
     await actor.update({ "system.attributes.hp.temp": amount });
   } else {
-    throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.ChooseAValidHitPointOperation", "Choose a valid hit-point operation."));
+    throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ChooseAValidHitPointOperation", "Choose a valid hit-point operation."));
   }
 
   const current = actor.system?.attributes?.hp ?? hp;
@@ -955,38 +951,38 @@ async function editHitPoints(actor, payload) {
 async function addExperience(actor, payload) {
   const xp = actor.system?.details?.xp;
   if (actor.type !== "character" || typeof actor.update !== "function" || !xp) {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorSExperienceCannotBeEdited", "This actor's experience cannot be edited."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorSExperienceCannotBeEdited", "This actor's experience cannot be edited."));
   }
   const current = xp.value;
   if (typeof current !== "number" || !Number.isSafeInteger(current) || current < 0) {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorDoesNotHaveAValidExperienceTotal", "This actor does not have a valid experience total."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorDoesNotHaveAValidExperienceTotal", "This actor does not have a valid experience total."));
   }
   if (typeof payload.amount !== "number" || !Number.isSafeInteger(payload.amount) || payload.amount < 0 || payload.amount > 1_000_000_000) {
-    throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.AmountMustBeAWholeNumberFromTo", "amount must be a whole number from 0 to 1000000000."));
+    throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.AmountMustBeAWholeNumberFromTo", "amount must be a whole number from 0 to 1000000000."));
   }
   const amount = payload.amount;
   const value = current + amount;
-  if (!Number.isSafeInteger(value)) throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.TheResultingExperienceTotalIsTooLarge", "The resulting experience total is too large."));
+  if (!Number.isSafeInteger(value)) throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.TheResultingExperienceTotalIsTooLarge", "The resulting experience total is too large."));
   await actor.update({ "system.details.xp.value": value });
   return Object.freeze({ previous: current, added: amount, value });
 }
 
 async function updateCurrency(actor, payload) {
   if (typeof actor.update !== "function" || !actor.system?.currency) {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorSCurrencyCannotBeEdited", "This actor's currency cannot be edited."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorSCurrencyCannotBeEdited", "This actor's currency cannot be edited."));
   }
   const values = payload?.values;
   if (!values || typeof values !== "object" || Array.isArray(values)) {
-    throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.ChooseAtLeastOneCurrencyDenominationToUpdate", "Choose at least one currency denomination to update."));
+    throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ChooseAtLeastOneCurrencyDenominationToUpdate", "Choose at least one currency denomination to update."));
   }
   const entries = Object.entries(values);
   if (!entries.length || entries.some(([key]) => !CURRENCY_DENOMINATIONS.includes(key))) {
-    throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.OnlyPpGpEpSpAndCpMayBe", "Only pp, gp, ep, sp, and cp may be updated."));
+    throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.OnlyPpGpEpSpAndCpMayBe", "Only pp, gp, ep, sp, and cp may be updated."));
   }
   const updates = {};
   for (const [denomination, rawValue] of entries) {
     if (typeof rawValue !== "number" || !Number.isSafeInteger(rawValue) || rawValue < 0) {
-      throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.Presenter.MustBeANonNegativeWholeNumber", "{denomination} must be a non-negative whole number.", { denomination: denomination.toUpperCase() }));
+      throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.Presenter.MustBeANonNegativeWholeNumber", "{denomination} must be a non-negative whole number.", { denomination: denomination.toUpperCase() }));
     }
     const value = rawValue;
     const current = Number(actor.system.currency?.[denomination]);
@@ -1005,14 +1001,14 @@ async function updateCurrency(actor, payload) {
 
 async function setSpellSlotValue(actor, payload) {
   if (typeof actor.update !== "function") {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorSSpellSlotsCannotBeEdited", "This actor's spell slots cannot be edited."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorSSpellSlotsCannotBeEdited", "This actor's spell slots cannot be edited."));
   }
   const slotKey = spellSlotKey(payload?.slotKey);
   const slot = actor.system?.spells?.[slotKey];
-  if (!slot) throw new CommandError("TARGET_MISSING", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisSpellSlotResourceIsNoLongerAvailable", "This spell-slot resource is no longer available."));
+  if (!slot) throw new CommandError("TARGET_MISSING", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisSpellSlotResourceIsNoLongerAvailable", "This spell-slot resource is no longer available."));
   const maximum = nonNegativeWholeNumber(slot.max, "spell-slot maximum");
-  if (maximum <= 0) throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisSpellSlotResourceIsNoLongerAvailable", "This spell-slot resource is no longer available."));
-  if (typeof payload?.value !== "number") throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.SpellSlotValueMustBeNumeric", "Spell-slot value must be numeric."));
+  if (maximum <= 0) throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisSpellSlotResourceIsNoLongerAvailable", "This spell-slot resource is no longer available."));
+  if (typeof payload?.value !== "number") throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.SpellSlotValueMustBeNumeric", "Spell-slot value must be numeric."));
   const value = wholeNumber(payload?.value, "spell-slot value", 0, maximum);
   const current = wholeNumber(slot.value, "current spell-slot value", 0, maximum);
   if (current !== value) await actor.update({ [`system.spells.${slotKey}.value`]: value });
@@ -1023,10 +1019,10 @@ async function setItemEquipped(actor, payload) {
   const item = mutableEmbeddedItem(actor, payload?.itemId);
   const intended = requiredBoolean(payload?.equipped, "equipped");
   if (!("equipped" in (item.system ?? {}))) {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisItemDoesNotSupportAnEquippedState", "This item does not support an equipped state."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisItemDoesNotSupportAnEquippedState", "This item does not support an equipped state."));
   }
   if (item.system.equipped === intended) {
-    throw new CommandError("STALE_STATE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisItemIsAlready", "This item is already {state}.", { state: localizeFoundry(intended ? "VEMOBILE.Character.CommandGateway.Equipped" : "VEMOBILE.Character.CommandGateway.Unequipped", intended ? "equipped" : "unequipped") }));
+    throw new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisItemIsAlready", "This item is already {state}.", { state: localizeFoundry(intended ? "MIKELANDIA_CONTROLS.Character.CommandGateway.Equipped" : "MIKELANDIA_CONTROLS.Character.CommandGateway.Unequipped", intended ? "equipped" : "unequipped") }));
   }
   await item.update({ "system.equipped": intended });
   return Object.freeze({ itemId: String(item.id), equipped: intended });
@@ -1036,10 +1032,10 @@ async function setItemAttuned(actor, payload) {
   const item = mutableEmbeddedItem(actor, payload?.itemId);
   const intended = requiredBoolean(payload?.attuned, "attuned");
   if (!["required", "optional"].includes(String(item.system?.attunement ?? "")) || typeof item.system?.attuned !== "boolean") {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisItemDoesNotSupportAttunement", "This item does not support attunement."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisItemDoesNotSupportAttunement", "This item does not support attunement."));
   }
   if (item.system.attuned === intended) {
-    throw new CommandError("STALE_STATE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisItemIsAlready2", "This item is already {state}.", { state: localizeFoundry(intended ? "VEMOBILE.Character.CommandGateway.Attuned" : "VEMOBILE.Character.CommandGateway.Unattuned", intended ? "attuned" : "unattuned") }));
+    throw new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisItemIsAlready2", "This item is already {state}.", { state: localizeFoundry(intended ? "MIKELANDIA_CONTROLS.Character.CommandGateway.Attuned" : "MIKELANDIA_CONTROLS.Character.CommandGateway.Unattuned", intended ? "attuned" : "unattuned") }));
   }
   await item.update({ "system.attuned": intended });
   return Object.freeze({ itemId: String(item.id), attuned: intended });
@@ -1052,25 +1048,25 @@ async function setItemFavorite(actor, payload) {
   if (!("favorites" in (favorites ?? {})) || typeof favorites?.hasFavorite !== "function"
     || typeof favorites?.addFavorite !== "function" || typeof favorites?.removeFavorite !== "function"
     || typeof item.getRelativeUUID !== "function") {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.DDEFavoritesAreNotAvailableForThis", "D&D5e favorites are not available for this actor or item."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.DDEFavoritesAreNotAvailableForThis", "D&D5e favorites are not available for this actor or item."));
   }
   let relativeUuid;
   try { relativeUuid = String(item.getRelativeUUID(actor) ?? ""); }
-  catch (error) { throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisItemSNativeDDEFavouriteTag", "This item's native D&D5e favorite tag is unavailable."), { cause: error }); }
-  if (!relativeUuid) throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisItemSNativeDDEFavouriteTag", "This item's native D&D5e favorite tag is unavailable."));
+  catch (error) { throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisItemSNativeDDEFavouriteTag", "This item's native D&D5e favorite tag is unavailable."), { cause: error }); }
+  if (!relativeUuid) throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisItemSNativeDDEFavouriteTag", "This item's native D&D5e favorite tag is unavailable."));
   const requestedIds = intended ? [] : favouriteIds(payload?.favouriteIds);
   const allowedIds = new Set([relativeUuid, ...collectionValues(item.system?.activities).map((activity) => {
     const id = String(activity?.relativeUUID ?? "").trim();
     return id || (activity?.id ? `${relativeUuid}.Activity.${activity.id}` : "");
   }).filter(Boolean)]);
   if (requestedIds.some((id) => !allowedIds.has(id))) {
-    throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.AFavouriteEntryDoesNotBelongToTheSelected", "A favorite entry does not belong to the selected item."));
+    throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.AFavouriteEntryDoesNotBelongToTheSelected", "A favorite entry does not belong to the selected item."));
   }
   const targetIds = requestedIds.length ? requestedIds : [relativeUuid];
   const currentIds = targetIds.filter((id) => favorites.hasFavorite(id));
   const current = favorites.hasFavorite(relativeUuid);
   if ((intended && current) || (!intended && !currentIds.length)) {
-    throw new CommandError("STALE_STATE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisItemIsAlready3", "This item is already {state}.", { state: localizeFoundry(intended ? "VEMOBILE.Character.CommandGateway.AFavorite" : "VEMOBILE.Character.CommandGateway.NotAFavorite", intended ? "a favorite" : "not a favorite") }));
+    throw new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisItemIsAlready3", "This item is already {state}.", { state: localizeFoundry(intended ? "MIKELANDIA_CONTROLS.Character.CommandGateway.AFavorite" : "MIKELANDIA_CONTROLS.Character.CommandGateway.NotAFavorite", intended ? "a favorite" : "not a favorite") }));
   }
   if (intended) await favorites.addFavorite({ type: "item", id: relativeUuid });
   else for (const favoriteId of currentIds) await favorites.removeFavorite(favoriteId);
@@ -1079,9 +1075,9 @@ async function setItemFavorite(actor, payload) {
 
 function favouriteIds(value) {
   if (value === undefined) return [];
-  if (!Array.isArray(value) || value.length > 64) throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.FavouriteIdsMustBeABoundedList", "favouriteIds must be a bounded list."));
+  if (!Array.isArray(value) || value.length > 64) throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.FavouriteIdsMustBeABoundedList", "favouriteIds must be a bounded list."));
   const ids = [...new Set(value.map((entry) => String(entry ?? "").trim()))];
-  if (ids.some((id) => !id || id.length > 512)) throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.AFavouriteEntryIsInvalid", "A favorite entry is invalid."));
+  if (ids.some((id) => !id || id.length > 512)) throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.AFavouriteEntryIsInvalid", "A favorite entry is invalid."));
   return ids;
 }
 
@@ -1089,10 +1085,10 @@ async function setSpellPrepared(actor, payload) {
   const item = resolveItem(actor, payload?.itemId);
   const intended = payload?.prepared;
   if (intended !== 0 && intended !== 1) {
-    throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.SpellPreparationMustBeExplicitlySetToPreparedOr", "Spell preparation must be explicitly set to prepared or unprepared."));
+    throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.SpellPreparationMustBeExplicitlySetToPreparedOr", "Spell preparation must be explicitly set to prepared or unprepared."));
   }
   if (item.type !== "spell" || item.parent !== actor || item.isOwner === false || typeof item.update !== "function") {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisEmbeddedSpellCannotBePreparedFromTheCharacter", "This embedded spell cannot be prepared from the character sheet."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisEmbeddedSpellCannotBePreparedFromTheCharacter", "This embedded spell cannot be prepared from the character sheet."));
   }
   const method = String(item.system?.method ?? "");
   const current = Number(item.system?.prepared);
@@ -1101,10 +1097,10 @@ async function setSpellPrepared(actor, payload) {
   const sourceItem = resolveItemSourceItem(actor, item);
   const nonClassItemSourced = Boolean(sourceItem && String(sourceItem.type ?? "").toLowerCase() !== "class");
   if (!PREPARING_SPELL_METHODS.has(method) || ![0, 1].includes(current) || nonClassItemSourced || linked || cached || item.hasRecharge) {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisSpellSCurrentDDEStateDoes", "This spell's current D&D5e state does not allow preparation changes."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisSpellSCurrentDDEStateDoes", "This spell's current D&D5e state does not allow preparation changes."));
   }
   if (current === intended) {
-    throw new CommandError("STALE_STATE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisSpellIsAlready", "This spell is already {state}.", { state: localizeFoundry(intended ? "VEMOBILE.Character.CommandGateway.Prepared" : "VEMOBILE.Character.CommandGateway.Unprepared", intended ? "prepared" : "unprepared") }));
+    throw new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisSpellIsAlready", "This spell is already {state}.", { state: localizeFoundry(intended ? "MIKELANDIA_CONTROLS.Character.CommandGateway.Prepared" : "MIKELANDIA_CONTROLS.Character.CommandGateway.Unprepared", intended ? "prepared" : "unprepared") }));
   }
   await item.update({ "system.prepared": intended });
   return Object.freeze({ itemId: String(item.id), prepared: intended });
@@ -1113,7 +1109,7 @@ async function setSpellPrepared(actor, payload) {
 function openItemSheet(actor, payload) {
   const item = resolveOwnedEmbeddedItem(actor, payload?.itemId);
   if (typeof item.sheet?.render !== "function") {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisItemSNativeDDESheetIs", "This item's native D&D5e sheet is unavailable."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisItemSNativeDDESheetIs", "This item's native D&D5e sheet is unavailable."));
   }
   const editMode = item.sheet.constructor?.MODES?.EDIT ?? 2;
   ownMobileApplication(item.sheet);
@@ -1124,7 +1120,7 @@ function openItemSheet(actor, payload) {
 function mutableEmbeddedItem(actor, itemId) {
   const item = resolveOwnedEmbeddedItem(actor, itemId);
   if (typeof item.update !== "function") {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisEmbeddedItemCannotBeChanged", "This embedded item cannot be changed."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisEmbeddedItemCannotBeChanged", "This embedded item cannot be changed."));
   }
   return item;
 }
@@ -1132,13 +1128,13 @@ function mutableEmbeddedItem(actor, itemId) {
 function resolveOwnedEmbeddedItem(actor, itemId) {
   const item = resolveItem(actor, itemId);
   if (item.parent !== actor || item.isOwner === false) {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisEmbeddedItemIsNotEditableOnTheSelected", "This embedded item is not editable on the selected actor."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisEmbeddedItemIsNotEditableOnTheSelected", "This embedded item is not editable on the selected actor."));
   }
   return item;
 }
 
 function requiredBoolean(value, field) {
-  if (typeof value !== "boolean") throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.MustBeExplicitlyTrueOrFalse", "{field} must be explicitly true or false.", { field: (field) }));
+  if (typeof value !== "boolean") throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.MustBeExplicitlyTrueOrFalse", "{field} must be explicitly true or false.", { field: (field) }));
   return value;
 }
 
@@ -1152,14 +1148,14 @@ async function adjustHitDice(actor, payload) {
   const denomination = String(payload?.denomination ?? "").trim().toLowerCase();
   const direction = String(payload?.direction ?? "");
   if (!/^d\d{1,3}$/u.test(denomination) || !["increase", "decrease"].includes(direction)) {
-    throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.ChooseAValidHitDieTypeAndAdjustment", "Choose a valid hit-die type and adjustment."));
+    throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ChooseAValidHitDieTypeAndAdjustment", "Choose a valid hit-die type and adjustment."));
   }
 
   const classes = collectionValues(actor.items).filter(item => item?.type === "class"
     && String(item.system?.hd?.denomination ?? "").toLowerCase() === denomination);
   if (classes.length) {
     if (typeof actor.updateEmbeddedDocuments !== "function") {
-      throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorSHitDiceCannotBeEdited", "This actor's hit dice cannot be edited."));
+      throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorSHitDiceCannotBeEdited", "This actor's hit dice cannot be edited."));
     }
     const pools = classes.map(item => {
       const max = Math.max(0, Number(item.system?.hd?.max ?? item.system?.levels) || 0);
@@ -1169,7 +1165,7 @@ async function adjustHitDice(actor, payload) {
     const target = direction === "increase"
       ? pools.find(pool => pool.spent > 0)
       : pools.find(pool => pool.spent < pool.max);
-    if (!target) throw new CommandError("INVALID_INPUT", direction === "increase" ? localizeFoundry("VEMOBILE.Character.CommandGateway.ThoseHitDiceAreAlreadyFull", "Those hit dice are already full.") : localizeFoundry("VEMOBILE.Character.CommandGateway.NoMoreOfThoseHitDiceAreAvailable", "No more of those hit dice are available."));
+    if (!target) throw new CommandError("INVALID_INPUT", direction === "increase" ? localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThoseHitDiceAreAlreadyFull", "Those hit dice are already full.") : localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.NoMoreOfThoseHitDiceAreAvailable", "No more of those hit dice are available."));
     const spent = target.spent + (direction === "increase" ? -1 : 1);
     await actor.updateEmbeddedDocuments("Item", [{ _id: target.item.id, "system.hd.spent": spent }]);
     const max = pools.reduce((total, pool) => total + pool.max, 0);
@@ -1181,12 +1177,12 @@ async function adjustHitDice(actor, payload) {
   const rawDenomination = String(hd?.denomination ?? "");
   const actorDenomination = rawDenomination.startsWith("d") ? rawDenomination.toLowerCase() : `d${Number(rawDenomination) || 0}`;
   if (!hd || actorDenomination !== denomination || typeof actor.update !== "function") {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThatHitDiePoolIsNoLongerAvailable", "That hit-die pool is no longer available."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThatHitDiePoolIsNoLongerAvailable", "That hit-die pool is no longer available."));
   }
   const max = Math.max(0, Number(hd.max) || 0);
   const current = Math.max(0, Math.min(max, Number(hd.value) || 0));
   const value = current + (direction === "increase" ? 1 : -1);
-  if (value < 0 || value > max) throw new CommandError("INVALID_INPUT", value > max ? localizeFoundry("VEMOBILE.Character.CommandGateway.ThoseHitDiceAreAlreadyFull", "Those hit dice are already full.") : localizeFoundry("VEMOBILE.Character.CommandGateway.NoMoreOfThoseHitDiceAreAvailable", "No more of those hit dice are available."));
+  if (value < 0 || value > max) throw new CommandError("INVALID_INPUT", value > max ? localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThoseHitDiceAreAlreadyFull", "Those hit dice are already full.") : localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.NoMoreOfThoseHitDiceAreAvailable", "No more of those hit dice are available."));
   await actor.update({ "system.attributes.hd.spent": max - value });
   return Object.freeze({ denomination, value, max });
 }
@@ -1195,8 +1191,8 @@ function takeRest(actor, payload) {
   const type = String(payload?.type ?? "");
   if (type === "short" && typeof actor.shortRest === "function") return actor.shortRest();
   if (type === "long" && typeof actor.longRest === "function") return actor.longRest();
-  if (!["short", "long"].includes(type)) throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.ChooseAValidRestType", "Choose a valid rest type."));
-  throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActorCannotTakeARest", "This actor cannot take this rest: {type}.", { type: localizeFoundry(type === "short" ? "VEMOBILE.Character.Copy.ShortRest" : "VEMOBILE.Character.Copy.LongRest", type === "short" ? "Short Rest" : "Long Rest") }));
+  if (!["short", "long"].includes(type)) throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ChooseAValidRestType", "Choose a valid rest type."));
+  throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorCannotTakeARest", "This actor cannot take this rest: {type}.", { type: localizeFoundry(type === "short" ? "MIKELANDIA_CONTROLS.Character.Copy.ShortRest" : "MIKELANDIA_CONTROLS.Character.Copy.LongRest", type === "short" ? "Short Rest" : "Long Rest") }));
 }
 
 function useItem(actor, requestedItemId, requestedActivityId) {
@@ -1206,12 +1202,12 @@ function useItem(actor, requestedItemId, requestedActivityId) {
     const activity = item.system?.activities?.get?.(activityId)
       ?? collectionValues(item.system?.activities).find((candidate) => String(candidate?.id ?? "") === activityId);
     if (!activity || !activity.canUse || typeof activity.use !== "function") {
-      throw new CommandError("TARGET_MISSING", localizeFoundry("VEMOBILE.Character.CommandGateway.ThatActivityIsNoLongerAvailableOnThisItem", "That activity is no longer available on this item."));
+      throw new CommandError("TARGET_MISSING", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThatActivityIsNoLongerAvailableOnThisItem", "That activity is no longer available on this item."));
     }
     return activity.use();
   }
   if (typeof item.use !== "function") {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisItemCannotBeUsedFromTheCharacterSheet", "This item cannot be used from the character sheet."));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisItemCannotBeUsedFromTheCharacterSheet", "This item cannot be used from the character sheet."));
   }
   return item.use();
 }
@@ -1220,14 +1216,14 @@ function resolveItem(actor, requestedItemId) {
   const itemId = identifier(requestedItemId, "itemId");
   const item = actor.items?.get?.(itemId)
     ?? collectionValues(actor.items).find((candidate) => String(candidate?.id ?? "") === itemId);
-  if (!item) throw new CommandError("TARGET_MISSING", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisItemIsNoLongerAvailableOnTheSelected", "This item is no longer available on the selected actor."));
+  if (!item) throw new CommandError("TARGET_MISSING", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisItemIsNoLongerAvailableOnTheSelected", "This item is no longer available on the selected actor."));
   return item;
 }
 
 function wholeNumber(value, field, minimum, maximum) {
   const numeric = Number(value);
   if (!Number.isSafeInteger(numeric) || numeric < minimum || numeric > maximum) {
-    throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Character.CommandGateway.MustBeAWholeNumberFromTo", "{field} must be a whole number from {minimum} to {maximum}.", { field: (field), minimum: (minimum), maximum: (maximum) }));
+    throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.MustBeAWholeNumberFromTo", "{field} must be a whole number from {minimum} to {maximum}.", { field: (field), minimum: (minimum), maximum: (maximum) }));
   }
   return numeric;
 }
@@ -1235,7 +1231,7 @@ function wholeNumber(value, field, minimum, maximum) {
 function nonNegativeWholeNumber(value, field) {
   const numeric = Number(value);
   if (!Number.isSafeInteger(numeric) || numeric < 0) {
-    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.CommandGateway.TheIsUnavailable", "The {field} is unavailable.", { field: (field) }));
+    throw new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.TheIsUnavailable", "The {field} is unavailable.", { field: (field) }));
   }
   return numeric;
 }

@@ -1,16 +1,16 @@
 import { localizeFoundry } from "./localization.mjs";
 import { deliberateApplicationControl } from "./mobile-presentation.mjs";
 
-const SETTINGS_CLASS = "ve-mobile-settings-app";
-const SESSION_CLASS = "ve-mobile-settings-session-open";
-const SCROLL_OWNER_CLASS = "ve-mobile-settings-scroll-owner";
-const SETTINGS_LAYER_PROPERTY = "--ve-mobile-settings-layer";
-const SETTINGS_BACKDROP_LAYER_PROPERTY = "--ve-mobile-settings-backdrop-layer";
+const SETTINGS_CLASS = "mc-mobile-settings-app";
+const SESSION_CLASS = "mc-mobile-settings-session-open";
+const SCROLL_OWNER_CLASS = "mc-mobile-settings-scroll-owner";
+const SETTINGS_LAYER_PROPERTY = "--mc-mobile-settings-layer";
+const SETTINGS_BACKDROP_LAYER_PROPERTY = "--mc-mobile-settings-backdrop-layer";
 // Keep native settings above Scene overlays/HUD and the modal band, matching
-// --ve-layer-settings in the renderer's shared layer scale.
+// --mc-layer-settings in the renderer's shared layer scale.
 const SETTINGS_LAYER_BASE = 5200;
-const DICE_ACTIVE_CLASS = "ve-mobile-settings-dice-active";
-const DICE_LAYER_PROPERTY = "--ve-mobile-settings-dice-layer";
+const DICE_ACTIVE_CLASS = "mc-mobile-settings-dice-active";
+const DICE_LAYER_PROPERTY = "--mc-mobile-settings-dice-layer";
 const LINEAGE_WINDOW_MS = 5000;
 const PENDING_ROOT_WINDOW_MS = 3000;
 const DICE_ACTIVITY_POLL_MS = 50;
@@ -258,15 +258,15 @@ export function createFoundrySettingsCompatibilityGateway({
   };
 
   const open = async (app, renderOptions) => {
-    if (!enabled) throw new Error(localizeFoundry("VEMOBILE.Interface.SettingsCompatibilityGateway.NativeSettingsCompatibilityIsNotActive", "Native settings compatibility is not active."));
-    if (!app || typeof app.render !== "function") throw new Error(localizeFoundry("VEMOBILE.Interface.SettingsCompatibilityGateway.ThatNativeSettingsApplicationIsUnavailable", "That native settings application is unavailable."));
+    if (!enabled) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SettingsCompatibilityGateway.NativeSettingsCompatibilityIsNotActive", "Native settings compatibility is not active."));
+    if (!app || typeof app.render !== "function") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SettingsCompatibilityGateway.ThatNativeSettingsApplicationIsUnavailable", "That native settings application is unavailable."));
     const openingSession = beginSession(app);
     try {
       await Promise.resolve(app.render(renderOptions));
       const admitted = await waitForAdmission(openingSession, app);
       const record = openingSession.apps.get(app);
       if (!admitted || session !== openingSession || !usableAdmission(record?.element, readComputedStyle)) {
-        throw new Error(localizeFoundry("VEMOBILE.Interface.SettingsCompatibilityGateway.TheNativeSettingsApplicationDidNotProduceAVisible", "The native settings application did not produce a visible window."));
+        throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SettingsCompatibilityGateway.TheNativeSettingsApplicationDidNotProduceAVisible", "The native settings application did not produce a visible window."));
       }
       return Object.freeze({ ok: true });
     } catch (error) {
@@ -348,10 +348,10 @@ export function createFoundrySettingsCompatibilityGateway({
     snapshot() {
       const game = getGame();
       return Object.freeze({
-        title: localized(game, "VEMOBILE.Settings.Native.Title", "Foundry Settings"),
-        openFoundryLabel: localized(game, "VEMOBILE.Settings.Native.OpenFoundry", "Open Foundry Settings"),
-        openFoundryHint: localized(game, "VEMOBILE.Settings.Native.OpenFoundryHint", "Use Foundry's native settings interface for core, system, and module configuration."),
-        compatibilityHint: localized(game, "VEMOBILE.Settings.Native.CompatibilityHint", "Some Foundry and module settings are designed for desktop and may not display correctly on smaller screens. If needed, switch to Desktop mode to access them.")
+        title: localized(game, "MIKELANDIA_CONTROLS.Settings.Native.Title", "Foundry Settings"),
+        openFoundryLabel: localized(game, "MIKELANDIA_CONTROLS.Settings.Native.OpenFoundry", "Open Foundry Settings"),
+        openFoundryHint: localized(game, "MIKELANDIA_CONTROLS.Settings.Native.OpenFoundryHint", "Use Foundry's native settings interface for core, system, and module configuration."),
+        compatibilityHint: localized(game, "MIKELANDIA_CONTROLS.Settings.Native.CompatibilityHint", "Some Foundry and module settings are designed for desktop and may not display correctly on smaller screens. If needed, switch to Desktop mode to access them.")
       });
     },
 
@@ -462,7 +462,7 @@ function restoreDiceHost(activity) {
 function diceSoNiceTestRoll(target) {
   const control = target?.closest?.("[data-action='test']");
   const root = control?.closest?.(".dice-so-nice");
-  return Boolean(control && root?.classList?.contains?.("ve-mobile-settings-app"));
+  return Boolean(control && root?.classList?.contains?.("mc-mobile-settings-app"));
 }
 
 function elementLike(value) {

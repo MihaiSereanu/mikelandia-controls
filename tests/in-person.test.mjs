@@ -7,13 +7,46 @@ import { createTaskScope } from "../src/kernel/task-scope.mjs";
 import { resolveMobileGraphicsPolicy } from "../src/foundry/mobile-graphics-policy.mjs";
 import { createActor, createGame, createHooks, installGlobals } from "./helpers/foundry.mjs";
 
-test("dice presentation still resolves without a canvas or retired graphics journal", () => {
-  for (const diceRendering of ["auto", "static", "reduced", "normal"]) {
-    const policy = resolveMobileGraphicsPolicy({ graphicsSafety: "off", diceRendering, getCanvas: () => null, navigatorRef: {}, screenRef: {} });
-    assert.equal(policy.effects, "off");
-    assert.ok(["static", "reduced", "normal"].includes(policy.dice));
-    if (diceRendering !== "auto") assert.equal(policy.dice, diceRendering);
+test("explicit dice choices override device hints and invalid choices use automatic mode", () => {
+  for (const navigatorRef of [{}, { userAgent: "Android", deviceMemory: 4, hardwareConcurrency: 4 }, { userAgent: "iPhone" }]) {
+    for (const diceRendering of ["static", "reduced", "normal"]) {
+      assert.equal(resolveMobileGraphicsPolicy({ diceRendering, navigatorRef }).dice, diceRendering);
+    }
   }
+  assert.equal(resolveMobileGraphicsPolicy({ diceRendering: "invalid", navigatorRef: {} }).dice, "normal");
+  assert.equal(resolveMobileGraphicsPolicy({ diceRendering: "invalid", navigatorRef: { userAgent: "Android" } }).dice, "reduced");
+});
+
+test("automatic dice selection preserves mobile capability and backing-area boundaries", () => {
+  const android = { userAgent: "Android" };
+  const cases = [
+    ["desktop without hints", {}, {}, 1, "normal"],
+    ["Android without hints", android, {}, 1, "reduced"],
+    ["iPhone without hints", { userAgent: "iPhone" }, {}, 1, "reduced"],
+    ["iPad desktop identification", { platform: "MacIntel", maxTouchPoints: 5 }, {}, 1, "reduced"],
+    ["Mac without touch", { platform: "MacIntel", maxTouchPoints: 0 }, {}, 1, "normal"],
+    ["low memory and CPU", { ...android, deviceMemory: 4, hardwareConcurrency: 4 }, {}, 1, "static"],
+    ["high CPU with low memory", { ...android, deviceMemory: 4, hardwareConcurrency: 8 }, {}, 1, "normal"],
+    ["high memory with low CPU", { ...android, deviceMemory: 8, hardwareConcurrency: 4 }, {}, 1, "reduced"],
+    ["high memory and six cores", { ...android, deviceMemory: 8, hardwareConcurrency: 6 }, {}, 1, "normal"],
+    ["six cores without memory", { ...android, hardwareConcurrency: 6 }, {}, 1, "reduced"],
+    ["high memory without CPU", { ...android, deviceMemory: 8 }, {}, 1, "normal"],
+    ["malformed hints", { ...android, deviceMemory: "invalid", hardwareConcurrency: -1 }, {}, 1, "reduced"],
+    ["numeric string hints", { ...android, deviceMemory: "4", hardwareConcurrency: "4" }, {}, 1, "static"],
+    ["14 million backing pixels", { ...android, hardwareConcurrency: 8 }, { width: 2000, height: 7000 }, 1, "normal"],
+    ["above 14 million backing pixels", { ...android, hardwareConcurrency: 8 }, { width: 2000, height: 7001 }, 1, "reduced"],
+    ["DPR boundary", { ...android, hardwareConcurrency: 8 }, { width: 1000, height: 3500 }, 2, "normal"],
+    ["above DPR boundary", { ...android, hardwareConcurrency: 8 }, { width: 1000, height: 3501 }, 2, "reduced"],
+    ["pixel ratio floor", { ...android, hardwareConcurrency: 8 }, { width: 2000, height: 7001 }, 0.5, "reduced"]
+  ];
+  for (const [label, navigatorRef, screenRef, ratio, expected] of cases) {
+    assert.equal(resolveMobileGraphicsPolicy({ navigatorRef, screenRef, getPixelRatio: () => ratio }).dice, expected, label);
+  }
+});
+
+test("dice selection never inspects the Foundry renderer", t => {
+  installGlobals(t, { canvas: { get app() { throw new Error("The renderer must not be inspected"); } } });
+  assert.equal(resolveMobileGraphicsPolicy({ navigatorRef: { userAgent: "Android", hardwareConcurrency: 8 }, screenRef: {}, getPixelRatio: () => 1 }).dice, "normal");
 });
 
 test("retired Scene routes and commands cannot reopen map controls", () => {
@@ -55,7 +88,7 @@ test("selected character data still refreshes after native item edits", async t 
 });
 
 function restorationFixture(t, snapshot) {
-  const values = new Map([["ve-mobile.graphicsSettingsSnapshot", snapshot], ["core.maxFPS", 20], ["core.noCanvas", true]]);
+  const values = new Map([["mikelandia-controls.graphicsSettingsSnapshot", snapshot], ["core.maxFPS", 20], ["core.noCanvas", true]]);
   const game = createGame();
   game.settings = {
     get: (namespace, key) => values.get(`${namespace}.${key}`),
@@ -71,7 +104,7 @@ test("upgrades restore saved client graphics preferences without applying a new 
   await f.restore.beginMobileSession();
   assert.equal(f.values.get("core.maxFPS"), 60);
   assert.equal(f.values.get("core.noCanvas"), false);
-  assert.deepEqual(f.values.get("ve-mobile.graphicsSettingsSnapshot"), {});
+  assert.deepEqual(f.values.get("mikelandia-controls.graphicsSettingsSnapshot"), {});
   assert.deepEqual(f.restore.pendingRestoration(), []);
 });
 
@@ -79,6 +112,6 @@ test("invalid restoration snapshots remain intact and cannot write unrelated set
   const snapshot = { schemaVersion: 4, original: { "core.permissions": {} }, applied: { "core.permissions": {} } };
   const f = restorationFixture(t, snapshot);
   await assert.rejects(f.restore.restoreForDesktop(), /invalid/);
-  assert.equal(f.values.get("ve-mobile.graphicsSettingsSnapshot"), snapshot);
+  assert.equal(f.values.get("mikelandia-controls.graphicsSettingsSnapshot"), snapshot);
   assert.equal(f.values.has("core.permissions"), false);
 });

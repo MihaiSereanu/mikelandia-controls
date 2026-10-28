@@ -153,7 +153,7 @@ export function createFoundrySessionGateway({
         capturedAt: new Date().toISOString(),
         world: readDomain("world", () => ({
           id: game.world?.id ?? "",
-          title: game.world?.title ?? game.world?.id ?? localizeFoundry("VEMOBILE.Interface.SessionGateway.FoundryWorld", "Foundry World"),
+          title: game.world?.title ?? game.world?.id ?? localizeFoundry("MIKELANDIA_CONTROLS.Interface.SessionGateway.FoundryWorld", "Foundry World"),
           systemId: game.system?.id ?? "",
           systemVersion: game.system?.version ?? ""
         })),
@@ -226,7 +226,7 @@ export function createFoundrySessionGateway({
       assertSession(expectedSession);
       const uuid = validSourceUuid(sourceUuid);
       const actor = resolveActorSource(uuid);
-      if (!actor || !actorEligible(actor, game.user)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisActorIsNoLongerAvailable", "This actor is no longer available."));
+      if (!actor || !actorEligible(actor, game.user)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SessionGateway.ThisActorIsNoLongerAvailable", "This actor is no longer available."));
       selectedActorSourceUuid = uuid;
       if (!latestSnapshot) return read();
       const snapshot = Object.freeze({
@@ -244,7 +244,7 @@ export function createFoundrySessionGateway({
       const origin = resolveActorSource(validSourceUuid(originSourceUuid));
       const target = validSourceUuid(targetSourceUuid);
       if (selectedActorSourceUuid !== originSourceUuid || !origin || !actorEligible(origin, game.user)
-        || !getSystemIntegration().referenceSources(origin).includes(target)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisReferenceIsNoLongerAvailable", "This reference is no longer available."));
+        || !getSystemIntegration().referenceSources(origin).includes(target)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SessionGateway.ThisReferenceIsNoLongerAvailable", "This reference is no longer available."));
       return this.selectCharacterSource(target, expectedSession);
     },
 
@@ -347,13 +347,13 @@ export function createFoundrySessionGateway({
       assertSession(expectedSession);
       const id = identifier(journalId, "journalId");
       const journal = game.journal?.get?.(id) ?? Array.from(game.journal ?? []).find((entry) => String(entry.id ?? "") === id);
-      if (!isJournalVisible(journal, game.user)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisJournalIsNoLongerAvailable", "This journal is no longer available."));
+      if (!isJournalVisible(journal, game.user)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SessionGateway.ThisJournalIsNoLongerAvailable", "This journal is no longer available."));
       const pages = [];
       for (const page of Array.from(journal.pages ?? []).filter((entry) => isJournalPageVisible(entry, journal, game.user))) {
         const type = String(page.type ?? "text");
         const record = {
           id: String(page.id ?? ""),
-          name: String(page.name ?? localizeFoundry("VEMOBILE.Journals.UntitledPage", "Untitled page")),
+          name: String(page.name ?? localizeFoundry("MIKELANDIA_CONTROLS.Journals.UntitledPage", "Untitled page")),
           type,
           sort: Number(page.sort) || 0,
           level: Number(page.title?.level) || 1,
@@ -369,7 +369,7 @@ export function createFoundrySessionGateway({
         pages.push(Object.freeze(record));
       }
       assertSession(expectedSession);
-      if (game.journal?.get?.(id) !== journal || !isJournalVisible(journal, game.user)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisJournalIsNoLongerAvailable", "This journal is no longer available."));
+      if (game.journal?.get?.(id) !== journal || !isJournalVisible(journal, game.user)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SessionGateway.ThisJournalIsNoLongerAvailable", "This journal is no longer available."));
       const currentPages = pages.filter((record) => {
         const current = journal.pages?.get?.(record.id) ?? Array.from(journal.pages ?? []).find((entry) => entry.id === record.id);
         return current && isJournalPageVisible(current, journal, game.user);
@@ -382,28 +382,28 @@ export function createFoundrySessionGateway({
       assertSession(expectedSession);
       const id = identifier(journalId, "journalId");
       const journal = game.journal?.get?.(id);
-      if (!isJournalVisible(journal, game.user) || !canOwn(journal, game.user)) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.YouCannotEditThisJournal", "You cannot edit this Journal."));
+      if (!isJournalVisible(journal, game.user) || !canOwn(journal, game.user)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SessionGateway.YouCannotEditThisJournal", "You cannot edit this Journal."));
       const page = pageId ? journal.pages?.get?.(identifier(pageId, "pageId")) : null;
-      if (pageId && (!isJournalPageVisible(page, journal, game.user) || !canOwn(page, game.user))) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.YouCannotEditThisJournalPage", "You cannot edit this Journal page."));
+      if (pageId && (!isJournalPageVisible(page, journal, game.user) || !canOwn(page, game.user))) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SessionGateway.YouCannotEditThisJournalPage", "You cannot edit this Journal page."));
       // Foundry v13's own JournalEntrySheet opens text and image editors from
       // page.sheet. Other page types use the native parent at the current page.
       const sheet = page && ["text", "image"].includes(String(page.type)) && typeof page.sheet?.render === "function"
         ? page.sheet : journal.sheet;
-      if (typeof sheet?.render !== "function") throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.TheNativeJournalEditorIsUnavailable", "The native Journal editor is unavailable."));
+      if (typeof sheet?.render !== "function") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SessionGateway.TheNativeJournalEditorIsUnavailable", "The native Journal editor is unavailable."));
       ownMobileApplication(sheet);
       // Foundry 13.351's JournalEntrySheet is ApplicationV2, while its text
       // and image JournalPageSheet editors still use ApplicationV1.render.
-      if (sheet.isV2 === false) await Promise.resolve(sheet.render(true, { veNativeEdit: true }));
-      else await Promise.resolve(sheet.render({ force: true, veNativeEdit: true,
+      if (sheet.isV2 === false) await Promise.resolve(sheet.render(true, { mcNativeEdit: true }));
+      else await Promise.resolve(sheet.render({ force: true, mcNativeEdit: true,
         ...(sheet === journal.sheet && page ? { pageId: page.id } : {}) }));
       assertSession(expectedSession);
       return Object.freeze({ opened: true });
     },
     async sendChat(content, sourceUuid = "") {
       const text = String(content ?? "").trim();
-      if (!text || text.length > 5000) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ChatMessagesMustContainBetweenAndCharacters", "Chat messages must contain between 1 and 5,000 characters."));
+      if (!text || text.length > 5000) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SessionGateway.ChatMessagesMustContainBetweenAndCharacters", "Chat messages must contain between 1 and 5,000 characters."));
       const actor = sourceUuid ? resolveActorSource(sourceUuid) : null;
-      if (sourceUuid && (!actor || !actorEligible(actor, game.user))) throw new Error(localizeFoundry("VEMOBILE.Interface.SessionGateway.ThisActorIsNoLongerAvailable", "This actor is no longer available."));
+      if (sourceUuid && (!actor || !actorEligible(actor, game.user))) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SessionGateway.ThisActorIsNoLongerAvailable", "This actor is no longer available."));
       const speaker = actor ? ChatMessage.getSpeaker({ actor }) : ChatMessage.getSpeaker({ user: game.user });
       return ChatMessage.create({ content: text, speaker, user: game.user.id });
     }
@@ -513,12 +513,6 @@ function snapshotDomainSignature(snapshot, domain) {
   return JSON.stringify(snapshot?.[domain] ?? null);
 }
 
-export function snapshotPresentationSignature(snapshot) {
-  if (!snapshot) return "null";
-  const { capturedAt: _capturedAt, ...presentation } = snapshot;
-  return JSON.stringify(presentation);
-}
-
 function visibleActors(user, integration) {
   return Array.from(game.actors ?? [])
     .filter((actor) => isActorEligible(actor, user, integration))
@@ -602,14 +596,14 @@ function escapeHtml(value) {
 }
 
 function assertSession(expected) {
-  if (!game?.user || !game?.world) throw new Error(localizeFoundry("VEMOBILE.Interface.CombatGateway.TheFoundrySessionIsNotReady", "The Foundry session is not ready."));
-  if (expected.worldId && expected.worldId !== game.world.id) throw new Error(localizeFoundry("VEMOBILE.Interface.CombatGateway.TheActiveFoundryWorldHasChanged", "The active Foundry world has changed."));
-  if (expected.userId && expected.userId !== game.user.id) throw new Error(localizeFoundry("VEMOBILE.Interface.CombatGateway.TheActiveFoundryUserHasChanged", "The active Foundry user has changed."));
+  if (!game?.user || !game?.world) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.TheFoundrySessionIsNotReady", "The Foundry session is not ready."));
+  if (expected.worldId && expected.worldId !== game.world.id) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.TheActiveFoundryWorldHasChanged", "The active Foundry world has changed."));
+  if (expected.userId && expected.userId !== game.user.id) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.TheActiveFoundryUserHasChanged", "The active Foundry user has changed."));
 }
 
 function identifier(value, field) {
   const id = String(value ?? "").trim();
-  if (!id || id.length > 128) throw new Error(localizeFoundry("VEMOBILE.Interface.CharacterSource.IsRequired", "{field} is required.", { field: (field) }));
+  if (!id || id.length > 128) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.CharacterSource.IsRequired", "{field} is required.", { field: (field) }));
   return id;
 }
 

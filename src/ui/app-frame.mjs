@@ -6,8 +6,8 @@ import { renderChat } from "../features/chat/presenter.mjs";
 import { renderSettings } from "../features/settings/presenter.mjs";
 import { renderCombat, renderGmCombatControls } from "../features/combat/presenter.mjs";
 import { resolveCharacterThemeProfile } from "../kernel/character-theme.mjs";
-import { createVeBackDispatcher } from "./ve-back-dispatcher.mjs";
-import { createVeCloseWatcherBack, veCloseWatcherLayers } from "./ve-close-watcher-back.mjs";
+import { createMcBackDispatcher } from "./mc-back-dispatcher.mjs";
+import { createMcCloseWatcherBack, mcCloseWatcherLayers } from "./mc-close-watcher-back.mjs";
 import { createElapsedWorkerClock } from "./elapsed-worker-clock.mjs";
 import { createLoadingCheckpoints } from "./loading-checkpoints.mjs";
 import { bindCharacterHeaderScroll } from "./character-header-scroll.mjs";
@@ -24,15 +24,15 @@ const SCREENS = Object.freeze({
 export const RECONNECT_BLOCKER_DELAY_MS = 120;
 
 export function createAppFrame({ store, commands, policy, scope, mobileBackGateway = null, performanceObserver = null, nativeApplications = null }) {
-  const root = node("div", { className: "ve-mobile-app", attrs: { role: "application", "aria-label": localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.VEMobile", "Mikelandia Controls") } });
-  const viewport = node("main", { className: "ve-viewport" });
-  const panelOverlays = node("div", { className: "ve-panel-overlays", attrs: { "aria-live": "polite" } });
-  const nav = node("nav", { className: "ve-bottom-nav", attrs: { "aria-label": localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.Primary", "Primary") } });
+  const root = node("div", { className: "mc-mobile-app", attrs: { role: "application", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.MCMobile", "Mikelandia Controls") } });
+  const viewport = node("main", { className: "mc-viewport" });
+  const panelOverlays = node("div", { className: "mc-panel-overlays", attrs: { "aria-live": "polite" } });
+  const nav = node("nav", { className: "mc-bottom-nav", attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.Primary", "Primary") } });
   const navSideIcon = icon("fa-arrow-left");
   let screenScope = null, combatControlsScope = null, combatControlsRenderKey = "", renderedState = null;
   let mounted = true, characterScrollRestoreGeneration = 0, characterScrollRestoreScope = null, characterHeaderScroll = null;
   const characterScrollMemory = createCharacterScrollMemory();
-  const characterScroller = () => viewport.querySelector(".ve-character-content-scroller") ?? viewport;
+  const characterScroller = () => viewport.querySelector(".mc-character-content-scroller") ?? viewport;
   const characterScrollTop = () => characterScroller().scrollTop;
   const restoreCharacterScroll = (state, desiredScrollTop) => {
     characterScrollRestoreScope?.dispose();
@@ -67,20 +67,20 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
   const reconnectBlocker = createReconnectBlocker(scope, { localize: commands.localize, locale: commands.readLocale?.() ?? "en", onReload: () => commands.reloadApplication() });
   const modeTransitionBlocker = createModeTransitionBlocker(scope, { localize: commands.localize });
   const rotateSuggestion = tabletRotateSuggestion(commands.localize);
-  const navSideToggle = node("button", { className: "ve-tablet-nav-side-toggle", attrs: { type: "button" }, children: [navSideIcon], on: { click: () => commands.toggleTabletNavSide() } }, scope);
-  const combatControlsHost = node("div", { className: "ve-gm-combat-control-host", attrs: { hidden: true } });
+  const navSideToggle = node("button", { className: "mc-tablet-nav-side-toggle", attrs: { type: "button" }, children: [navSideIcon], on: { click: () => commands.toggleTabletNavSide() } }, scope);
+  const combatControlsHost = node("div", { className: "mc-gm-combat-control-host", attrs: { hidden: true } });
   const navItems = [["characters", "fa-user", "Character"], ["chat", "fa-comments", "Chat"], ["journals", "fa-book-open", "Journals"], ["combat", combatNavIcon, "Combat"], ["settings", "fa-gear", "Settings"]];
   const navButtons = new Map(navItems.map(([route, createIcon, label]) => {
-    const button = node("button", { className: "ve-main-nav-item", attrs: { type: "button" }, dataset: { route }, on: { click: () => commands.navigate(route) }, children: [typeof createIcon === "function" ? createIcon() : icon(createIcon), node("span", { text: commands.localize?.(`VEMOBILE.Navigation.${label}`, label) ?? label })] }, scope);
+    const button = node("button", { className: "mc-main-nav-item", attrs: { type: "button" }, dataset: { route }, on: { click: () => commands.navigate(route) }, children: [typeof createIcon === "function" ? createIcon() : icon(createIcon), node("span", { text: commands.localize?.(`MIKELANDIA_CONTROLS.Navigation.${label}`, label) ?? label })] }, scope);
     return [route, button];
   }));
-  nav.append(rotateSuggestion, node("div", { className: "ve-nav-routes", children: [...navButtons.values()] }), navSideToggle);
-  const backDispatcher = createVeBackDispatcher({ getState: () => store.state, commands, nativeApplications: {
+  nav.append(rotateSuggestion, node("div", { className: "mc-nav-routes", children: [...navButtons.values()] }), navSideToggle);
+  const backDispatcher = createMcBackDispatcher({ getState: () => store.state, commands, nativeApplications: {
     topmost: () => nativeApplications?.settings?.topmost?.() ?? nativeApplications?.admissions?.topmost?.(),
     closeTopmost: () => nativeApplications?.settings?.topmost?.() ? nativeApplications.settings.closeTopmost() : nativeApplications?.admissions?.closeTopmost?.()
   }, getRoot: () => root.ownerDocument ?? root });
   const nativeBackLayers = () => [...(nativeApplications?.admissions?.layers ?? []), ...(nativeApplications?.settings?.layers ?? []), ...(!controlsGuide.element.hidden ? ["controls-guide"] : [])];
-  const closeWatcherBack = createVeCloseWatcherBack({ scope, getLayers: () => veCloseWatcherLayers(store.state, { nativeLayers: nativeBackLayers() }), onBack: () => backDispatcher.back() });
+  const closeWatcherBack = createMcCloseWatcherBack({ scope, getLayers: () => mcCloseWatcherLayers(store.state, { nativeLayers: nativeBackLayers() }), onBack: () => backDispatcher.back() });
   mobileBackGateway?.enable(scope, { onBack: () => backDispatcher.back(), getDiagnosticContext: () => ({ route: store.state.route, routeDepth: store.state.routeHistory?.length ?? 0, topmostDismissible: backDispatcher.peek(), closeWatcher: closeWatcherBack.snapshot() }) });
   const controlsGuide = createControlsGuide({ scope, readContext: () => commands.readControlsContext(), localize: key => commands.localize(key), onVisibility: () => closeWatcherBack.sync() });
   const controlsInvitation = createControlsInvitation({ root, scope, commands, getState: () => store.state, isReady: () => commands.controlsUiReady?.(), isNativeOpen: () => nativeApplications?.settings?.topmost?.() ?? nativeApplications?.admissions?.topmost?.(), openGuide: anchor => controlsGuide.show(anchor) });
@@ -88,8 +88,8 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
   function syncCombatControlGeometry() {
     const height = combatControlsHost.hidden ? 0 : combatControlsHost.getBoundingClientRect().height;
     const navBounds = nav.getBoundingClientRect();
-    if (navBounds.width > navBounds.height && navBounds.height > 0) root.style.setProperty("--ve-nav-dock-height", `${navBounds.height}px`);
-    root.style.setProperty("--ve-gm-combat-row-reservation", height > 0 ? `${height + 8}px` : "0px");
+    if (navBounds.width > navBounds.height && navBounds.height > 0) root.style.setProperty("--mc-nav-dock-height", `${navBounds.height}px`);
+    root.style.setProperty("--mc-gm-combat-row-reservation", height > 0 ? `${height + 8}px` : "0px");
   }
   const render = state => {
     if (!mounted || scope.disposed) return;
@@ -110,8 +110,8 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     root.dataset.theme = latestPolicy.theme;
     // The frame may mount after presentation preparation; each render also
     // reconciles the client preference without observing the whole document.
-    if (settings.protectVeStyling) root.setAttribute("data-ve-style-authority", "");
-    else root.removeAttribute("data-ve-style-authority");
+    if (settings.protectMcStyling) root.setAttribute("data-mc-style-authority", "");
+    else root.removeAttribute("data-mc-style-authority");
     root.dataset.formFactor = latestPolicy.formFactor;
     root.dataset.orientation = latestPolicy.orientation;
     root.dataset.navSide = tabletNavSide;
@@ -119,25 +119,25 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     root.dataset.characterTheme = characterTheme;
     root.dataset.characterThemeBlend = themeProfile.multiclass ? "multiclass" : "single";
     const artworkOpacity = Number(settings.headerArtworkOpacity);
-    root.style.setProperty("--ve-class-art-opacity", String(Number.isFinite(artworkOpacity) ? Math.max(0, Math.min(1, artworkOpacity)) : 1));
+    root.style.setProperty("--mc-class-art-opacity", String(Number.isFinite(artworkOpacity) ? Math.max(0, Math.min(1, artworkOpacity)) : 1));
     applyThemeBlend(root, themeProfile);
-    root.classList.toggle("ve-has-roll-result", Boolean(state.rollResult));
-    root.classList.toggle("ve-has-action-session", Boolean(state.actionSession));
-    root.classList.toggle("ve-has-hp-editor", Boolean(state.hitPointEditor));
-    root.classList.toggle("ve-has-rest-editor", Boolean(state.restEditor));
-    root.classList.toggle("ve-has-spell-slot-editor", Boolean(state.spellSlotEditor));
-    document.body.dataset.veMobileTheme = latestPolicy.theme;
-    document.body.dataset.veMobileFormFactor = latestPolicy.formFactor;
-    document.body.dataset.veMobileOrientation = latestPolicy.orientation;
-    document.body.dataset.veMobileNavSide = tabletNavSide;
-    document.body.dataset.veMobileCharacterTheme = characterTheme;
-    document.body.dataset.veMobileCharacterThemeBlend = themeProfile.multiclass ? "multiclass" : "single";
+    root.classList.toggle("mc-has-roll-result", Boolean(state.rollResult));
+    root.classList.toggle("mc-has-action-session", Boolean(state.actionSession));
+    root.classList.toggle("mc-has-hp-editor", Boolean(state.hitPointEditor));
+    root.classList.toggle("mc-has-rest-editor", Boolean(state.restEditor));
+    root.classList.toggle("mc-has-spell-slot-editor", Boolean(state.spellSlotEditor));
+    document.body.dataset.mcMobileTheme = latestPolicy.theme;
+    document.body.dataset.mcMobileFormFactor = latestPolicy.formFactor;
+    document.body.dataset.mcMobileOrientation = latestPolicy.orientation;
+    document.body.dataset.mcMobileNavSide = tabletNavSide;
+    document.body.dataset.mcMobileCharacterTheme = characterTheme;
+    document.body.dataset.mcMobileCharacterThemeBlend = themeProfile.multiclass ? "multiclass" : "single";
     applyThemeBlend(document.body, themeProfile);
 
-    document.body.classList.toggle("ve-mobile-reconnecting", reconnectActive);
-    document.body.classList.toggle("ve-mobile-mode-transitioning", modeTransitionActive);
+    document.body.classList.toggle("mc-mobile-reconnecting", reconnectActive);
+    document.body.classList.toggle("mc-mobile-mode-transitioning", modeTransitionActive);
     const navSideDestination = tabletNavSide === "right" ? "left" : "right";
-    const navSideLabel = navSideDestination === "left" ? localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.MoveNavigationToLeftSide", "Move navigation to left side") : localizedText(commands.localize, "VEMOBILE.Navigation.MoveRight", "Move navigation to right side");
+    const navSideLabel = navSideDestination === "left" ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.MoveNavigationToLeftSide", "Move navigation to left side") : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Navigation.MoveRight", "Move navigation to right side");
     navSideToggle.setAttribute("aria-label", navSideLabel); navSideToggle.title = navSideLabel;
     navSideIcon.classList.toggle("fa-arrow-left", navSideDestination === "left"); navSideIcon.classList.toggle("fa-arrow-right", navSideDestination === "right");
     const combatControls = state.snapshot?.combatControls;
@@ -164,7 +164,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
       && renderedState?.layoutKey === layoutKey;
     const snapshotChanged = renderedState?.snapshot !== state.snapshot;
     const selectionChanged = renderedState?.selectedActorSourceUuid !== state.selectedActorSourceUuid
-      || (state.route === "characters" && state.snapshot?.selectedActor === null && Boolean(viewport.firstElementChild?.__veUpdateCharacter));
+      || (state.route === "characters" && state.snapshot?.selectedActor === null && Boolean(viewport.firstElementChild?.__mcUpdateCharacter));
     const characterTabChanged = renderedState?.characterTab !== state.characterTab;
     const rollResultChanged = renderedState?.rollResult !== state.rollResult;
     const actionSessionChanged = renderedState?.actionSession !== state.actionSession;
@@ -191,10 +191,10 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     // Refresh shared authoritative header data even while a form/item modal
     // deliberately retains its local edits and pane DOM.
     if (sameScreen && state.status === "ready" && state.route === "characters" && !selectionChanged
-      && (snapshotChanged || viewChanged) && viewport.firstElementChild?.__veUpdateCharacterHeader) {
+      && (snapshotChanged || viewChanged) && viewport.firstElementChild?.__mcUpdateCharacterHeader) {
       try {
         const paneTop = characterScrollTop();
-        if (viewport.firstElementChild.__veUpdateCharacterHeader({ state, commands })) {
+        if (viewport.firstElementChild.__mcUpdateCharacterHeader({ state, commands })) {
           characterHeaderScroll?.refresh?.();
           restoreCharacterScroll(state, paneTop);
         }
@@ -255,7 +255,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
       return;
     }
 
-    // The portrait viewer is a temporary VE surface. Preserve it across
+    // The portrait viewer is a temporary Mikelandia Controls surface. Preserve it across
     // unrelated Actor hooks until the user dismisses it explicitly.
     if (sameScreen && state.status === "ready" && state.route === "characters" && state.portraitImage
       && !selectionChanged && !characterTabChanged && !actionSessionChanged && !characterItemChanged && !hitPointEditorChanged && !restEditorChanged && !spellSlotEditorChanged && !xpEditorChanged && !portraitImageChanged) {
@@ -308,9 +308,9 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
       ? (Object.hasOwn(state.snapshot ?? {}, "selectedActor") ? state.snapshot.selectedActor
         : state.snapshot?.actors?.find(actor => actor.id === state.selectedActorId)) : null;
     if (sameScreen && state.status === "ready" && state.route === "characters" && !selectionChanged
-      && selectedCharacter && characterScreen?.__veUpdateCharacter) {
+      && selectedCharacter && characterScreen?.__mcUpdateCharacter) {
       try {
-        characterScreen.__veUpdateCharacter({ state, commands });
+        characterScreen.__mcUpdateCharacter({ state, commands });
         characterHeaderScroll?.refresh?.();
         performanceObserver?.increment?.("dom.replace.characterPane");
         restoreCharacterScroll(state, desiredCharacterScrollTop);
@@ -327,13 +327,13 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     screenScope = scope.child(`screen:${state.route}`);
     if (state.status === "error") {
       performanceObserver?.increment?.("dom.replace.viewport");
-      viewport.replaceChildren(node("section", { className: "ve-empty", children: [icon("fa-triangle-exclamation"), node("h2", { text: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.VEMobileCouldNotStart", "Mikelandia Controls could not start") }), node("p", { text: commands.localize?.(state.error, state.error) ?? state.error })] }));
+      viewport.replaceChildren(node("section", { className: "mc-empty", children: [icon("fa-triangle-exclamation"), node("h2", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.MCMobileCouldNotStart", "Mikelandia Controls could not start") }), node("p", { text: commands.localize?.(state.error, state.error) ?? state.error })] }));
       renderedState = screenState(state, layoutKey);
       return;
     }
     if (!state.snapshot) {
       performanceObserver?.increment?.("dom.replace.viewport");
-      viewport.replaceChildren(node("section", { className: "ve-empty", children: [node("div", { className: "ve-loader" }), node("p", { text: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.PreparingYourMobileSession", "Preparing your mobile session…") })] }));
+      viewport.replaceChildren(node("section", { className: "mc-empty", children: [node("div", { className: "mc-loader" }), node("p", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.PreparingYourMobileSession", "Preparing your mobile session…") })] }));
       renderedState = screenState(state, layoutKey);
       return;
     }
@@ -355,8 +355,8 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
       screenScope?.dispose();
       characterHeaderScroll = null;
       viewport.replaceChildren(node("section", {
-        className: "ve-empty",
-        children: [icon("fa-triangle-exclamation"), node("h2", { text: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.ThisScreenCouldNotOpen", "This screen could not open") }), node("p", { text: localizedText(commands.localize, "VEMOBILE.Interface.AppFrame.ReloadFoundryAndTryAgain", "Reload Foundry and try again.") })]
+        className: "mc-empty",
+        children: [icon("fa-triangle-exclamation"), node("h2", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ThisScreenCouldNotOpen", "This screen could not open") }), node("p", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ReloadFoundryAndTryAgain", "Reload Foundry and try again.") })]
       }));
     }
     renderedState = screenState(state, layoutKey);
@@ -368,16 +368,16 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
   const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(syncCombatControlGeometry) : null;
   resizeObserver?.observe(combatControlsHost); scope.own(() => resizeObserver?.disconnect());
   return Object.freeze({
-    mount() { if (!mounted || scope.disposed) return; for (const existing of document.querySelectorAll?.(".ve-mobile-app") ?? []) if (existing !== root) existing.remove(); document.body.append(root); document.body.classList.add("ve-mobile-running"); controlsInvitation.reconcile(); },
+    mount() { if (!mounted || scope.disposed) return; for (const existing of document.querySelectorAll?.(".mc-mobile-app") ?? []) if (existing !== root) existing.remove(); document.body.append(root); document.body.classList.add("mc-mobile-running"); controlsInvitation.reconcile(); },
     unmount() {
       if (!mounted) return; mounted = false; characterScrollRestoreGeneration++; characterScrollMemory.clear(); characterScrollRestoreScope?.dispose(); screenScope?.dispose(); combatControlsScope?.dispose();
-      document.body.classList.remove("ve-mobile-running", "ve-mobile-reconnecting", "ve-mobile-mode-transitioning");
-      for (const key of ["veMobileTheme", "veMobileFormFactor", "veMobileOrientation", "veMobileNavSide", "veMobileCharacterTheme", "veMobileCharacterThemeBlend"]) delete document.body.dataset[key];
+      document.body.classList.remove("mc-mobile-running", "mc-mobile-reconnecting", "mc-mobile-mode-transitioning");
+      for (const key of ["mcMobileTheme", "mcMobileFormFactor", "mcMobileOrientation", "mcMobileNavSide", "mcMobileCharacterTheme", "mcMobileCharacterThemeBlend"]) delete document.body.dataset[key];
       clearThemeBlend(document.body); root.remove();
     },
     openControlsGuide: anchor => controlsGuide.show(anchor), refreshControlsInvitation: () => controlsInvitation.reconcile(),
     captureModeTransitionState: () => ({ formFactor: store.state.formFactor, orientation: store.state.orientation, route: store.state.route, viewportScrollTop: characterScrollTop(), viewportScrollLeft: viewport.scrollLeft }),
-    modeTransitionDiagnosticSnapshot: () => ({ formFactor: store.state.formFactor, orientation: store.state.orientation, route: store.state.route, rootCount: document.querySelectorAll(".ve-mobile-app").length, viewportBounds: elementViewport(viewport) }),
+    modeTransitionDiagnosticSnapshot: () => ({ formFactor: store.state.formFactor, orientation: store.state.orientation, route: store.state.route, rootCount: document.querySelectorAll(".mc-mobile-app").length, viewportBounds: elementViewport(viewport) }),
     settleModeTransition: ({ isCurrent = () => true } = {}) => waitForStableElementGeometry(viewport, { localize: commands.localize, isCurrent, maxFrames: 45 }),
     async restoreModeTransitionState(preserved, bounds, { isCurrent = () => true } = {}) { if (!isCurrent()) return false; if (store.state.route === "characters") restoreCharacterScrollPosition(characterScroller(), Number(preserved?.viewportScrollTop) || 0, characterHeaderScroll, { clampContent: true }); else viewport.scrollTop = Number(preserved?.viewportScrollTop) || 0; viewport.scrollLeft = Number(preserved?.viewportScrollLeft) || 0; return Boolean(bounds); },
     cancelModeTransitionRestore() {}
@@ -393,34 +393,34 @@ export function createReconnectBlocker(scope, {
   elapsedUpdateMs = 200
 } = {}) {
   const checkpointDefinitions = Object.freeze([
-    Object.freeze({ id: "connection", label: localizedText(localize, "VEMOBILE.Interface.AppFrame.RestoringConnection", "Restoring connection"), message: localizedText(localize, "VEMOBILE.Interface.AppFrame.RestoringConnection2", "Restoring connection…") }),
-    Object.freeze({ id: "collections", label: localizedText(localize, "VEMOBILE.Interface.AppFrame.RefreshingWorldData", "Refreshing world data"), message: localizedText(localize, "VEMOBILE.Interface.AppFrame.RefreshingWorldData2", "Refreshing world data…") }),
-    Object.freeze({ id: "foundry-session", label: localizedText(localize, "VEMOBILE.Interface.AppFrame.SynchronisingSessionData", "Synchronizing session data"), message: localizedText(localize, "VEMOBILE.Interface.AppFrame.SynchronisingSessionData2", "Synchronizing session data…") }),
-    Object.freeze({ id: "mobile-session", label: localizedText(localize, "VEMOBILE.Interface.AppFrame.RestoringSession", "Restoring session"), message: localizedText(localize, "VEMOBILE.Interface.AppKernel.RestoringYourSession", "Restoring your session…") }),
-    Object.freeze({ id: "presentation", label: localizedText(localize, "VEMOBILE.Interface.AppFrame.RestoringInterface", "Restoring interface"), message: localizedText(localize, "VEMOBILE.Interface.AppKernel.RestoringMobileInterface", "Restoring mobile interface…") }),
-    Object.freeze({ id: "interactions", label: localizedText(localize, "VEMOBILE.Interface.AppFrame.RestoringControls", "Restoring controls"), message: localizedText(localize, "VEMOBILE.Interface.AppKernel.RestoringControls", "Restoring controls…") })
+    Object.freeze({ id: "connection", label: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RestoringConnection", "Restoring connection"), message: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RestoringConnection2", "Restoring connection…") }),
+    Object.freeze({ id: "collections", label: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RefreshingWorldData", "Refreshing world data"), message: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RefreshingWorldData2", "Refreshing world data…") }),
+    Object.freeze({ id: "foundry-session", label: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.SynchronisingSessionData", "Synchronizing session data"), message: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.SynchronisingSessionData2", "Synchronizing session data…") }),
+    Object.freeze({ id: "mobile-session", label: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RestoringSession", "Restoring session"), message: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.RestoringYourSession", "Restoring your session…") }),
+    Object.freeze({ id: "presentation", label: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RestoringInterface", "Restoring interface"), message: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.RestoringMobileInterface", "Restoring mobile interface…") }),
+    Object.freeze({ id: "interactions", label: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RestoringControls", "Restoring controls"), message: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.RestoringControls", "Restoring controls…") })
   ]);
-  const title = node("h2", { text: localizedText(localize, "VEMOBILE.Interface.AppFrame.Reconnecting", "Reconnecting"), attrs: { id: "ve-reconnect-title" } });
+  const title = node("h2", { text: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.Reconnecting", "Reconnecting"), attrs: { id: "mc-reconnect-title" } });
   const message = node("p", {
-    className: "ve-reconnect-phase",
+    className: "mc-reconnect-phase",
     text: checkpointDefinitions[0].message,
     attrs: { "aria-live": "polite", "aria-atomic": "true" }
   });
-  const progress = node("span", { className: "ve-reconnect-progress", attrs: { hidden: true } });
-  const elapsed = node("span", { className: "ve-reconnect-elapsed", text: localizedText(localize, "VEMOBILE.Interface.AppFrame.ElapsedMs", "Elapsed · 0 ms") });
-  const elapsedClock = createElapsedWorkerClock(elapsed, { now, elapsedLabel: localizedText(localize, "VEMOBILE.Timer.Elapsed", "Elapsed"), locale });
-  const previous = node("span", { className: "ve-reconnect-previous", text: localizedText(localize, "VEMOBILE.Interface.AppFrame.LastResync", "Last resync · —") });
-  const timing = node("div", { className: "ve-reconnect-timing", children: [elapsed, previous] });
-  const checkpoints = createLoadingCheckpoints(document, checkpointDefinitions, { label: localizedText(localize, "VEMOBILE.Interface.AppFrame.ResynchronisationCheckpoints", "Resynchronization checkpoints") });
+  const progress = node("span", { className: "mc-reconnect-progress", attrs: { hidden: true } });
+  const elapsed = node("span", { className: "mc-reconnect-elapsed", text: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ElapsedMs", "Elapsed · 0 ms") });
+  const elapsedClock = createElapsedWorkerClock(elapsed, { now, elapsedLabel: localizedText(localize, "MIKELANDIA_CONTROLS.Timer.Elapsed", "Elapsed"), locale });
+  const previous = node("span", { className: "mc-reconnect-previous", text: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.LastResync", "Last resync · —") });
+  const timing = node("div", { className: "mc-reconnect-timing", children: [elapsed, previous] });
+  const checkpoints = createLoadingCheckpoints(document, checkpointDefinitions, { label: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ResynchronisationCheckpoints", "Resynchronization checkpoints") });
   const reload = node("button", {
     attrs: { type: "button", hidden: true },
-    children: [icon("fa-rotate"), node("span", { text: localizedText(localize, "VEMOBILE.Interface.AppFrame.ReloadFoundry", "Reload Foundry") })]
+    children: [icon("fa-rotate"), node("span", { text: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ReloadFoundry", "Reload Foundry") })]
   });
   const element = node("div", {
-    className: "ve-reconnect-blocker",
-    attrs: { hidden: true, role: "dialog", "aria-modal": "true", "aria-labelledby": "ve-reconnect-title" },
-    children: [node("section", { className: "ve-reconnect-card", children: [
-      node("div", { className: "ve-reconnect-spinner", children: [icon("fa-arrows-rotate")] }),
+    className: "mc-reconnect-blocker",
+    attrs: { hidden: true, role: "dialog", "aria-modal": "true", "aria-labelledby": "mc-reconnect-title" },
+    children: [node("section", { className: "mc-reconnect-card", children: [
+      node("div", { className: "mc-reconnect-spinner", children: [icon("fa-arrows-rotate")] }),
       title,
       message,
       progress,
@@ -451,14 +451,14 @@ export function createReconnectBlocker(scope, {
       ? Math.max(0, current - startedAt)
       : 0;
     elapsed.hidden = !running;
-    elapsed.textContent = localizedText(localize, "VEMOBILE.Interface.AppFrame.Elapsed", "Elapsed · {formatTimingelapsedMs}", { formatTimingelapsedMs: (formatTiming(elapsedMs)) });
+    elapsed.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.Elapsed", "Elapsed · {formatTimingelapsedMs}", { formatTimingelapsedMs: (formatTiming(elapsedMs)) });
     if (running) elapsedClock.start(startedAt);
     const lastSuccessfulMs = Number(activeState?.lastSuccessfulMs);
     const hasPrevious = activeState?.lastSuccessfulMs !== null
       && activeState?.lastSuccessfulMs !== undefined
       && Number.isFinite(lastSuccessfulMs)
       && lastSuccessfulMs >= 0;
-    previous.textContent = localizedText(localize, "VEMOBILE.Interface.AppFrame.LastResync2", "Last resync · {hasPreviousformatTimin}", { hasPreviousformatTimin: (hasPrevious ? formatTiming(lastSuccessfulMs) : "—") });
+    previous.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.LastResync2", "Last resync · {hasPreviousformatTimin}", { hasPreviousformatTimin: (hasPrevious ? formatTiming(lastSuccessfulMs) : "—") });
   };
   const scheduleElapsed = (ownedScope, ownedGeneration) => {
     ownedScope.timeout(() => {
@@ -502,7 +502,7 @@ export function createReconnectBlocker(scope, {
     if (phaseProgress.current !== null && phaseProgress.current !== undefined
       && phaseProgress.total !== null && phaseProgress.total !== undefined
       && Number.isFinite(current) && Number.isFinite(total) && total > 0) {
-      parts.push(localizedText(localize, "VEMOBILE.Recovery.Progress", "{current} of {total}", { current: localizedNumber(Math.max(0, current), locale), total: localizedNumber(Math.max(0, total), locale) }));
+      parts.push(localizedText(localize, "MIKELANDIA_CONTROLS.Recovery.Progress", "{current} of {total}", { current: localizedNumber(Math.max(0, current), locale), total: localizedNumber(Math.max(0, total), locale) }));
     }
     progress.textContent = parts.join(" · ");
     progress.hidden = parts.length === 0;
@@ -534,34 +534,34 @@ export function createReconnectBlocker(scope, {
       if (state.phase === "failed") {
         presentationScope?.dispose();
         presentationScope = null;
-        title.textContent = localizedText(localize, "VEMOBILE.Interface.AppFrame.ResynchronisationInterrupted", "Resynchronization interrupted");
-        message.textContent = localizedText(localize, "VEMOBILE.Interface.AppFrame.VEMobileCouldNotRestoreTheSessionReloadFoundry", "Mikelandia Controls could not restore the session. Reload Foundry to recover safely.");
+        title.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ResynchronisationInterrupted", "Resynchronization interrupted");
+        message.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.MCMobileCouldNotRestoreTheSessionReloadFoundry", "Mikelandia Controls could not restore the session. Reload Foundry to recover safely.");
         message.hidden = false;
         reveal();
       } else if (state.phase === "reloading") {
-        title.textContent = localizedText(localize, "VEMOBILE.Interface.AppFrame.FinishingRecovery", "Finishing recovery");
-        message.textContent = localizedText(localize, "VEMOBILE.Interface.AppFrame.ReloadingFoundryToFinishRecovery", "Reloading Foundry to finish recovery…");
+        title.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.FinishingRecovery", "Finishing recovery");
+        message.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ReloadingFoundryToFinishRecovery", "Reloading Foundry to finish recovery…");
         message.hidden = false;
         reveal();
       } else if (state.phase === "resynchronising") {
-        title.textContent = localizedText(localize, "VEMOBILE.Interface.AppFrame.SynchronisingGame", "Synchronizing game…");
+        title.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.SynchronisingGame", "Synchronizing game…");
         reveal();
       } else {
-        title.textContent = localizedText(localize, "VEMOBILE.Interface.AppFrame.Reconnecting", "Reconnecting");
+        title.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.Reconnecting", "Reconnecting");
       }
     }
   });
 }
 
 export function createModeTransitionBlocker(scope, { localize = null, delayMs = RECONNECT_BLOCKER_DELAY_MS } = {}) {
-  const title = node("h2", { text: localizedText(localize, "VEMOBILE.Interface.AppFrame.ChangingPresentation", "Changing presentation"), attrs: { id: "ve-mode-transition-title" } });
-  const message = node("p", { text: localizedText(localize, "VEMOBILE.Interface.AppFrame.ApplyingTheRequestedMobilePresentation", "Applying the requested mobile presentation."), attrs: { "aria-live": "polite", "aria-atomic": "true" } });
-  const phase = node("span", { className: "ve-mode-transition-phase", text: localizedText(localize, "VEMOBILE.Interface.AppFrame.ApplyingLayout", "Applying layout") });
+  const title = node("h2", { text: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ChangingPresentation", "Changing presentation"), attrs: { id: "mc-mode-transition-title" } });
+  const message = node("p", { text: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ApplyingTheRequestedMobilePresentation", "Applying the requested mobile presentation."), attrs: { "aria-live": "polite", "aria-atomic": "true" } });
+  const phase = node("span", { className: "mc-mode-transition-phase", text: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ApplyingLayout", "Applying layout") });
   const element = node("div", {
-    className: "ve-mode-transition-blocker",
-    attrs: { hidden: true, role: "dialog", "aria-modal": "true", "aria-labelledby": "ve-mode-transition-title" },
-    children: [node("section", { className: "ve-mode-transition-card", children: [
-      node("div", { className: "ve-mode-transition-spinner", children: [icon("fa-mobile-screen-button")] }),
+    className: "mc-mode-transition-blocker",
+    attrs: { hidden: true, role: "dialog", "aria-modal": "true", "aria-labelledby": "mc-mode-transition-title" },
+    children: [node("section", { className: "mc-mode-transition-card", children: [
+      node("div", { className: "mc-mode-transition-spinner", children: [icon("fa-mobile-screen-button")] }),
       title,
       message,
       phase
@@ -590,11 +590,11 @@ export function createModeTransitionBlocker(scope, { localize = null, delayMs = 
         element.dataset.visible = "false";
         presentationScope.timeout(reveal, delayMs);
       }
-      title.textContent = localizedText(localize, "VEMOBILE.Interface.AppFrame.SwitchingTo", "Switching to {targetmobile}", { targetmobile: (state.target || "mobile") });
-      message.textContent = state.detail || localizedText(localize, "VEMOBILE.Interface.AppFrame.ApplyingTheRequestedMobilePresentation", "Applying the requested mobile presentation.");
+      title.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.SwitchingTo", "Switching to {targetmobile}", { targetmobile: (state.target || "mobile") });
+      message.textContent = state.detail || localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ApplyingTheRequestedMobilePresentation", "Applying the requested mobile presentation.");
       phase.textContent = state.phase === "settling"
-        ? localizedText(localize, "VEMOBILE.Interface.AppFrame.SettlingViewport", "Settling viewport")
-        : state.phase === "restoring" ? localizedText(localize, "VEMOBILE.Interface.AppFrame.RestoringInteractions", "Restoring interactions") : localizedText(localize, "VEMOBILE.Interface.AppFrame.ApplyingLayout", "Applying layout");
+        ? localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.SettlingViewport", "Settling viewport")
+        : state.phase === "restoring" ? localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RestoringInteractions", "Restoring interactions") : localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ApplyingLayout", "Applying layout");
     }
   });
 }
@@ -605,18 +605,18 @@ function combatNavIcon() {
 
 function applyThemeBlend(element, profile) {
   const [primary, secondary, tertiary] = profile.accents;
-  element.style.setProperty("--ve-class-accent-primary", primary.bright);
-  element.style.setProperty("--ve-class-accent-secondary", secondary.bright);
-  element.style.setProperty("--ve-class-accent-tertiary", tertiary.bright);
-  element.style.setProperty("--ve-class-deep-primary", primary.deep);
-  element.style.setProperty("--ve-class-deep-secondary", secondary.deep);
-  element.style.setProperty("--ve-class-deep-tertiary", tertiary.deep);
+  element.style.setProperty("--mc-class-accent-primary", primary.bright);
+  element.style.setProperty("--mc-class-accent-secondary", secondary.bright);
+  element.style.setProperty("--mc-class-accent-tertiary", tertiary.bright);
+  element.style.setProperty("--mc-class-deep-primary", primary.deep);
+  element.style.setProperty("--mc-class-deep-secondary", secondary.deep);
+  element.style.setProperty("--mc-class-deep-tertiary", tertiary.deep);
 }
 
 function clearThemeBlend(element) {
   for (const property of [
-    "--ve-class-accent-primary", "--ve-class-accent-secondary", "--ve-class-accent-tertiary",
-    "--ve-class-deep-primary", "--ve-class-deep-secondary", "--ve-class-deep-tertiary"
+    "--mc-class-accent-primary", "--mc-class-accent-secondary", "--mc-class-accent-tertiary",
+    "--mc-class-deep-primary", "--mc-class-deep-secondary", "--mc-class-deep-tertiary"
   ]) element.style.removeProperty(property);
 }
 
@@ -668,7 +668,7 @@ export function waitForStableElementGeometry(element, {
   maxFrames = Number.POSITIVE_INFINITY,
   includeScrollHeight = false
 } = {}) {
-  if (signal?.aborted) return Promise.reject(signal.reason ?? new Error(localizedText(localize, "VEMOBILE.Errors.LayoutCanceled", "Layout transition was canceled.")));
+  if (signal?.aborted) return Promise.reject(signal.reason ?? new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Errors.LayoutCanceled", "Layout transition was canceled.")));
   return new Promise((resolve, reject) => {
     let frame = null;
     let previous = null;
@@ -685,7 +685,7 @@ export function waitForStableElementGeometry(element, {
       cleanup();
       callback(value);
     };
-    const onAbort = () => finish(reject, signal.reason ?? new Error(localizedText(localize, "VEMOBILE.Errors.LayoutCanceled", "Layout transition was canceled.")));
+    const onAbort = () => finish(reject, signal.reason ?? new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Errors.LayoutCanceled", "Layout transition was canceled.")));
     const sample = () => {
       frame = null;
       if (!isCurrent()) return finish(resolve, null);
@@ -696,7 +696,7 @@ export function waitForStableElementGeometry(element, {
       else stableFrames = 0;
       previous = next;
       if (next && stableFrames >= 2) return finish(resolve, next);
-      if (sampledFrames >= maxFrames) return finish(reject, new Error(localizedText(localize, "VEMOBILE.Errors.ViewportUnsettled", "The rendered viewport did not settle.")));
+      if (sampledFrames >= maxFrames) return finish(reject, new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Errors.ViewportUnsettled", "The rendered viewport did not settle.")));
       frame = requestAnimationFrameFn(sample);
     };
     signal?.addEventListener?.("abort", onAbort, { once: true });
@@ -728,7 +728,7 @@ export function restoreCharacterScrollPosition(scroller, targetScrollTop, charac
   const fillerTarget = toNative(characterHeaderScroll
     ? Math.min(targetScrollTop, characterHeaderScroll.collapseDistance)
     : targetScrollTop);
-  const spacer = scroller.querySelector?.(".ve-character-scroll-spacer");
+  const spacer = scroller.querySelector?.(".mc-character-scroll-spacer");
   if (spacer) {
     let filler = 0;
     spacer.style.height = "0px";
@@ -751,25 +751,6 @@ export function restoreCharacterScrollPosition(scroller, targetScrollTop, charac
   }
   scroller.scrollTop = clampCharacterScrollTop(toNative(targetScrollTop), scroller.scrollHeight, scroller.clientHeight);
   characterHeaderScroll?.update(scroller.scrollTop);
-}
-
-export function characterTabScrollTarget(currentScrollTop, currentTabBarTop, desiredTabBarTop) {
-  const currentScroll = Math.max(0, Number(currentScrollTop) || 0);
-  const currentTop = Number(currentTabBarTop);
-  const desiredTop = Number(desiredTabBarTop);
-  if (!Number.isFinite(currentTop) || !Number.isFinite(desiredTop)) return currentScroll;
-  return Math.max(0, currentScroll + currentTop - desiredTop);
-}
-
-export function requiredCharacterScrollFiller(scrollTop, scrollHeight, clientHeight) {
-  const desired = Math.max(0, Number(scrollTop) || 0);
-  const maximum = Math.max(0, (Number(scrollHeight) || 0) - (Number(clientHeight) || 0));
-  return Math.max(0, desired - maximum);
-}
-
-export function nextCharacterScrollFiller(scrollTop, scrollHeight, clientHeight, currentFiller = 0) {
-  const filler = Math.max(0, Number(currentFiller) || 0);
-  return filler + requiredCharacterScrollFiller(scrollTop, scrollHeight, clientHeight);
 }
 
 export function createCharacterScrollMemory() {
@@ -851,11 +832,11 @@ export function journalPresentationChanged(previous, current) {
 
 function tabletRotateSuggestion(localize = null) {
   return node("div", {
-    className: "ve-tablet-rotate-suggestion",
+    className: "mc-tablet-rotate-suggestion",
     attrs: {
       role: "img",
-      title: localizedText(localize, "VEMOBILE.Interface.AppFrame.RotateToLandscapeForTheBestTabletExperience", "Rotate to landscape for the best tablet experience"),
-      "aria-label": localizedText(localize, "VEMOBILE.Interface.AppFrame.RotateToLandscapeForTheBestTabletExperience", "Rotate to landscape for the best tablet experience")
+      title: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RotateToLandscapeForTheBestTabletExperience", "Rotate to landscape for the best tablet experience"),
+      "aria-label": localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RotateToLandscapeForTheBestTabletExperience", "Rotate to landscape for the best tablet experience")
     },
     children: [
       icon("fa-tablet-screen-button"),

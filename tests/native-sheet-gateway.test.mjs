@@ -56,7 +56,7 @@ for (const v1 of [true, false]) {
     assert.equal(gateway.ownsApplication(assigned), false);
     assert.equal(gateway.ownsApplication(app), true);
     assert.deepEqual(app.renderArguments, v1 ? [true] : [{ force: true, mode: "play" }]);
-    assert.match(app.options.id, /^ve-mobile-native-sheet-/);
+    assert.match(app.options.id, /^mc-mobile-native-sheet-/);
     if (v1) assert.equal(app.options.popOut, undefined);
     owner.dispose();
     assert.equal(gateway.ownsApplication(app), false);
@@ -140,13 +140,13 @@ test("nested modal back/close retains the sheet and restoration clears admission
   admissions.admit(sheet, sheetElement, false, null, sheet);
   admissions.admit(dialog, modalElement, true, null, dialog);
   assert.equal(admissions.topmost().application, dialog);
-  assert.equal(body.classList.contains("ve-mobile-dialog-open"), true);
+  assert.equal(body.classList.contains("mc-mobile-dialog-open"), true);
   assert.equal(admissions.closeTopmost(), true);
   assert.equal(admissions.topmost().application, sheet);
-  assert.equal(body.classList.contains("ve-mobile-dialog-open"), false);
+  assert.equal(body.classList.contains("mc-mobile-dialog-open"), false);
   admissions.clear();
-  assert.equal(sheetElement.classList.contains("ve-mobile-admitted-app"), false);
-  assert.equal(sheetElement.style.getPropertyValue("--ve-mobile-native-app-layer"), "");
+  assert.equal(sheetElement.classList.contains("mc-mobile-admitted-app"), false);
+  assert.equal(sheetElement.style.getPropertyValue("--mc-mobile-native-app-layer"), "");
 });
 
 test("legacy sheets without an isV2 flag use the legacy constructor", async t => {
@@ -172,13 +172,13 @@ test("Foundry 14 legacy actor base hooks mark and release the exact editor", asy
   root.nodeType = 1;
   app.element = { 0: root };
   f.hooks.emit("renderActorSheet", app, root);
-  assert.equal(root.classList.contains("ve-mobile-native-editor"), true);
-  assert.equal(root.dataset.veNativeSystem, "shadowdark");
+  assert.equal(root.classList.contains("mc-mobile-native-editor"), true);
+  assert.equal(root.dataset.mcNativeSystem, "shadowdark");
   const innerForm = element(); innerForm.nodeType = 1; innerForm.dataset = {};
   for (const rendered of [innerForm, { 0: innerForm }]) {
     f.hooks.emit("renderActorSheet", app, rendered);
-    assert.equal(root.classList.contains("ve-mobile-native-editor"), true);
-    assert.equal(innerForm.classList.contains("ve-mobile-native-editor"), false);
+    assert.equal(root.classList.contains("mc-mobile-native-editor"), true);
+    assert.equal(innerForm.classList.contains("mc-mobile-native-editor"), false);
   }
   f.hooks.emit("closeActorSheet", app);
   assert.equal(f.gateway.ownsApplication(app), false);

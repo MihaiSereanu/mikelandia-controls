@@ -24,7 +24,7 @@ for (const use5e of [false, true]) {
   for (const id of ["sword", "handgun"]) {
     test(`${use5e ? "5e" : "4e"} ${id} attacks use native setupWeapon and roll exactly once`, async t => {
       const { actor, game, gateway, calls } = setup(t, { use5e });
-      Object.defineProperty(game, "messages", { get() { throw new Error("VE must not parse native attack messages"); } });
+      Object.defineProperty(game, "messages", { get() { throw new Error("Mikelandia Controls must not parse native attack messages"); } });
       const weapon = actor.items.find(item => item.id === id);
       const outcome = await gateway.execute(command, request(id, use5e ? "5e" : "4e"));
       assert.equal(calls[0][0], "setup");
@@ -92,10 +92,10 @@ test("native setup owns ammunition, reload, targeting, and damage decisions", as
   const { actor, game, gateway, calls } = setup(t);
   const weapon = actor.items.find(item => item.id === "handgun");
   const initial = JSON.stringify(weapon.system);
-  for (const key of ["targets"]) Object.defineProperty(game.user, key, { get() { throw new Error("VE must not resolve native attack targets"); } });
-  actor.update = () => { throw new Error("VE attempted an actor resource write"); };
-  weapon.update = () => { throw new Error("VE attempted a weapon/ammo write"); };
-  Object.defineProperty(weapon.system, "damage", { get() { throw new Error("VE read raw damage instead of native DamageString"); } });
+  for (const key of ["targets"]) Object.defineProperty(game.user, key, { get() { throw new Error("Mikelandia Controls must not resolve native attack targets"); } });
+  actor.update = () => { throw new Error("Mikelandia Controls attempted an actor resource write"); };
+  weapon.update = () => { throw new Error("Mikelandia Controls attempted a weapon/ammo write"); };
+  Object.defineProperty(weapon.system, "damage", { get() { throw new Error("Mikelandia Controls read raw damage instead of native DamageString"); } });
   assert.equal((await gateway.execute(command, request("handgun"))).ok, true);
   assert.equal(JSON.stringify(weapon.system), initial);
   assert.deepEqual(calls.map(call => call[0]), ["setup", "roll"]);

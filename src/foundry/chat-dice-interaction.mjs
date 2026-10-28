@@ -1,7 +1,7 @@
-/** Dice Tray 3.x owns formula parsing and clicks. VE owns only its mobile
+/** Dice Tray 3.x owns formula parsing and clicks. Mikelandia Controls owns only its mobile
  * gesture and focus policy; no copied dice syntax or document mutations. */
 export function bindChatDiceInteraction({ host, input, scope, getDiceTray = () => globalThis.CONFIG?.DICETRAY }) {
-  const layer = host.querySelector?.(".ve-chat-dice-layer");
+  const layer = host.querySelector?.(".mc-chat-dice-layer");
   if (!layer) return;
   let gesture = null;
   const release = () => {

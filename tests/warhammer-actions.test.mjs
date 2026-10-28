@@ -22,7 +22,7 @@ function setup(t, { use5e = false } = {}) {
 for (const use5e of [false, true]) {
   test(`${use5e ? "5e" : "4e"} Characteristic tests run native setup and roll once`, async t => {
     const { actor, game, gateway, calls } = setup(t, { use5e });
-    Object.defineProperty(game, "messages", { get() { throw new Error("native results must not be parsed by VE"); } });
+    Object.defineProperty(game, "messages", { get() { throw new Error("native results must not be parsed by Mikelandia Controls"); } });
     const actions = gateway.capabilitiesForActor(actor).profileActions;
     assert.equal(actions.find(action => action.id === "characteristic:ws").label, "Weapon Skill");
     const outcome = await gateway.execute(command, payload("characteristic:ws", use5e ? "5e" : "4e"));

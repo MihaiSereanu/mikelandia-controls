@@ -37,7 +37,7 @@ export function createMobileStartupGateway({ getGame = () => globalThis.game, gr
       const pending = read(KEYS.PENDING_DESKTOP_RESTORE);
       if (pending?.version === 1 || (!readMobile() && hasCapturedState())) {
         const attempts = Math.max(0, Number(pending?.attempts) || 0);
-        if (!manual && attempts >= 2) return recover(new Error(localizeFoundry("VEMOBILE.Interface.MobileStartupGateway.AutomaticDesktopRestorationRetriesAreExhausted", "Automatic Desktop restoration retries are exhausted.")));
+        if (!manual && attempts >= 2) return recover(new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobileStartupGateway.AutomaticDesktopRestorationRetriesAreExhausted", "Automatic Desktop restoration retries are exhausted.")));
         await write(KEYS.PENDING_DESKTOP_RESTORE, { version: 1, attempts: attempts + 1 });
         await restore();
       }
@@ -65,11 +65,11 @@ export function createMobileStartupGateway({ getGame = () => globalThis.game, gr
     install(scope) {
       const target = game();
       const original = target.initializeCanvas;
-      if (typeof original !== "function") throw new Error(localizeFoundry("VEMOBILE.Interface.MobileStartupGateway.FoundrySPreCanvasStartupBoundaryIsUnavailable", "Foundry's pre-Canvas startup boundary is unavailable."));
+      if (typeof original !== "function") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobileStartupGateway.FoundrySPreCanvasStartupBoundaryIsUnavailable", "Foundry's pre-Canvas startup boundary is unavailable."));
       const prepare = () => boot ??= Promise.resolve().then(() => run());
       const wrapper = async function (...args) {
         await prepare();
-        // Failed restoration keeps VE dormant; native Desktop can still load
+        // Failed restoration keeps Mikelandia Controls dormant; native Desktop can still load
         // and expose the recovery surface without any further mobile writes.
         return original.apply(this, args);
       };

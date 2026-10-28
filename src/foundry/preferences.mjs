@@ -3,8 +3,9 @@ import { supportsPreference, effectiveColorScheme, characterPresentation } from 
 import { COLOR_SCHEME_CHOICES } from "../kernel/character-theme.mjs";
 import { localizeFoundry } from "./localization.mjs";
 
-export const MODULE_ID = "ve-mobile";
-export const BOOTSTRAP_PREFERENCES_KEY = "ve-mobile:bootstrap-preferences:v1";
+import { MODULE_ID } from "./branding-migration.mjs";
+export { MODULE_ID };
+export const BOOTSTRAP_PREFERENCES_KEY = "mikelandia-controls:bootstrap-preferences:v1";
 export const LOAD_TIMING_KEYS = Object.freeze({ FULL: "lastSuccessfulFullLoadMs", RESYNC: "lastSuccessfulResyncMs" });
 
 const KEYS = Object.freeze({
@@ -29,7 +30,7 @@ const KEYS = Object.freeze({
   GRAPHICS_PROFILE_TRANSACTION: "graphicsProfileTransaction",
 
   KEEP_SCREEN_AWAKE: "keepScreenAwake",
-  PROTECT_VE_STYLING: "protectVeStyling",
+  PROTECT_MC_STYLING: "protectMcStyling",
 
   CHARACTER_INVENTORY_SORT: "characterInventorySort",
   CHARACTER_SPELL_SORT: "characterSpellSort",
@@ -57,7 +58,7 @@ const CHOICES = Object.freeze({
   [KEYS.CHARACTER_FAVOURITES_SOURCE]: Object.freeze(["core", "tidy", "both", "off"]),
 });
 
-const DEFAULTS = Object.freeze({ mode: "auto", muteMobileAudio: true, theme: "system", colorScheme: "class", headerArtwork: "automatic", headerArtworkOpacity: 1, showActionSummaries: true, compactActionSummaries: false, diceRendering: "auto", keepScreenAwake: false, protectVeStyling: true, characterInventorySort: "manual", characterSpellSort: "manual", characterSpellFilter: "all", characterFeatureSort: "manual", characterFavouritesSort: "manual", characterEffectsSort: "manual", characterFavouritesSource: "core" });
+const DEFAULTS = Object.freeze({ mode: "auto", muteMobileAudio: true, theme: "system", colorScheme: "class", headerArtwork: "automatic", headerArtworkOpacity: 1, showActionSummaries: true, compactActionSummaries: false, diceRendering: "auto", keepScreenAwake: false, protectMcStyling: true, characterInventorySort: "manual", characterSpellSort: "manual", characterSpellFilter: "all", characterFeatureSort: "manual", characterFavouritesSort: "manual", characterEffectsSort: "manual", characterFavouritesSource: "core" });
 
 const CHARACTER_COLLECTION_SETTING_KEYS = Object.freeze({
   inventorySort: KEYS.CHARACTER_INVENTORY_SORT,
@@ -89,72 +90,72 @@ export function registerPreferences({
     notify?.(Object.freeze({ key, value }));
   };
   game.settings.register(MODULE_ID, KEYS.MODE, {
-    name: "VEMOBILE.Settings.Mode.Name",
-    hint: "VEMOBILE.Settings.Mode.Hint",
+    name: "MIKELANDIA_CONTROLS.Settings.Mode.Name",
+    hint: "MIKELANDIA_CONTROLS.Settings.Mode.Hint",
     scope: "client",
     config: true,
     type: String,
     choices: {
-      auto: "VEMOBILE.Settings.Mode.Auto",
-      phone: "VEMOBILE.Settings.Mode.Phone",
-      tablet: "VEMOBILE.Settings.Mode.Tablet",
-      desktop: "VEMOBILE.Settings.Mode.Desktop"
+      auto: "MIKELANDIA_CONTROLS.Settings.Mode.Auto",
+      phone: "MIKELANDIA_CONTROLS.Settings.Mode.Phone",
+      tablet: "MIKELANDIA_CONTROLS.Settings.Mode.Tablet",
+      desktop: "MIKELANDIA_CONTROLS.Settings.Mode.Desktop"
     },
     default: "auto",
     onChange: changed(KEYS.MODE, onPresentationChange)
   });
 
   game.settings.register(MODULE_ID, KEYS.MUTE_MOBILE_AUDIO, {
-    name: "VEMOBILE.Settings.MuteMobileAudio.Name", hint: "VEMOBILE.Settings.MuteMobileAudio.Hint",
+    name: "MIKELANDIA_CONTROLS.Settings.MuteMobileAudio.Name", hint: "MIKELANDIA_CONTROLS.Settings.MuteMobileAudio.Hint",
     scope: "client", config: true, type: Boolean, default: true,
     onChange: changed(KEYS.MUTE_MOBILE_AUDIO, onApplicationChange)
   });
 
   game.settings.register(MODULE_ID, KEYS.THEME, {
-    name: "VEMOBILE.Settings.Theme.Name",
-    hint: "VEMOBILE.Settings.Theme.Hint",
+    name: "MIKELANDIA_CONTROLS.Settings.Theme.Name",
+    hint: "MIKELANDIA_CONTROLS.Settings.Theme.Hint",
     scope: "client",
     config: true,
     type: String,
     choices: {
-      system: "VEMOBILE.Settings.Theme.System",
-      light: "VEMOBILE.Settings.Theme.Light",
-      dark: "VEMOBILE.Settings.Theme.Dark"
+      system: "MIKELANDIA_CONTROLS.Settings.Theme.System",
+      light: "MIKELANDIA_CONTROLS.Settings.Theme.Light",
+      dark: "MIKELANDIA_CONTROLS.Settings.Theme.Dark"
     },
     default: "system",
     onChange: changed(KEYS.THEME, onPresentationChange)
   });
 
   game.settings.register(MODULE_ID, KEYS.COLOR_SCHEME, {
-    name: "VEMOBILE.Settings.ColourScheme.Name",
-    hint: features.legacyCharacterSheet ? "VEMOBILE.Settings.ColourScheme.Hint" : "VEMOBILE.Settings.ColourScheme.PlainHint",
+    name: "MIKELANDIA_CONTROLS.Settings.ColourScheme.Name",
+    hint: features.legacyCharacterSheet ? "MIKELANDIA_CONTROLS.Settings.ColourScheme.Hint" : "MIKELANDIA_CONTROLS.Settings.ColourScheme.PlainHint",
     scope: "client",
     config: features.legacyCharacterSheet === true,
     type: String,
     choices: {
-      class: "VEMOBILE.Settings.ColourScheme.Class",
-      red: "VEMOBILE.Settings.ColourScheme.Red",
-      neutral: "VEMOBILE.Settings.ColourScheme.Neutral",
-      bestiary: "VEMOBILE.Settings.ColourScheme.Bestiary"
+      class: "MIKELANDIA_CONTROLS.Settings.ColourScheme.Class",
+      red: "MIKELANDIA_CONTROLS.Settings.ColourScheme.Red",
+      neutral: "MIKELANDIA_CONTROLS.Settings.ColourScheme.Neutral",
+      bestiary: "MIKELANDIA_CONTROLS.Settings.ColourScheme.Bestiary"
     },
     default: "class",
     onChange: changed(KEYS.COLOR_SCHEME, onApplicationChange)
   });
 
   game.settings.register(MODULE_ID, KEYS.HEADER_ARTWORK, {
-    name: "VEMOBILE.Settings.HeaderArtwork.Name",
-    hint: "VEMOBILE.Settings.HeaderArtwork.Hint",
+    name: "MIKELANDIA_CONTROLS.Settings.HeaderArtwork.Name",
+    hint: "MIKELANDIA_CONTROLS.Settings.HeaderArtwork.Hint",
     scope: "client",
     config: supportsPreference(KEYS.HEADER_ARTWORK, features),
     type: String,
-    choices: Object.fromEntries(CHOICES[KEYS.HEADER_ARTWORK].map(value => [value, "VEMOBILE.Settings.HeaderArtwork." + value[0].toUpperCase() + value.slice(1)])),
+    choices: Object.fromEntries(CHOICES[KEYS.HEADER_ARTWORK].map(value => [value, "MIKELANDIA_CONTROLS.Settings.HeaderArtwork." + value[0].toUpperCase() + value.slice(1)])),
     default: DEFAULTS.headerArtwork,
     onChange: changed(KEYS.HEADER_ARTWORK, onApplicationChange)
   });
 
   game.settings.register(MODULE_ID, KEYS.HEADER_ARTWORK_OPACITY, {
-    name: "VEMOBILE.Settings.HeaderArtworkOpacity.Name",
-    hint: "VEMOBILE.Settings.HeaderArtworkOpacity.Hint",
+    name: "MIKELANDIA_CONTROLS.Settings.HeaderArtworkOpacity.Name",
+    hint: "MIKELANDIA_CONTROLS.Settings.HeaderArtworkOpacity.Hint",
     scope: "client",
     config: supportsPreference(KEYS.HEADER_ARTWORK_OPACITY, features),
     type: Number,
@@ -164,8 +165,8 @@ export function registerPreferences({
   });
 
   game.settings.register(MODULE_ID, KEYS.SHOW_ACTION_SUMMARIES, {
-    name: "VEMOBILE.Settings.ShowActionSummaries.Name",
-    hint: "VEMOBILE.Settings.ShowActionSummaries.Hint",
+    name: "MIKELANDIA_CONTROLS.Settings.ShowActionSummaries.Name",
+    hint: "MIKELANDIA_CONTROLS.Settings.ShowActionSummaries.Hint",
     scope: "client",
     config: supportsPreference(KEYS.SHOW_ACTION_SUMMARIES, features),
     type: Boolean,
@@ -174,8 +175,8 @@ export function registerPreferences({
   });
 
   game.settings.register(MODULE_ID, KEYS.COMPACT_ACTION_SUMMARIES, {
-    name: "VEMOBILE.Settings.CompactActionSummaries.Name",
-    hint: "VEMOBILE.Settings.CompactActionSummaries.Hint",
+    name: "MIKELANDIA_CONTROLS.Settings.CompactActionSummaries.Name",
+    hint: "MIKELANDIA_CONTROLS.Settings.CompactActionSummaries.Hint",
     scope: "client",
     config: supportsPreference(KEYS.COMPACT_ACTION_SUMMARIES, features),
     type: Boolean,
@@ -184,16 +185,16 @@ export function registerPreferences({
   });
 
   game.settings.register(MODULE_ID, KEYS.DICE_RENDERING, {
-    name: "VEMOBILE.Settings.DiceRendering.Name",
-    hint: "VEMOBILE.Settings.DiceRendering.Hint",
+    name: "MIKELANDIA_CONTROLS.Settings.DiceRendering.Name",
+    hint: "MIKELANDIA_CONTROLS.Settings.DiceRendering.Hint",
     scope: "client",
     config: true,
     type: String,
     choices: {
-      auto: "VEMOBILE.Settings.DiceRendering.Auto",
-      static: "VEMOBILE.Settings.DiceRendering.Static",
-      reduced: "VEMOBILE.Settings.DiceRendering.Reduced",
-      normal: "VEMOBILE.Settings.DiceRendering.Normal"
+      auto: "MIKELANDIA_CONTROLS.Settings.DiceRendering.Auto",
+      static: "MIKELANDIA_CONTROLS.Settings.DiceRendering.Static",
+      reduced: "MIKELANDIA_CONTROLS.Settings.DiceRendering.Reduced",
+      normal: "MIKELANDIA_CONTROLS.Settings.DiceRendering.Normal"
     },
     default: DEFAULTS.diceRendering,
     onChange: changed(KEYS.DICE_RENDERING, onApplicationChange)
@@ -248,8 +249,8 @@ export function registerPreferences({
   });
 
   game.settings.register(MODULE_ID, KEYS.KEEP_SCREEN_AWAKE, {
-    name: "VEMOBILE.Settings.KeepScreenAwake.Name",
-    hint: "VEMOBILE.Settings.KeepScreenAwake.Hint",
+    name: "MIKELANDIA_CONTROLS.Settings.KeepScreenAwake.Name",
+    hint: "MIKELANDIA_CONTROLS.Settings.KeepScreenAwake.Hint",
     scope: "client",
     config: true,
     type: Boolean,
@@ -257,14 +258,14 @@ export function registerPreferences({
     onChange: changed(KEYS.KEEP_SCREEN_AWAKE, onWakeChange)
   });
 
-  game.settings.register(MODULE_ID, KEYS.PROTECT_VE_STYLING, {
-    name: "VEMOBILE.Settings.ProtectVeStyling.Name",
-    hint: "VEMOBILE.Settings.ProtectVeStyling.Hint",
+  game.settings.register(MODULE_ID, KEYS.PROTECT_MC_STYLING, {
+    name: "MIKELANDIA_CONTROLS.Settings.ProtectMcStyling.Name",
+    hint: "MIKELANDIA_CONTROLS.Settings.ProtectMcStyling.Hint",
     scope: "client",
     config: true,
     type: Boolean,
     default: true,
-    onChange: changed(KEYS.PROTECT_VE_STYLING, onVisualIsolationChange)
+    onChange: changed(KEYS.PROTECT_MC_STYLING, onVisualIsolationChange)
   });
 
   for (const key of Object.values(CHARACTER_COLLECTION_SETTING_KEYS)) {
@@ -280,18 +281,18 @@ export function registerPreferences({
 
   const tidyDetected = isTidy5eActive(game);
   game.settings.register(MODULE_ID, KEYS.CHARACTER_FAVOURITES_SOURCE, {
-    name: "VEMOBILE.Settings.CharacterFavouritesSource.Name",
-    hint: "VEMOBILE.Settings.CharacterFavouritesSource.Hint",
+    name: "MIKELANDIA_CONTROLS.Settings.CharacterFavouritesSource.Name",
+    hint: "MIKELANDIA_CONTROLS.Settings.CharacterFavouritesSource.Hint",
     scope: "client",
     config: supportsPreference(KEYS.CHARACTER_FAVOURITES_SOURCE, features),
     type: String,
     choices: {
-      core: "VEMOBILE.Settings.CharacterFavouritesSource.Core",
+      core: "MIKELANDIA_CONTROLS.Settings.CharacterFavouritesSource.Core",
       ...(tidyDetected ? {
-        tidy: "VEMOBILE.Settings.CharacterFavouritesSource.Tidy",
-        both: "VEMOBILE.Settings.CharacterFavouritesSource.Both"
+        tidy: "MIKELANDIA_CONTROLS.Settings.CharacterFavouritesSource.Tidy",
+        both: "MIKELANDIA_CONTROLS.Settings.CharacterFavouritesSource.Both"
       } : {}),
-      off: "VEMOBILE.Settings.CharacterFavouritesSource.Off"
+      off: "MIKELANDIA_CONTROLS.Settings.CharacterFavouritesSource.Off"
     },
     default: DEFAULTS.characterFavouritesSource,
     onChange: changed(KEYS.CHARACTER_FAVOURITES_SOURCE, onApplicationChange)
@@ -309,7 +310,7 @@ export function registerPreferences({
 
   if (typeof game.settings.registerMenu === "function" && typeof openControlsGuide === "function") {
     game.settings.registerMenu(MODULE_ID, "controlsGuide", {
-      name: "VEMOBILE.Controls.Title", label: "VEMOBILE.Controls.View", hint: "VEMOBILE.Controls.MenuHint",
+      name: "MIKELANDIA_CONTROLS.Controls.Title", label: "MIKELANDIA_CONTROLS.Controls.View", hint: "MIKELANDIA_CONTROLS.Controls.MenuHint",
       icon: "fa-solid fa-hand-pointer", type: controlsGuideMenuType(openControlsGuide), restricted: false
     });
   }
@@ -325,7 +326,7 @@ export function registerPreferences({
 
 function controlsGuideMenuType(openControlsGuide) {
   const Base = globalThis.foundry?.applications?.api?.ApplicationV2 ?? globalThis.FormApplication ?? class {};
-  return class VEControlsGuideMenu extends Base {
+  return class MCControlsGuideMenu extends Base {
     render() { queueMicrotask(openControlsGuide); return this; }
   };
 }
@@ -347,8 +348,8 @@ export function readKeepScreenAwake() {
   return Boolean(readSetting(KEYS.KEEP_SCREEN_AWAKE, readBootstrapPreferences().keepScreenAwake));
 }
 
-export function readProtectVeStyling() {
-  return readSetting(KEYS.PROTECT_VE_STYLING, true) !== false;
+export function readProtectMcStyling() {
+  return readSetting(KEYS.PROTECT_MC_STYLING, true) !== false;
 }
 
 export function readLoggingLevel() { return "warn"; }
@@ -413,7 +414,7 @@ export function createFoundryPreferencesGateway({
     diceRendering: () => normalizedChoice(KEYS.DICE_RENDERING, setting(KEYS.DICE_RENDERING), DEFAULTS.diceRendering),
 
     keepScreenAwake: () => Boolean(setting(KEYS.KEEP_SCREEN_AWAKE)),
-    protectVeStyling: () => setting(KEYS.PROTECT_VE_STYLING) !== false,
+    protectMcStyling: () => setting(KEYS.PROTECT_MC_STYLING) !== false,
     characterCollections: () => getSystemIntegration().features.legacyCharacterSheet ? Object.freeze({
         inventorySort: normalizedChoice(KEYS.CHARACTER_INVENTORY_SORT, setting(KEYS.CHARACTER_INVENTORY_SORT), DEFAULTS.characterInventorySort),
         spellSort: normalizedChoice(KEYS.CHARACTER_SPELL_SORT, setting(KEYS.CHARACTER_SPELL_SORT), DEFAULTS.characterSpellSort),
@@ -445,7 +446,7 @@ export function createFoundryPreferencesGateway({
     controls: () => Object.freeze({ characterPresentation: characterPresentation(getSystemIntegration().features) }),
     presentation,
     layout: () => pick(["mode", ]),
-    frame: () => pick(["colorScheme", "headerArtworkOpacity", "protectVeStyling", ]),
+    frame: () => pick(["colorScheme", "headerArtworkOpacity", "protectMcStyling", ]),
     character: () => pick(["colorScheme", "headerArtwork", "characterCollections", "characterFavouritesSource", "characterFavouritesEnabled"]),
 
     actionSummaries: () => pick(["showActionSummaries", "compactActionSummaries"]),
@@ -463,10 +464,10 @@ export function createFoundryPreferencesGateway({
 
     async set({ namespace = MODULE_ID, key, value }) {
       const game = getGame();
-      if (!game?.settings?.set) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.FoundrySettingsUnavailable", "Foundry settings are unavailable."));
+      if (!game?.settings?.set) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.FoundrySettingsUnavailable", "Foundry settings are unavailable."));
       if (namespace === MODULE_ID && (!supportsPreference(key, getSystemIntegration().features)
         || (key === KEYS.COLOR_SCHEME && value === "class" && !getSystemIntegration().features.legacyCharacterSheet))) {
-        throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.GamePreferenceUnavailable", "This preference is unavailable for the current game."));
+        throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.GamePreferenceUnavailable", "This preference is unavailable for the current game."));
       }
       const registered = findRegisteredSetting(game, namespace, key);
       // The shared mobile color picker remains available without exposing
@@ -490,17 +491,17 @@ export function createFoundryPreferencesGateway({
 
     async setCharacterCollectionPreference({ key, value }) {
       const settingKey = CHARACTER_COLLECTION_SETTING_KEYS[key];
-      if (!settingKey) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.CollectionPreferenceUnsupported", "That character collection preference is not supported."));
-      if (!supportsPreference(settingKey, getSystemIntegration().features)) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.GamePreferenceUnavailable", "This preference is unavailable for the current game."));
+      if (!settingKey) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.CollectionPreferenceUnsupported", "That character collection preference is not supported."));
+      if (!supportsPreference(settingKey, getSystemIntegration().features)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.GamePreferenceUnavailable", "This preference is unavailable for the current game."));
       const game = getGame();
-      if (!game?.settings?.set) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.FoundrySettingsUnavailable", "Foundry settings are unavailable."));
+      if (!game?.settings?.set) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.FoundrySettingsUnavailable", "Foundry settings are unavailable."));
       const normalized = normalizeSetting(settingKey, value);
       await game.settings.set(MODULE_ID, settingKey, normalized);
       return Object.freeze({ ok: true, key, value: normalizeSetting(settingKey, game.settings.get(MODULE_ID, settingKey)) });
     },
 
     async restoreDefaults() {
-      if (restoring) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.DefaultsRestoring", "Defaults are already being restored."));
+      if (restoring) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.DefaultsRestoring", "Defaults are already being restored."));
       restoring = true;
       try {
         const session = getGame();
@@ -522,7 +523,7 @@ export function createFoundryPreferencesGateway({
         // Auto-detect may stop a forced mobile view, so restore mode last.
         const ordered = [...fields].sort((a, b) => Number(a.key === KEYS.MODE) - Number(b.key === KEYS.MODE));
         for (const field of ordered) {
-          if (getGame() !== session) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.SessionChanged", "The session changed. Try restoring defaults again."));
+          if (getGame() !== session) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.SessionChanged", "The session changed. Try restoring defaults again."));
           if ((field.namespace !== MODULE_ID && field.supported === false) || field.value === field.defaultValue) continue;
           const result = await this.set({ namespace: field.namespace, key: field.key, value: field.defaultValue });
           requiresReload ||= result.requiresReload;
@@ -535,7 +536,7 @@ export function createFoundryPreferencesGateway({
 
     async logout() {
       const game = getGame();
-      if (typeof game?.logOut !== "function") throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.LogoutUnavailable", "Foundry logout is unavailable."));
+      if (typeof game?.logOut !== "function") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.LogoutUnavailable", "Foundry logout is unavailable."));
       await game.logOut();
       return Object.freeze({ ok: true });
     }
@@ -550,14 +551,14 @@ function preferenceFields(setting, localize, getNavigator, getGame, features) {
     choiceField(KEYS.MODE, "Mode", normalizedModePreference(setting(KEYS.MODE)), localize),
     choiceField(KEYS.THEME, "Theme", setting(KEYS.THEME), localize),
     choiceField(KEYS.COLOR_SCHEME, "ColourScheme", setting(KEYS.COLOR_SCHEME), localize),
-    booleanField(KEYS.PROTECT_VE_STYLING, "ProtectVeStyling", setting(KEYS.PROTECT_VE_STYLING) !== false, localize),
+    booleanField(KEYS.PROTECT_MC_STYLING, "ProtectMcStyling", setting(KEYS.PROTECT_MC_STYLING) !== false, localize),
     choiceField(KEYS.HEADER_ARTWORK, "HeaderArtwork", setting(KEYS.HEADER_ARTWORK), localize),
     Object.freeze({
       namespace: MODULE_ID,
       key: KEYS.HEADER_ARTWORK_OPACITY,
       type: "range",
-      name: localize("VEMOBILE.Settings.HeaderArtworkOpacity.Name"),
-      hint: localize("VEMOBILE.Settings.HeaderArtworkOpacity.Hint"),
+      name: localize("MIKELANDIA_CONTROLS.Settings.HeaderArtworkOpacity.Name"),
+      hint: localize("MIKELANDIA_CONTROLS.Settings.HeaderArtworkOpacity.Hint"),
       value: normalizedOpacity(setting(KEYS.HEADER_ARTWORK_OPACITY)),
       min: 0,
       max: 1,
@@ -573,16 +574,16 @@ function preferenceFields(setting, localize, getNavigator, getGame, features) {
     Object.freeze({
       ...booleanField(KEYS.KEEP_SCREEN_AWAKE, "KeepScreenAwake", setting(KEYS.KEEP_SCREEN_AWAKE), localize),
       supported: typeof getNavigator()?.wakeLock?.request === "function",
-      unsupported: localize("VEMOBILE.Settings.KeepScreenAwake.Unsupported"),
+      unsupported: localize("MIKELANDIA_CONTROLS.Settings.KeepScreenAwake.Unsupported"),
       wakeLock: true,
-      failure: localize("VEMOBILE.Settings.KeepScreenAwake.Failure")
+      failure: localize("MIKELANDIA_CONTROLS.Settings.KeepScreenAwake.Failure")
     })
   ].filter(field => field.namespace !== MODULE_ID || supportsPreference(field.key, features)).map(field => Object.freeze({
     ...field,
     ...(field.key === KEYS.COLOR_SCHEME && !features.legacyCharacterSheet ? {
       value: effectiveColorScheme(normalizedColorScheme(field.value), features),
       choices: field.choices.filter(choice => choice.value !== "class"),
-      hint: localize("VEMOBILE.Settings.ColourScheme.PlainHint")
+      hint: localize("MIKELANDIA_CONTROLS.Settings.ColourScheme.PlainHint")
     } : {}),
     defaultValue: field.namespace === MODULE_ID ? (field.key === KEYS.COLOR_SCHEME ? effectiveColorScheme(DEFAULTS[field.key], features) : DEFAULTS[field.key])
       : (findRegisteredSetting(getGame(), field.namespace, field.key)?.default ?? false)
@@ -631,36 +632,36 @@ function findRegisteredSetting(game, namespace, key) {
 function assertSettingAuthority(game, registered, namespace, key) {
   if (!registered) {
     if (namespace === MODULE_ID) return;
-    throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.FoundrySettingMissing", "That Foundry setting does not exist."));
+    throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.FoundrySettingMissing", "That Foundry setting does not exist."));
   }
-  if (!registered.config) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.FoundrySettingNotConfigurable", "That Foundry setting is not configurable here."));
+  if (!registered.config) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.FoundrySettingNotConfigurable", "That Foundry setting is not configurable here."));
   if (registered.scope === "world" && !game?.user?.can?.("SETTINGS_MODIFY")) {
-    throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.WorldSettingPermission", "You do not have permission to change that world setting."));
+    throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.WorldSettingPermission", "You do not have permission to change that world setting."));
   }
-  if (registered.namespace !== namespace || registered.key !== key) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.FoundrySettingMissing", "That Foundry setting does not exist."));
+  if (registered.namespace !== namespace || registered.key !== key) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.FoundrySettingMissing", "That Foundry setting does not exist."));
 }
 
 function normalizeRegisteredSetting(registered, value) {
   const choices = settingChoices(registered);
   if (choices.length) {
     const choice = String(value ?? "");
-    if (!choices.some((entry) => entry.value === choice)) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.ChoiceUnsupported", "That setting choice is not supported."));
+    if (!choices.some((entry) => entry.value === choice)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.ChoiceUnsupported", "That setting choice is not supported."));
     return isNumberSetting(registered) ? Number(choice) : choice;
   }
   const type = settingControlType(registered, choices, settingRange(registered));
   if (type === "boolean") {
-    if (typeof value !== "boolean") throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.BooleanExpected", "That setting requires an on or off value."));
+    if (typeof value !== "boolean") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.BooleanExpected", "That setting requires an on or off value."));
     return value;
   }
   if (type === "number" || type === "range") {
     const number = Number(value);
-    if (!Number.isFinite(number)) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.NumberExpected", "That setting requires a number."));
+    if (!Number.isFinite(number)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.NumberExpected", "That setting requires a number."));
     const range = settingRange(registered);
-    if (range && (number < range.min || number > range.max)) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.RangeExceeded", "That setting is outside its allowed range."));
+    if (range && (number < range.min || number > range.max)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.RangeExceeded", "That setting is outside its allowed range."));
     return number;
   }
   if (type === "text" || type === "color") return String(value ?? "");
-  throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.MobileTypeUnsupported", "That setting type is not supported on mobile."));
+  throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.MobileTypeUnsupported", "That setting type is not supported on mobile."));
 }
 
 function isNumberSetting(registered) {
@@ -689,7 +690,7 @@ function settingsLabels(localize) {
     "ModuleOverlayNone", "ModuleOverlayDetectedOne", "ModuleOverlayDetectedMany", "ModuleOverlayShow", "ModuleOverlayUnavailable",
     "ModuleOverlayScanning", "ModuleOverlayOrderHint", "ModuleOverlayScale", "SessionTitle", "Online", "LatencyTitle", "FpsTitle", "SessionMetricsNote"
   ];
-  return Object.freeze(Object.fromEntries(keys.map((key) => [key[0].toLowerCase() + key.slice(1), localize(`VEMOBILE.Settings.Copy.${key}`)])));
+  return Object.freeze(Object.fromEntries(keys.map((key) => [key[0].toLowerCase() + key.slice(1), localize(`MIKELANDIA_CONTROLS.Settings.Copy.${key}`)])));
 }
 
 function localizeValue(game, value, data) {
@@ -703,12 +704,12 @@ function choiceField(key, group, value, localize) {
     namespace: MODULE_ID,
     key,
     type: "choice",
-    name: localize(`VEMOBILE.Settings.${group}.Name`),
-    hint: localize(`VEMOBILE.Settings.${group}.Hint`),
+    name: localize(`MIKELANDIA_CONTROLS.Settings.${group}.Name`),
+    hint: localize(`MIKELANDIA_CONTROLS.Settings.${group}.Hint`),
     value: CHOICES[key].includes(value) ? value : CHOICES[key][0],
     choices: Object.freeze(CHOICES[key].map((choice) => Object.freeze({
       value: choice,
-      label: localize(`VEMOBILE.Settings.${group}.${choice[0].toUpperCase()}${choice.slice(1)}`)
+      label: localize(`MIKELANDIA_CONTROLS.Settings.${group}.${choice[0].toUpperCase()}${choice.slice(1)}`)
     })))
   });
 }
@@ -718,28 +719,28 @@ function booleanField(key, group, value, localize) {
     namespace: MODULE_ID,
     key,
     type: "boolean",
-    name: localize(`VEMOBILE.Settings.${group}.Name`),
-    hint: localize(`VEMOBILE.Settings.${group}.Hint`),
+    name: localize(`MIKELANDIA_CONTROLS.Settings.${group}.Name`),
+    hint: localize(`MIKELANDIA_CONTROLS.Settings.${group}.Hint`),
     value: Boolean(value),
     supported: true
   });
 }
 
 function normalizeSetting(key, value) {
-  if ([KEYS.MUTE_MOBILE_AUDIO, KEYS.KEEP_SCREEN_AWAKE, KEYS.PROTECT_VE_STYLING, KEYS.SHOW_ACTION_SUMMARIES, KEYS.COMPACT_ACTION_SUMMARIES].includes(key)) {
-    if (typeof value !== "boolean") throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.BooleanExpected", "That setting requires an on or off value."));
+  if ([KEYS.MUTE_MOBILE_AUDIO, KEYS.KEEP_SCREEN_AWAKE, KEYS.PROTECT_MC_STYLING, KEYS.SHOW_ACTION_SUMMARIES, KEYS.COMPACT_ACTION_SUMMARIES].includes(key)) {
+    if (typeof value !== "boolean") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.BooleanExpected", "That setting requires an on or off value."));
     return value;
   }
   if (key === KEYS.MODE && value === "off") return "desktop";
   if (CHOICES[key]) {
     const choice = String(value ?? "");
-    if (!CHOICES[key].includes(choice)) throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.ChoiceUnsupported", "That setting choice is not supported."));
+    if (!CHOICES[key].includes(choice)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.ChoiceUnsupported", "That setting choice is not supported."));
     return choice;
   }
 
   if (key === KEYS.HEADER_ARTWORK_OPACITY) return normalizedOpacity(value);
 
-  throw new Error(localizeFoundry("VEMOBILE.Settings.Errors.VeSettingMissing", "That Mikelandia Controls setting does not exist."));
+  throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.McSettingMissing", "That Mikelandia Controls setting does not exist."));
 }
 
 export function isTidy5eActive(game = globalThis.game) {

@@ -11,8 +11,8 @@ const resources = Object.freeze([
   { id: "advantage", label: "Advantage", path: "system.status.advantage.value", method: "setAdvantage" },
   { id: "momentum", label: "Momentum", path: "system.status.momentum", kind: "boolean" }
 ]);
-const unavailable = () => new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Panels.ActionUnavailable", "This game action is no longer available."));
-const stale = () => new CommandError("STALE_STATE", localizeFoundry("VEMOBILE.Panels.ResourceChanged", "This resource changed. Reopen the editor and try again."));
+const unavailable = () => new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Panels.ActionUnavailable", "This game action is no longer available."));
+const stale = () => new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Panels.ResourceChanged", "This resource changed. Reopen the editor and try again."));
 const integer = value => Number.isSafeInteger(value) && value >= 0;
 
 function resourceState(actor, game, resource, context) {
@@ -59,13 +59,13 @@ export async function editWarhammerResource(payload, { actor, assertCurrent, sou
   if (!edits.length) throw unavailable();
   const keys = new Set(["actorSourceUuid", "actorId", "resourceId", "resourceRevision", "expectedValue", "value"]);
   if (Object.keys(payload).some(key => !keys.has(key)) || typeof payload.resourceId !== "string"
-    || typeof payload.resourceRevision !== "string") throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Panels.InvalidResource", "Invalid resource edit."));
+    || typeof payload.resourceRevision !== "string") throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Panels.InvalidResource", "Invalid resource edit."));
   const edit = edits.find(edit => edit.id === payload.resourceId);
   if (!edit) throw unavailable();
   if (edit.revision !== payload.resourceRevision || edit.value !== payload.expectedValue) throw stale();
   const valid = edit.kind === "boolean" ? typeof payload.value === "boolean"
     : integer(payload.value) && payload.value >= edit.min && (edit.max === undefined || payload.value <= edit.max);
-  if (!valid) throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Panels.InvalidResourceValue", "Enter a valid value within this resource's limits."));
+  if (!valid) throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Panels.InvalidResourceValue", "Enter a valid value within this resource's limits."));
   assertCurrent();
   if (payload.value === edit.value) return Object.freeze({ ok: true, actorId: String(actor.id), actorSourceUuid: sourceUuid, unchanged: true });
   const resource = resources.find(resource => resource.id === edit.id);

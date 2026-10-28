@@ -13,7 +13,6 @@ export function localizedText(localize, key, fallback = key, data) {
 // common native regional aliases. Bounded caches key on the actual language;
 // a Foundry language reload cannot reuse a formatter from a different locale.
 const numberFormats = new Map();
-const dateFormats = new Map();
 const pluralRules = new Map();
 function formatter(cache, locale, Factory, options, variant = "") {
   const language = locale || "en";
@@ -31,10 +30,6 @@ export function localizedNumber(value, locale = "en", fractionDigits = null) {
   const digits = Number.isInteger(fractionDigits) ? Math.min(20, Math.max(0, fractionDigits)) : null;
   return formatter(numberFormats, locale, Intl.NumberFormat, digits === null ? undefined : { minimumFractionDigits: digits, maximumFractionDigits: digits }, digits ?? "default").format(value);
 }
-export function localizedDate(value, locale = "en") {
-  return formatter(dateFormats, locale, Intl.DateTimeFormat, { dateStyle: "medium", timeStyle: "short" }).format(value);
-}
-
 /** Select complete native dictionary messages; Foundry format does not parse ICU.
  * These six languages need one/other UI forms; other categories use Other. */
 export function localizedCount(localize, key, { one, other }, count, locale = "en", data = {}) {

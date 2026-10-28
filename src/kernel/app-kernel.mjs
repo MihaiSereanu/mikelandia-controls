@@ -8,7 +8,7 @@ import { ACTOR_COMMANDS } from "./command-names.mjs";
 
 import { createModeTransitionCoordinator, presentationLabel } from "./mode-transition.mjs";
 
-export function createAppKernel({ store, session, commandGateway, biographyGateway, actorEditorGateway = null, combatGateway, authoritativeGateway, loadTimingGateway = null, reloadApplication = () => globalThis.window?.location?.reload?.(), connectionGeneration, nativeChatGateway, armorClassGateway = null, activeEffectContextGateway, actionSessionGateway, preferencesGateway, settingsCompatibilityGateway, sessionStatusGateway, controlsGuideGateway = null, isControlsUiReady = () => false, themeGateway, mobileBackGateway = null, diagnostics, performanceObserver = null, wakeLockController, readPolicy, readGraphicsPolicy = () => null, watchGraphicsPolicy = () => () => {}, disable, preparePresentation = () => {}, createFrame = createAppFrame }) {
+export function createAppKernel({ store, session, commandGateway, biographyGateway, actorEditorGateway = null, combatGateway, authoritativeGateway, loadTimingGateway = null, reloadApplication = () => globalThis.window?.location?.reload?.(), connectionGeneration, nativeChatGateway, armorClassGateway = null, activeEffectContextGateway, actionSessionGateway, preferencesGateway, settingsCompatibilityGateway, sessionStatusGateway, controlsGuideGateway = null, isControlsUiReady = () => false, themeGateway, mobileBackGateway = null, diagnostics, performanceObserver = null, wakeLockController, readPolicy, disable, preparePresentation = () => {}, createFrame = createAppFrame }) {
   const localize = (key, fallback, data) => localizedText((id, _fallback, values) => preferencesGateway?.localize?.(id, values), key, fallback, data);
   let runtimeScope = null;
   let activationCommitted = false;
@@ -39,7 +39,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     const owner = runtimeScope;
     const result = await runMobileApplicationWorkflow(() => action({ ...expectedSession(), connectionGeneration: generation }),
       () => activationCommitted && runtimeScope === owner && !owner?.disposed && readPolicy().active);
-    if (connectionGeneration && !connectionGeneration.matches(generation)) throw new Error(localizedText(localize, "VEMOBILE.Interface.CombatGateway.TheConnectionChangedWhileThisActionWasRunning", "The connection changed while this action was running."));
+    if (connectionGeneration && !connectionGeneration.matches(generation)) throw new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.CombatGateway.TheConnectionChangedWhileThisActionWasRunning", "The connection changed while this action was running."));
     return result;
   };
   const guardCombatControl = (request, action) => {
@@ -48,7 +48,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       const state = store.state;
       if (!activationCommitted || !lifecycleToken || runtimeScope !== lifecycleToken || lifecycleToken.disposed || !readPolicy().active
         || state.reconnect || state.modeTransition || state.route !== "combat") {
-        throw new Error(localizedText(localize, "VEMOBILE.Interface.CombatGateway.MobileCombatControlsAreNoLongerActive", "Mobile combat controls are no longer active."));
+        throw new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.CombatGateway.MobileCombatControlsAreNoLongerActive", "Mobile combat controls are no longer active."));
       }
       return action({ ...request, ...expected, lifecycleToken });
     });
@@ -57,7 +57,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
   const requireCharacterView = (sourceUuid = store.state.selectedActorSourceUuid) => {
     if (!activationCommitted || !runtimeScope || runtimeScope.disposed || !readPolicy().active
       || store.state.route !== "characters" || store.state.reconnect || store.state.modeTransition
-      || sourceUuid !== store.state.selectedActorSourceUuid) throw new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.ThisActorViewIsNoLongerActive", "This Actor view is no longer active."));
+      || sourceUuid !== store.state.selectedActorSourceUuid) throw new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.ThisActorViewIsNoLongerActive", "This Actor view is no longer active."));
   };
   const dispatchNavigation = (event) => {
     store.dispatch({ type: "action-navigation-invalidated" });
@@ -248,14 +248,10 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     readFramePreferences: () => preferencesGateway.frame?.() ?? preferencesGateway.snapshot(),
     readCharacterPreferences: () => preferencesGateway.character?.() ?? preferencesGateway.snapshot(),
 
-    readPresentationPreferences: () => {
-      const preferences = preferencesGateway.presentation?.() ?? preferencesGateway.snapshot();
-      return Object.freeze({ ...preferences, resolvedMode: store.state.formFactor, graphicsPolicy: readGraphicsPolicy() });
-    },
     readCharacterItemMenu: (request) => {
       if (!activationCommitted || !runtimeScope || runtimeScope.disposed || !readPolicy().active
         || store.state.reconnect || store.state.modeTransition
-        || request.actorSourceUuid !== store.state.selectedActorSourceUuid) throw new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.ThisCharacterMenuIsNoLongerActive", "This character menu is no longer active."));
+        || request.actorSourceUuid !== store.state.selectedActorSourceUuid) throw new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.ThisCharacterMenuIsNoLongerActive", "This character menu is no longer active."));
       performanceObserver?.increment?.("character.menu.prepare");
       return Object.freeze({ ...commandGateway.readItemMenu(request, expectedSession()),
         preferences: preferencesGateway.actionMenu?.() ?? preferencesGateway.snapshot() });
@@ -280,7 +276,6 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       return Object.freeze({
         ...preferences,
         resolvedMode: store.state.formFactor,
-        graphicsPolicy: readGraphicsPolicy(),
 
         nativeSettings: settingsCompatibilityGateway?.snapshot?.() ?? Object.freeze({})
       });
@@ -298,11 +293,10 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       publish();
       return unsubscribe;
     },
-    watchGraphicsPolicy: (owner, onUpdate) => watchGraphicsPolicy(owner, onUpdate),
     readSessionStatus: () => sessionStatusGateway?.snapshot?.() ?? Object.freeze({ users: Object.freeze([]) }),
     watchSessionStatus: (owner, onUpdate) => sessionStatusGateway?.watch?.(owner, onUpdate),
 
-    restoreSettingsDefaults: () => restoreVeSettingsDefaults({
+    restoreSettingsDefaults: () => restoreMcSettingsDefaults({
       preferencesGateway,
       guardConnection,
       invalidate: () => store.dispatch({ type: "view-invalidated" })
@@ -311,7 +305,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     updateSetting: async (payload) => {
       store.dispatch({ type: "action-navigation-invalidated" });
       const result = await guardConnection(() => preferencesGateway.set(payload));
-      if (result.namespace === "ve-mobile" && ((result.key === "showActionSummaries" && result.value === false) || result.key === "compactActionSummaries")) {
+      if (result.namespace === "mikelandia-controls" && ((result.key === "showActionSummaries" && result.value === false) || result.key === "compactActionSummaries")) {
         store.dispatch({ type: "dismiss-action-session" });
       }
       if (!result.requiresReload) store.dispatch({ type: "view-invalidated" });
@@ -326,30 +320,30 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     readCharacterBiography: async (actorSourceUuid) => {
       const sourceUuid = String(actorSourceUuid ?? "");
       if (store.state.route !== "characters" || store.state.characterTab !== "biography"
-        || store.state.selectedActorSourceUuid !== sourceUuid) throw new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.TheSelectedBiographyIsNoLongerActive", "The selected biography is no longer active."));
+        || store.state.selectedActorSourceUuid !== sourceUuid) throw new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.TheSelectedBiographyIsNoLongerActive", "The selected biography is no longer active."));
       const result = await guardConnection((expected) => biographyGateway.read({ actorSourceUuid: sourceUuid }, expected));
       if (store.state.route !== "characters" || store.state.characterTab !== "biography"
-        || store.state.selectedActorSourceUuid !== sourceUuid) throw new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.TheSelectedBiographyIsNoLongerActive", "The selected biography is no longer active."));
+        || store.state.selectedActorSourceUuid !== sourceUuid) throw new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.TheSelectedBiographyIsNoLongerActive", "The selected biography is no longer active."));
       return result;
     },
     rollCharacterBiographyInline: (payload) => {
       const sourceUuid = String(payload?.actorSourceUuid ?? "");
       if (store.state.route !== "characters" || store.state.characterTab !== "biography"
-        || store.state.selectedActorSourceUuid !== sourceUuid) return Promise.reject(new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.TheSelectedBiographyIsNoLongerActive", "The selected biography is no longer active.")));
+        || store.state.selectedActorSourceUuid !== sourceUuid) return Promise.reject(new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.TheSelectedBiographyIsNoLongerActive", "The selected biography is no longer active.")));
       return guardConnection((expected) => biographyGateway.roll(payload, expected));
     },
     execute: (name, payload, observer) => {
       if (!activationCommitted || !runtimeScope || runtimeScope.disposed || !readPolicy().active
-        || store.state.reconnect || store.state.modeTransition) return Promise.reject(new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.ThisActorActionIsNoLongerActive", "This Actor action is no longer active.")));
+        || store.state.reconnect || store.state.modeTransition) return Promise.reject(new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.ThisActorActionIsNoLongerActive", "This Actor action is no longer active.")));
       const sourceUuid = String(payload?.actorSourceUuid ?? "");
       const visibleSource = store.state.route === "characters" ? store.state.selectedActorSourceUuid : "";
-      if (sourceUuid && sourceUuid !== visibleSource) return Promise.reject(new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.TheSelectedActorSourceChangedBeforeThisActionCould", "The selected Actor source changed before this action could run.")));
+      if (sourceUuid && sourceUuid !== visibleSource) return Promise.reject(new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.TheSelectedActorSourceChangedBeforeThisActionCould", "The selected Actor source changed before this action could run.")));
       if ([ACTOR_COMMANDS.ADD_EXPERIENCE, ACTOR_COMMANDS.UPDATE_CURRENCY, ACTOR_COMMANDS.SET_SPELL_SLOT_VALUE, ACTOR_COMMANDS.SET_ITEM_EQUIPPED, ACTOR_COMMANDS.SET_ITEM_ATTUNED, ACTOR_COMMANDS.SET_ITEM_FAVORITE, ACTOR_COMMANDS.SET_SPELL_PREPARED, ACTOR_COMMANDS.OPEN_ITEM_SHEET].includes(name)
         || name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION || name === ACTOR_COMMANDS.SET_EXHAUSTION_LEVEL || [ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name)) {
         const sourceUuid = String(payload?.actorSourceUuid ?? "");
         if (store.state.route !== "characters" || store.state.selectedActorSourceUuid !== sourceUuid
           || (name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION && store.state.characterTab !== "biography")) {
-          return Promise.reject(new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.TheSelectedCharacterSourceChangedBeforeThisActionCould", "The selected character source changed before this action could run.")));
+          return Promise.reject(new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.TheSelectedCharacterSourceChangedBeforeThisActionCould", "The selected character source changed before this action could run.")));
         }
       }
       if (name === ACTOR_COMMANDS.SET_SPELL_SLOT_VALUE) {
@@ -358,7 +352,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
         if (!editor || editor.actorSourceUuid !== payload.actorSourceUuid || editor.resourceId !== resourceId
           || editor.connectionGeneration !== payload.editorGeneration
           || editor.connectionGeneration !== (connectionGeneration?.current ?? 0)) {
-          return Promise.reject(new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.ThisSpellSlotEditorIsStaleReopenItAnd", "This spell-slot editor is stale. Reopen it and try again.")));
+          return Promise.reject(new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.ThisSpellSlotEditorIsStaleReopenItAnd", "This spell-slot editor is stale. Reopen it and try again.")));
         }
       }
       const owner = runtimeScope;
@@ -414,7 +408,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
   const start = () => {
     if (runtimeScope || starting || stopping) return;
     starting = true;
-    const cancelled = new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.VEMobileActivationWasCancelled", "Mikelandia Controls activation was canceled."));
+    const cancelled = new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.MCMobileActivationWasCancelled", "Mikelandia Controls activation was canceled."));
     try {
       // Commands need their provisional owner during initial rendering. Public
       // activation and reconnect access remain closed until every stage succeeds.
@@ -451,7 +445,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
           });
           if (!result.applied || !context.isCurrent()) return null;
           loadTimingGateway?.note?.({ checkpoint: "mobile-session" });
-          store.dispatch({ type: "reconnect-progress", generation: context.generation, checkpoint: "mobile-session", detail: localizedText(localize, "VEMOBILE.Interface.AppKernel.RestoringYourSession", "Restoring your session…"), timings: result.timings });
+          store.dispatch({ type: "reconnect-progress", generation: context.generation, checkpoint: "mobile-session", detail: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.RestoringYourSession", "Restoring your session…"), timings: result.timings });
           return session.read();
         },
         applySnapshot: async (snapshot, generation, context) => {
@@ -459,7 +453,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
           const journalId = store.state.journal?.id ?? "";
           const pageId = store.state.journalPageId;
           loadTimingGateway?.note?.({ checkpoint: "presentation" });
-          store.dispatch({ type: "reconnect-progress", generation, checkpoint: "presentation", detail: localizedText(localize, "VEMOBILE.Interface.AppKernel.RestoringMobileInterface", "Restoring mobile interface…") });
+          store.dispatch({ type: "reconnect-progress", generation, checkpoint: "presentation", detail: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.RestoringMobileInterface", "Restoring mobile interface…") });
           session.adopt?.(snapshot);
           store.dispatch({ type: "session-loaded", snapshot });
           if (journalId && snapshot.journals?.some((journal) => journal.id === journalId)) {
@@ -472,7 +466,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
           await nextRenderedFrame();
           if (!context.isCurrent()) return;
           loadTimingGateway?.note?.({ checkpoint: "interactions" });
-          store.dispatch({ type: "reconnect-progress", generation, checkpoint: "interactions", detail: localizedText(localize, "VEMOBILE.Interface.AppKernel.RestoringControls", "Restoring controls…") });
+          store.dispatch({ type: "reconnect-progress", generation, checkpoint: "interactions", detail: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.RestoringControls", "Restoring controls…") });
           await nextRenderedFrame();
         },
         onError: (error) => diagnostics?.record?.("error", "Authoritative reconnect resynchronisation failed", error)
@@ -658,7 +652,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
         store.dispatch({ type: "reconnect-finished", generation: activeGeneration });
         diagnostics?.record?.("info", `Reconnect generation ${activeGeneration} became interactive after ${elapsed}ms`);
       } else {
-        const failure = result.error ?? new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.RecoveryCouldNotReachATrustworthyReadyState", "Recovery could not reach a trustworthy ready state."));
+        const failure = result.error ?? new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.RecoveryCouldNotReachATrustworthyReadyState", "Recovery could not reach a trustworthy ready state."));
         loadTimingGateway?.note?.({ type: "hard reload", hardReload: true, canvasSucceeded: false,
           checkpoint: failure.reconnectCheckpoint ?? "recovery" });
         store.dispatch({ type: "reconnect-reloading", generation: activeGeneration });
@@ -673,7 +667,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       store.dispatch({ type: "navigate", route });
     },
     async openJournalTarget(journalId, target = {}) {
-      if (!activationCommitted || readPolicy().runtimeMode === "desktop") throw new Error(localizedText(localize, "VEMOBILE.Interface.AppKernel.TheMobileJournalReaderIsInactive", "The mobile Journal reader is inactive."));
+      if (!activationCommitted || readPolicy().runtimeMode === "desktop") throw new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.TheMobileJournalReaderIsInactive", "The mobile Journal reader is inactive."));
       const journal = await commands.openJournal(journalId, target);
       if (!activationCommitted || !journal || store.state.journal?.id !== journal.id) return journal;
       store.dispatch({ type: "navigate", route: "journals" });
@@ -694,15 +688,15 @@ function nextRenderedFrame() {
   });
 }
 
-export async function restoreVeSettingsDefaults({  preferencesGateway, guardConnection = (action) => action(), invalidate = () => {} }) {
+export async function restoreMcSettingsDefaults({  preferencesGateway, guardConnection = (action) => action(), invalidate = () => {} }) {
   const result = await guardConnection(() => preferencesGateway.restoreDefaults());
   invalidate();
   return Object.freeze({ ...result, requiresReload: Boolean(result.requiresReload) });
 }
 
-/** Avoid destroying an active VE-owned editor when only the software keyboard changes the visual viewport. */
+/** Avoid destroying an active Mikelandia Controls-owned editor when only the software keyboard changes the visual viewport. */
 export function shouldPreserveEditableSurfaceOnViewportResize({ activeElement, currentFormFactor, currentOrientation, nextPolicy } = {}) {
-  if (!activeElement?.closest?.(".ve-mobile-app")) return false;
+  if (!activeElement?.closest?.(".mc-mobile-app")) return false;
   const editable = activeElement.matches?.("input, textarea, select, [contenteditable='true'], [contenteditable='']");
   return Boolean(editable
     && nextPolicy?.formFactor === currentFormFactor

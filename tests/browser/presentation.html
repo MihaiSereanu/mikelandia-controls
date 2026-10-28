@@ -4,17 +4,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Settings and Help browser checks</title>
 <style>
-  @import url("/assets/ve-mobile.css") layer(modules);
-  @import url("/assets/ve-style-authority.css") layer(modules);
+  @import url("/assets/mikelandia-controls.css") layer(modules);
+  @import url("/assets/mc-style-authority.css") layer(modules);
 </style>
 <style>
   body { margin: 0; background: #16191f; color: #f0eee6; font: 16px system-ui; }
-  .ve-mobile-app { position: relative !important; display: block !important; padding: 16px; overflow: auto !important; min-height: 100dvh; }
+  .mc-mobile-app { position: relative !important; display: block !important; padding: 16px; overflow: auto !important; min-height: 100dvh; }
   #results { display: none; }
   .application { background: #262a33; color: #f0eee6; padding: 12px; width: 600px; }
 </style>
-<body class="ve-mobile-running">
-<main class="ve-mobile-app" data-ve-style-authority data-form-factor="phone" data-theme="dark"></main>
+<body class="mc-mobile-running">
+<main class="mc-mobile-app" data-mc-style-authority data-form-factor="phone" data-theme="dark"></main>
 <pre id="results">Running browser checks…</pre>
 <script type="module" src="/tests/browser/presentation.mjs"></script>
 </body>

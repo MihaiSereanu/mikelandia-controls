@@ -4,18 +4,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Fallback browser checks</title>
 <style>
-  @import url("/assets/ve-mobile.css") layer(modules);
-  @import url("/assets/ve-style-authority.css") layer(modules);
+  @import url("/assets/mikelandia-controls.css") layer(modules);
+  @import url("/assets/mc-style-authority.css") layer(modules);
 </style>
 <style>
   body { margin: 0; background: #16191f; color: #f0eee6; font: 16px system-ui; }
   /* Test host only; the renderer and native application CSS are unchanged. */
-  .ve-mobile-app { position: relative !important; display: block !important; padding: 16px; overflow: auto !important; min-height: 100dvh; }
+  .mc-mobile-app { position: relative !important; display: block !important; padding: 16px; overflow: auto !important; min-height: 100dvh; }
   #results { display: none; }
   .application { background: #262a33; color: #f0eee6; padding: 12px; width: 600px; }
 </style>
-<body class="ve-mobile-running">
-<main class="ve-mobile-app" data-ve-style-authority data-form-factor="phone" data-theme="dark"></main>
+<body class="mc-mobile-running">
+<main class="mc-mobile-app" data-mc-style-authority data-form-factor="phone" data-theme="dark"></main>
 <pre id="results">Running browser checksâ€¦</pre>
 <script type="module">
 import { createActorEditorGateway } from "/src/foundry/actor-editor-gateway.mjs";
@@ -90,7 +90,7 @@ try {
   const commands = {
     localize: (key, fallback) => game.i18n.localize(key) === key ? fallback : game.i18n.localize(key),
     openNativeActorEditor: request => gateway.open(request, {}, scope),
-    selectActor: uuid => { state = { snapshot: session.selectCharacterSource(uuid) }; screen.__veUpdateCharacter({ state, commands }); }
+    selectActor: uuid => { state = { snapshot: session.selectCharacterSource(uuid) }; screen.__mcUpdateCharacter({ state, commands }); }
   };
   screen = renderCharacters({ state, commands, scope });
   document.querySelector("main").append(screen);
@@ -104,8 +104,8 @@ try {
   check("fallback fits viewport", screen.getBoundingClientRect().right <= window.innerWidth + 1);
   button().click();
   await tick();
-  check("deliberate sheet is admitted", opened?.element.classList.contains("ve-mobile-admitted-app"));
-  check("native editor geometry belongs to its root, including form roots", opened.element.classList.contains("ve-mobile-native-editor") && !opened.element.querySelector(".ve-mobile-native-editor"));
+  check("deliberate sheet is admitted", opened?.element.classList.contains("mc-mobile-admitted-app"));
+  check("native editor geometry belongs to its root, including form roots", opened.element.classList.contains("mc-mobile-native-editor") && !opened.element.querySelector(".mc-mobile-native-editor"));
   check("native sheet is promoted above mobile composition", opened.element.matches(":popover-open"));
   const reachable = element => {
     const r = element.getBoundingClientRect();
@@ -120,7 +120,7 @@ try {
   opened.element.querySelector(".window-content").replaceChildren(fragment);
   Hooks.emit(v1 ? "renderActorSheet" : "renderApplicationV2", opened, v1 ? { 0: fragment } : fragment);
   await tick();
-  check("rerender keeps the outer native frame admitted", opened.element.classList.contains("ve-mobile-admitted-app") && !fragment.classList.contains("ve-mobile-admitted-app"));
+  check("rerender keeps the outer native frame admitted", opened.element.classList.contains("mc-mobile-admitted-app") && !fragment.classList.contains("mc-mobile-admitted-app"));
   check("native close control survives inner-form rerender", reachable(opened.element.querySelector("[data-native-close]")));
   const input = opened.element.querySelector("input");
   input.focus(); input.value = "2"; input.dispatchEvent(new Event("input", { bubbles: true }));

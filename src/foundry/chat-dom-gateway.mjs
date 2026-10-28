@@ -16,7 +16,7 @@ export function inspectChatLogPrune(game = globalThis.game, config = globalThis.
   const className = String(config?.ui?.chat?.name ?? "");
   const classActive = /ChatLogPrune/u.test(className);
   // The module's default is enabled. Treat an active module as the owner even
-  // if VE's init hook runs before its setting/class hook; only an explicit
+  // if Mikelandia Controls's init hook runs before its setting/class hook; only an explicit
   // stored/registered false releases ownership.
   const active = moduleActive && setting !== false;
   return Object.freeze({
@@ -29,8 +29,8 @@ export function inspectChatLogPrune(game = globalThis.game, config = globalThis.
   });
 }
 
-/** Install VE's bounded ChatLog subclass only when Chat Log Prune is not the owner. */
-export function installVeChatWindowClass({
+/** Install Mikelandia Controls's bounded ChatLog subclass only when Chat Log Prune is not the owner. */
+export function installMcChatWindowClass({
   game = globalThis.game,
   config = globalThis.CONFIG,
   foundry = globalThis.foundry,
@@ -42,47 +42,47 @@ export function installVeChatWindowClass({
   if (midiLegacy.active) return Object.freeze({ installed: false, owner: "Midi-QOL legacy", prune, midiLegacy });
   const BaseChatLog = config?.ui?.chat;
   if (typeof BaseChatLog !== "function") {
-    return Object.freeze({ installed: false, owner: "none", prune, reason: localizeFoundry("VEMOBILE.Interface.ChatDomGateway.ChatLogClassUnavailable", "ChatLog class unavailable") });
+    return Object.freeze({ installed: false, owner: "none", prune, reason: localizeFoundry("MIKELANDIA_CONTROLS.Interface.ChatDomGateway.ChatLogClassUnavailable", "ChatLog class unavailable") });
   }
-  if (BaseChatLog.veMobileBoundedChat === true) {
+  if (BaseChatLog.mcMobileBoundedChat === true) {
     return Object.freeze({ installed: true, owner: "Mikelandia Controls", prune, ChatLogClass: BaseChatLog });
   }
 
   const Semaphore = foundry?.utils?.Semaphore;
-  class VeMobileBoundedChatLog extends BaseChatLog {
-    static veMobileBoundedChat = true;
-    #veActive = false;
-    #veRendering = false;
-    #veRenderingForward = false;
-    #veQueue = typeof Semaphore === "function" ? new Semaphore(1) : { add: (fn, ...args) => fn(...args) };
-    #veForwardListener = null;
-    #veLogElement = null;
-    #veLimit = configuredBatchSize(config);
+  class McMobileBoundedChatLog extends BaseChatLog {
+    static mcMobileBoundedChat = true;
+    #mcActive = false;
+    #mcRendering = false;
+    #mcRenderingForward = false;
+    #mcQueue = typeof Semaphore === "function" ? new Semaphore(1) : { add: (fn, ...args) => fn(...args) };
+    #mcForwardListener = null;
+    #mcLogElement = null;
+    #mcLimit = configuredBatchSize(config);
 
-    veMobileSetBoundedWindow(active, limit = configuredBatchSize(config)) {
-      this.#veActive = Boolean(active && !this.isPopout);
-      this.#veLimit = Math.max(1, Number(limit) || configuredBatchSize(config));
-      if (this.#veActive) this.#vePruneTop();
+    mcMobileSetBoundedWindow(active, limit = configuredBatchSize(config)) {
+      this.#mcActive = Boolean(active && !this.isPopout);
+      this.#mcLimit = Math.max(1, Number(limit) || configuredBatchSize(config));
+      if (this.#mcActive) this.#mcPruneTop();
     }
 
     async scrollBottom(options = {}) {
       const result = await super.scrollBottom(options);
-      if (this.#veActive) this.#vePruneTop();
+      if (this.#mcActive) this.#mcPruneTop();
       return result;
     }
 
     async renderBatch(size) {
-      if (!this.#veActive) return super.renderBatch(size);
-      if (this.#veRendering) return;
-      this.#veRendering = true;
-      return this.#veQueue.add(async () => {
+      if (!this.#mcActive) return super.renderBatch(size);
+      if (this.#mcRendering) return;
+      this.#mcRendering = true;
+      return this.#mcQueue.add(async () => {
         try {
           const log = this.element?.querySelector?.(".chat-log");
           const messages = game?.messages?.contents ?? [];
           const oldest = log?.firstElementChild?.dataset?.messageId;
           let end = oldest ? messages.findIndex((message) => message.id === oldest) : messages.length;
           if (end < 0) end = messages.length;
-          const start = Math.max(0, end - Math.max(1, Number(size) || this.#veLimit));
+          const start = Math.max(0, end - Math.max(1, Number(size) || this.#mcLimit));
           const present = renderedMessageIds(log);
           const elements = [];
           for (let index = start; index < end; index += 1) {
@@ -94,64 +94,64 @@ export function installVeChatWindowClass({
               present.add(message.id);
               if (!this.isPopout) message.logged = true;
             } catch (error) {
-              hooks?.onError?.("VeMobileBoundedChatLog#renderBatch", error, {
+              hooks?.onError?.("McMobileBoundedChatLog#renderBatch", error, {
                 msg: `Chat message ${message?.id ?? "unknown"} failed to render`, log: "error"
               });
             }
           }
           if (elements.length) log?.prepend?.(...elements);
-          this.#vePruneBottom();
+          this.#mcPruneBottom();
         } finally {
-          this.#veRendering = false;
+          this.#mcRendering = false;
         }
       });
     }
 
     _attachLogListeners(element, options) {
       super._attachLogListeners(element, options);
-      this.#veDetachForwardListener();
-      this.#veForwardListener = () => {
-        if (!this.#veActive || this.#veRenderingForward) return;
+      this.#mcDetachForwardListener();
+      this.#mcForwardListener = () => {
+        if (!this.#mcActive || this.#mcRenderingForward) return;
         const denominator = element.scrollHeight - element.clientHeight;
         const ratio = denominator > 0 ? element.scrollTop / denominator : 1;
         if (ratio < 0.99) return;
-        void this.#veRenderForward(configuredBatchSize(config));
+        void this.#mcRenderForward(configuredBatchSize(config));
       };
-      this.#veLogElement = element;
-      element.addEventListener("scroll", this.#veForwardListener, { passive: true });
+      this.#mcLogElement = element;
+      element.addEventListener("scroll", this.#mcForwardListener, { passive: true });
     }
 
     async close(options = {}) {
-      this.#veActive = false;
-      this.#veDetachForwardListener();
+      this.#mcActive = false;
+      this.#mcDetachForwardListener();
       return super.close(options);
     }
 
-    #veDetachForwardListener() {
-      if (this.#veLogElement && this.#veForwardListener) {
-        this.#veLogElement.removeEventListener?.("scroll", this.#veForwardListener);
+    #mcDetachForwardListener() {
+      if (this.#mcLogElement && this.#mcForwardListener) {
+        this.#mcLogElement.removeEventListener?.("scroll", this.#mcForwardListener);
       }
-      this.#veLogElement = null;
-      this.#veForwardListener = null;
+      this.#mcLogElement = null;
+      this.#mcForwardListener = null;
     }
 
-    #vePruneTop() {
+    #mcPruneTop() {
       const log = this.element?.querySelector?.(".chat-log");
       if (!log) return;
-      const threshold = this.#veLimit * 2;
+      const threshold = this.#mcLimit * 2;
       if ((log.children?.length ?? 0) < threshold) return;
-      while ((log.children?.length ?? 0) > this.#veLimit) this.#veRemove(log.firstElementChild);
+      while ((log.children?.length ?? 0) > this.#mcLimit) this.#mcRemove(log.firstElementChild);
     }
 
-    #vePruneBottom() {
+    #mcPruneBottom() {
       const log = this.element?.querySelector?.(".chat-log");
       if (!log) return;
-      const threshold = this.#veLimit * 2;
+      const threshold = this.#mcLimit * 2;
       if ((log.children?.length ?? 0) < threshold) return;
-      while ((log.children?.length ?? 0) > this.#veLimit) this.#veRemove(log.lastElementChild);
+      while ((log.children?.length ?? 0) > this.#mcLimit) this.#mcRemove(log.lastElementChild);
     }
 
-    #veRemove(element) {
+    #mcRemove(element) {
       const messageId = element?.dataset?.messageId;
       if (!messageId) return element?.remove?.();
       if (!this.isPopout) {
@@ -163,10 +163,10 @@ export function installVeChatWindowClass({
       element.remove?.();
     }
 
-    async #veRenderForward(size) {
-      if (this.#veRenderingForward) return;
-      this.#veRenderingForward = true;
-      return this.#veQueue.add(async () => {
+    async #mcRenderForward(size) {
+      if (this.#mcRenderingForward) return;
+      this.#mcRenderingForward = true;
+      return this.#mcQueue.add(async () => {
         try {
           const log = this.element?.querySelector?.(".chat-log");
           const messages = game?.messages?.contents ?? [];
@@ -183,22 +183,22 @@ export function installVeChatWindowClass({
               present.add(message.id);
               if (!this.isPopout) message.logged = true;
             } catch (error) {
-              hooks?.onError?.("VeMobileBoundedChatLog#renderForward", error, {
+              hooks?.onError?.("McMobileBoundedChatLog#renderForward", error, {
                 msg: `Chat message ${message?.id ?? "unknown"} failed to render`, log: "error"
               });
             }
           }
           if (elements.length) log?.append?.(...elements);
-          this.#vePruneTop();
+          this.#mcPruneTop();
         } finally {
-          this.#veRenderingForward = false;
+          this.#mcRenderingForward = false;
         }
       });
     }
   }
 
-  config.ui.chat = VeMobileBoundedChatLog;
-  return Object.freeze({ installed: true, owner: "Mikelandia Controls", prune, ChatLogClass: VeMobileBoundedChatLog });
+  config.ui.chat = McMobileBoundedChatLog;
+  return Object.freeze({ installed: true, owner: "Mikelandia Controls", prune, ChatLogClass: McMobileBoundedChatLog });
 }
 
 export function createChatDomGateway({
@@ -208,18 +208,18 @@ export function createChatDomGateway({
   readDocument = () => globalThis.document
 } = {}) {
   const limit = () => configuredBatchSize(readConfig());
-  let veActive = false;
+  let mcActive = false;
   return Object.freeze({
     activate(chat = readUi()?.chat) {
-      if (inspectChatLogPrune(readGame(), readConfig()).active) { veActive = false; return false; }
-      if (inspectMidiLegacyPruning(readGame(), readConfig()).active) { veActive = false; return false; }
-      chat?.veMobileSetBoundedWindow?.(true, limit());
-      veActive = typeof chat?.veMobileSetBoundedWindow === "function";
-      return veActive;
+      if (inspectChatLogPrune(readGame(), readConfig()).active) { mcActive = false; return false; }
+      if (inspectMidiLegacyPruning(readGame(), readConfig()).active) { mcActive = false; return false; }
+      chat?.mcMobileSetBoundedWindow?.(true, limit());
+      mcActive = typeof chat?.mcMobileSetBoundedWindow === "function";
+      return mcActive;
     },
     deactivate(chat = readUi()?.chat) {
-      chat?.veMobileSetBoundedWindow?.(false, limit());
-      veActive = false;
+      chat?.mcMobileSetBoundedWindow?.(false, limit());
+      mcActive = false;
     },
     snapshot() {
       const game = readGame();
@@ -227,17 +227,17 @@ export function createChatDomGateway({
       const prune = inspectChatLogPrune(game, readConfig());
       const midiLegacy = inspectMidiLegacyPruning(game, readConfig());
       const nativeRows = document?.querySelectorAll?.("#chat .chat-log > [data-message-id], #chat-popout .chat-log > [data-message-id]")?.length ?? 0;
-      const veRows = document?.querySelectorAll?.(".ve-native-chat-screen .chat-log > [data-message-id]")?.length ?? 0;
-      const veClass = Boolean(readConfig()?.ui?.chat?.veMobileBoundedChat);
+      const mcRows = document?.querySelectorAll?.(".mc-native-chat-screen .chat-log > [data-message-id]")?.length ?? 0;
+      const mcClass = Boolean(readConfig()?.ui?.chat?.mcMobileBoundedChat);
       return Object.freeze({
         chatLogPruneInstalled: prune.installed,
         chatLogPruneActive: prune.active,
         chatLogPruneVersion: prune.version,
         midiQolLegacyPruningActive: midiLegacy.active,
         nativeRenderedRows: nativeRows,
-        veRenderedRows: veRows,
-        veWindowLimit: limit(),
-        nativePruningOwner: prune.active ? "ChatLog Prune" : midiLegacy.active ? "Midi-QOL legacy" : (veClass && veActive ? "Mikelandia Controls" : "none")
+        mcRenderedRows: mcRows,
+        mcWindowLimit: limit(),
+        nativePruningOwner: prune.active ? "ChatLog Prune" : midiLegacy.active ? "Midi-QOL legacy" : (mcClass && mcActive ? "Mikelandia Controls" : "none")
       });
     }
   });

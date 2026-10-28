@@ -26,7 +26,7 @@ const rect = selector => main.querySelector(selector).getBoundingClientRect();
 const sameLine = (a, b) => Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top);
 try {
   const screen = document.createElement("section");
-  screen.className = "ve-character-screen ve-character-unselected ve-native-character-screen";
+  screen.className = "mc-character-screen mc-character-unselected mc-native-character-screen";
   main.append(screen);
   screen.append(...renderProfilePanels(actor, { characterTab: "overview" }, {
     localize: (_key, fallback) => fallback, execute: async () => ({ nativeHandled: true }), selectCharacterTab: () => {}
@@ -46,16 +46,16 @@ try {
   check("pencil is aligned to the field's top-right", editRect.right >= fieldRect.right - 2 && editRect.top <= fieldRect.top + 2);
   const hp = rect('[data-profile-section="hp"]'), ac = rect('[data-profile-section="ac"]'), luck = rect('[data-profile-section="luck"]');
   if (main.clientWidth >= 352) check("small resource sections share a row", sameLine(hp, ac));
-  if (luck.top > hp.top + 2) check("last resource card fills spare row width", Math.abs(luck.width - rect('.ve-profile-summary').width) < 2);
+  if (luck.top > hp.top + 2) check("last resource card fills spare row width", Math.abs(luck.width - rect('.mc-profile-summary').width) < 2);
   if (!params.has("large")) check("short Stats keep labels and values side by side", sameLine(rect('[data-profile-field="Str"] dt'), rect('[data-profile-field="Str"] dd')));
   if (innerWidth >= 768) check("long item rows share available width", sameLine(rect('[data-profile-field="skill"]'), rect('[data-profile-field="weapon"]')));
-  const contained = () => [...main.querySelectorAll('.ve-profile-row, .ve-profile-row dt, .ve-profile-row dd, .ve-profile-resource-form input, .ve-profile-resource-form button')].every(element => {
+  const contained = () => [...main.querySelectorAll('.mc-profile-row, .mc-profile-row dt, .mc-profile-row dd, .mc-profile-resource-form input, .mc-profile-resource-form button')].every(element => {
     const r = element.getBoundingClientRect(); return r.left >= 15 && r.right <= innerWidth - 15 && element.scrollWidth <= element.clientWidth + 1;
   });
   check("long names and values stay inside sheet", contained());
   main.querySelector('[data-profile-edit="luck"]').click(); await tick();
   check("open editor fits alongside available controls", contained());
-  check("editor preserves touch target height", [...main.querySelectorAll('.ve-profile-resource-form button, .ve-profile-resource-form input')].every(e => e.getBoundingClientRect().height >= 44));
+  check("editor preserves touch target height", [...main.querySelectorAll('.mc-profile-resource-form button, .mc-profile-resource-form input')].every(e => e.getBoundingClientRect().height >= 44));
   const input = main.querySelector('[data-profile-resource-input="luck"]');
   check("opening the editor selects the full current value", input.selectionStart === 0 && input.selectionEnd === input.value.length);
   main.querySelector('[data-profile-resource-cancel]').click(); await tick();

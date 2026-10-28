@@ -77,12 +77,12 @@ export function createFoundryAuthoritativeSessionGateway({
         onProgress(Object.freeze({ checkpoint, detail, timings: Object.freeze({ ...timings }) }));
       };
       const game = getGame();
-      if (!game?.user || !game?.collections) throw new Error(localizeFoundry("VEMOBILE.Interface.AuthoritativeSessionGateway.TheFoundrySessionIsNotReadyForResynchronisation", "The Foundry session is not ready for resynchronization."));
+      if (!game?.user || !game?.collections) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.AuthoritativeSessionGateway.TheFoundrySessionIsNotReadyForResynchronisation", "The Foundry session is not ready for resynchronization."));
       ensureSession(game);
       const userId = game.user.id;
       const worldId = game.world?.id;
       const currentSession = () => isCurrent() && getGame() === game && game.user?.id === userId && game.world?.id === worldId;
-      progress("collections", localizeFoundry("VEMOBILE.Interface.AppFrame.RefreshingWorldData2", "Refreshing world data…"));
+      progress("collections", localizeFoundry("MIKELANDIA_CONTROLS.Interface.AppFrame.RefreshingWorldData2", "Refreshing world data…"));
       const finishFetch = performanceObserver?.start?.("reconnect.authoritative.fetch") ?? (() => {});
       let fetchFailed = false;
       const fetched = await Promise.all(COLLECTIONS.map(async (documentName) => {
@@ -102,7 +102,7 @@ export function createFoundryAuthoritativeSessionGateway({
         } catch (error) {
           fetchFailed = true;
           error.reconnectCheckpoint = "collections";
-          error.reconnectDetail = localizeFoundry(`VEMOBILE.Recovery.Collection.${documentName}`, `Could not refresh ${COLLECTION_LABELS[documentName]}.`);
+          error.reconnectDetail = localizeFoundry(`MIKELANDIA_CONTROLS.Recovery.Collection.${documentName}`, `Could not refresh ${COLLECTION_LABELS[documentName]}.`);
           throw error;
         }
       }));
@@ -120,7 +120,7 @@ export function createFoundryAuthoritativeSessionGateway({
         finishTotal();
         return Object.freeze({ applied: false, reason: "stale-generation" });
       }
-      progress("foundry-session", localizeFoundry("VEMOBILE.Interface.AppFrame.SynchronisingSessionData2", "Synchronizing session data…"));
+      progress("foundry-session", localizeFoundry("MIKELANDIA_CONTROLS.Interface.AppFrame.SynchronisingSessionData2", "Synchronizing session data…"));
       const finishReconcile = performanceObserver?.start?.("reconnect.authoritative.reconcile") ?? (() => {});
       const changedCollections = new Set();
       const work = { prepared: 0, updated: 0, added: 0, deleted: 0 };
@@ -148,13 +148,13 @@ export function createFoundryAuthoritativeSessionGateway({
         finishTotal();
         return Object.freeze({ applied: false, reason: "stale-generation" });
       }
-      progress("foundry-session", localizeFoundry("VEMOBILE.Interface.AuthoritativeSessionGateway.RestoringGameMessages", "Restoring game messages…"));
+      progress("foundry-session", localizeFoundry("MIKELANDIA_CONTROLS.Interface.AuthoritativeSessionGateway.RestoringGameMessages", "Restoring game messages…"));
       await Promise.resolve(getUi()?.chat?.render?.({ force: true }));
       if (!currentSession()) {
         finishTotal();
         return Object.freeze({ applied: false, reason: "stale-generation" });
       }
-      progress("foundry-session", localizeFoundry("VEMOBILE.Interface.AuthoritativeSessionGateway.WorldDataReady", "World data ready"), true);
+      progress("foundry-session", localizeFoundry("MIKELANDIA_CONTROLS.Interface.AuthoritativeSessionGateway.WorldDataReady", "World data ready"), true);
       const slowestCollection = Object.entries(collectionTimings).sort((left, right) => right[1] - left[1])[0] ?? null;
       const total = Math.max(0, now() - startedAt);
       diagnostics?.record?.("debug", `Authoritative resync timings | collections=${Math.round(fetchedAt - startedAt)}ms reconcile=${Math.round(reconciledAt - fetchedAt)}ms FoundrySession=${Math.round(timings["foundry-session"] ?? 0)}ms slowestCollection=${slowestCollection ? `${slowestCollection[0]}:${Math.round(slowestCollection[1])}ms` : "none"} total=${Math.round(total)}ms changedCollections=${changedCollections.size}`);
@@ -174,7 +174,7 @@ export function createFoundryAuthoritativeSessionGateway({
 // sources and construct only new documents; `index:true` would change the query.
 async function requestWorldSources({ documentName }) {
   const socket = globalThis.foundry?.helpers?.SocketInterface;
-  if (typeof socket?.dispatch !== "function") throw new Error(localizeFoundry("VEMOBILE.Interface.AuthoritativeSessionGateway.DocumentTransportUnavailable", "Foundry's document connection is unavailable."));
+  if (typeof socket?.dispatch !== "function") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.AuthoritativeSessionGateway.DocumentTransportUnavailable", "Foundry's document connection is unavailable."));
   const response = await socket.dispatch("modifyDocument", {
     type: documentName,
     action: "get",
@@ -184,11 +184,11 @@ async function requestWorldSources({ documentName }) {
 }
 
 function validateSources(sources) {
-  if (!Array.isArray(sources)) throw new Error(localizeFoundry("VEMOBILE.Interface.AuthoritativeSessionGateway.InvalidDocumentCollection", "Foundry returned invalid world data."));
+  if (!Array.isArray(sources)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.AuthoritativeSessionGateway.InvalidDocumentCollection", "Foundry returned invalid world data."));
   const ids = new Set();
   for (const source of sources) {
     if (!source || typeof source !== "object" || Array.isArray(source) || typeof source._id !== "string" || !source._id || ids.has(source._id)) {
-      throw new Error(localizeFoundry("VEMOBILE.Interface.AuthoritativeSessionGateway.InvalidDocumentSource", "Foundry returned an invalid document record."));
+      throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.AuthoritativeSessionGateway.InvalidDocumentSource", "Foundry returned an invalid document record."));
     }
     ids.add(source._id);
   }

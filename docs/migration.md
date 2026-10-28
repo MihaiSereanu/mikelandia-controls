@@ -1,0 +1,32 @@
+# Mikelandia Controls migration
+
+The repository, Foundry module ID, install folder, settings namespace, and ZIP use `mikelandia-controls`. CSS/data prefixes use `mc-`; localization uses `MIKELANDIA_CONTROLS`.
+
+## Installation
+
+After the renamed package is published:
+
+1. Back up each world before changing its enabled modules.
+2. Disable the old `ve-mobile` module in that world.
+3. Install `https://github.com/MihaiSereanu/mikelandia-controls/releases/download/latest/module.json` and enable **Mikelandia Controls**.
+4. Join as a GM first so shared Actor and unlinked-token flags can migrate, then reconnect players.
+
+Foundry treats the new ID as a separate module. Enabling it in one world does not enable it in other worlds. There is no runtime coexistence guard.
+
+## Preserved data
+
+Each browser copies its old preferences, bootstrap cache, controls-guide receipt, chat dock state, and Carolingian restoration receipt before the new interface reads them. Existing destination values win. A completion marker prevents consumed receipts from being copied again. Original entries remain available for rollback. A failed transfer is retryable and leaves the normal Foundry interface available without starting the new mobile interface.
+
+One active GM copies missing flags from world Actors and raw unlinked-token deltas. Existing new values win, including zero, false, null, and arrays. The complete old flag namespace is retained, including historical Renown. Imported or compendium Actors can still read their legacy resource values before those values are written under the new namespace. Packs are not bulk rewritten.
+
+Legacy identifiers are confined to the migration implementation, its tests, and this runbook. Original MIT copyright and permission notices remain in `LICENSE`.
+
+## Rollback
+
+Disable the new module and re-enable the original installation. Its retained browser preferences and document flags represent the pre-migration state; later changes made under the new namespace are separate.
+
+The pre-rename source snapshot is `dist/diagnosis/rebrand-before.zip`. Earlier deployment backups retain their original paths:
+
+- `/home/ubuntu/backups/ve-mobile/20261028-momentum-cancellation/`
+- `/home/ubuntu/backups/ve-mobile-journals/20261027-212646/`
+- `D:/FoundryVTT/Backups/ve-mobile/20261027-044946-runtime-before-momentum-checkbox.zip`

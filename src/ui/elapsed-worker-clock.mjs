@@ -16,7 +16,7 @@ export function createElapsedWorkerClock(textElement, {
     canvas?.remove();
     canvas = null;
     startedAt = null;
-    textElement.classList?.remove("ve-elapsed-worker-text");
+    textElement.classList?.remove("mc-elapsed-worker-text");
   };
   const start = (value) => {
     const startTime = Number(value);
@@ -36,7 +36,7 @@ export function createElapsedWorkerClock(textElement, {
       const dpr = Math.min(4, Math.max(1, Number(globalThis.devicePixelRatio) || 1));
       nextCanvas.width = Math.round(160 * dpr);
       nextCanvas.height = Math.round(20 * dpr);
-      nextCanvas.className = "ve-elapsed-worker-clock";
+      nextCanvas.className = "mc-elapsed-worker-clock";
       nextCanvas.setAttribute("aria-hidden", "true");
       const surface = nextCanvas.transferControlToOffscreen();
       const nextWorker = createWorker();
@@ -49,7 +49,7 @@ export function createElapsedWorkerClock(textElement, {
         font: `${style?.fontWeight ?? "600"} ${style?.fontSize ?? "12px"} ${style?.fontFamily ?? "sans-serif"}`
       }, [surface]);
       textElement.parentNode?.append(nextCanvas);
-      textElement.classList?.add("ve-elapsed-worker-text");
+      textElement.classList?.add("mc-elapsed-worker-text");
       startedAt = startTime;
     } catch {
       stop(); // The DOM clock remains a functioning fallback.

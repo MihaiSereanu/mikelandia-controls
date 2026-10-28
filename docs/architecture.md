@@ -17,7 +17,7 @@ Five routes: Character, Chat, Journals, Combat, Settings. Character selection ne
 
 Resolve fresh Actor/Item state by UUID. Validate ownership, session/config revisions, and duplicate submissions; clean up pending actions on cancellation. Never accept arbitrary client paths or native method names. Refresh after native updates; system models own derived values. Share implementation while retaining each game's terminology/grouping. Unsupported systems get identity and native sheets; isolate D&D handlers.
 
-Visible branding is Mikelandia Controls; preserve `ve-mobile` IDs, flags/settings, CSS prefix, folder, and release URLs. Upgrade restoration restores only owned client settings and preserves failed restoration data.
+Branding and technical ID are Mikelandia Controls / `mikelandia-controls`; CSS/data prefixes are `mc-`, and localization uses `MIKELANDIA_CONTROLS`. `branding-migration.mjs` copies browser state before first reads and missing Actor/raw-token flag leaves under one GM, preserving destination values and originals. See [migration](migration.md) for world activation and rollback. Upgrade restoration restores only owned client settings and preserves failed restoration data.
 
 ## Native applications and rolls
 
@@ -41,7 +41,7 @@ WFRP 10.1.2 / Library 3.5.1 missing-ammo cancellation can pass undefined setup d
 
 ## Shadowdark resources and gear
 
-HP/AC/DEF and XP/Grit/Luck use native values except nonnegative integer `flags.ve-mobile.shadowdarkResources.{def,grit}` (default zero). XP is `system.level.xp`; old Renown flags are unused. Preserve native/Pulp Luck, 44px edit targets, and independent `system.coins.{gp,sp,cp}` controls with no negative decrement.
+HP/AC/DEF and XP/Grit/Luck use native values except nonnegative integer `flags.mikelandia-controls.shadowdarkResources.{def,grit}` (default zero). XP is `system.level.xp`; old Renown flags are unused. Preserve native/Pulp Luck, 44px edit targets, and independent `system.coins.{gp,sp,cp}` controls with no negative decrement.
 
 Keep Gear/Slots/add visible when empty. Custom/catalog choice supports Cancel, Escape, and Back; render only the selected editor. Catalog auto-loads, searches all words across name/source ignoring case/accents, and keeps all results scrollable. Success/Cancel removes the editor; native cancellation retains it. Dispose chooser and ignore late responses.
 
@@ -53,7 +53,9 @@ Quantities are nonnegative safe integers without per-slot caps; revisions includ
 
 Phone/Tablet isolation is reversible and independent of Protect/Common Display. Approved descendants expose ancestor hosts without exposing siblings; reconcile late windows, rerenders, and forced display changes. Restore latest underlying preferences on exit.
 
-Admit exact owned editors, recognized roll forms, approved children, or native dialogs following deliberate mobile controls. Navigation/render hooks/generic modal flags grant no admission. Scoped requests own exact confirmations; Settings has explicit session ownership. Revoke ownership on teardown; preserve headers, notifications, tooltips, menus, and Dice So Nice canvas. Skip observer mutations wholly inside approved branches while reconciling ownership changes.
+Admit exact owned editors, recognized roll forms, approved children, or native dialogs following deliberate mobile controls. Navigation/render hooks/generic modal flags grant no admission. Scoped requests own exact confirmations; Settings has explicit session ownership. While the companion is active, the native visibility layer covers both `.mc-mobile-admitted-app` and `.mc-mobile-settings-app`, including headers and Close controls, so Common Display Hide UI cannot hide owned workflows. Keep the saved Hide UI preference and desktop presentation intact. Revoke ownership on teardown; preserve headers, notifications, tooltips, menus, and Dice So Nice canvas. Skip observer mutations wholly inside approved branches while reconciling ownership changes.
+
+Dice rendering resolves explicit static/reduced/normal choices or automatic device-hint selection without reading the canvas or a recovery journal. Keep the separate legacy client-setting restoration path for old saved graphics changes.
 
 `muteMobileAudio` defaults on locally. Guard first-gesture contexts, playback, gain writes, detached media, and embedded players; restore prior state on exit/disable. YouTube mute is idempotent per player even with stale iframe state: repeated commands trigger Player Widget playlist-volume/render loops. Guard volume/unmute without repeating mute. Audible proof requires a phone.
 
@@ -61,4 +63,4 @@ Optional in-memory API: `setRollTimingEnabled`, `rollTimingSnapshot`, `resetRoll
 
 ## Packaging
 
-Validation workflow: [AGENTS.md](../AGENTS.md). Build module packages with `py scripts/build_release.py --version <version>`; verify with `scripts/check_release.py`. Main pushes publish releases. The standalone login has its own build/deployment [runbook](mobile-login.md).
+Validation workflow: [AGENTS.md](../AGENTS.md). Build the single module package with `py scripts/build_release.py --version <version>`; verify with `scripts/check_release.py`. The canonical release contains `module.json` and `mikelandia-controls.zip`; publication removes obsolete experimental assets. Main pushes publish releases. The standalone login has its own build/deployment [runbook](mobile-login.md).

@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 from zipfile import ZIP_DEFLATED, ZipFile
 
 ROOT = Path(__file__).resolve().parents[1]
-REPOSITORY = "https://github.com/MihaiSereanu/ve-mobile"
+REPOSITORY = "https://github.com/MihaiSereanu/mikelandia-controls"
 RUNTIME_ENTRIES = ("src", "assets", "locales", "Icon.svg", "LICENSE")
 
 def download_url(value):
@@ -23,8 +23,6 @@ def main():
     parser.add_argument("--version", required=True)
     parser.add_argument("--manifest-url")
     parser.add_argument("--download-url")
-    parser.add_argument("--experimental-fallback", action="store_true",
-                        help="Mark this build as an experimental cross-system package")
     args = parser.parse_args()
     if not re.fullmatch(r"(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)", args.version):
         parser.error("Version must be MAJOR.MINOR.PATCH with no leading zeroes")
@@ -33,20 +31,11 @@ def main():
     manifest.update(
         version=args.version,
         url=REPOSITORY,
-        manifest=download_url(args.manifest_url or f"{REPOSITORY}/releases/download/latest/{'module-experimental.json' if args.experimental_fallback else 'module.json'}"),
-        download=download_url(args.download_url or f"{REPOSITORY}/releases/download/latest/{'ve-mobile-experimental.zip' if args.experimental_fallback else 've-mobile.zip'}"),
+        manifest=download_url(args.manifest_url or f"{REPOSITORY}/releases/download/latest/module.json"),
+        download=download_url(args.download_url or f"{REPOSITORY}/releases/download/latest/mikelandia-controls.zip"),
     )
-    if manifest["id"] != "ve-mobile":
+    if manifest["id"] != "mikelandia-controls":
         raise ValueError("Unexpected module ID")
-    if args.experimental_fallback:
-        relationships = manifest.get("relationships", {})
-        relationships.pop("systems", None)
-        if not relationships:
-            manifest.pop("relationships", None)
-        manifest["description"] = (
-            "Experimental Mikelandia Controls development build: D&D5e mobile sheets, Warhammer character "
-            "panels/actions/resources, Shadowdark PC panels/actions/inventory, and native-sheet fallback. Cross-system compatibility is unverified."
-        )
     files = []
     for entry in RUNTIME_ENTRIES:
         path = ROOT / entry
@@ -64,12 +53,10 @@ def main():
             json.loads(path.read_text(encoding="utf-8"))
 
     output = ROOT / "dist"
-    if args.experimental_fallback:
-        output = output / "experimental"
     output.mkdir(exist_ok=True)
     manifest_text = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
     (output / "module.json").write_text(manifest_text, encoding="utf-8")
-    archive_path = output / "ve-mobile.zip"
+    archive_path = output / "mikelandia-controls.zip"
     with ZipFile(archive_path, "w", ZIP_DEFLATED) as archive:
         archive.writestr("module.json", manifest_text)
         for path in files:

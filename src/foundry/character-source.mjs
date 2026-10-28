@@ -46,9 +46,9 @@ export function resolveActorSource(sourceUuid, {
 
 export function validSourceUuid(value, field = "actorSourceUuid") {
   const uuid = String(value ?? "").trim();
-  if (!uuid || uuid.length > 512) throw new Error(localizeFoundry("VEMOBILE.Interface.CharacterSource.IsRequired", "{field} is required.", { field: (field) }));
+  if (!uuid || uuid.length > 512) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.CharacterSource.IsRequired", "{field} is required.", { field: (field) }));
   if (!/^Actor\.[^.]+$|^Scene\.[^.]+\.Token\.[^.]+\.Actor\.[^.]+$/u.test(uuid)) {
-    throw new Error(localizeFoundry("VEMOBILE.Interface.CharacterSource.IsInvalid", "{field} is invalid.", { field: (field) }));
+    throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.CharacterSource.IsInvalid", "{field} is invalid.", { field: (field) }));
   }
   return uuid;
 }

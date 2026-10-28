@@ -1,6 +1,6 @@
 import { isJournalVisible, isJournalPageVisible } from "./journal-visibility.mjs";
 
-/** Route ordinary Foundry Journal sheet reads into VE while mobile owns the UI.
+/** Route ordinary Foundry Journal sheet reads into Mikelandia Controls while mobile owns the UI.
  * Foundry and modules still resolve the document and execute their own action;
  * only the final sheet presentation is substituted. */
 export function enableMobileJournalReader(scope, {
@@ -38,7 +38,7 @@ export function journalReadTarget(application, options = {}, game = globalThis.g
   const entry = document?.documentName === "JournalEntryPage" ? document.parent : document;
   if (entry?.documentName !== "JournalEntry" || entry.pack || !entry.id) return null;
   if (game?.journal?.get?.(entry.id) !== entry) return null;
-  if (options?.veNativeEdit || options?.edit || options?.configure || options?.tempOwnership) return null;
+  if (options?.mcNativeEdit || options?.edit || options?.configure || options?.tempOwnership) return null;
   // A specialised Journal application may provide workflows beyond reading.
   if (application?.constructor?.name?.includes("EnhancedJournal")) return null;
   if (!isJournalVisible(entry, game.user, game)) return null;

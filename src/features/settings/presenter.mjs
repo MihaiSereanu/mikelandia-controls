@@ -1,17 +1,17 @@
 import { icon, node } from "../../ui/dom.mjs";
 import { localizedNumber, localizedText } from "../../ui/localized-text.mjs";
 
-const uiText = (commands, key, fallback, data) => localizedText(commands?.localize, `VEMOBILE.Settings.UI.${key}`, fallback, data);
+const uiText = (commands, key, fallback, data) => localizedText(commands?.localize, `MIKELANDIA_CONTROLS.Settings.UI.${key}`, fallback, data);
 
 export function renderSettings({ commands, scope, overlayHost = null }) {
-  const host = node("section", { attrs: { "data-ve-settings-presenter-builds": "1", "data-ve-settings-content-builds": "0" } });
+  const host = node("section", { attrs: { "data-mc-settings-presenter-builds": "1", "data-mc-settings-content-builds": "0" } });
   const accordionState = createSettingsAccordionState();
   let contentScope;
   let currentOverlayHost = overlayHost;
   let ownedOverlays = [];
   const syncOverlayHost = nextHost => {
     currentOverlayHost = nextHost;
-    const destination = nextHost ?? host.querySelector(".ve-settings");
+    const destination = nextHost ?? host.querySelector(".mc-settings");
     const focused = host.ownerDocument?.activeElement;
     const restoreFocus = ownedOverlays.some(element => element.contains(focused));
     if (destination) for (const element of ownedOverlays) if (element.parentNode !== destination) destination.append(element);
@@ -20,13 +20,13 @@ export function renderSettings({ commands, scope, overlayHost = null }) {
   host.syncOverlayHost = syncOverlayHost;
   const refresh = (requiresReload = false) => {
     if (scope.disposed) return;
-    const scrollContainer = host.closest?.(".ve-viewport");
+    const scrollContainer = host.closest?.(".mc-viewport");
     const scrollTop = Number(scrollContainer?.scrollTop) || 0;
     const focusedId = host.ownerDocument?.activeElement?.id ?? "";
     contentScope?.dispose();
     contentScope = scope.child("settings-content");
     host.replaceChildren(settingsContent({ commands, scope: contentScope, refresh, requiresReload, overlayHost: currentOverlayHost, accordionState, captureOverlays: elements => { ownedOverlays = elements; } }));
-    host.dataset.veSettingsContentBuilds = String(Number(host.dataset.veSettingsContentBuilds) + 1);
+    host.dataset.mcSettingsContentBuilds = String(Number(host.dataset.mcSettingsContentBuilds) + 1);
     if (scrollContainer) scrollContainer.scrollTop = scrollTop;
     if (focusedId) host.querySelector?.(`#${safeId(focusedId)}`)?.focus?.({ preventScroll: true });
   };
@@ -37,7 +37,7 @@ export function renderSettings({ commands, scope, overlayHost = null }) {
 function settingsContent({ commands, scope, refresh, requiresReload, overlayHost, accordionState, captureOverlays }) {
   const preferences = commands.readSettings();
   const labels = preferences.labels ?? {};
-  const status = node("div", { className: "ve-settings-status", attrs: { role: "status", "aria-live": "polite" } });
+  const status = node("div", { className: "mc-settings-status", attrs: { role: "status", "aria-live": "polite" } });
   const reloadPrompt = createReloadPrompt(commands, scope);
   const defaults = createDefaultsPrompt(commands, scope, refresh);
   const overlays = [reloadPrompt.element, defaults.element].filter(Boolean);
@@ -49,33 +49,33 @@ function settingsContent({ commands, scope, refresh, requiresReload, overlayHost
   const groups = groupSettings(fields);
   const native = preferences.nativeSettings ?? {};
   return node("section", {
-    className: "ve-settings",
+    className: "mc-settings",
       attrs: { "aria-label": uiText(commands, "Settings", "Settings") },
     children: [
-      node("section", { className: "ve-settings-primary-section ve-settings-session", attrs: { "aria-labelledby": "ve-settings-session-title" }, children: [
-        node("header", { className: "ve-settings-primary-heading ve-settings-session-heading", children: [
+      node("section", { className: "mc-settings-primary-section mc-settings-session", attrs: { "aria-labelledby": "mc-settings-session-title" }, children: [
+        node("header", { className: "mc-settings-primary-heading mc-settings-session-heading", children: [
           icon("fa-users"),
-          node("h2", { text: labels.sessionTitle ?? uiText(commands, "SessionTitle", "Session"), attrs: { id: "ve-settings-session-title" } }),
+          node("h2", { text: labels.sessionTitle ?? uiText(commands, "SessionTitle", "Session"), attrs: { id: "mc-settings-session-title" } }),
           logoutButton(preferences.logoutLabel, commands, status, scope)
         ] }),
         sessionStatusPanel(commands, scope, labels)
       ] }),
-      node("div", { className: "ve-settings-divider", attrs: { "aria-hidden": "true" } }),
-      node("section", { className: "ve-settings-primary-section ve-settings-foundry-section", attrs: { "aria-labelledby": "ve-foundry-settings-title" }, children: [
-        node("header", { className: "ve-settings-primary-heading ve-settings-foundry-heading", children: [
+      node("div", { className: "mc-settings-divider", attrs: { "aria-hidden": "true" } }),
+      node("section", { className: "mc-settings-primary-section mc-settings-foundry-section", attrs: { "aria-labelledby": "mc-foundry-settings-title" }, children: [
+        node("header", { className: "mc-settings-primary-heading mc-settings-foundry-heading", children: [
           icon("fa-gear"),
-          node("h2", { text: native.title ?? uiText(commands, "FoundrySettingsTitle", "Foundry Settings"), attrs: { id: "ve-foundry-settings-title" } })
+          node("h2", { text: native.title ?? uiText(commands, "FoundrySettingsTitle", "Foundry Settings"), attrs: { id: "mc-foundry-settings-title" } })
         ] }),
         foundrySettingsBlock(native, commands, status, scope)
       ] }),
-      node("div", { className: "ve-settings-divider", attrs: { "aria-hidden": "true" } }),
-      node("section", { className: "ve-settings-primary-section ve-settings-mobile-section", attrs: { "aria-labelledby": "ve-mobile-settings-title" }, children: [
-        node("header", { className: "ve-settings-primary-heading ve-settings-mobile-heading", children: [
+      node("div", { className: "mc-settings-divider", attrs: { "aria-hidden": "true" } }),
+      node("section", { className: "mc-settings-primary-section mc-settings-mobile-section", attrs: { "aria-labelledby": "mc-mobile-settings-title" }, children: [
+        node("header", { className: "mc-settings-primary-heading mc-settings-mobile-heading", children: [
           icon("fa-mobile-screen-button"),
-          node("h2", { text: labels.mobileSettingsTitle ?? uiText(commands, "MobileSettingsTitle", "Mikelandia Controls Settings"), attrs: { id: "ve-mobile-settings-title" } }),
+          node("h2", { text: labels.mobileSettingsTitle ?? uiText(commands, "MobileSettingsTitle", "Mikelandia Controls Settings"), attrs: { id: "mc-mobile-settings-title" } }),
           defaults.button
         ] }),
-        node("div", { className: "ve-settings-groups", children: groups.map((group) => {
+        node("div", { className: "mc-settings-groups", children: groups.map((group) => {
           const rowsFor = (groupFields) => groupFields.flatMap((field) => {
             const row = settingField(field, commands, status, scope, reloadPrompt, {
               detail: null,
@@ -85,11 +85,11 @@ function settingsContent({ commands, scope, refresh, requiresReload, overlayHost
           });
           let children = rowsFor(group.fields);
           if (group.id === "device") children.push(node("button", {
-            className: "ve-settings-controls-link", attrs: { type: "button" },
-            children: [icon("fa-hand-pointer"), node("span", { text: commands.localize("VEMOBILE.Controls.Title") })],
+            className: "mc-settings-controls-link", attrs: { type: "button" },
+            children: [icon("fa-hand-pointer"), node("span", { text: commands.localize("MIKELANDIA_CONTROLS.Controls.Title") })],
             on: { click: event => commands.openControlsGuide(event.currentTarget) }
           }, scope));
-          return settingsSection(group.id, localizedText(commands.localize, `VEMOBILE.Settings.UI.Group.${group.id}`, group.title), children, scope, accordionState);
+          return settingsSection(group.id, localizedText(commands.localize, `MIKELANDIA_CONTROLS.Settings.UI.Group.${group.id}`, group.title), children, scope, accordionState);
         }) })
       ] }),
       status,
@@ -105,10 +105,10 @@ function foundrySettingsBlock(native, commands, status, scope) {
     iconName: "fa-gears",
     action: () => commands.openFoundrySettings()
   }, status, scope, commands);
-  return node("section", { className: "ve-foundry-settings", attrs: { "aria-labelledby": "ve-foundry-settings-title" }, children: [
+  return node("section", { className: "mc-foundry-settings", attrs: { "aria-labelledby": "mc-foundry-settings-title" }, children: [
     node("p", { text: native.openFoundryDescription ?? uiText(commands, "OpenFoundryDescription", "Open core Foundry and module settings here.") }),
     node("p", {
-      className: "ve-native-settings-compatibility-note",
+      className: "mc-native-settings-compatibility-note",
       attrs: { role: "note" },
       children: [icon("fa-circle-info"), node("span", {
         text: native.compatibilityHint ?? uiText(commands, "NativeSettingsCompatibility", "Some Foundry and module settings are designed for desktop and may not display correctly on smaller screens. If needed, switch to Desktop mode to access them.")
@@ -120,7 +120,7 @@ function foundrySettingsBlock(native, commands, status, scope) {
 
 function nativeSettingsAction({ name, hint, iconName, action }, status, scope, commands) {
   const button = node("button", {
-    className: "ve-setting-menu-button ve-button-accent-outline",
+    className: "mc-setting-menu-button mc-button-accent-outline",
     attrs: { type: "button" },
     children: [icon(iconName), node("span", { text: name }), icon("fa-chevron-right")]
   });
@@ -141,17 +141,17 @@ function nativeSettingsAction({ name, hint, iconName, action }, status, scope, c
 }
 
 function sessionStatusPanel(commands, scope, labels) {
-  const list = node("div", { className: "ve-session-status-list" });
+  const list = node("div", { className: "mc-session-status-list" });
   const update = snapshot => list.replaceChildren(...(snapshot?.users ?? []).map(user => node("div", {
-    className: "ve-session-user", children: [
-      node("span", { className: "ve-session-user-dot", attrs: { "aria-hidden": "true", style: `--ve-session-user-color:${user.color}` } }),
+    className: "mc-session-user", children: [
+      node("span", { className: "mc-session-user-dot", attrs: { "aria-hidden": "true", style: `--mc-session-user-color:${user.color}` } }),
       node("strong", { text: user.name })
     ]
   })));
   update(commands.readSessionStatus());
   commands.watchSessionStatus?.(scope, update);
-  return node("div", { className: "ve-session-status", children: [
-    node("span", { className: "ve-session-status-online", text: labels.online ?? uiText(commands, "Online", "Online") }), list
+  return node("div", { className: "mc-session-status", children: [
+    node("span", { className: "mc-session-status-online", text: labels.online ?? uiText(commands, "Online", "Online") }), list
   ] });
 }
 
@@ -159,7 +159,7 @@ export function groupSettings(fields) {
   const groups = [
     { id: "device", title: "Device & Power", keys: ["mode", "keepScreenAwake", "muteMobileAudio"] },
     { id: "actions", title: "Action Results", keys: ["showActionSummaries", "compactActionSummaries"] },
-    { id: "appearance", title: "Appearance", keys: ["theme", "colorScheme", "headerArtwork", "headerArtworkOpacity", "protectVeStyling"] },
+    { id: "appearance", title: "Appearance", keys: ["theme", "colorScheme", "headerArtwork", "headerArtworkOpacity", "protectMcStyling"] },
     { id: "performance", title: "Dice", keys: ["diceRendering"] },
   ];
   const known = new Set(groups.flatMap((group) => group.keys));
@@ -186,12 +186,12 @@ export function createSettingsAccordionState(initiallyOpen = []) {
 
 
 function settingsSection(id, title, children, scope, accordionState) {
-  const headerId = `ve-settings-${safeId(id)}-header`;
-  const bodyId = `ve-settings-${safeId(id)}-body`;
+  const headerId = `mc-settings-${safeId(id)}-header`;
+  const bodyId = `mc-settings-${safeId(id)}-body`;
   const expanded = accordionState.isOpen(id);
-  const body = node("div", { className: "ve-settings-group-body", attrs: { id: bodyId, hidden: !expanded }, children });
+  const body = node("div", { className: "mc-settings-group-body", attrs: { id: bodyId, hidden: !expanded }, children });
   const button = node("button", {
-    className: "ve-settings-group-toggle",
+    className: "mc-settings-group-toggle",
     attrs: { id: headerId, type: "button", "aria-expanded": String(expanded), "aria-controls": bodyId },
     children: [node("span", { text: title }), icon("fa-chevron-down")]
   });
@@ -200,7 +200,7 @@ function settingsSection(id, title, children, scope, accordionState) {
     button.setAttribute("aria-expanded", String(next));
     body.hidden = !next;
   });
-  return node("section", { className: "ve-settings-group", attrs: { "aria-labelledby": headerId }, children: [
+  return node("section", { className: "mc-settings-group", attrs: { "aria-labelledby": headerId }, children: [
     node("h2", { children: [button] }),
     body
   ] });
@@ -209,17 +209,17 @@ function settingsSection(id, title, children, scope, accordionState) {
 function createReloadPrompt(commands, scope) {
   const title = node("h2", { text: uiText(commands, "ReloadTitle", "Reload Mikelandia Controls?") });
   const message = node("p", { text: uiText(commands, "FoundryReloadNeeded", "Foundry needs to reload before this setting can take effect.") });
-  const later = node("button", { className: "ve-settings-reload-later", attrs: { type: "button" }, text: uiText(commands, "NotNow", "Not now") });
-  const reload = node("button", { className: "ve-settings-reload-now", attrs: { type: "button" }, children: [icon("fa-rotate"), node("span", { text: uiText(commands, "ReloadNow", "Reload now") })] });
+  const later = node("button", { className: "mc-settings-reload-later", attrs: { type: "button" }, text: uiText(commands, "NotNow", "Not now") });
+  const reload = node("button", { className: "mc-settings-reload-now", attrs: { type: "button" }, children: [icon("fa-rotate"), node("span", { text: uiText(commands, "ReloadNow", "Reload now") })] });
   const element = node("div", {
-    className: "ve-settings-reload",
+    className: "mc-settings-reload",
     attrs: { hidden: true, role: "dialog", "aria-modal": "true", "aria-live": "assertive" },
-    children: [node("section", { className: "ve-settings-reload-card", children: [
+    children: [node("section", { className: "mc-settings-reload-card", children: [
       icon("fa-arrows-rotate"),
       title,
       message,
-      node("p", { className: "ve-settings-reload-note", text: uiText(commands, "ReloadNote", "Your choice has already been saved. You can reload later from your browser if you prefer.") }),
-      node("div", { className: "ve-settings-reload-actions", children: [later, reload] })
+      node("p", { className: "mc-settings-reload-note", text: uiText(commands, "ReloadNote", "Your choice has already been saved. You can reload later from your browser if you prefer.") }),
+      node("div", { className: "mc-settings-reload-actions", children: [later, reload] })
     ] })]
   });
   scope.listen(later, "click", () => element.setAttribute("hidden", ""));
@@ -243,7 +243,7 @@ function createReloadPrompt(commands, scope) {
 
 function logoutButton(label, commands, status, scope) {
   const button = node("button", {
-    className: "ve-settings-logout",
+    className: "mc-settings-logout",
     attrs: { type: "button" },
     children: [
       icon("fa-right-from-bracket"),
@@ -268,7 +268,7 @@ function logoutButton(label, commands, status, scope) {
 }
 
 function settingField(field, commands, status, scope, reloadPrompt, { detail = null, onSaved = null } = {}) {
-  const controlId = `ve-setting-${safeId(field.namespace)}-${safeId(field.key)}`;
+  const controlId = `mc-setting-${safeId(field.namespace)}-${safeId(field.key)}`;
   const hintId = `${controlId}-hint`;
   const control = settingControl(field, controlId, commands);
   if (field.key === "compactActionSummaries" && commands.readActionSummaryPreferences?.().showActionSummaries === false) control.disabled = true;
@@ -295,7 +295,7 @@ function settingField(field, commands, status, scope, reloadPrompt, { detail = n
         throw new Error(field.failure ?? uiText(commands, "WakeLockFailed", "This browser did not grant the screen wake lock."));
       }
       if (field.key === "showActionSummaries") {
-        const dependent = control.closest(".ve-settings")?.querySelector('[id="ve-setting-ve-mobile-compactActionSummaries"]');
+        const dependent = control.closest(".mc-settings")?.querySelector('[id="mc-setting-mc-mobile-compactActionSummaries"]');
         if (dependent) dependent.disabled = result.value === false;
       }
       currentValue = result.value;
@@ -326,10 +326,10 @@ function settingField(field, commands, status, scope, reloadPrompt, { detail = n
     });
   }
   return node("div", {
-    className: `ve-setting ve-setting-${field.type}`,
+    className: `mc-setting mc-setting-${field.type}`,
     children: [
       settingCopy({ ...field, hint }, controlId, hintId, detail, commands),
-      node("div", { className: "ve-setting-control", children: [control, suffix] })
+      node("div", { className: "mc-setting-control", children: [control, suffix] })
     ]
   });
 }
@@ -342,19 +342,19 @@ function defaultLabel(field, commands) {
 }
 
 function createDefaultsPrompt(commands, scope, refresh) {
-  const button = node("button", { className: "ve-settings-defaults", attrs: { type: "button" }, text: uiText(commands, "RestoreDefaults", "Restore Defaults") });
-  const cancel = node("button", { className: "ve-settings-reload-later", attrs: { type: "button" }, text: uiText(commands, "Cancel", "Cancel") });
-  const confirm = node("button", { className: "ve-settings-reload-now", attrs: { type: "button" }, text: uiText(commands, "RestoreDefaults", "Restore Defaults") });
+  const button = node("button", { className: "mc-settings-defaults", attrs: { type: "button" }, text: uiText(commands, "RestoreDefaults", "Restore Defaults") });
+  const cancel = node("button", { className: "mc-settings-reload-later", attrs: { type: "button" }, text: uiText(commands, "Cancel", "Cancel") });
+  const confirm = node("button", { className: "mc-settings-reload-now", attrs: { type: "button" }, text: uiText(commands, "RestoreDefaults", "Restore Defaults") });
   const feedback = node("p", { attrs: { role: "status", "aria-live": "polite" } });
   const element = node("div", {
-    className: "ve-settings-reload",
+    className: "mc-settings-reload",
     attrs: { hidden: true, role: "dialog", "aria-modal": "true", "aria-label": uiText(commands, "RestoreDefaultsLabel", "Restore default settings") },
-    children: [node("section", { className: "ve-settings-reload-card", children: [
+    children: [node("section", { className: "mc-settings-reload-card", children: [
       icon("fa-rotate-left"),
       node("h2", { text: uiText(commands, "RestoreDefaultsTitle", "Restore default settings?") }),
       node("p", { text: uiText(commands, "RestoreDefaultsMessage", "Reset every setting listed on this tab to its default for this browser? A reload may be needed. Auto-detect may return this device to the desktop interface.") }),
       feedback,
-      node("div", { className: "ve-settings-reload-actions", children: [cancel, confirm] })
+      node("div", { className: "mc-settings-reload-actions", children: [cancel, confirm] })
     ] })]
   });
   scope.listen(button, "click", () => { element.hidden = false; cancel.focus({ preventScroll: true }); });
@@ -375,12 +375,12 @@ function createDefaultsPrompt(commands, scope, refresh) {
 }
 
 function settingCopy(entry, controlId, hintId, detail = null, commands) {
-  return node("div", { className: "ve-setting-copy", children: [
-    node(controlId ? "label" : "div", { className: "ve-setting-name", text: entry.name, attrs: { for: controlId } }),
+  return node("div", { className: "mc-setting-copy", children: [
+    node(controlId ? "label" : "div", { className: "mc-setting-name", text: entry.name, attrs: { for: controlId } }),
     entry.hint ? node("p", { attrs: hintId ? { id: hintId } : {}, text: entry.hint + (entry.defaultValue !== undefined ? ` (${uiText(commands, "Default", "Default: {value}.", { value: defaultLabel(entry, commands) })})` : "") }) : null,
     detail,
     entry.requiresReload || (entry.scope && entry.scope !== "client") ? node("div", {
-      className: "ve-setting-meta",
+      className: "mc-setting-meta",
       children: [
         entry.scope && entry.scope !== "client" ? node("span", { text: entry.scope === "world" ? uiText(commands, "World", "World") : uiText(commands, "User", "User") }) : null,
         entry.requiresReload ? node("span", { text: uiText(commands, "ReloadRequired", "Reload required") }) : null
@@ -391,11 +391,11 @@ function settingCopy(entry, controlId, hintId, detail = null, commands) {
 
 function settingControl(field, id, commands) {
   if (field.type === "unsupported") {
-    return node("span", { className: "ve-setting-unavailable", text: uiText(commands, "NotEditableHere", "Not editable here") });
+    return node("span", { className: "mc-setting-unavailable", text: uiText(commands, "NotEditableHere", "Not editable here") });
   }
   if (field.type === "choice") {
     const select = node("select", {
-      className: "ve-setting-select",
+      className: "mc-setting-select",
       attrs: { id, "aria-label": field.name, disabled: field.supported === false },
       children: field.choices.map((choice) => node("option", {
         text: choice.label,
@@ -421,7 +421,7 @@ function settingControl(field, id, commands) {
     });
   }
   return node("input", {
-    className: `ve-setting-input ve-setting-input-${field.type}`,
+    className: `mc-setting-input mc-setting-input-${field.type}`,
     attrs: {
       id,
       type: field.type === "number" || field.type === "color" ? field.type : "text",
@@ -437,7 +437,7 @@ function settingControl(field, id, commands) {
 }
 
 function settingsToggle(attrs) {
-  return node("input", { className: "ve-setting-toggle", attrs: { type: "checkbox", role: "switch", ...attrs } });
+  return node("input", { className: "mc-setting-toggle", attrs: { type: "checkbox", role: "switch", ...attrs } });
 }
 
 function controlValue(control, type) {
@@ -468,17 +468,4 @@ function safeId(value) {
 function friendlyLabel(value, fallback) {
   const label = String(value ?? "").trim();
   return !label || /^[A-Z0-9_.-]+$/u.test(label) ? fallback : label;
-}
-
-export function autoResolvedPolicyText(requested, resolved, label = titleCase, localize) {
-  return requested === "auto" && resolved ? localizedText(localize, "VEMOBILE.Settings.UI.AutoResolved", "Auto · {value}", { value: label(resolved) }) : "";
-}
-
-
-
-
-
-function titleCase(value) {
-  const text = String(value ?? "");
-  return text ? `${text[0].toUpperCase()}${text.slice(1)}` : "";
 }

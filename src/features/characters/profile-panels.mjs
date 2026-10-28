@@ -10,10 +10,10 @@ export function renderProfilePanels(actor, state, commands, scope) {
   if (!tabs.length) return [];
   const active = tabs.find(tab => tab.id === state.characterTab) ?? tabs[0];
   const inventory = actor.profileInventory && active.id === "inventory" ? renderProfileInventory(actor, commands, scope) : null;
-  const prefix = `ve-profile-${actor.sourceUuid.replace(/[^a-zA-Z0-9_-]/gu, "-")}`;
+  const prefix = `mc-profile-${actor.sourceUuid.replace(/[^a-zA-Z0-9_-]/gu, "-")}`;
   const valueText = row => {
     if (row.format === "boolean") return localizedText(commands.localize,
-      row.value ? "VEMOBILE.Panels.Active" : "VEMOBILE.Panels.Inactive", row.value ? "Active" : "Inactive");
+      row.value ? "MIKELANDIA_CONTROLS.Panels.Active" : "MIKELANDIA_CONTROLS.Panels.Inactive", row.value ? "Active" : "Inactive");
     if (row.format === "text" || (row.format === "display" && typeof row.value === "string")) return row.value;
     const locale = commands.readLocale?.() ?? "en";
     const value = localizedNumber(row.value, locale);
@@ -28,13 +28,13 @@ export function renderProfilePanels(actor, state, commands, scope) {
       template.content.querySelectorAll("script, style, iframe, object, embed, .secret").forEach(element => element.remove());
       template.content.querySelectorAll("p, div, li, br, h1, h2, h3, h4").forEach(element => element.append("\n"));
       const text = template.content.textContent.trim();
-      if (text) description = node("details", { className: "ve-profile-description", children: [
-        node("summary", { text: localizedText(commands.localize, "VEMOBILE.Panels.Details", "Details") }),
+      if (text) description = node("details", { className: "mc-profile-description", children: [
+        node("summary", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Panels.Details", "Details") }),
         node("p", { text })
       ] });
     }
     const label = row.action ? node("button", {
-      className: "ve-profile-action", attrs: { type: "button", "data-profile-action": row.action.id },
+      className: "mc-profile-action", attrs: { type: "button", "data-profile-action": row.action.id },
       children: [node("span", { text: row.label }), icon(row.action.icon ?? "fa-dice")],
       on: { click: async event => {
         const button = event.currentTarget;
@@ -52,9 +52,9 @@ export function renderProfilePanels(actor, state, commands, scope) {
         }
       } }
     }, scope) : node("span", { text: row.label });
-    return node("div", { className: "ve-profile-row", dataset: { profileField: row.id }, children: [
-      node("dt", { className: "ve-profile-item-name", children: [label] }), row.value === undefined || row.edit?.id.startsWith("quantity:") || row.edit?.id.startsWith("coin-") ? null : node("dd", { children: [
-        row.valueLabel ? node("span", { className: "ve-profile-value-label", text: `${row.valueLabel} ` }) : null,
+    return node("div", { className: "mc-profile-row", dataset: { profileField: row.id }, children: [
+      node("dt", { className: "mc-profile-item-name", children: [label] }), row.value === undefined || row.edit?.id.startsWith("quantity:") || row.edit?.id.startsWith("coin-") ? null : node("dd", { children: [
+        row.valueLabel ? node("span", { className: "mc-profile-value-label", text: `${row.valueLabel} ` }) : null,
         node("span", { text: `${row.valuePrefix ?? ""}${valueText(row)}` })
       ] }), description, row.edit ? renderProfileResourceEditor(row, actor, commands, scope) : null
     ] });
@@ -67,29 +67,29 @@ export function renderProfilePanels(actor, state, commands, scope) {
     const compact = ["values", "counters"].includes(section.kind) && section.rows.length === 1;
     const inventorySection = inventory && section.id === "gear";
     const heading = [node("h3", { text: section.label }), ...(section.summary ?? []).map(row => node("span", {
-      className: "ve-profile-section-metric", dataset: { profileMetric: row.id }, text: `${row.label} ${valueText(row)}`
+      className: "mc-profile-section-metric", dataset: { profileMetric: row.id }, text: `${row.label} ${valueText(row)}`
     }))];
     const element = node("section", {
-      className: `ve-profile-section ve-profile-${section.kind}${section.layout === "inline" ? " ve-profile-section-inline" : ""}`, dataset: { profileSection: section.id },
-      children: [compact && section.label === section.rows[0].label && !section.summary?.length ? null : node("header", { className: "ve-profile-section-heading", children: [
-        ...(inventorySection ? [node("div", { className: "ve-profile-section-title", children: heading }), inventory.button] : heading)
+      className: `mc-profile-section mc-profile-${section.kind}${section.layout === "inline" ? " mc-profile-section-inline" : ""}`, dataset: { profileSection: section.id },
+      children: [compact && section.label === section.rows[0].label && !section.summary?.length ? null : node("header", { className: "mc-profile-section-heading", children: [
+        ...(inventorySection ? [node("div", { className: "mc-profile-section-title", children: heading }), inventory.button] : heading)
       ] }), inventorySection ? inventory.body : null, section.kind === "text" ? node("p", { text: section.text }) : node("dl", {
         children: section.rows.map(renderRow)
       })]
     });
     if (compact) {
-      if (!summary) { summary = node("div", { className: `ve-profile-summary${["paired", "triple"].includes(active.summaryLayout) ? ` ve-profile-summary-${active.summaryLayout}` : ""}` }); sections.push(summary); }
+      if (!summary) { summary = node("div", { className: `mc-profile-summary${["paired", "triple"].includes(active.summaryLayout) ? ` mc-profile-summary-${active.summaryLayout}` : ""}` }); sections.push(summary); }
       summary.append(element);
     } else { summary = null; sections.push(element); }
   }
   return [
-    node("nav", { className: "ve-profile-tabs", attrs: { role: "tablist" }, children: tabs.map(tab => node("button", {
+    node("nav", { className: "mc-profile-tabs", attrs: { role: "tablist" }, children: tabs.map(tab => node("button", {
       text: tab.label,
       attrs: { type: "button", role: "tab", id: `${prefix}-tab-${tab.id}`, "aria-controls": `${prefix}-panel-${tab.id}`,
         "aria-selected": String(tab === active), "data-profile-tab": tab.id },
       on: { click: () => commands.selectCharacterTab(tab.id) }
     }, scope)) }),
-    node("div", { className: "ve-profile-content", attrs: { role: "tabpanel", id: `${prefix}-panel-${active.id}`,
+    node("div", { className: "mc-profile-content", attrs: { role: "tabpanel", id: `${prefix}-panel-${active.id}`,
       "aria-labelledby": `${prefix}-tab-${active.id}` }, children: sections })
   ];
 }

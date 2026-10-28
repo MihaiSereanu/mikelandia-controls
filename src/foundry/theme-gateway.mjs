@@ -6,8 +6,8 @@ const CORE_THEME_SETTING = "core.uiConfig";
 /**
  * Synchronize Mikelandia Controls with Foundry v13's Interface Theme.
  *
- * A direct VE choice intentionally sets both native themes. A native change
- * only flows from Interface Theme back into VE, leaving Application Theme as
+ * A direct Mikelandia Controls choice intentionally sets both native themes. A native change
+ * only flows from Interface Theme back into Mikelandia Controls, leaving Application Theme as
  * an independent Foundry control.
  */
 export function createFoundryThemeGateway({
@@ -118,7 +118,7 @@ export function createFoundryThemeGateway({
       return true;
     },
 
-    /** A direct VE change makes both Foundry theme controls match it. */
+    /** A direct Mikelandia Controls change makes both Foundry theme controls match it. */
     sync(requested) {
       const theme = normalizedTheme(requested) ?? "dark";
       if (ignoredMobileTheme === theme) {
@@ -185,7 +185,7 @@ function configFingerprint(config) {
 }
 
 function updateHostedSurfaces(document, theme) {
-  for (const element of document?.querySelectorAll?.(".ve-native-chat-screen, .ve-mobile-dialog.themed") ?? []) {
+  for (const element of document?.querySelectorAll?.(".mc-native-chat-screen, .mc-mobile-dialog.themed") ?? []) {
     element.classList?.add?.("themed");
     element.classList?.remove?.("theme-light", "theme-dark");
     element.classList?.add?.(`theme-${theme}`);

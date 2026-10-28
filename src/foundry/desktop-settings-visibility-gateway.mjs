@@ -1,7 +1,7 @@
 import { isMobilePerformanceAuthorityActive } from "../kernel/presentation-mode-authority.mjs";
 import { localizeFoundry } from "./localization.mjs";
 
-const MODULE_ID = "ve-mobile";
+import { MODULE_ID } from "./preferences.mjs";
 const DESKTOP_HIDDEN_SETTING_KEYS = Object.freeze([
   "theme",
   "colorScheme",
@@ -9,25 +9,25 @@ const DESKTOP_HIDDEN_SETTING_KEYS = Object.freeze([
   "headerArtworkOpacity",
   "keepScreenAwake",
   "diceRendering",
-  "protectVeStyling",
+  "protectMcStyling",
   "characterFavouritesSource"
 ]);
 const GROUPS = Object.freeze([
   { id: "preferences", keys: ["showActionSummaries", "compactActionSummaries"] },
 ]);
 
-/** Remove only unedited/omitted VE controls; other modules retain native submission. */
-export function filterVeSettingsSubmission(values, fields, { readCurrent, canWrite, localize = localizeFoundry }) {
+/** Remove only unedited/omitted Mikelandia Controls controls; other modules retain native submission. */
+export function filterMcSettingsSubmission(values, fields, { readCurrent, canWrite, localize = localizeFoundry }) {
   const result = { ...values };
   for (const id of Object.keys(result)) {
-    if (!id.startsWith("ve-mobile.")) continue;
+    if (!id.startsWith("mikelandia-controls.")) continue;
     const field = fields.get(id);
-    if (!field || field.control.disabled || field.control.closest?.(".ve-mobile-desktop-hidden-setting")
+    if (!field || field.control.disabled || field.control.closest?.(".mc-mobile-desktop-hidden-setting")
       || sameValue(controlValue(field.control), field.initial)) { delete result[id]; continue; }
-    if (!canWrite(id)) throw new Error(localize("VEMOBILE.Graphics.DesktopSettingsPermission", "You no longer have permission to change this setting."));
+    if (!canWrite(id)) throw new Error(localize("MIKELANDIA_CONTROLS.Graphics.DesktopSettingsPermission", "You no longer have permission to change this setting."));
     const current = readCurrent(id);
     if (!sameValue(current, field.stored) && !sameValue(current, result[id])) {
-      throw new Error(localize("VEMOBILE.Graphics.DesktopSettingsStale", "This setting changed while the form was open. Close and reopen settings before changing it."));
+      throw new Error(localize("MIKELANDIA_CONTROLS.Graphics.DesktopSettingsStale", "This setting changed while the form was open. Close and reopen settings before changing it."));
     }
   }
   return result;
@@ -55,7 +55,7 @@ export function createFoundryDesktopSettingsVisibilityGateway({
   const desktopPresentation = () => !isMobilePerformanceAuthorityActive(readPolicy);
 
   const localize = key => {
-    try { return getGame()?.i18n?.localize?.(`VEMOBILE.Controls.Settings.${key}`) ?? key; }
+    try { return getGame()?.i18n?.localize?.(`MIKELANDIA_CONTROLS.Controls.Settings.${key}`) ?? key; }
     catch { return key; }
   };
   const grouped = new Map();
@@ -81,8 +81,8 @@ export function createFoundryDesktopSettingsVisibilityGateway({
       const rows = group.keys.map(key => settingRow(category, key)).filter(Boolean);
       if (!rows.length) continue;
       const element = category.ownerDocument.createElement("details");
-      element.className = "ve-native-settings-group";
-      element.dataset.veSettingsGroup = group.id;
+      element.className = "mc-native-settings-group";
+      element.dataset.mcSettingsGroup = group.id;
       const summary = category.ownerDocument.createElement("summary");
       summary.textContent = localize(group.id);
       element.append(summary);
@@ -103,8 +103,8 @@ export function createFoundryDesktopSettingsVisibilityGateway({
     }
   };
   const summaryDependency = category => {
-    const parent = category.querySelector('[name="ve-mobile.showActionSummaries"]');
-    const child = category.querySelector('[name="ve-mobile.compactActionSummaries"]');
+    const parent = category.querySelector('[name="mikelandia-controls.showActionSummaries"]');
+    const child = category.querySelector('[name="mikelandia-controls.compactActionSummaries"]');
     if (!parent || !child) return;
     const entry = submissions.get(category);
     if (entry && !entry.dependency) {
@@ -117,7 +117,7 @@ export function createFoundryDesktopSettingsVisibilityGateway({
   const protectSubmission = (app, category) => {
     if (!category || submissions.has(category)) return;
     const game = getGame();
-    const fields = new Map([...category.querySelectorAll('input[name], select[name], textarea[name]')].filter(control => control.name?.startsWith("ve-mobile.")).map(control => {
+    const fields = new Map([...category.querySelectorAll('input[name], select[name], textarea[name]')].filter(control => control.name?.startsWith("mikelandia-controls.")).map(control => {
       const id = control.name;
       return [id, { control, initial: controlValue(control), stored: game?.settings?.get?.(MODULE_ID, id.slice(MODULE_ID.length + 1)) }];
     }));
@@ -129,9 +129,9 @@ export function createFoundryDesktopSettingsVisibilityGateway({
     if (typeof original !== "function") return;
     const wrapper = async function(event, form, data) {
       const currentGame = getGame();
-      if (identity.world !== currentGame?.world?.id || identity.user !== currentGame?.user?.id) throw new Error(localizeFoundry("VEMOBILE.Graphics.DesktopSettingsSessionChanged", "The settings session changed."));
+      if (identity.world !== currentGame?.world?.id || identity.user !== currentGame?.user?.id) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Graphics.DesktopSettingsSessionChanged", "The settings session changed."));
       const values = data.object;
-      const filtered = filterVeSettingsSubmission(values, fields, {
+      const filtered = filterMcSettingsSubmission(values, fields, {
         localize: (key, fallback) => localizeFoundry(key, fallback),
         readCurrent: id => currentGame.settings.get(MODULE_ID, id.slice(MODULE_ID.length + 1)),
         canWrite: id => {
@@ -141,7 +141,7 @@ export function createFoundryDesktopSettingsVisibilityGateway({
             && !(FCS?.isRestricted?.(id)) && !(FCS?.isForced?.(id) && !currentGame.user?.isGM));
         }
       });
-      for (const id of Object.keys(values)) if (id.startsWith("ve-mobile.") && !Object.hasOwn(filtered, id)) delete values[id];
+      for (const id of Object.keys(values)) if (id.startsWith("mikelandia-controls.") && !Object.hasOwn(filtered, id)) delete values[id];
       return original.call(this, event, form, data);
     };
     formOptions.handler = wrapper;
@@ -152,7 +152,7 @@ export function createFoundryDesktopSettingsVisibilityGateway({
     if (!entry) return;
     if (entry.formOptions?.handler === entry.wrapper) entry.formOptions.handler = entry.original;
     if (entry.dependency) {
-      category.querySelector('[name="ve-mobile.showActionSummaries"]')?.removeEventListener("change", entry.change);
+      category.querySelector('[name="mikelandia-controls.showActionSummaries"]')?.removeEventListener("change", entry.change);
       entry.dependency.child.disabled = entry.dependency.disabled;
     }
     submissions.delete(category);
@@ -179,14 +179,14 @@ export function createFoundryDesktopSettingsVisibilityGateway({
     else row.removeAttribute?.("hidden");
     if (previous.ariaHidden === null) row.removeAttribute?.("aria-hidden");
     else row.setAttribute?.("aria-hidden", previous.ariaHidden);
-    row.classList?.remove?.("ve-mobile-desktop-hidden-setting");
+    row.classList?.remove?.("mc-mobile-desktop-hidden-setting");
     for (const [control, disabled] of previous.controls) control.disabled = disabled;
     rowState.delete(row);
   };
 
   const applyOriginalVisibility = (row, previous, hide) => {
     row.hidden = hide || previous.hidden;
-    row.classList?.toggle?.("ve-mobile-desktop-hidden-setting", hide);
+    row.classList?.toggle?.("mc-mobile-desktop-hidden-setting", hide);
     for (const [control, disabled] of previous.controls) control.disabled = hide || disabled;
     if (hide) row.setAttribute?.("aria-hidden", "true");
     else if (previous.ariaHidden === null) row.removeAttribute?.("aria-hidden");
@@ -223,7 +223,7 @@ export function createFoundryDesktopSettingsVisibilityGateway({
     }
     for (const [row, state] of rowState) if (state.root === root && !currentRows.has(row)) restoreRow(row);
 
-    category.querySelector?.("#ve-mobile-desktop-settings-notice")?.remove();
+    category.querySelector?.("#mc-mobile-desktop-settings-notice")?.remove();
     if (hideMobileControls) groupRows(root, category);
     else restoreGrouping(root);
     summaryDependency(category);

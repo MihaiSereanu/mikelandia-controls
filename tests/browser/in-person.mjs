@@ -27,7 +27,7 @@ try {
   game.settings = {
     settings: definitions,
     register(namespace, key, data) { definitions.set(`${namespace}.${key}`, { ...data, namespace, key }); },
-    get(namespace, key) { return namespace === "ve-mobile" ? values.get(key) ?? definitions.get(`${namespace}.${key}`)?.default : originalGet(namespace, key); },
+    get(namespace, key) { return namespace === "mikelandia-controls" ? values.get(key) ?? definitions.get(`${namespace}.${key}`)?.default : originalGet(namespace, key); },
     async set(namespace, key, value) { values.set(key, value); return value; }
   };
   registerPreferences();
@@ -77,41 +77,41 @@ try {
   });
   kernel.reconcile(); await tick(); await tick();
   check("complete kernel starts without a canvas", kernel.active);
-  const root = document.querySelector(".ve-mobile-app");
+  const root = document.querySelector(".mc-mobile-app");
   check("application uses Mikelandia Controls name", root?.getAttribute("aria-label") === "Mikelandia Controls");
-  check("exactly five navigation screens remain", [...root.querySelectorAll(".ve-main-nav-item")].map(b => b.dataset.route).join(",") === "characters,chat,journals,combat,settings");
-  const nav = root.querySelector(".ve-bottom-nav");
+  check("exactly five navigation screens remain", [...root.querySelectorAll(".mc-main-nav-item")].map(b => b.dataset.route).join(",") === "characters,chat,journals,combat,settings");
+  const nav = root.querySelector(".mc-bottom-nav");
   check("bottom navigation has no empty sixth slot", nav.getBoundingClientRect().height > nav.getBoundingClientRect().width || getComputedStyle(nav).gridTemplateColumns.split(" ").length === 5);
-  check("character renders without token selection", !!root.querySelector(legacy ? ".ve-character-selector" : ".ve-profile-section"));
-  check("no map or split viewport mounts", !root.querySelector(".ve-scene-screen, .ve-split-scene-viewport, .ve-tablet-split-toggle"));
-  check("no light or token placement controls mount", !root.querySelector('[data-profile-action^="light:"], .ve-portrait-action-menu, .ve-portrait-token-ghost'));
+  check("character renders without token selection", !!root.querySelector(legacy ? ".mc-character-selector" : ".mc-profile-section"));
+  check("no map or split viewport mounts", !root.querySelector(".mc-scene-screen, .mc-split-scene-viewport, .mc-tablet-split-toggle"));
+  check("no light or token placement controls mount", !root.querySelector('[data-profile-action^="light:"], .mc-portrait-action-menu, .mc-portrait-token-ghost'));
   root.querySelector('[data-route="journals"]').click(); await tick();
-  check("journal library hides module storage and denied documents", root.querySelectorAll(".ve-journal-entry").length === 1 && root.querySelector(".ve-journal-entry")?.textContent.includes("Shared Handout"));
-  check("journal summary excludes hidden page names", !/Private page|Hidden page/.test(root.querySelector(".ve-journal-library")?.textContent));
-  root.querySelector(".ve-journal-entry").click(); await tick();
-  check("permitted journal opens in mobile reader", root.querySelector(".ve-journal-rich-text")?.textContent.includes("A shared handout."));
-  check("reader excludes private and sheet-hidden pages", !/Private page|Hidden page/.test(root.querySelector(".ve-journal-reader")?.textContent));
+  check("journal library hides module storage and denied documents", root.querySelectorAll(".mc-journal-entry").length === 1 && root.querySelector(".mc-journal-entry")?.textContent.includes("Shared Handout"));
+  check("journal summary excludes hidden page names", !/Private page|Hidden page/.test(root.querySelector(".mc-journal-library")?.textContent));
+  root.querySelector(".mc-journal-entry").click(); await tick();
+  check("permitted journal opens in mobile reader", root.querySelector(".mc-journal-rich-text")?.textContent.includes("A shared handout."));
+  check("reader excludes private and sheet-hidden pages", !/Private page|Hidden page/.test(root.querySelector(".mc-journal-reader")?.textContent));
   root.querySelector('[data-route="combat"]').click(); await tick();
-  check("Combat lists initiative without a canvas", root.querySelector(".ve-combat-name")?.textContent === "Fighter");
+  check("Combat lists initiative without a canvas", root.querySelector(".mc-combat-name")?.textContent === "Fighter");
   check("Combat has no focus or targeting controls", !root.querySelector(".fa-bullseye, .fa-arrows-to-eye"));
-  root.querySelector(".ve-combat-roll-initiative").click(); await tick();
+  root.querySelector(".mc-combat-roll-initiative").click(); await tick();
   check("initiative uses native combat workflow", nativeCalls[0]?.[0] === "initiative");
-  root.querySelector(".ve-combat-end-turn").click(); await tick();
+  root.querySelector(".mc-combat-end-turn").click(); await tick();
   check("End Turn uses native progression", nativeCalls.at(-1)?.[0] === "next");
-  root.querySelector(".ve-gm-combat-previous").click(); await tick();
+  root.querySelector(".mc-gm-combat-previous").click(); await tick();
   check("GM Previous remains available", nativeCalls.at(-1)?.[0] === "previous");
-  root.querySelector(".ve-gm-combat-next").click(); await tick();
+  root.querySelector(".mc-gm-combat-next").click(); await tick();
   check("GM Next remains available", nativeCalls.at(-1)?.[0] === "next");
-  root.querySelector(".ve-gm-combat-center").click(); await tick();
+  root.querySelector(".mc-gm-combat-center").click(); await tick();
   check("GM End Combat remains available", nativeCalls.at(-1)?.[0] === "end");
   game.combat.started = false; Hooks.emit("updateCombat", game.combat, {}); await tick();
-  root.querySelector(".ve-gm-combat-center").click(); await tick();
+  root.querySelector(".mc-gm-combat-center").click(); await tick();
   check("GM Start Combat remains available", nativeCalls.at(-1)?.[0] === "start");
   check("navigation fits viewport", document.documentElement.scrollWidth <= innerWidth + 1);
-  check("GM controls fit viewport", root.querySelector(".ve-gm-combat-controls").getBoundingClientRect().right <= innerWidth + 1);
+  check("GM controls fit viewport", root.querySelector(".mc-gm-combat-controls").getBoundingClientRect().right <= innerWidth + 1);
   root.querySelector('[data-route="settings"]').click(); await tick();
-  check("Settings no longer exposes Scene, movement, memory or overlays", !/Scene & Controls|Joystick|Mobile Asset Optimizer|Memory Protection|Module Overlays/.test(root.querySelector(".ve-settings")?.textContent ?? ""));
-  const settings = root.querySelector(".ve-settings");
+  check("Settings no longer exposes Scene, movement, memory or overlays", !/Scene & Controls|Joystick|Mobile Asset Optimizer|Memory Protection|Module Overlays/.test(root.querySelector(".mc-settings")?.textContent ?? ""));
+  const settings = root.querySelector(".mc-settings");
   check("Settings renders successfully", !!settings);
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
 } catch (error) {

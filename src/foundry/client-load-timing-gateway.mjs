@@ -1,6 +1,6 @@
 import { localizeFoundry } from "./localization.mjs";
 import { MODULE_ID, LOAD_TIMING_KEYS } from "./preferences.mjs";
-const RECOVERY_SESSION_KEY = "ve-mobile:last-recovery:v1";
+const RECOVERY_SESSION_KEY = "mikelandia-controls:last-recovery:v1";
 
 /** Browser-specific successful timings and bounded recovery diagnostics. */
 export function createClientLoadTimingGateway({
@@ -32,7 +32,7 @@ export function createClientLoadTimingGateway({
     if (!Number.isFinite(value) || value <= 0) return false;
     const game = getGame();
     const registration = game?.settings?.settings?.get?.(`${MODULE_ID}.${key}`);
-    if (registration?.scope !== "client") throw new Error(localizeFoundry("VEMOBILE.Interface.ClientLoadTimingGateway.LoadTimingStorageIsNotClientScoped", "Load timing storage is not client-scoped."));
+    if (registration?.scope !== "client") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.ClientLoadTimingGateway.LoadTimingStorageIsNotClientScoped", "Load timing storage is not client-scoped."));
     // FCS 2.6 routes a forced client-setting write by a GM through a world
     // mirror. A device timing must never change that shared value.
     if (isForced(game, key)) return false;

@@ -1,4 +1,4 @@
-# Working in VE Mobile
+# Working in Mikelandia Controls
 
 Read [current status](docs/current-status.md) first. Read only the relevant [architecture](docs/architecture.md) section; code/tests establish behavior. Open [mobile login](docs/mobile-login.md) for login/PWA deployment work.
 
@@ -7,7 +7,7 @@ Read [current status](docs/current-status.md) first. Read only the relevant [arc
 - Follow the standing grill-me interview; reuse settled answers. Preserve existing edits.
 - Use targeted `rg` searches and bounded reads. State the hypothesis and required evidence; stop after it passes. After two unproductive attempts, change approach and explain the blocker.
 - Trace actual native classes and active modules before patching Foundry symptoms: Shadowdark sheets use V1, its roll dialogs can use V2, and Warhammer sheets use V2.
-- Keep this checkout separate from `D:/FoundryVTT/Data/modules/ve-mobile`. Verify installed files for live reports; copy only within authorized scope.
+- Keep this checkout separate from `D:/FoundryVTT/Data/modules/mikelandia-controls`. Verify installed files for live reports; copy only within authorized scope.
 
 ## Validation
 

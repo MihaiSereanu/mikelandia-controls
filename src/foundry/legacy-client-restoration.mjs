@@ -1,7 +1,7 @@
 import { KEYS, MODULE_ID } from "./preferences.mjs";
 import { restoreLocalSetting } from "./client-setting-restoration.mjs";
 
-// Retire graphics changes saved by earlier VE Mobile versions. This module
+// Retire graphics changes saved by earlier Mikelandia Controls versions. This module
 // restores client preferences only; it never applies a graphics profile.
 export function createLegacyClientRestoration({ getGame = () => globalThis.game } = {}) {
   const allowed = new Set(["core.performanceMode", "core.maxFPS", "core.pixelRatioResolutionScaling", "core.mipmap", "core.lightAnimation"]);

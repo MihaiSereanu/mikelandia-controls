@@ -42,16 +42,5 @@ const ICONS = Object.freeze({
 
 export function sheetTabIcon(name) {
   const definition = ICONS[name] ?? ICONS.biography;
-  return vectorIcon(definition.viewBox, definition.shapes, `ve-sheet-tab-icon ve-sheet-tab-icon-${name}`);
-}
-
-/** A compact VE-owned heroic crest: shield, raised sword, and laurel branches. */
-export function heroicInspirationIcon() {
-  return vectorIcon("0 0 64 64", [
-    { tag: "path", attrs: { d: "M32 3 53 11v16c0 15-8.2 26.3-21 34C19.2 53.3 11 42 11 27V11L32 3Z", fill: "none", stroke: "currentColor", "stroke-width": 3, "stroke-linejoin": "round" } },
-    { tag: "path", attrs: { d: "m32 10 5 20-5 6-5-6 5-20Zm-10 21h20v4H22v-4Zm8 4h4v13h-4V35Zm2 12 5 5H27l5-5Z", fill: "currentColor" } },
-    { tag: "path", attrs: { d: "M22 45c-5-4.2-7.7-10-7.2-16.7M42 45c5-4.2 7.7-10 7.2-16.7", fill: "none", stroke: "currentColor", "stroke-width": 2.4, "stroke-linecap": "round" } },
-    { tag: "path", attrs: { d: "m16 34-5-2 3.6 5.2L16 34Zm2.7 6.2-5.2-.4 4.6 4.1.6-3.7Zm29.3-6.2 5-2-3.6 5.2L48 34Zm-2.7 6.2 5.2-.4-4.6 4.1-.6-3.7Z", fill: "currentColor" } },
-    { tag: "path", attrs: { d: "M23 16 18 13l2 5-4 3 5.5.4L23 27l1.5-5.6L30 21l-4-3 2-5-5 3Zm18 0-5-3 2 5-4 3 5.5.4L41 27l1.5-5.6L48 21l-4-3 2-5-5 3Z", fill: "currentColor", opacity: ".72" } }
-  ], "ve-inspiration-symbol");
+  return vectorIcon(definition.viewBox, definition.shapes, `mc-sheet-tab-icon mc-sheet-tab-icon-${name}`);
 }

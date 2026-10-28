@@ -5,7 +5,7 @@ const MAX_ENTRIES = 200;
 
 /**
  * A bounded, serializable mobile diagnostic trail. It intentionally records
- * VE's important lifecycle failures and uncaught browser failures without
+ * Mikelandia Controls's important lifecycle failures and uncaught browser failures without
  * patching the browser console or collecting data remotely.
  */
 export function createMobileDiagnostics({
@@ -21,7 +21,7 @@ export function createMobileDiagnostics({
     const entry = Object.freeze({
       at: safeTimestamp(now),
       level: normalizedLevel,
-      message: String(message ?? localizeFoundry("VEMOBILE.Interface.MobileDiagnostics.VEMobileEvent", "Mikelandia Controls event")).slice(0, 500),
+      message: String(message ?? localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobileDiagnostics.MCMobileEvent", "Mikelandia Controls event")).slice(0, 500),
       ...(error ? { error: errorText(error).slice(0, 1600) } : {})
     });
     entries.push(entry);

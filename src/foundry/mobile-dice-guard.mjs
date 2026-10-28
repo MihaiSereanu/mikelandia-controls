@@ -166,66 +166,6 @@ export function reduceDiceQuality(instance) {
   };
 }
 
-/**
- * Read-only geometry for the existing diagnostics report. This deliberately
- * observes DSN's public instance and renderer surface without changing either.
- */
-export function inspectDiceRuntime(instance, {
-  getWindow = () => globalThis.window,
-  getGame = () => globalThis.game
-} = {}) {
-  const browser = getWindow?.();
-  const game = getGame?.();
-  const box = instance?.box;
-  const renderer = box?.renderer ?? instance?.dice3dRenderers?.board;
-  const host = instance?.canvas?.[0] ?? box?.container ?? null;
-  const canvas = renderer?.domElement ?? host?.querySelector?.("canvas") ?? null;
-  const hostRect = safeRect(host);
-  const canvasRect = safeRect(canvas);
-  const cssWidth = finiteDimension(canvas?.clientWidth) ?? finiteDimension(canvasRect?.width) ?? finiteDimension(host?.clientWidth) ?? finiteDimension(hostRect?.width);
-  const cssHeight = finiteDimension(canvas?.clientHeight) ?? finiteDimension(canvasRect?.height) ?? finiteDimension(host?.clientHeight) ?? finiteDimension(hostRect?.height);
-  const backingWidth = finiteDimension(canvas?.width);
-  const backingHeight = finiteDimension(canvas?.height);
-
-  let performanceMode = null;
-  try { performanceMode = game?.settings?.get?.("core", "performanceMode") ?? null; } catch { /* Core settings may not be ready. */ }
-
-  return Object.freeze({
-    available: Boolean(instance && box && renderer),
-    viewport: Object.freeze({
-      width: finiteDimension(browser?.innerWidth),
-      height: finiteDimension(browser?.innerHeight),
-      visualWidth: finiteDimension(browser?.visualViewport?.width),
-      visualHeight: finiteDimension(browser?.visualViewport?.height),
-      devicePixelRatio: finiteDimension(browser?.devicePixelRatio) ?? 1,
-      screenWidth: finiteDimension(browser?.screen?.width),
-      screenHeight: finiteDimension(browser?.screen?.height)
-    }),
-    host: Object.freeze({
-      cssWidth: finiteDimension(hostRect?.width) ?? finiteDimension(host?.clientWidth),
-      cssHeight: finiteDimension(hostRect?.height) ?? finiteDimension(host?.clientHeight)
-    }),
-    canvas: Object.freeze({
-      cssWidth,
-      cssHeight,
-      backingWidth,
-      backingHeight,
-      rendererPixelRatio: finiteDimension(renderer?.getPixelRatio?.()),
-      effectivePixelRatioX: effectiveRatio(backingWidth, cssWidth),
-      effectivePixelRatioY: effectiveRatio(backingHeight, cssHeight)
-    }),
-    quality: Object.freeze({
-      imageQuality: box?.config?.imageQuality ?? null,
-      useHighDPI: box?.dicefactory?.useHighDPI ?? null,
-      antialiasing: box?.dicefactory?.aa ?? box?.config?.antialiasing ?? null,
-      shadowQuality: box?.dicefactory?.shadowQuality ?? box?.config?.shadowQuality ?? null,
-      bumpMapping: box?.dicefactory?.realisticLighting ?? box?.config?.bumpMapping ?? null,
-      customRollingArea: Boolean(box?.config?.rollingArea)
-    }),
-    foundryPerformanceMode: Number.isFinite(Number(performanceMode)) ? Number(performanceMode) : null
-  });
-}
-
 function drainHiddenAnimations(instance) {
   const queue = Array.isArray(instance?.hiddenAnimationQueue) ? instance.hiddenAnimationQueue.splice(0) : [];
   for (const entry of queue) {
@@ -251,18 +191,4 @@ function suspendDiceRenderer(instance) {
     renderer.setPixelRatio?.(pixelRatio);
     renderer.setSize?.(width, height, false);
   };
-}
-
-function safeRect(element) {
-  try { return element?.getBoundingClientRect?.() ?? null; } catch { return null; }
-}
-
-function finiteDimension(value) {
-  const number = Number(value);
-  return Number.isFinite(number) && number >= 0 ? Math.round(number * 100) / 100 : null;
-}
-
-function effectiveRatio(backing, css) {
-  if (!Number.isFinite(backing) || !Number.isFinite(css) || css <= 0) return null;
-  return Math.round((backing / css) * 100) / 100;
 }

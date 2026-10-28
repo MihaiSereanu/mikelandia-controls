@@ -17,25 +17,25 @@ export function readLocalSetting(game, key) {
 }
 
 export async function restoreLocalSetting(game, key, value, { notify = true } = {}) {
-  if (!OWNED_SETTINGS.has(key)) throw new Error(localizeFoundry("VEMOBILE.Interface.ClientSettingRestoration.UnownedRestorationSetting", "Unowned restoration setting: {key}", { key: (key) }));
+  if (!OWNED_SETTINGS.has(key)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.ClientSettingRestoration.UnownedRestorationSetting", "Unowned restoration setting: {key}", { key: (key) }));
   const config = game?.settings?.settings?.get?.(key);
   const storage = game?.settings?.storage?.get?.("client");
   const [namespace, name] = key.split(".");
   let expected = value;
   if (!storage || config?.scope !== "client") {
     // Older adapters may use the ordinary native route only for unforced keys.
-    if (config?.scope && config.scope !== "client") throw new Error(localizeFoundry("VEMOBILE.Interface.ClientSettingRestoration.NonClientRestorationSetting", "Non-client restoration setting: {key}", { key: (key) }));
-    if (game?.modules?.get?.("force-client-settings")?.active && game.settings.get("force-client-settings", "forced")?.[key]) throw new Error(localizeFoundry("VEMOBILE.Interface.ClientSettingRestoration.ClientLocalRestorationUnavailableFor", "Client-local restoration unavailable for {key}", { key: (key) }));
+    if (config?.scope && config.scope !== "client") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.ClientSettingRestoration.NonClientRestorationSetting", "Non-client restoration setting: {key}", { key: (key) }));
+    if (game?.modules?.get?.("force-client-settings")?.active && game.settings.get("force-client-settings", "forced")?.[key]) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.ClientSettingRestoration.ClientLocalRestorationUnavailableFor", "Client-local restoration unavailable for {key}", { key: (key) }));
     await game.settings.set(namespace, name, value);
   } else {
     const cleaned = typeof config.type?.clean === "function" ? config.type.clean(structuredClone(value)) : value;
     // A newer native schema may add defaults missing from an older snapshot.
     // Accept those additions, but never silently coerce or drop captured values.
-    if (!preservesCapturedValue(value, cleaned)) throw new Error(localizeFoundry("VEMOBILE.Interface.ClientSettingRestoration.RestorationVerificationFailedFor", "Restoration verification failed for {key}", { key: (key) }));
+    if (!preservesCapturedValue(value, cleaned)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.ClientSettingRestoration.RestorationVerificationFailedFor", "Restoration verification failed for {key}", { key: (key) }));
     const invalid = config.type?.validate?.(cleaned, { fallback: false });
-    if (invalid) throw invalid.asError?.() ?? new Error(localizeFoundry("VEMOBILE.Interface.ClientSettingRestoration.InvalidCapturedValueFor", "Invalid captured value for {key}", { key: (key) }));
+    if (invalid) throw invalid.asError?.() ?? new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.ClientSettingRestoration.InvalidCapturedValueFor", "Invalid captured value for {key}", { key: (key) }));
     const json = JSON.stringify(cleaned);
-    if (json === undefined) throw new Error(localizeFoundry("VEMOBILE.Interface.ClientSettingRestoration.MissingCapturedValueFor", "Missing captured value for {key}", { key: (key) }));
+    if (json === undefined) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.ClientSettingRestoration.MissingCapturedValueFor", "Missing captured value for {key}", { key: (key) }));
     storage.setItem(key, json);
     expected = cleaned;
     if (notify) {
@@ -46,7 +46,7 @@ export async function restoreLocalSetting(game, key, value, { notify = true } = 
       globalThis.Hooks?.callAll?.("clientSettingChanged", key, effective, {});
     }
   }
-  if (!sameSettingValue(readLocalSetting(game, key), expected)) throw new Error(localizeFoundry("VEMOBILE.Interface.ClientSettingRestoration.RestorationVerificationFailedFor", "Restoration verification failed for {key}", { key: (key) }));
+  if (!sameSettingValue(readLocalSetting(game, key), expected)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.ClientSettingRestoration.RestorationVerificationFailedFor", "Restoration verification failed for {key}", { key: (key) }));
   return value;
 }
 

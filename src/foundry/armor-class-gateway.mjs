@@ -17,25 +17,25 @@ export function createArmorClassGateway({
     async open({ actorSourceUuid, worldId, userId, connectionGeneration } = {}) {
       const uuid = validSourceUuid(actorSourceUuid);
       const game = getGame();
-      if (!getSystemIntegration().features.armorClassEditor) throw new Error(localizeFoundry("VEMOBILE.NativeSheet.UseSheet", "Use the character sheet for this operation."));
+      if (!getSystemIntegration().features.armorClassEditor) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.NativeSheet.UseSheet", "Use the character sheet for this operation."));
       const currentSession = () => getGame() === game && game?.user?.id === userId && game?.world?.id === worldId
         && getConnectionGeneration() === connectionGeneration && ["phone", "tablet"].includes(getMode());
       if (!currentSession()) {
-        throw new Error(localizeFoundry("VEMOBILE.Character.ArmorClassGateway.TheCharacterSessionChangedBeforeArmourClassCouldOpen", "The Character session changed before Armor Class could open."));
+        throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ArmorClassGateway.TheCharacterSessionChangedBeforeArmourClassCouldOpen", "The Character session changed before Armor Class could open."));
       }
       const actor = resolve(uuid, game);
       if (!actor || actor.uuid !== uuid || !["character", "npc"].includes(actor.type)
         || actor.testUserPermission?.(game.user, "OWNER") !== true) {
-        throw new Error(localizeFoundry("VEMOBILE.Character.ArmorClassGateway.ThisActorSArmourClassIsUnavailableOrNo", "This Actor's Armor Class is unavailable or no longer editable."));
+        throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ArmorClassGateway.ThisActorSArmourClassIsUnavailableOrNo", "This Actor's Armor Class is unavailable or no longer editable."));
       }
       const Config = getConfigClass();
-      if (typeof Config !== "function") throw new Error(localizeFoundry("VEMOBILE.Character.ArmorClassGateway.DDEArmourClassConfigurationIsUnavailable", "D&D5e Armor Class configuration is unavailable."));
+      if (typeof Config !== "function") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ArmorClassGateway.DDEArmourClassConfigurationIsUnavailable", "D&D5e Armor Class configuration is unavailable."));
       const existing = openApps.get(uuid);
       if (existing && existing.app?.document !== actor) {
         openApps.delete(uuid);
         await existing.app?.close?.();
         if (!currentSession() || resolve(uuid, game) !== actor || actor.testUserPermission?.(game.user, "OWNER") !== true) {
-          throw new Error(localizeFoundry("VEMOBILE.Character.ArmorClassGateway.TheCharacterSessionChangedWhileArmourClassOpened", "The Character session changed while Armor Class opened."));
+          throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ArmorClassGateway.TheCharacterSessionChangedWhileArmourClassOpened", "The Character session changed while Armor Class opened."));
         }
       } else if (existing?.opening || existing?.app?.rendered) {
         existing.app.bringToFront?.();
@@ -52,7 +52,7 @@ export function createArmorClassGateway({
       if (!currentSession() || resolve(uuid, game) !== actor || actor.testUserPermission?.(game.user, "OWNER") !== true) {
         await app.close?.();
         if (openApps.get(uuid) === record) openApps.delete(uuid);
-        throw new Error(localizeFoundry("VEMOBILE.Character.ArmorClassGateway.TheCharacterSessionChangedWhileArmourClassOpened", "The Character session changed while Armor Class opened."));
+        throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ArmorClassGateway.TheCharacterSessionChangedWhileArmourClassOpened", "The Character session changed while Armor Class opened."));
       }
       return Object.freeze({ ok: true, actorSourceUuid: uuid });
     }

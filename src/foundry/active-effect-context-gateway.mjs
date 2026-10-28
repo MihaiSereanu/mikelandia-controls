@@ -1,7 +1,7 @@
 import { localizeFoundry } from "./localization.mjs";
 import { resolveActorSource, validSourceUuid } from "./character-source.mjs";
 
-/** Retrieve D&D5e's own Active Effect descriptors while VE owns mobile menu presentation. */
+/** Retrieve D&D5e's own Active Effect descriptors while Mikelandia Controls owns mobile menu presentation. */
 export function createFoundryActiveEffectContextGateway({
   getGame = () => globalThis.game,
   getDocument = () => globalThis.document,
@@ -139,17 +139,17 @@ export function createFoundryActiveEffectContextGateway({
 
 function createNativeProviderBridge({ actor, effect, actorSourceUuid, effectReference, nativeDataset, document, applications, DialogV2 }) {
   if (!document?.body?.append || !document?.createElement || typeof applications?.set !== "function") {
-    throw new Error(localizeFoundry("VEMOBILE.Character.ActiveEffectContextGateway.DDESNativeActiveEffectProviderIs", "D&D5e's native Active Effect provider is unavailable."));
+    throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ActiveEffectContextGateway.DDESNativeActiveEffectProviderIs", "D&D5e's native Active Effect provider is unavailable."));
   }
   const host = document.createElement("section");
-  host.id = `ve-mobile-effects-${actorSourceUuid.replaceAll(".", "-")}-${effectReference}`;
-  host.className = "application ve-native-effect-provider-bridge";
+  host.id = `mc-mobile-effects-${actorSourceUuid.replaceAll(".", "-")}-${effectReference}`;
+  host.className = "application mc-native-effect-provider-bridge";
   host.hidden = true;
   host.setAttribute?.("aria-hidden", "true");
   const component = document.createElement("dnd5e-effects");
   const anchor = document.createElement("span");
   Object.assign(anchor.dataset, nativeDataset);
-  anchor.dataset.veEffectContextTarget = "true";
+  anchor.dataset.mcEffectContextTarget = "true";
   component.append(anchor);
   const sheet = actor.sheet;
   const bridgeApp = Object.freeze({
@@ -157,12 +157,12 @@ function createNativeProviderBridge({ actor, effect, actorSourceUuid, effectRefe
     _concentration: actor.concentration,
     _openDocumentSheet: (nativeDocument) => sheet?._openDocumentSheet?.(nativeDocument),
     // D&D5e calls this for ActiveEffect.deleteDialog({ sheet: this.#app }).
-    // Its normal sheet owns _confirmDialog; VE's hidden provider must supply it.
+    // Its normal sheet owns _confirmDialog; Mikelandia Controls's hidden provider must supply it.
     _confirmDialog: (config) => {
-      if (typeof DialogV2?.confirm !== "function") throw new Error(localizeFoundry("VEMOBILE.Character.ActiveEffectContextGateway.FoundrySNativeConfirmationDialogIsUnavailable", "Foundry's native confirmation dialog is unavailable."));
+      if (typeof DialogV2?.confirm !== "function") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ActiveEffectContextGateway.FoundrySNativeConfirmationDialogIsUnavailable", "Foundry's native confirmation dialog is unavailable."));
       return DialogV2.confirm(config);
     },
-    // The delete hook refreshes VE; a hidden provider must not open a desktop Actor sheet.
+    // The delete hook refreshes Mikelandia Controls; a hidden provider must not open a desktop Actor sheet.
     render: () => Promise.resolve()
   });
   applications.set(host.id, bridgeApp);
@@ -185,7 +185,7 @@ function createNativeProviderBridge({ actor, effect, actorSourceUuid, effectRefe
 
 function nativeDescriptors(component, anchor, effect, hooks) {
   if (typeof component?._getContextOptions !== "function") {
-    throw new Error(localizeFoundry("VEMOBILE.Character.ActiveEffectContextGateway.DDESNativeActiveEffectOptionsAre", "D&D5e's native Active Effect options are unavailable."));
+    throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ActiveEffectContextGateway.DDESNativeActiveEffectOptionsAre", "D&D5e's native Active Effect options are unavailable."));
   }
   const nativeEffect = component.getEffect?.(anchor.dataset) ?? effect;
   const descriptors = component._getContextOptions(nativeEffect);
@@ -248,13 +248,13 @@ function localize(game, key) {
 
 function identifier(value, field) {
   const id = String(value ?? "").trim();
-  if (!id || id.length > 128) throw new Error(localizeFoundry("VEMOBILE.Character.CommandGateway.IsRequired", "{field} is required.", { field: (field) }));
+  if (!id || id.length > 128) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.IsRequired", "{field} is required.", { field: (field) }));
   return id;
 }
 
 function optionalIdentifier(value, maximum) {
   const id = String(value ?? "").trim();
-  if (id.length > maximum) throw new Error(localizeFoundry("VEMOBILE.Character.ActiveEffectContextGateway.ActiveEffectIdentityIsInvalid", "Active Effect identity is invalid."));
+  if (id.length > maximum) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ActiveEffectContextGateway.ActiveEffectIdentityIsInvalid", "Active Effect identity is invalid."));
   return id;
 }
 
@@ -264,7 +264,7 @@ function finiteCoordinate(value) {
 }
 
 function assertSession(game, expected) {
-  if (!game?.user || !game?.world) throw new Error(localizeFoundry("VEMOBILE.Character.ActiveEffectContextGateway.TheFoundrySessionIsUnavailable", "The Foundry session is unavailable."));
-  if (expected.worldId && String(game.world.id) !== String(expected.worldId)) throw new Error(localizeFoundry("VEMOBILE.Character.ActiveEffectContextGateway.TheActiveWorldChanged", "The active world changed."));
-  if (expected.userId && String(game.user.id) !== String(expected.userId)) throw new Error(localizeFoundry("VEMOBILE.Character.ActiveEffectContextGateway.TheActiveUserChanged", "The active user changed."));
+  if (!game?.user || !game?.world) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ActiveEffectContextGateway.TheFoundrySessionIsUnavailable", "The Foundry session is unavailable."));
+  if (expected.worldId && String(game.world.id) !== String(expected.worldId)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ActiveEffectContextGateway.TheActiveWorldChanged", "The active world changed."));
+  if (expected.userId && String(game.user.id) !== String(expected.userId)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.ActiveEffectContextGateway.TheActiveUserChanged", "The active user changed."));
 }

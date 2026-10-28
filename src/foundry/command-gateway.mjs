@@ -25,7 +25,7 @@ export function createFoundryCommandGateway({
     return adapters.get(integration);
   };
   const unavailable = () => new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry(
-    "VEMOBILE.Character.CommandGateway.ThisActorTypeRequiresItsNativeWorkflowForThat",
+    "MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActorTypeRequiresItsNativeWorkflowForThat",
     "This Actor type requires its native workflow for that operation."));
   const resolveOwned = (payload, expected) => {
     const game = getGame();
@@ -34,13 +34,13 @@ export function createFoundryCommandGateway({
     try { sourceUuid = validSourceUuid(payload.actorSourceUuid || (payload.actorId ? `Actor.${payload.actorId}` : "")); }
     catch (error) { throw new CommandError("INVALID_INPUT", error.message, { cause: error }); }
     const actor = resolveActorSource(sourceUuid, { game });
-    if (!actor) throw new CommandError("TARGET_MISSING", localizeFoundry("VEMOBILE.Character.BiographyGateway.TheSelectedActorIsNoLongerAvailable", "The selected actor is no longer available."));
-    if (!canOwn(actor, game.user)) throw new CommandError("FORBIDDEN", localizeFoundry("VEMOBILE.Character.CommandGateway.YouNoLongerHavePermissionToControlThisActor", "You no longer have permission to control this actor."));
+    if (!actor) throw new CommandError("TARGET_MISSING", localizeFoundry("MIKELANDIA_CONTROLS.Character.BiographyGateway.TheSelectedActorIsNoLongerAvailable", "The selected actor is no longer available."));
+    if (!canOwn(actor, game.user)) throw new CommandError("FORBIDDEN", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.YouNoLongerHavePermissionToControlThisActor", "You no longer have permission to control this actor."));
     return { game, actor, sourceUuid };
   };
   return Object.freeze({
     notifyError(error) {
-      const message = error?.message ?? localizeFoundry("VEMOBILE.Character.CommandGateway.TheFoundryActionFailed", "The Foundry action failed.");
+      const message = error?.message ?? localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.TheFoundryActionFailed", "The Foundry action failed.");
       getNotifications()?.error?.(message);
       return message;
     },
@@ -56,8 +56,8 @@ export function createFoundryCommandGateway({
       return commands.readItemMenu(payload, expectedSession);
     },
     async execute(name, payload = {}, expectedSession = {}, observer = {}) {
-      if (!Object.values(ACTOR_COMMANDS).includes(name)) throw new CommandError("UNKNOWN_COMMAND", localizeFoundry("VEMOBILE.Character.CommandGateway.UnsupportedCommand", "Unsupported command: {name}", { name: String(name) }));
-      if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new CommandError("INVALID_INPUT", localizeFoundry("VEMOBILE.Panels.InvalidAction", "Invalid game action request."));
+      if (!Object.values(ACTOR_COMMANDS).includes(name)) throw new CommandError("UNKNOWN_COMMAND", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.UnsupportedCommand", "Unsupported command: {name}", { name: String(name) }));
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Panels.InvalidAction", "Invalid game action request."));
       const { game, actor, sourceUuid } = resolveOwned(payload, expectedSession);
       const commands = commandsForSystem();
       if (commands.supportsCommand?.(name) !== true || typeof commands.execute !== "function") throw unavailable();
@@ -65,15 +65,15 @@ export function createFoundryCommandGateway({
         userId: expectedSession.userId ?? game.user.id,
         connectionGeneration: expectedSession.connectionGeneration ?? getConnectionGeneration() };
       const assertCurrent = () => {
-        if (getGame() !== game) throw new CommandError("STALE_SESSION", localizeFoundry("VEMOBILE.Panels.SessionChanged", "The Foundry session changed."));
+        if (getGame() !== game) throw new CommandError("STALE_SESSION", localizeFoundry("MIKELANDIA_CONTROLS.Panels.SessionChanged", "The Foundry session changed."));
         assertSession(game, expected, getConnectionGeneration);
-        if (typeof expected.isCurrent === "function" && expected.isCurrent() !== true) throw new CommandError("STALE_SESSION", localizeFoundry("VEMOBILE.Panels.ActionInactive", "This actor action is no longer active."));
+        if (typeof expected.isCurrent === "function" && expected.isCurrent() !== true) throw new CommandError("STALE_SESSION", localizeFoundry("MIKELANDIA_CONTROLS.Panels.ActionInactive", "This actor action is no longer active."));
         const current = resolveOwned({ actorSourceUuid: sourceUuid }, expected).actor;
-        if (current !== actor) throw new CommandError("TARGET_MISSING", localizeFoundry("VEMOBILE.Panels.ActorChanged", "The selected actor changed while the action was open."));
+        if (current !== actor) throw new CommandError("TARGET_MISSING", localizeFoundry("MIKELANDIA_CONTROLS.Panels.ActorChanged", "The selected actor changed while the action was open."));
         return current;
       };
       const key = commands.commandKey?.(name, sourceUuid, payload) ?? JSON.stringify([name, sourceUuid, payload.actionId, payload.resourceId]);
-      if (inFlight.has(key)) throw new CommandError("COMMAND_BUSY", localizeFoundry("VEMOBILE.Character.CommandGateway.ThisActionIsAlreadyRunning", "This action is already running."));
+      if (inFlight.has(key)) throw new CommandError("COMMAND_BUSY", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.ThisActionIsAlreadyRunning", "This action is already running."));
       inFlight.add(key);
       const timing = name === ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION
         ? rollTiming?.begin?.({ actorSourceUuid: sourceUuid, actionId: payload.actionId }) : null;
@@ -85,7 +85,7 @@ export function createFoundryCommandGateway({
       } catch (error) {
         timing?.mark("failed");
         if (error instanceof CommandError) throw error;
-        throw new CommandError("COMMAND_FAILED", error?.message ?? localizeFoundry("VEMOBILE.Character.CommandGateway.TheFoundryActionFailed", "The Foundry action failed."), { cause: error });
+        throw new CommandError("COMMAND_FAILED", error?.message ?? localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.TheFoundryActionFailed", "The Foundry action failed."), { cause: error });
       } finally { timing?.finish(); inFlight.delete(key); }
     }
   });
@@ -100,9 +100,9 @@ function canOwn(actor, user) {
 }
 
 function assertSession(game, expected, getConnectionGeneration) {
-  if (!game?.user || !game?.world) throw new CommandError("SESSION_UNAVAILABLE", localizeFoundry("VEMOBILE.Character.BiographyGateway.TheFoundrySessionIsNotReady", "The Foundry session is not ready."));
+  if (!game?.user || !game?.world) throw new CommandError("SESSION_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Character.BiographyGateway.TheFoundrySessionIsNotReady", "The Foundry session is not ready."));
   if ((expected.worldId && expected.worldId !== game.world.id) || (expected.userId && expected.userId !== game.user.id)
     || (expected.connectionGeneration !== undefined && expected.connectionGeneration !== getConnectionGeneration())) {
-    throw new CommandError("STALE_SESSION", localizeFoundry("VEMOBILE.Character.CommandGateway.TheConnectionChangedWhileThisActionWasRunning", "The connection changed while this action was running."));
+    throw new CommandError("STALE_SESSION", localizeFoundry("MIKELANDIA_CONTROLS.Character.CommandGateway.TheConnectionChangedWhileThisActionWasRunning", "The connection changed while this action was running."));
   }
 }

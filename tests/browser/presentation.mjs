@@ -16,7 +16,7 @@ try {
   for (const system of ["dnd5e", "custom", "shadowdark", "wfrp4e"]) {
     currentScope?.dispose(); main.replaceChildren(); currentScope = owner.child(system);
     const game = createGame([], system), definitions = new Map(), writes = [];
-    const values = new Map([["ve-mobile.colorScheme", "class"], ["ve-mobile.headerArtwork", "race"], ["ve-mobile.quickbarSource", "character"], ["ve-mobile.showActionSummaries", true]]);
+    const values = new Map([["mikelandia-controls.colorScheme", "class"], ["mikelandia-controls.headerArtwork", "race"], ["mikelandia-controls.quickbarSource", "character"], ["mikelandia-controls.showActionSummaries", true]]);
     game.i18n = { localize }; game.settings = {
       settings: definitions,
       register(namespace, key, data) { definitions.set(`${namespace}.${key}`, { ...data, namespace, key }); },
@@ -31,7 +31,7 @@ try {
       ...preferences.controls()
     }) });
     const commands = {
-      localize, readSettings: () => preferences.snapshot(), readPresentationPreferences: () => preferences.presentation(),
+      localize, readSettings: () => preferences.snapshot(),
       updateSetting: request => preferences.set(request), readLocale: () => "en",
       readSessionStatus: () => ({ users: [] }), readModuleOverlays: () => ({ scanned: false, entries: [] }),
       readActionSummaryPreferences: () => preferences.actionSummaries(), readDeviceIdentity: async () => ({ label: "Browser fixture" }),
@@ -39,27 +39,27 @@ try {
     };
     const settings = renderSettings({ commands, scope: currentScope }); main.append(settings, guide.element); await tick();
     const legacy = system === "dnd5e";
-    const field = key => settings.querySelector(`#ve-setting-ve-mobile-${key}`);
+    const field = key => settings.querySelector(`#mc-setting-mikelandia-controls-${key}`);
     check(`${system}: class color availability follows the integration`, !!field("colorScheme").querySelector('option[value="class"]') === legacy);
-    check(`${system}: effective color keeps stored class choice separate`, field("colorScheme").value === (legacy ? "class" : "neutral") && values.get("ve-mobile.colorScheme") === "class");
+    check(`${system}: effective color keeps stored class choice separate`, field("colorScheme").value === (legacy ? "class" : "neutral") && values.get("mikelandia-controls.colorScheme") === "class");
     for (const key of ["headerArtwork", "headerArtworkOpacity", "showActionSummaries", "compactActionSummaries"]) {
       check(`${system}: ${key} control follows capability`, !!field(key) === legacy);
     }
     check(`${system}: rendering performs no preference writes`, writes.length === 0);
     field("colorScheme").value = "red"; field("colorScheme").dispatchEvent(new Event("change", { bubbles: true })); await tick();
     check(`${system}: shared color change saves through actual settings control`, preferences.frame().colorScheme === "red" && writes.some(([_namespace, key, value]) => key === "colorScheme" && value === "red"));
-    check(`${system}: unrelated saved preferences survive`, values.get("ve-mobile.headerArtwork") === "race" && values.get("ve-mobile.quickbarSource") === "character");
+    check(`${system}: unrelated saved preferences survive`, values.get("mikelandia-controls.headerArtwork") === "race" && values.get("mikelandia-controls.quickbarSource") === "character");
     guide.show(field("colorScheme")); await tick();
     const text = guide.element.textContent;
     check(`${system}: help matches actual character interactions`, legacy ? text.includes("Tap the portrait") && text.includes("Hold a row") : text.includes("Open Character Sheet opens") && !text.includes("Tap the portrait") && !text.includes("Hold a row"));
     check(`${system}: native action/resource instructions follow mapped panels`, text.includes("Choose Edit on an available resource") === ["wfrp4e", "shadowdark"].includes(system));
     check(`${system}: help contains no Scene or token-control instructions`, !/joystick|target a token|Character Quickbar slot|Foundry Hotbar slot/i.test(text));
-    check(`${system}: guide fits the emulated viewport`, guide.element.querySelector(".ve-controls-guide-card").getBoundingClientRect().right <= innerWidth + 1 && document.documentElement.scrollWidth <= innerWidth + 1);
+    check(`${system}: guide fits the emulated viewport`, guide.element.querySelector(".mc-controls-guide-card").getBoundingClientRect().right <= innerWidth + 1 && document.documentElement.scrollWidth <= innerWidth + 1);
     guide.hide(); await tick();
-    check(`${system}: guide closes without rebuilding Settings`, guide.element.hidden && settings.dataset.veSettingsContentBuilds === "1");
+    check(`${system}: guide closes without rebuilding Settings`, guide.element.hidden && settings.dataset.mcSettingsContentBuilds === "1");
     if (system === "wfrp4e") {
       guide.show(field("colorScheme"));
-      const body = guide.element.querySelector(".ve-controls-guide-body");
+      const body = guide.element.querySelector(".mc-controls-guide-body");
       const character = body.querySelectorAll(":scope > section")[1];
       body.scrollTop = character.offsetTop - body.offsetTop;
     }

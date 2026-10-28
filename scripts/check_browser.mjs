@@ -92,7 +92,7 @@ const server = createServer(async (request, response) => {
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 await mkdir(join(root, "dist"), { recursive: true });
 const temporaryRoot = resolve(tmpdir());
-const profile = await mkdtemp(join(temporaryRoot, "ve-mobile-browser-"));
+const profile = await mkdtemp(join(temporaryRoot, "mc-mobile-browser-"));
 const child = spawn(browser, ["--headless", "--disable-gpu", "--no-first-run", "--no-default-browser-check",
   "--remote-debugging-pipe", `--user-data-dir=${profile}`], { windowsHide: true, stdio: ["ignore", "ignore", "pipe", "pipe", "pipe"] });
 const requests = new Map();
@@ -168,6 +168,6 @@ try {
   await new Promise(resolve => server.close(resolve));
   // Delete only the temporary browser profile created by this invocation.
   const rel = relative(temporaryRoot, resolve(profile));
-  if (rel.startsWith("..") || isAbsolute(rel) || !basename(profile).startsWith("ve-mobile-browser-")) throw new Error("Unexpected temporary profile path");
+  if (rel.startsWith("..") || isAbsolute(rel) || !basename(profile).startsWith("mc-mobile-browser-")) throw new Error("Unexpected temporary profile path");
   await rm(profile, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 }

@@ -76,7 +76,7 @@ class TestMutationObserver {
 }
 
 function createDocument() {
-  const head = createNode(), body = createNode({ classNames: ["crlngn-ui", "ve-mobile-running"] });
+  const head = createNode(), body = createNode({ classNames: ["crlngn-ui", "mc-mobile-running"] });
   return { head, body };
 }
 
@@ -118,7 +118,7 @@ test("mobile mode suppresses Carolingian styles and Narrator Tools hooks locally
   assert.equal(narratorStyles.removed, true);
   assert.equal(unrelatedStyles.removed, false);
   assert.equal(documentRef.body.classList.contains("crlngn-ui"), false);
-  assert.equal(documentRef.body.classList.contains("ve-mobile-running"), true);
+  assert.equal(documentRef.body.classList.contains("mc-mobile-running"), true);
   assert.equal(narratorOverlay.removed, true);
   assert.deepEqual(hooks.events.setup.map(entry => entry.fn.name), ["unrelated"]);
   assert.deepEqual(hooks.events.ready.map(entry => entry.fn.name), ["unrelated"]);

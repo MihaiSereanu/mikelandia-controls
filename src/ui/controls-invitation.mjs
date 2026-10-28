@@ -4,12 +4,12 @@ import { localizedText } from "./localized-text.mjs";
 
 /** Event-driven first-use invitation; no polling, route changes or focus stealing. */
 export function createControlsInvitation({ root, scope, commands, getState, isReady, isNativeOpen, openGuide }) {
-  const text = (key, fallback) => localizedText(commands.localize, `VEMOBILE.Controls.${key}`, fallback);
+  const text = (key, fallback) => localizedText(commands.localize, `MIKELANDIA_CONTROLS.Controls.${key}`, fallback);
   const view = node("button", { attrs: { type: "button" }, text: text("View", "View") });
   const later = node("button", { attrs: { type: "button" }, text: text("Later", "Later") });
   const invitation = text("Invitation", "Your mobile controls are ready to explore. Would you like a quick guide?");
   const copy = node("p", { text: invitation });
-  const element = node("aside", { className: "ve-controls-invitation", attrs: { hidden: true, "aria-label": invitation, "data-ve-back-dismissable": "true", "data-ve-back-kind": "controls-invitation" }, children: [
+  const element = node("aside", { className: "mc-controls-invitation", attrs: { hidden: true, "aria-label": invitation, "data-mc-back-dismissable": "true", "data-mc-back-kind": "controls-invitation" }, children: [
     copy, node("div", { children: [view, later] })
   ] });
   const waiting = scope.child("controls-invitation-wait");
@@ -19,7 +19,7 @@ export function createControlsInvitation({ root, scope, commands, getState, isRe
   const hide = () => { element.hidden = true; };
   const blocked = () => Boolean(isNativeOpen?.()
     || root.ownerDocument.activeElement?.matches?.("input, textarea, select, [contenteditable='true']")
-    || root.ownerDocument.querySelector(".ve-controls-guide:not([hidden]), .ve-mobile-bootstrap, .ve-character-item-menu, .ve-mobile-dialog:not([hidden]), .ve-settings-report-modal:not([hidden]), .ve-settings-reload:not([hidden])"));
+    || root.ownerDocument.querySelector(".mc-controls-guide:not([hidden]), .mc-mobile-bootstrap, .mc-character-item-menu, .mc-mobile-dialog:not([hidden]), .mc-settings-report-modal:not([hidden]), .mc-settings-reload:not([hidden])"));
   function reconcile() {
     if (scope.disposed) return;
     const safe = controlsInvitationReady({ ready: isReady(), state: getState(), blocked: blocked(), interacting });
@@ -45,7 +45,7 @@ export function createControlsInvitation({ root, scope, commands, getState, isRe
   };
   scope.listen(view, "click", () => { hide(); openGuide(view); });
   scope.listen(later, "click", hide);
-  scope.listen(element, "ve-close", hide);
+  scope.listen(element, "mc-close", hide);
   waiting.listen(root.ownerDocument, "pointerdown", () => { interacting = true; }, { capture: true, passive: true });
   waiting.listen(root.ownerDocument, "pointerup", () => { interacting = false; schedule(); }, { capture: true, passive: true });
   waiting.listen(root.ownerDocument, "pointercancel", () => { interacting = false; schedule(); }, { capture: true, passive: true });

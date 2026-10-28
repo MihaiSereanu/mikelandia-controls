@@ -107,7 +107,7 @@ function reduceState(state, event) {
       };
     }
     case "session-error":
-      return { ...state, status: "error", error: String(event.error?.message ?? event.error ?? "VEMOBILE.Errors.Unknown") };
+      return { ...state, status: "error", error: String(event.error?.message ?? event.error ?? "MIKELANDIA_CONTROLS.Errors.Unknown") };
     case "navigate": {
       const route = ROUTES.has(event.route) ? event.route : "characters";
       return state.route === route ? state : { ...state, route, routeHistory: pushRouteHistory(state.routeHistory, state.route),   rollResult: route === "characters" ? state.rollResult : null, characterItemId: route === "characters" ? state.characterItemId : "", expandedCharacterItemId: route === "characters" ? state.expandedCharacterItemId : "", characterOpenSections: route === "characters" ? disclosureSections(state.characterDisclosureByContext, activeActorSource(state), state.characterTab) : [], hitPointEditor: route === "characters" ? state.hitPointEditor : "", restEditor: route === "characters" ? state.restEditor : false, spellSlotEditor: route === "characters" ? state.spellSlotEditor : null, xpEditor: route === "characters" ? state.xpEditor : false, portraitImage: route === "characters" ? state.portraitImage : null };
@@ -207,7 +207,7 @@ function reduceState(state, event) {
         journalMenuOpen: false, journalImage: null };
     }
     case "journal-error":
-      return { ...state, journalLoading: false, journalError: String(event.error?.message ?? event.error ?? "VEMOBILE.Errors.JournalUnavailable") };
+      return { ...state, journalLoading: false, journalError: String(event.error?.message ?? event.error ?? "MIKELANDIA_CONTROLS.Errors.JournalUnavailable") };
     case "close-journal":
       return { ...state, journal: null, journalLoading: false, journalError: "", journalPageId: "", journalHeading: "", journalMenuOpen: false, journalImage: null };
     case "select-journal-page":
@@ -288,7 +288,7 @@ function reduceState(state, event) {
         : state;
     case "reconnect-failed":
       return state.reconnect?.generation === Number(event.generation)
-        ? { ...state, reconnect: Object.freeze({ ...state.reconnect, phase: "failed", checkpoint: event.error?.reconnectCheckpoint ?? state.reconnect.checkpoint, detail: event.error?.reconnectDetail ?? state.reconnect.detail, error: String(event.error?.message ?? event.error ?? "VEMOBILE.Errors.ResyncFailed") }) }
+        ? { ...state, reconnect: Object.freeze({ ...state.reconnect, phase: "failed", checkpoint: event.error?.reconnectCheckpoint ?? state.reconnect.checkpoint, detail: event.error?.reconnectDetail ?? state.reconnect.detail, error: String(event.error?.message ?? event.error ?? "MIKELANDIA_CONTROLS.Errors.ResyncFailed") }) }
         : state;
     case "reconnect-finished":
       return state.reconnect?.generation === Number(event.generation) ? { ...state, reconnect: null } : state;

@@ -21,15 +21,15 @@ export function renderProfileResourceEditor(row, actor, commands, scope) {
       }
     } } }, scope);
     input.checked = row.value;
-    return node("div", { className: "ve-profile-resource-editor ve-profile-boolean", dataset: { profileResource: row.edit.id },
-      children: [node("label", { className: "ve-profile-boolean-target", children: [input] })] });
+    return node("div", { className: "mc-profile-resource-editor mc-profile-boolean", dataset: { profileResource: row.edit.id },
+      children: [node("label", { className: "mc-profile-boolean-target", children: [input] })] });
   }
-  const text = (key, fallback) => localizedText(commands.localize, `VEMOBILE.Panels.${key}`, fallback);
+  const text = (key, fallback) => localizedText(commands.localize, `MIKELANDIA_CONTROLS.Panels.${key}`, fallback);
   const quantity = row.edit.id.startsWith("quantity:");
   const coin = row.edit.id.startsWith("coin-");
   const stepped = quantity || coin;
   const body = node("div");
-  const open = node("button", { className: "ve-profile-resource-open", children: stepped ? [String(row.value)] : [icon("fa-pen")],
+  const open = node("button", { className: "mc-profile-resource-open", children: stepped ? [String(row.value)] : [icon("fa-pen")],
     attrs: { type: "button", "aria-label": `${quantity ? text("EditQuantity", "Edit quantity") : text("Edit", "Edit")}: ${row.label}`, "data-profile-edit": row.edit.id },
     on: { click: () => {
       if (scope.disposed || open.disabled) return;
@@ -53,8 +53,8 @@ export function renderProfileResourceEditor(row, actor, commands, scope) {
       const close = () => { open.parentElement.classList.remove("is-editing"); body.replaceChildren(); open.hidden = false; open.focus(); };
       const save = node("button", { text: text("Save", "Save"), attrs: { type: "submit", "data-profile-resource-save": true } });
       const cancel = node("button", { text: text("Cancel", "Cancel"), attrs: { type: "button", "data-profile-resource-cancel": true }, on: { click: close } }, scope);
-      const form = node("form", { className: "ve-profile-resource-form", children: [input,
-        node("div", { className: "ve-profile-resource-buttons", children: [save, cancel] })], on: { submit: async event => {
+      const form = node("form", { className: "mc-profile-resource-form", children: [input,
+        node("div", { className: "mc-profile-resource-buttons", children: [save, cancel] })], on: { submit: async event => {
         event.preventDefault();
         if (scope.disposed || save.disabled) return;
         validate();
@@ -80,7 +80,7 @@ export function renderProfileResourceEditor(row, actor, commands, scope) {
     type: "button", "aria-label": `${delta < 0 ? text("Decrease", "Decrease") : text("Increase", "Increase")}: ${row.label}`,
     disabled: delta < 0 ? row.value <= row.edit.min : row.value >= row.edit.max, "data-profile-quantity-delta": delta
   }, on: { click: async event => {
-    const button = event.currentTarget, controls = button.closest(".ve-profile-resource-editor").querySelectorAll("button");
+    const button = event.currentTarget, controls = button.closest(".mc-profile-resource-editor").querySelectorAll("button");
     if (button.disabled || scope.disposed) return;
     const previous = new Map([...controls].map(control => [control, control.disabled]));
     for (const control of controls) control.disabled = true;
@@ -89,7 +89,7 @@ export function renderProfileResourceEditor(row, actor, commands, scope) {
     catch (error) { if (!scope.disposed) commands.reportCharacterMutationError?.(error); }
     finally { if (!scope.disposed) for (const [control, disabled] of previous) control.disabled = disabled; }
   } } }, scope);
-  return node("div", { className: `ve-profile-resource-editor${quantity ? " ve-profile-quantity" : coin ? " ve-profile-coin" : ""}`, dataset: { profileResource: row.edit.id },
-    children: coin ? [open, node("div", { className: "ve-profile-coin-controls", children: [adjust(-1), adjust(1)] }), body]
+  return node("div", { className: `mc-profile-resource-editor${quantity ? " mc-profile-quantity" : coin ? " mc-profile-coin" : ""}`, dataset: { profileResource: row.edit.id },
+    children: coin ? [open, node("div", { className: "mc-profile-coin-controls", children: [adjust(-1), adjust(1)] }), body]
       : quantity ? [adjust(-1), open, adjust(1), body] : [open, body] });
 }

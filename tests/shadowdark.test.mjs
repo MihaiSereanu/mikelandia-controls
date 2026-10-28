@@ -14,7 +14,7 @@ test("custom resources default to zero, persist per actor flag, and preserve nat
   for (const id of ["def", "grit"]) {
     assert.equal(sections.find(s => s.id === id).rows[0].value, 0);
     await f.gateway.execute(edit, f.edit(id, 3));
-    assert.equal(f.actor.flags["ve-mobile"].shadowdarkResources[id], 3);
+    assert.equal(f.actor.flags["mikelandia-controls"].shadowdarkResources[id], 3);
     for (const value of [-1, 1.5, "2"]) await assert.rejects(f.gateway.execute(edit, f.edit(id, value)), { code: "INVALID_INPUT" });
     assert.equal(f.view().panels[0].sections.find(s => s.id === id).rows[0].value, 3);
   }
@@ -27,7 +27,7 @@ test("custom resources default to zero, persist per actor flag, and preserve nat
 
 test("XP edits use the native field and reject stale or invalid values without migrating Renown", async t => {
   const f = setup(t);
-  f.actor.flags = { "ve-mobile": { shadowdarkResources: { renown: 17 } } };
+  f.actor.flags = { "mikelandia-controls": { shadowdarkResources: { renown: 17 } } };
   assert.equal(f.view().panels[0].sections.find(s => s.id === "xp").rows[0].value, 8);
   await assert.rejects(f.gateway.execute(edit, f.edit("renown", 3)), { code: "CAPABILITY_UNAVAILABLE" });
   for (const value of [-1, 1.5, "2", Number.MAX_SAFE_INTEGER + 1]) {
@@ -39,7 +39,7 @@ test("XP edits use the native field and reject stale or invalid values without m
   await f.gateway.execute(edit, f.edit("xp", 0));
   assert.equal(f.actor.system.level.xp, 0);
   assert.deepEqual(f.writes.at(-1)[0], { "system.level.xp": 0 });
-  assert.equal(f.actor.flags["ve-mobile"].shadowdarkResources.renown, 17);
+  assert.equal(f.actor.flags["mikelandia-controls"].shadowdarkResources.renown, 17);
 });
 
 test("the native Shadowdark roll application is recognized across V1 sheet workflows", t => {

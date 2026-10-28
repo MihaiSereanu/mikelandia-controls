@@ -82,7 +82,7 @@ export function createFoundryCombatGateway({
   };
 
   const runGmAction = async (action, expected = {}) => {
-    if (progressionActionBusy) throw new CombatError("COMMAND_BUSY", localizeFoundry("VEMOBILE.Interface.CombatGateway.ACombatProgressionActionIsAlreadyInProgress", "A combat progression action is already in progress."));
+    if (progressionActionBusy) throw new CombatError("COMMAND_BUSY", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.ACombatProgressionActionIsAlreadyInProgress", "A combat progression action is already in progress."));
     progressionActionBusy = true;
     try {
       const { game, combat } = resolveGmCombat(expected, getGame, getConnectionGeneration, isMobileActive, getLifecycleToken, observeCombat);
@@ -92,7 +92,7 @@ export function createFoundryCombatGateway({
       return Object.freeze({ ok: true, combatId: String(combat.id ?? "") });
     } catch (error) {
       if (error instanceof CombatError) throw error;
-      throw new CombatError("COMBAT_FAILED", error?.message ?? localizeFoundry("VEMOBILE.Interface.CombatGateway.FoundryRefusedTheCombatAction", "Foundry refused the combat action."), { cause: error });
+      throw new CombatError("COMBAT_FAILED", error?.message ?? localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.FoundryRefusedTheCombatAction", "Foundry refused the combat action."), { cause: error });
     } finally {
       progressionActionBusy = false;
     }
@@ -105,16 +105,16 @@ export function createFoundryCombatGateway({
     async endTurn(expected = {}) {
       const game = getGame();
       assertSession(game, expected, getConnectionGeneration);
-      if (progressionActionBusy) throw new CombatError("COMMAND_BUSY", localizeFoundry("VEMOBILE.Interface.CombatGateway.EndingThisTurnIsAlreadyInProgress", "Ending this turn is already in progress."));
+      if (progressionActionBusy) throw new CombatError("COMMAND_BUSY", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.EndingThisTurnIsAlreadyInProgress", "Ending this turn is already in progress."));
       const combat = game.combat;
       if (!combat || String(combat.id ?? "") !== String(expected.combatId ?? "")) {
-        throw new CombatError("STALE_COMBAT", localizeFoundry("VEMOBILE.Interface.CombatGateway.TheActiveCombatHasChanged", "The active combat has changed."));
+        throw new CombatError("STALE_COMBAT", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.TheActiveCombatHasChanged", "The active combat has changed."));
       }
       if (!canAdvanceCombatTurn(combat, game.user)) {
-        throw new CombatError("FORBIDDEN", localizeFoundry("VEMOBILE.Interface.CombatGateway.YouCanNoLongerEndThisCombatTurn", "You can no longer end this combat turn."));
+        throw new CombatError("FORBIDDEN", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.YouCanNoLongerEndThisCombatTurn", "You can no longer end this combat turn."));
       }
       if (typeof combat.nextTurn !== "function") {
-        throw new CombatError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Interface.CombatGateway.FoundryCannotAdvanceThisCombatTurn", "Foundry cannot advance this combat turn."));
+        throw new CombatError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.FoundryCannotAdvanceThisCombatTurn", "Foundry cannot advance this combat turn."));
       }
       progressionActionBusy = true;
       try {
@@ -123,7 +123,7 @@ export function createFoundryCombatGateway({
         return Object.freeze({ ok: true, combatId: String(combat.id ?? "") });
       } catch (error) {
         if (error instanceof CombatError) throw error;
-        throw new CombatError("COMBAT_FAILED", error?.message ?? localizeFoundry("VEMOBILE.Interface.CombatGateway.FoundryRefusedToEndTheTurn", "Foundry refused to end the turn."), { cause: error });
+        throw new CombatError("COMBAT_FAILED", error?.message ?? localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.FoundryRefusedToEndTheTurn", "Foundry refused to end the turn."), { cause: error });
       } finally {
         progressionActionBusy = false;
       }
@@ -138,7 +138,7 @@ export function createFoundryCombatGateway({
     },
 
     async endCombat(expected = {}) {
-      if (progressionActionBusy) throw new CombatError("COMMAND_BUSY", localizeFoundry("VEMOBILE.Interface.CombatGateway.ACombatProgressionActionIsAlreadyInProgress", "A combat progression action is already in progress."));
+      if (progressionActionBusy) throw new CombatError("COMMAND_BUSY", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.ACombatProgressionActionIsAlreadyInProgress", "A combat progression action is already in progress."));
       progressionActionBusy = true;
       try {
         let confirmedDeletion = false;
@@ -162,7 +162,7 @@ export function createFoundryCombatGateway({
         return Object.freeze({ ok: true, combatId: String(combat.id ?? ""), confirmed: confirmedDeletion });
       } catch (error) {
         if (error instanceof CombatError) throw error;
-        throw new CombatError("COMBAT_FAILED", error?.message ?? localizeFoundry("VEMOBILE.Interface.CombatGateway.FoundryRefusedTheCombatAction", "Foundry refused the combat action."), { cause: error });
+        throw new CombatError("COMBAT_FAILED", error?.message ?? localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.FoundryRefusedTheCombatAction", "Foundry refused the combat action."), { cause: error });
       } finally {
         progressionActionBusy = false;
       }
@@ -191,21 +191,21 @@ export function createFoundryCombatGateway({
       const combatantId = identifier(request.combatantId, "combatantId");
       const combat = game.combat;
       if (!combat || String(combat.id ?? "") !== combatId) {
-        throw new CombatError("STALE_COMBAT", localizeFoundry("VEMOBILE.Interface.CombatGateway.TheActiveCombatHasChanged", "The active combat has changed."));
+        throw new CombatError("STALE_COMBAT", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.TheActiveCombatHasChanged", "The active combat has changed."));
       }
       const combatant = combat.combatants?.get?.(combatantId)
         ?? Array.from(combat.turns ?? []).find((entry) => String(entry.id ?? "") === combatantId);
       if (!combatant || combatant.visible === false) {
-        throw new CombatError("TARGET_MISSING", localizeFoundry("VEMOBILE.Interface.CombatGateway.TheCombatantIsNoLongerVisible", "The combatant is no longer visible."));
+        throw new CombatError("TARGET_MISSING", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.TheCombatantIsNoLongerVisible", "The combatant is no longer visible."));
       }
       if (!canRollInitiative(combatant)) {
-        throw new CombatError("FORBIDDEN", localizeFoundry("VEMOBILE.Interface.CombatGateway.YouCanNoLongerRollInitiativeForThisCombatant", "You can no longer roll initiative for this combatant."));
+        throw new CombatError("FORBIDDEN", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.YouCanNoLongerRollInitiativeForThisCombatant", "You can no longer roll initiative for this combatant."));
       }
       if (typeof combat.rollInitiative !== "function") {
-        throw new CombatError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Interface.CombatGateway.FoundryCannotRollInitiativeForThisCombatant", "Foundry cannot roll initiative for this combatant."));
+        throw new CombatError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.FoundryCannotRollInitiativeForThisCombatant", "Foundry cannot roll initiative for this combatant."));
       }
       if (rollingInitiative.has(combatantId)) {
-        throw new CombatError("COMMAND_BUSY", localizeFoundry("VEMOBILE.Interface.CombatGateway.InitiativeIsAlreadyBeingRolledForThisCombatant", "Initiative is already being rolled for this combatant."));
+        throw new CombatError("COMMAND_BUSY", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.InitiativeIsAlreadyBeingRolledForThisCombatant", "Initiative is already being rolled for this combatant."));
       }
       rollingInitiative.add(combatantId);
       try {
@@ -214,7 +214,7 @@ export function createFoundryCombatGateway({
         return Object.freeze({ ok: true, combatId, combatantId });
       } catch (error) {
         if (error instanceof CombatError) throw error;
-        throw new CombatError("COMBAT_FAILED", error?.message ?? localizeFoundry("VEMOBILE.Interface.CombatGateway.FoundryRefusedToRollInitiative", "Foundry refused to roll initiative."), { cause: error });
+        throw new CombatError("COMBAT_FAILED", error?.message ?? localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.FoundryRefusedToRollInitiative", "Foundry refused to roll initiative."), { cause: error });
       } finally {
         rollingInitiative.delete(combatantId);
       }
@@ -271,8 +271,8 @@ function resolveGmCombat(expected, getGame, getConnectionGeneration, isMobileAct
   const game = getGame();
   requireCombatExpectation(expected);
   assertSession(game, expected, getConnectionGeneration);
-  if (!isMobileActive() || !expected.lifecycleToken || expected.lifecycleToken !== getLifecycleToken()) throw new CombatError("INACTIVE", localizeFoundry("VEMOBILE.Interface.CombatGateway.MobileCombatControlsAreNoLongerActive", "Mobile combat controls are no longer active."));
-  if (!game.user.isGM) throw new CombatError("FORBIDDEN", localizeFoundry("VEMOBILE.Interface.CombatGateway.OnlyTheGMCanControlCombatProgression", "Only the GM can control combat progression."));
+  if (!isMobileActive() || !expected.lifecycleToken || expected.lifecycleToken !== getLifecycleToken()) throw new CombatError("INACTIVE", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.MobileCombatControlsAreNoLongerActive", "Mobile combat controls are no longer active."));
+  if (!game.user.isGM) throw new CombatError("FORBIDDEN", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.OnlyTheGMCanControlCombatProgression", "Only the GM can control combat progression."));
   const combatId = identifier(expected.combatId, "combatId");
   const combat = game.combat;
   if (!combat || String(combat.id ?? "") !== combatId || combat._deleted === true || combat.deleted === true) throw staleCombatAction();
@@ -301,22 +301,22 @@ function canGmMutateCombat(combat, user, action, data) {
 }
 
 function staleCombatAction() {
-  return new CombatError("STALE_COMBAT", localizeFoundry("VEMOBILE.Interface.CombatGateway.TheActiveCombatOrTurnHasChanged", "The active combat or turn has changed."));
+  return new CombatError("STALE_COMBAT", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.TheActiveCombatOrTurnHasChanged", "The active combat or turn has changed."));
 }
 
 function requireCombatExpectation(expected) {
   const required = ["worldId", "userId", "connectionGeneration", "lifecycleToken", "combatId", "combatInstanceRevision", "round", "turn", "currentCombatantId"];
   if (required.some((key) => !Object.hasOwn(expected, key) || expected[key] === undefined || expected[key] === null && !["turn"].includes(key))) {
-    throw new CombatError("STALE_COMBAT", localizeFoundry("VEMOBILE.Interface.CombatGateway.TheActiveCombatOrTurnHasChanged", "The active combat or turn has changed."));
+    throw new CombatError("STALE_COMBAT", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.TheActiveCombatOrTurnHasChanged", "The active combat or turn has changed."));
   }
 }
 
 function unavailableCombatAction() {
-  return new CombatError("CAPABILITY_UNAVAILABLE", localizeFoundry("VEMOBILE.Interface.CombatGateway.ThisNativeCombatActionIsUnavailable", "This native combat action is unavailable."));
+  return new CombatError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.ThisNativeCombatActionIsUnavailable", "This native combat action is unavailable."));
 }
 
 function unavailableTurnAction() {
-  return new CombatError("NO_TURN", localizeFoundry("VEMOBILE.Interface.CombatGateway.ThereIsNoAppropriateCombatTurn", "There is no appropriate combat turn."));
+  return new CombatError("NO_TURN", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.ThereIsNoAppropriateCombatTurn", "There is no appropriate combat turn."));
 }
 
 /** Mirror Foundry 13's Combat Tracker authority for advancing the active turn. */
@@ -358,14 +358,14 @@ function combatantOwned(combatant, user) {
 }
 
 function assertSession(game, expected, getConnectionGeneration = () => 0) {
-  if (!game?.user || !game?.world) throw new CombatError("SESSION_UNAVAILABLE", localizeFoundry("VEMOBILE.Interface.CombatGateway.TheFoundrySessionIsNotReady", "The Foundry session is not ready."));
-  if (expected.worldId && expected.worldId !== game.world.id) throw new CombatError("STALE_SESSION", localizeFoundry("VEMOBILE.Interface.CombatGateway.TheActiveFoundryWorldHasChanged", "The active Foundry world has changed."));
-  if (expected.userId && expected.userId !== game.user.id) throw new CombatError("STALE_SESSION", localizeFoundry("VEMOBILE.Interface.CombatGateway.TheActiveFoundryUserHasChanged", "The active Foundry user has changed."));
-  if (expected.connectionGeneration !== undefined && expected.connectionGeneration !== getConnectionGeneration()) throw new CombatError("STALE_SESSION", localizeFoundry("VEMOBILE.Interface.CombatGateway.TheConnectionChangedWhileThisActionWasRunning", "The connection changed while this action was running."));
+  if (!game?.user || !game?.world) throw new CombatError("SESSION_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.TheFoundrySessionIsNotReady", "The Foundry session is not ready."));
+  if (expected.worldId && expected.worldId !== game.world.id) throw new CombatError("STALE_SESSION", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.TheActiveFoundryWorldHasChanged", "The active Foundry world has changed."));
+  if (expected.userId && expected.userId !== game.user.id) throw new CombatError("STALE_SESSION", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.TheActiveFoundryUserHasChanged", "The active Foundry user has changed."));
+  if (expected.connectionGeneration !== undefined && expected.connectionGeneration !== getConnectionGeneration()) throw new CombatError("STALE_SESSION", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CombatGateway.TheConnectionChangedWhileThisActionWasRunning", "The connection changed while this action was running."));
 }
 
 function identifier(value, field) {
   const id = String(value ?? "").trim();
-  if (!id || id.length > 128) throw new CombatError("INVALID_INPUT", localizeFoundry("VEMOBILE.Interface.CharacterSource.IsRequired", "{field} is required.", { field: (field) }));
+  if (!id || id.length > 128) throw new CombatError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Interface.CharacterSource.IsRequired", "{field} is required.", { field: (field) }));
   return id;
 }

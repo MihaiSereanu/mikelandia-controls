@@ -1,4 +1,4 @@
-const PREFIX = "ve-mobile:controls-invitation:v1";
+const PREFIX = "mikelandia-controls:controls-invitation:v1";
 
 /** One browser-local receipt per world/user; storage failure is session-stable. */
 export function createControlsGuideGateway({ getGame = () => globalThis.game, getStorage = () => globalThis.localStorage } = {}) {

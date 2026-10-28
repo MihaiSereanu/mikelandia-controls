@@ -1,13 +1,13 @@
 /** Render the same honest checkpoint states for initial loading and resync. */
 export function createLoadingCheckpoints(document, definitions, { label, followCurrent = false, localize = (_key, fallback) => fallback }) {
   const element = document.createElement("ol");
-  element.className = "ve-loading-checkpoints";
+  element.className = "mc-loading-checkpoints";
   element.setAttribute("aria-label", label);
   const rows = definitions.map((definition, index) => {
     const row = document.createElement("li");
     row.dataset.checkpoint = definition.id;
     const marker = document.createElement("span");
-    marker.className = "ve-loading-checkpoint-marker";
+    marker.className = "mc-loading-checkpoint-marker";
     marker.setAttribute("aria-hidden", "true");
     const text = document.createElement("span");
     text.textContent = localize(definition.labelKey, definition.label);
@@ -36,9 +36,9 @@ export function createLoadingCheckpoints(document, definitions, { label, followC
       const definition = definitions[index];
       text.textContent = localize(definition.labelKey, definition.label);
     }
-    element.setAttribute("aria-label", localize("VEMOBILE.Boot.Checkpoints", label));
+    element.setAttribute("aria-label", localize("MIKELANDIA_CONTROLS.Boot.Checkpoints", label));
   };
-  element.setAttribute("aria-label", localize("VEMOBILE.Boot.Checkpoints", label));
+  element.setAttribute("aria-label", localize("MIKELANDIA_CONTROLS.Boot.Checkpoints", label));
   update(definitions[0]?.id);
   return Object.freeze({ element, update, refreshLabels });
 }

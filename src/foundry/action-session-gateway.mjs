@@ -16,10 +16,10 @@ export function createFoundryActionSessionGateway({
   return Object.freeze({
     async mount(host, session, scope, { onCompactVisibility = () => {} } = {}) {
       if (!getSystemIntegration().features.actionSummaries) return Object.freeze({ ok: false,
-        reason: localizeFoundry("VEMOBILE.Panels.NativeChatResults", "Use native Chat for action results.") });
+        reason: localizeFoundry("MIKELANDIA_CONTROLS.Panels.NativeChatResults", "Use native Chat for action results.") });
       const rootMessageId = identifier(session?.rootMessageId);
       if (!host?.replaceChildren || !rootMessageId || !scope?.hook) {
-        return Object.freeze({ ok: false, reason: localizeFoundry("VEMOBILE.Interface.ActionSessionGateway.ThatActionMessageIsUnavailable", "That action message is unavailable.") });
+        return Object.freeze({ ok: false, reason: localizeFoundry("MIKELANDIA_CONTROLS.Interface.ActionSessionGateway.ThatActionMessageIsUnavailable", "That action message is unavailable.") });
       }
 
       const document = getDocument();
@@ -79,7 +79,7 @@ export function createFoundryActionSessionGateway({
             }
             if (!element?.setAttribute) continue;
             element.setAttribute("data-message-id", messageIdentifier(message));
-            element.classList?.add("ve-action-session-message");
+            element.classList?.add("mc-action-session-message");
             if (compact) {
               if (messageIdentifier(message) === rootMessageId) compactDetails = compactActionDetailsElement(element, document);
               const summary = compactActionMessageElement(element, document, getUi?.()?.chat?.element, host);
@@ -114,8 +114,8 @@ export function createFoundryActionSessionGateway({
         }
         if (!elements.length) {
           const unavailable = document.createElement("p");
-          unavailable.className = "ve-action-session-unavailable";
-          unavailable.textContent = localizeFoundry("VEMOBILE.Interface.ActionSessionGateway.ThisChatMessageIsNoLongerAvailableToYou", "This chat message is no longer available to you.");
+          unavailable.className = "mc-action-session-unavailable";
+          unavailable.textContent = localizeFoundry("MIKELANDIA_CONTROLS.Interface.ActionSessionGateway.ThisChatMessageIsNoLongerAvailableToYou", "This chat message is no longer available to you.");
           elements.push(unavailable);
         }
         const nextSnapshot = elements.map((element) => String(element?.outerHTML ?? "")).join("\u001e");
@@ -207,16 +207,16 @@ export function createFoundryActionSessionGateway({
 
 /** The final roll occupies both columns when the flattened roll count is odd. */
 export function markOddCompactRoll(elements) {
-  const entries = elements.filter((element) => element.classList?.contains("ve-action-session-compact-entry"));
+  const entries = elements.filter((element) => element.classList?.contains("mc-action-session-compact-entry"));
   let rollCount = 0;
   let run = [];
   const finishRun = () => {
-    if (run.length % 2) run.at(-1)?.classList?.add("ve-action-session-compact-last-roll");
+    if (run.length % 2) run.at(-1)?.classList?.add("mc-action-session-compact-last-roll");
     run = [];
   };
   for (const entry of entries) {
     for (const row of Array.from(entry.children ?? [])) {
-      if (row.classList?.contains?.("ve-action-session-compact-save-heading")) { finishRun(); continue; }
+      if (row.classList?.contains?.("mc-action-session-compact-save-heading")) { finishRun(); continue; }
       run.push(row);
       rollCount += 1;
     }
@@ -288,22 +288,22 @@ export function compactActivityElements(document, session, records) {
       // Keep it when the outcome is hidden or cannot be matched to that exact target and total.
       if (save?.total) {
         for (const row of Array.from(record.summary.children ?? [])) {
-          const kind = row.getAttribute?.("data-ve-roll-kind");
-          const isSave = kind === "save" || (!kind && group.type === "save" && row.getAttribute?.("data-ve-roll-d20") === "true");
-          if (isSave && row.getAttribute?.("data-ve-roll-total") === save.total) row.remove?.();
+          const kind = row.getAttribute?.("data-mc-roll-kind");
+          const isSave = kind === "save" || (!kind && group.type === "save" && row.getAttribute?.("data-mc-roll-d20") === "true");
+          if (isSave && row.getAttribute?.("data-mc-roll-total") === save.total) row.remove?.();
         }
       }
       if (record.summary.children.length) entries.push(record.summary);
     }
     if (!entries.length && !group.targets.size) continue;
     const section = document.createElement("div");
-    section.className = "ve-action-session-compact-activity";
+    section.className = "mc-action-session-compact-activity";
     section.setAttribute("role", "group");
     section.setAttribute("data-message-id", `activity:${group.key}`);
-    const label = group.label || localizeFoundry("VEMOBILE.Interface.ActionSessionGateway.Activity", "Activity");
+    const label = group.label || localizeFoundry("MIKELANDIA_CONTROLS.Interface.ActionSessionGateway.Activity", "Activity");
     section.setAttribute("aria-label", label);
     const heading = document.createElement("h3");
-    heading.className = "ve-action-session-compact-activity-name";
+    heading.className = "mc-action-session-compact-activity-name";
     heading.textContent = label;
     section.append(heading, ...entries);
     const isRoot = group.key === rootKey;
@@ -312,7 +312,7 @@ export function compactActivityElements(document, session, records) {
     elements.push(section);
   }
   // A single activity keeps the familiar minimal card; names explain multi-activity cards.
-  if (elements.length === 1) elements[0].querySelector?.(".ve-action-session-compact-activity-name")?.remove?.();
+  if (elements.length === 1) elements[0].querySelector?.(".mc-action-session-compact-activity-name")?.remove?.();
   return elements;
 }
 
@@ -348,16 +348,16 @@ export function patchActionMessageElement(current, next) {
   if (!current || !next || current.nodeType !== next.nodeType || current.nodeName !== next.nodeName) return false;
   const collapsed = Array.from(current.querySelectorAll?.(".description.collapsible") ?? [])
     .map((element) => element.classList?.contains?.("collapsed") ?? true);
-  const targetsOpen = current.querySelector?.(".ve-action-session-compact-targets")?.open ?? false;
-  const itemDetailsOpen = current.classList?.contains?.("ve-action-session-compact-item-details") ? current.open : null;
-  const rollsOpen = new Map(Array.from(current.querySelectorAll?.("details[data-ve-roll-key]") ?? [])
-    .map((element) => [element.getAttribute("data-ve-roll-key"), element.open]));
+  const targetsOpen = current.querySelector?.(".mc-action-session-compact-targets")?.open ?? false;
+  const itemDetailsOpen = current.classList?.contains?.("mc-action-session-compact-item-details") ? current.open : null;
+  const rollsOpen = new Map(Array.from(current.querySelectorAll?.("details[data-mc-roll-key]") ?? [])
+    .map((element) => [element.getAttribute("data-mc-roll-key"), element.open]));
   patchNode(current, next);
   if (itemDetailsOpen !== null) current.open = itemDetailsOpen;
-  for (const disclosure of current.querySelectorAll?.("details[data-ve-roll-key]") ?? []) {
-    disclosure.open = rollsOpen.get(disclosure.getAttribute("data-ve-roll-key")) ?? false;
+  for (const disclosure of current.querySelectorAll?.("details[data-mc-roll-key]") ?? []) {
+    disclosure.open = rollsOpen.get(disclosure.getAttribute("data-mc-roll-key")) ?? false;
   }
-  const targetDisclosure = current.querySelector?.(".ve-action-session-compact-targets");
+  const targetDisclosure = current.querySelector?.(".mc-action-session-compact-targets");
   if (targetDisclosure) targetDisclosure.open = targetsOpen;
   Array.from(current.querySelectorAll?.(".description.collapsible") ?? []).forEach((element, index) => {
     const isCollapsed = collapsed[index] ?? true;
@@ -419,12 +419,12 @@ export function compactActionDetailsElement(element, document) {
     .filter(part => !nativeVisibilityHidden(part) && !part.closest?.("[data-concealed]"));
   if (!parts.length) return null;
   const details = document.createElement("details");
-  details.className = "ve-action-session-message ve-action-session-compact-item-details";
+  details.className = "mc-action-session-message mc-action-session-compact-item-details";
   details.setAttribute("data-message-id", messageId);
   const heading = document.createElement("summary");
-  heading.textContent = localizeFoundry("VEMOBILE.Interface.ActionSessionGateway.DescriptionDetails", "Description & details");
+  heading.textContent = localizeFoundry("MIKELANDIA_CONTROLS.Interface.ActionSessionGateway.DescriptionDetails", "Description & details");
   const content = document.createElement("div");
-  content.className = "ve-action-session-compact-item-content";
+  content.className = "mc-action-session-compact-item-content";
   for (const part of parts) {
     const copy = part.cloneNode?.(true);
     if (!copy) continue;
@@ -465,18 +465,18 @@ export function compactActionMessageElement(element, document, chatElement, moda
     // Native rendering is the permission boundary. Never rebuild hidden dice from Roll data.
     const breakdown = !nativeVisibilityHidden(tooltip) ? tooltip.cloneNode?.(true) : null;
     const row = document.createElement(breakdown ? "details" : "div");
-    row.className = "ve-action-session-compact-result";
-    row.setAttribute("data-ve-roll-kind", kind);
-    row.setAttribute("data-ve-roll-total", total);
-    if (/\d+d20(?:\D|$)/iu.test(formula)) row.setAttribute("data-ve-roll-d20", "true");
+    row.className = "mc-action-session-compact-result";
+    row.setAttribute("data-mc-roll-kind", kind);
+    row.setAttribute("data-mc-roll-total", total);
+    if (/\d+d20(?:\D|$)/iu.test(formula)) row.setAttribute("data-mc-roll-d20", "true");
     const heading = breakdown ? document.createElement("summary") : row;
-    if (breakdown) heading.className = "ve-action-session-compact-result-heading";
+    if (breakdown) heading.className = "mc-action-session-compact-result-heading";
     const label = document.createElement("span");
-    label.className = "ve-action-session-compact-label";
-    label.textContent = kindLabel(kind) || formula || localizeFoundry("VEMOBILE.Interface.ActionSessionGateway.Roll", "Roll");
+    label.className = "mc-action-session-compact-label";
+    label.textContent = kindLabel(kind) || formula || localizeFoundry("MIKELANDIA_CONTROLS.Interface.ActionSessionGateway.Roll", "Roll");
     if (formula && kind) label.title = formula;
     const value = document.createElement("strong");
-    value.className = "ve-action-session-compact-total";
+    value.className = "mc-action-session-compact-total";
     value.textContent = total;
     if (kind === "damage" || kind === "healing") {
       const totalIcons = Array.from(totalNode.querySelectorAll?.("dnd5e-icon[src], img[src]") ?? []);
@@ -488,7 +488,7 @@ export function compactActionMessageElement(element, document, chatElement, moda
         if (!src || seen.has(src)) continue;
         seen.add(src);
         const icon = document.createElement("img");
-        icon.className = "ve-action-session-compact-damage-icon";
+        icon.className = "mc-action-session-compact-damage-icon";
         icon.setAttribute("src", src);
         const name = nativeIcon.getAttribute("aria-label") || nativeIcon.getAttribute("alt") || nativeIcon.getAttribute("data-tooltip") || "";
         icon.setAttribute("alt", name);
@@ -500,8 +500,8 @@ export function compactActionMessageElement(element, document, chatElement, moda
     const activityUuid = roll.closest?.("[data-activity-uuid]")?.getAttribute?.("data-activity-uuid") ?? "";
     const key = `${kind}:${activityUuid}`;
     if (breakdown) {
-      row.setAttribute("data-ve-roll-key", `${messageId}:${key}:${rolledCounts.get(key) ?? 0}`);
-      breakdown.classList?.add("ve-action-session-compact-breakdown");
+      row.setAttribute("data-mc-roll-key", `${messageId}:${key}:${rolledCounts.get(key) ?? 0}`);
+      breakdown.classList?.add("mc-action-session-compact-breakdown");
       removeRepeatedDieValues(breakdown);
       row.append(heading, breakdown);
     }
@@ -525,14 +525,14 @@ export function compactActionMessageElement(element, document, chatElement, moda
       continue;
     }
     const row = document.createElement("div");
-    row.className = "ve-action-session-compact-control";
+    row.className = "mc-action-session-compact-control";
     if (activityUuid) row.setAttribute("data-activity-uuid", activityUuid);
     const button = control.cloneNode?.(true);
     if (!button) continue;
-    button.dataset.veNativeOrdinal = String(Array.from(element.querySelectorAll?.("[data-action]") ?? [])
+    button.dataset.mcNativeOrdinal = String(Array.from(element.querySelectorAll?.("[data-action]") ?? [])
       .filter((candidate) => candidate.dataset?.action === action).indexOf(control));
-    button.textContent = String(control.textContent ?? control.getAttribute?.("aria-label") ?? kindLabel(kind) ?? "Roll").trim().slice(0, 60) || localizeFoundry("VEMOBILE.Interface.ActionSessionGateway.Roll", "Roll");
-    button.classList?.add("ve-action-session-compact-roll");
+    button.textContent = String(control.textContent ?? control.getAttribute?.("aria-label") ?? kindLabel(kind) ?? "Roll").trim().slice(0, 60) || localizeFoundry("MIKELANDIA_CONTROLS.Interface.ActionSessionGateway.Roll", "Roll");
+    button.classList?.add("mc-action-session-compact-roll");
     if (button.tagName === "BUTTON") button.type = "button";
     row.append(button);
     rows.push({ kind, element: row });
@@ -544,7 +544,7 @@ export function compactActionMessageElement(element, document, chatElement, moda
     const text = String(heading.textContent ?? "").trim().replace(/\s+/gu, " ").slice(0, 160);
     if (!text) continue;
     const row = document.createElement("div");
-    row.className = "ve-action-session-compact-result ve-action-session-compact-save-heading";
+    row.className = "mc-action-session-compact-result mc-action-session-compact-save-heading";
     row.textContent = text;
     rows.push({ kind: "save", element: row });
   }
@@ -552,7 +552,7 @@ export function compactActionMessageElement(element, document, chatElement, moda
   const rank = { attack: 0, check: 1, damage: 2, healing: 3, save: 4 };
   rows.sort((left, right) => (rank[left.kind] ?? 4) - (rank[right.kind] ?? 4));
   const summary = document.createElement("div");
-  summary.className = "ve-action-session-message ve-action-session-compact-entry";
+  summary.className = "mc-action-session-message mc-action-session-compact-entry";
   summary.setAttribute("data-message-id", messageId);
   summary.append(...rows.map(({ element: row }) => row));
   return summary;
@@ -662,36 +662,36 @@ export function compactActionTargetsElement(document, rootMessageId, targetIds =
   const available = [...shown.values()];
   const count = new Set([...ids, ...shown.keys()]).size;
   const wrapper = document.createElement("div");
-  wrapper.className = "ve-action-session-compact-target-section";
+  wrapper.className = "mc-action-session-compact-target-section";
   wrapper.setAttribute("data-message-id", `targets:${rootMessageId}`);
   if (count === 1) {
     const single = document.createElement("div");
-    single.className = "ve-action-session-compact-single-target";
+    single.className = "mc-action-session-compact-single-target";
     const label = document.createElement("span");
-    label.className = "ve-action-session-compact-single-target-label";
-    label.textContent = localizeFoundry("VEMOBILE.ActionSession.TargetLabel", "Target:");
+    label.className = "mc-action-session-compact-single-target-label";
+    label.textContent = localizeFoundry("MIKELANDIA_CONTROLS.ActionSession.TargetLabel", "Target:");
     single.append(label);
     if (available.length) single.append(compactActionTargetRow(document, available[0]));
     else {
       const unavailable = document.createElement("span");
-      unavailable.className = "ve-action-session-compact-target-unavailable";
-      unavailable.textContent = localizeFoundry("VEMOBILE.Interface.ActionSessionGateway.DetailsPendingOrHidden", "Details pending or hidden");
+      unavailable.className = "mc-action-session-compact-target-unavailable";
+      unavailable.textContent = localizeFoundry("MIKELANDIA_CONTROLS.Interface.ActionSessionGateway.DetailsPendingOrHidden", "Details pending or hidden");
       single.append(unavailable);
     }
     wrapper.append(single);
     return wrapper;
   }
   const details = document.createElement("details");
-  details.className = "ve-action-session-compact-targets";
+  details.className = "mc-action-session-compact-targets";
   const heading = document.createElement("summary");
-  heading.textContent = localizeFoundry("VEMOBILE.Interface.ActionSessionGateway.Targets", "Targets: {count}", { count: (count) });
+  heading.textContent = localizeFoundry("MIKELANDIA_CONTROLS.Interface.ActionSessionGateway.Targets", "Targets: {count}", { count: (count) });
   details.append(heading);
   const list = document.createElement("div");
-  list.className = "ve-action-session-compact-target-list";
+  list.className = "mc-action-session-compact-target-list";
   for (const target of available) list.append(compactActionTargetRow(document, target));
   if (!available.length) {
     const unavailable = document.createElement("p");
-    unavailable.textContent = count ? localizeFoundry("VEMOBILE.Interface.ActionSessionGateway.TargetDetailsArePendingOrHidden", "Target details are pending or hidden.") : localizeFoundry("VEMOBILE.Interface.ActionSessionGateway.NoTargetsRecorded", "No targets recorded.");
+    unavailable.textContent = count ? localizeFoundry("MIKELANDIA_CONTROLS.Interface.ActionSessionGateway.TargetDetailsArePendingOrHidden", "Target details are pending or hidden.") : localizeFoundry("MIKELANDIA_CONTROLS.Interface.ActionSessionGateway.NoTargetsRecorded", "No targets recorded.");
     list.append(unavailable);
   }
   details.append(list);
@@ -701,7 +701,7 @@ export function compactActionTargetsElement(document, rootMessageId, targetIds =
 
 function compactActionTargetRow(document, target) {
   const row = document.createElement("div");
-  row.className = "ve-action-session-compact-target";
+  row.className = "mc-action-session-compact-target";
   if (target.img) {
     const img = document.createElement("img");
     img.src = target.img;
@@ -709,16 +709,16 @@ function compactActionTargetRow(document, target) {
     row.append(img);
   }
   const name = document.createElement("span");
-  name.className = "ve-action-session-compact-target-name";
+  name.className = "mc-action-session-compact-target-name";
   name.textContent = target.name;
   row.append(name);
   const addOutcome = (kind, result) => {
     if (!result) return;
     const badge = document.createElement("span");
     const outcome = typeof result === "string" ? result : result.outcome;
-    badge.className = `ve-action-session-compact-target-outcome${outcome ? ` is-${outcome}` : ""}`;
+    badge.className = `mc-action-session-compact-target-outcome${outcome ? ` is-${outcome}` : ""}`;
     const savingThrow = outcome === "success" ? ["SaveSucceeded", "Saving throw succeeded"] : outcome === "failure" ? ["SaveFailed", "Saving throw failed"] : ["SaveHidden", "Saving throw result hidden"];
-    badge.setAttribute("aria-label", kind === "save" ? localizeFoundry(`VEMOBILE.ActionSession.${savingThrow[0]}`, savingThrow[1]) : outcome === "success" ? localizeFoundry("VEMOBILE.Interface.ActionSessionGateway.Hit", "Hit") : outcome === "failure" ? localizeFoundry("VEMOBILE.Interface.ActionSessionGateway.Miss", "Miss") : localizeFoundry("VEMOBILE.Interface.ActionSessionGateway.AttackResultHidden", "Attack result hidden"));
+    badge.setAttribute("aria-label", kind === "save" ? localizeFoundry(`MIKELANDIA_CONTROLS.ActionSession.${savingThrow[0]}`, savingThrow[1]) : outcome === "success" ? localizeFoundry("MIKELANDIA_CONTROLS.Interface.ActionSessionGateway.Hit", "Hit") : outcome === "failure" ? localizeFoundry("MIKELANDIA_CONTROLS.Interface.ActionSessionGateway.Miss", "Miss") : localizeFoundry("MIKELANDIA_CONTROLS.Interface.ActionSessionGateway.AttackResultHidden", "Attack result hidden"));
     const symbol = outcome === "success" ? "✓" : outcome === "failure" ? "✕" : "";
     badge.textContent = kind === "save" && result.total !== undefined && result.total !== null ? `${result.total}${symbol ? ` ${symbol}` : ""}` : symbol;
     if (badge.textContent) row.append(badge);
@@ -771,7 +771,7 @@ export function bindNativeChatCardActions(host, rootMessageId, getUi, scope, onN
   if (!host?.querySelectorAll || !scope?.listen) return false;
   scope.listen(host, "click", (event) => {
     const modalAction = event.target?.closest?.("[data-action]");
-    const modalMessage = modalAction?.closest?.(".ve-action-session-message[data-message-id]");
+    const modalMessage = modalAction?.closest?.(".mc-action-session-message[data-message-id]");
     if (!modalAction || !modalMessage || !host.contains?.(modalMessage)) return;
 
     const messageId = identifier(modalMessage.getAttribute?.("data-message-id") ?? modalMessage.dataset?.messageId);
@@ -802,7 +802,7 @@ export function findNativeChatAction(chatElement, modalAction, messageId, modalH
   const modalPeers = Array.from(modalMessage?.querySelectorAll?.("[data-action]") ?? [])
     .filter((candidate) => candidate?.dataset?.action === action);
   const ordinal = Math.max(0, modalPeers.indexOf(modalAction));
-  const nativeOrdinal = modalAction.dataset?.veNativeOrdinal === undefined ? null : Number(modalAction.dataset.veNativeOrdinal);
+  const nativeOrdinal = modalAction.dataset?.mcNativeOrdinal === undefined ? null : Number(modalAction.dataset.mcNativeOrdinal);
   const fingerprint = actionFingerprint(modalAction);
 
   for (const liveMessage of liveMessages) {

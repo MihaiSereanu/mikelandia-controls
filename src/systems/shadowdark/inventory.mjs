@@ -3,7 +3,7 @@ import { CommandError } from "../../foundry/command-error.mjs";
 import { localizeFoundry } from "../../foundry/localization.mjs";
 import { isShadowdarkPlayer, shadowdarkContext, ownedItem, carriedItem, stashedItem, physicalTypes } from "./context.mjs";
 
-const fail = (code, message) => new CommandError(code, localizeFoundry(`VEMOBILE.Inventory.${code}`, message));
+const fail = (code, message) => new CommandError(code, localizeFoundry(`MIKELANDIA_CONTROLS.Inventory.${code}`, message));
 const values = source => Array.from(source?.contents ?? source ?? []);
 export function inventoryAvailable(actor, game, user = game?.user) {
   return !!shadowdarkContext(game) && isShadowdarkPlayer(actor, user)

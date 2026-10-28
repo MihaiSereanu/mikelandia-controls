@@ -8,7 +8,7 @@ export function characterHeaderRecord(actor, game = globalThis.game, config = gl
     xp: "XP", experience: "Experience progress", boons: "Epic boons earned"
   };
   const labels = Object.fromEntries(Object.entries(defaults).map(([name, fallback]) => {
-    const key = `VEMOBILE.Character.Header.${name}`;
+    const key = `MIKELANDIA_CONTROLS.Character.Header.${name}`;
     const translated = game?.i18n?.localize?.(key);
     return [name, translated && translated !== key ? translated : fallback];
   }));
