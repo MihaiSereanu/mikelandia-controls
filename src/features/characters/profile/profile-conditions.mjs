@@ -53,8 +53,11 @@ export function renderProfileConditions(section, actor, commands, scope, present
               .map(part => part.startsWith("**") && part.endsWith("**") ? node("strong", { text: part.slice(2, -2) }) : part) })) })
           ] });
         name.setAttribute("aria-describedby", tooltipId);
+        name.setAttribute("popovertarget", tooltipId);
         name.setAttribute("aria-expanded", "false");
-        rowScope.listen(name, "click", () => {
+        rowScope.listen(name, "click", event => {
+          // Keep native light dismissal aware of the trigger; toggle here to position immediately.
+          event.preventDefault();
           if (tooltip.matches(":popover-open")) { tooltip.hidePopover(); return; }
           tooltip.showPopover();
           const anchor = name.getBoundingClientRect(), bounds = tooltip.getBoundingClientRect();

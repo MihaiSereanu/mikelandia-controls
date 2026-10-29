@@ -95,7 +95,7 @@ try {
   screen = renderCharacters({ state, commands, scope });
   document.querySelector("main").append(screen);
   await tick();
-  const label = "Open Character Sheet";
+  const label = "Open Foundry Sheet";
   const button = () => [...screen.querySelectorAll("button")].find(button => button.textContent === label);
   check("fallback render uses native access", !!button());
   check("system actor type label is preserved", screen.textContent.includes("Player Character"));

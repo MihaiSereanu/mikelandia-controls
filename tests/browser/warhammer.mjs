@@ -696,7 +696,7 @@ try {
     screen.querySelector(`[data-profile-field="${id}"] [data-profile-counter-delta="-1"]`).click(); await tick();
     check(`${id} minus saves immediately through native updates`, actor.system.status[id].value === value);
   }
-  [...screen.querySelectorAll("button")].find(button => button.textContent === "Open Character Sheet").click();
+  [...screen.querySelectorAll("button")].find(button => button.textContent === "Open Foundry Sheet").click();
   await tick();
   check("native-sheet fallback uses the exact actor source", openedSource === actor.uuid);
   screen.querySelector(".mc-character-select-trigger").click();

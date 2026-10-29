@@ -69,18 +69,37 @@ test("D&D keeps its native appearance and summary settings", async t => {
   await f.gateway.set({ key: "headerArtwork", value: "race" });
   assert.equal(f.gateway.character().headerArtwork, "race"); assert.equal(f.gateway.controls().characterPresentation, "legacy");
 });
-for (const presentation of ["profile", "native"]) {
-  test(`${presentation} guide describes actual controls and omits D&D gestures`, () => {
-    const sections = controlsGuideSections({ characterPresentation: presentation, actionBarSource: "foundry", canPlaceActor: true, split: true, presentation: "tablet" });
+for (const systemId of ["wfrp4e", "shadowdark", "custom"]) {
+  test(`${systemId} guide describes actual controls and omits D&D gestures`, () => {
+    const sections = controlsGuideSections({ systemId, characterPresentation: systemId === "custom" ? "native" : "profile", presentation: "tablet" });
     const keys = sections.flatMap(section => section.entries);
-    for (const key of ["Chooser", "Rows", "Quickbar", "Members", "ActorPlace", "SplitDrop", "TabletSplit"]) assert.equal(keys.includes(key), false);
+    for (const key of ["Chooser", "Rows", "NativeHold", "Hold", "Availability", "DndOverview"]) assert.equal(keys.includes(key), false);
     for (const key of ["Portrait", "NativeChooser", "NativeSheet", "Tablet"]) assert.equal(keys.includes(key), true);
-    assert.equal(keys.includes("ProfileActions"), presentation === "profile");
+    assert.equal(keys.includes("Counters"), systemId !== "custom");
+    assert.equal(keys.includes("WarhammerEffects"), systemId === "wfrp4e");
+    assert.equal(keys.includes("ShadowdarkInventory"), systemId === "shadowdark");
   });
 }
 test("D&D guide retains its existing character gestures", () => {
-  const keys = controlsGuideSections({ collective: true, canPlaceActor: true }).flatMap(section => section.entries);
+  const keys = controlsGuideSections({ systemId: "dnd5e", actorType: "group" }).flatMap(section => section.entries);
   for (const key of ["Portrait", "Chooser", "Rows", "Members"]) assert.equal(keys.includes(key), true);
+  assert.equal(keys.includes("GroupSupplies"), true);
+  assert.equal(keys.includes("DndSpells"), false);
+  const vehicleKeys = controlsGuideSections({ actorType: "vehicle" }).flatMap(section => section.entries);
+  assert.equal(vehicleKeys.includes("VehicleCargo"), true);
+  assert.equal(vehicleKeys.includes("Members"), false);
+});
+test("profile guide follows available tabs, Notes and Warhammer edition", () => {
+  for (const edition of ["4e", "5e"]) {
+    const sections = controlsGuideSections({ systemId: "wfrp4e", characterPresentation: "profile", edition,
+      profileTabs: ["main", "combat", "effects"], notesAvailable: false });
+    const keys = sections.flatMap(section => section.entries);
+    assert.equal(keys.includes(`WarhammerCombat${edition}`), true);
+    assert.equal(keys.includes("WarhammerMagic"), false);
+    assert.equal(keys.includes("WarhammerNotes"), false);
+    assert.equal(keys.includes("ConditionReferences"), edition === "5e");
+    assert.deepEqual(sections[0].entries, ["CharacterTab", "ChatTab", "JournalsTab", "InitiativeTab", "SettingsTab"]);
+  }
 });
 test("integration contributions own item-specific directory refreshes", () => {
   const item = { type: "class", parent: createActor() };

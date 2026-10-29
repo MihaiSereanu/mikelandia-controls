@@ -4,9 +4,12 @@ import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, resolve, relative, isAbsolute, join, extname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkTooltipTouches } from "./browser/tooltip-touches.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844]].map(([layout, width, height]) =>
+    [`tooltip-touch-${layout}`, width, height, "warhammer", `layout=${layout === "tablet" ? "tablet" : "phone"}&edition=5e&preview=effects`]),
   ["control-contrast-native", 390, 844, "control-contrast", "native-forms=true"],
   ...["shadowdark", "4e", "5e"].flatMap(system => ["dark", "light"].flatMap(theme => [
     [`roll-dialogs-${system}-${theme}-phone`, 390, 844, "roll-dialogs", `system=${system}&theme=${theme}&layout=phone`],
@@ -182,6 +185,7 @@ try {
     const { targetId } = await send("Target.createTarget", { url: "about:blank" });
     const { sessionId } = await send("Target.attachToTarget", { targetId, flatten: true });
     await send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width < 720 }, sessionId);
+    if (name.startsWith("tooltip-touch-")) await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 }, sessionId);
     if (name.includes("ios") || name.includes("ipados")) {
       const ipad = name.includes("ipados");
       await send("Emulation.setUserAgentOverride", { userAgent: ipad ? "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 Version/18.0 Safari/605.1.15" : "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1", platform: ipad ? "MacIntel" : "iPhone" }, sessionId);
@@ -198,6 +202,10 @@ try {
       try { report = JSON.parse(result.value); } catch {}
       if (report?.status) break;
       await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    if (report?.status === "passed" && name.startsWith("tooltip-touch-")) {
+      try { await checkTooltipTouches((method, params) => send(method, params, sessionId), report.checks); }
+      catch (error) { report.status = "failed"; report.error = error.stack; }
     }
     if (report?.status !== "passed" || report.width !== width || report.height !== height) {
       const screenshot = await send("Page.captureScreenshot", { format: "png" }, sessionId);

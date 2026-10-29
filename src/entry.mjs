@@ -300,7 +300,7 @@ if (isGamePage && migrateBrowserState()) {
       owner.listen(window, "pagehide", () => owner.dispose(), { once: true });
       const surface = createControlsGuide({ scope: owner,
         localize: key => preferencesGateway.localize(key),
-        readContext: () => ({ presentation: "desktop", canvasAvailable: false, characterPresentation: preferencesGateway.controls().characterPresentation,  }) });
+        readContext: () => ({ presentation: "desktop", ...preferencesGateway.controls() }) });
       owner.own(() => { desktopControlsGuide = null; });
       document.body.append(surface.element);
       desktopControlsGuide = { owner, surface };

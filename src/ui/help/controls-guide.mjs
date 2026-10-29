@@ -33,9 +33,22 @@ export function createControlsGuide({ scope, readContext, localize, onVisibility
     targets[(index + (event.shiftKey ? -1 : 1) + targets.length) % targets.length].focus();
   });
   scope.own(() => { hide(); element.remove(); });
+  // Only bold markers are interpreted; localized copy never becomes HTML.
+  const formatted = copy => copy.split(/(\*\*[^*]+\*\*)/u).filter(Boolean).map(part =>
+    part.startsWith("**") ? node("strong", { text: part.slice(2, -2) }) : part);
+  const tabEntry = key => {
+    const copy = text(`Entries.${key}`), separator = copy.indexOf(": ");
+    return separator < 0 ? node("p", { children: formatted(copy) }) : node("div", {
+      className: "mc-controls-guide-entry", children: [
+        node("h4", { text: copy.slice(0, separator) }),
+        node("p", { children: formatted(copy.slice(separator + 2)) })
+      ]
+    });
+  };
   const renderCopy = () => body.replaceChildren(...controlsGuideSections(readContext()).map(section => node("section", { children: [
     node("h3", { text: text(`Sections.${section.id}`) }),
-    ...section.entries.map(key => node("p", { text: text(`Entries.${key}`) }))
+    ...(section.id === "controls" ? [node("ul", { className: "mc-controls-guide-tips", children: section.entries.map(key =>
+      node("li", { children: formatted(text(`Entries.${key}`)) })) })] : section.entries.map(tabEntry))
   ] })));
   const refreshLabels = () => {
     title.textContent = text("Title");

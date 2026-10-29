@@ -51,8 +51,13 @@ try {
     check(`${system}: unrelated saved preferences survive`, values.get("mikelandia-controls.headerArtwork") === "race" && values.get("mikelandia-controls.quickbarSource") === "character");
     guide.show(field("colorScheme")); await tick();
     const text = guide.element.textContent;
-    check(`${system}: help matches actual character interactions`, text.includes("Tap the portrait") && (legacy ? text.includes("Hold a row") : text.includes("Open Character Sheet opens") && text.includes("arrow beside the portrait") && !text.includes("Hold a row")));
-    check(`${system}: native action/resource instructions follow mapped panels`, text.includes("Choose Edit on an available resource") === ["wfrp4e", "shadowdark"].includes(system));
+    check(`${system}: help matches actual character interactions`, text.includes("Tap the portrait") && (legacy ? text.includes("Hold a row") : text.includes("Open Foundry Sheet opens") && text.includes("arrow beside the portrait") && !text.includes("Hold a row")));
+    check(`${system}: counter instructions follow mapped panels`, text.includes("Tap the padlock") === ["wfrp4e", "shadowdark"].includes(system));
+    const headings = [...guide.element.querySelectorAll("h4")].map(heading => heading.textContent);
+    check(`${system}: help explains every main tab`, ["Character", "Chat", "Journals", "Initiative", "Settings"].every(label => headings.includes(label)));
+    check(`${system}: help uses the current system's character tabs`, text.includes("Track conditions and read injuries") === (system === "wfrp4e") && text.includes("Check gear slots") === (system === "shadowdark") && headings.includes("Overview") === legacy);
+    check(`${system}: help emphasizes key controls in a scannable list`, !!guide.element.querySelector(".mc-controls-guide-tips li strong") && !text.includes("**"));
+    check(`${system}: all help text is localized`, !text.includes("MIKELANDIA_CONTROLS."));
     check(`${system}: help contains no Scene or token-control instructions`, !/joystick|target a token|Character Quickbar slot|Foundry Hotbar slot/i.test(text));
     check(`${system}: guide fits the emulated viewport`, guide.element.querySelector(".mc-controls-guide-card").getBoundingClientRect().right <= innerWidth + 1 && document.documentElement.scrollWidth <= innerWidth + 1);
     guide.hide(); await tick();

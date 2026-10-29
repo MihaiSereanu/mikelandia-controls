@@ -17,6 +17,9 @@ Changes since the local installation remain unpackaged and uninstalled:
 - WFRP signed SL controls, a separate Effects tab with native condition actions and 5e references, and revised effect/item rows. Engaged is excluded from mobile condition tracking; Injuries moved from Combat to Effects. Native encumbrance penalties remain in WFRP Combat.
 - The main Combat route is labelled Initiative. Targets also appears in WFRP Character > Combat, Shadowdark Abilities, and D&D Overview.
 - Collapsible WFRP/Shadowdark descriptions and expanded Effects Notes preserve source formatting; D&D effect disclosures retain complete descriptions. Secret content and executable markup remain excluded.
+- Condition references and Notes tooltips now associate their triggers with native popovers, preventing a second touch from closing and immediately reopening them. Outside taps dismiss and preserve the tapped control's action.
+
+- Controls & Gestures now explains the main tabs and system-specific Character tabs, with tab headings, bold controls and a short controls list. Mobile help follows the selected character and Warhammer edition.
 
 Behavioral contracts are in [architecture](architecture.md). Publication requires separate authorization: pushing main publishes the rolling `latest` release.
 
@@ -33,6 +36,8 @@ These records cover specific revisions and scopes, not all current changes. They
 
 | Scope | Result | Evidence |
 |---|---|---|
+| Controls guide | Full Node suite; 86 browser scenarios / 5,627 checks, including phone/tablet help content and formatting | `dist/controls-guide-evidence.json` |
+| Tooltip dismissal | Full Node suite; 87 browser scenarios / 6,529 checks, including trusted touch input at phone, tablet and narrow widths | `dist/tooltip-dismissal-evidence.json` |
 | Description formatting | Full Node suite plus new D&D regression; 83 browser scenarios / 4,971 checks, followed by 5 final effect-layout scenarios / 94 checks | `dist/description-formatting-evidence.json` |
 | Conditions layout and current checkout | 383 Node tests; 84 browser scenarios / 5,860 checks, including native button defaults and mixed condition rows | `dist/conditions-layout-evidence.json` |
 | Loading | Light/dark fixtures / 38 checks | `dist/bootstrap-{light,dark}-phone.png` |

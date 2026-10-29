@@ -29,6 +29,12 @@ Collapsible profile descriptions and expanded Effects Notes use `ui/primitives/d
 
 Native Notes content participates in selected-Actor snapshot change detection, so Notes-only updates refresh the enriched display. The editor host remains attached during same-Actor Notes refreshes, preserving drafts, focus and selection. Actor/tab changes and scope disposal remove the editor. Pending native writes retain the duplicate-save guard until settlement; failures preserve the draft and permit retry.
 
+## Controls guide
+
+Controls & Gestures shows main navigation, system-specific Character tabs, and useful controls. Both Desktop and mobile pass the integration ID; mobile also passes the selected character type, available profile tabs, Notes availability, and Warhammer edition. D&D groups and vehicles receive their own tab descriptions; unknown systems use full-sheet guidance.
+
+Tab names render as subheadings, and controls as a list. Localized copy supports only paired `**bold**` markers, rendered as text and `strong` elements without interpreting HTML. Hold instructions are limited to D&D lists.
+
 ## Combat targeting
 
 The main navigation tab and tracker heading are named Initiative. Targets remains there and also appears above WFRP Character > Combat, Shadowdark Abilities, and D&D Overview. All locations share the native target state, disclosure and token-source choice; initiative scores and turn markers stay in Initiative. Native movement refreshes run while any of these target surfaces is visible, and entering one refreshes its snapshot. Character distance-only updates retain rows and focus.
@@ -84,6 +90,8 @@ Populated secondary sections are read-only: combat Aspects, Injuries, Criticals,
 Item rows show native values and player Notes (`system.description.value`). Keep names/values single-line at full width; only Notes ellipsizes, with a 44px minimum tap width. Oversized rows scroll within their card. Notes opens a viewport-bounded native popover with full formatted content, light dismissal and Escape support; the compact trigger remains plain text. Shared description rendering excludes GM Notes, secrets, native controls and executable markup. No effect creation or editing controls.
 
 In 5e, tapping a condition name toggles a formatted, scrollable native popover without a visible heading. Engaged is excluded from the picker, rows and mobile actions. References live in `src/systems/wfrp4e/condition-descriptions.mjs` and render code-owned text and bold spans without HTML injection or system rule changes. The 5e references are gated by native edition settings so they do not replace 4e rules.
+
+Notes and condition tooltip triggers declare `popovertarget` so native light dismissal recognizes their invokers. Their click handlers prevent the default toggle and position the popover immediately. Outside taps dismiss without consuming the tapped control's action; inside taps and scrolling retain the tooltip. A second trigger tap closes it, another tooltip trigger switches it, and Escape dismisses it. `tooltip-touch-*` browser cases exercise trusted CDP touch input; synthetic `.click()` does not verify light dismissal.
 
 ### Resources, recovery and Notes
 

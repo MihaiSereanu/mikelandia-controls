@@ -445,7 +445,7 @@ export function createFoundryPreferencesGateway({
       return localize(key, data);
     },
     readLocale: () => readLocale(getGame()),
-    controls: () => Object.freeze({ characterPresentation: characterPresentation(getSystemIntegration().features) }),
+    controls: () => Object.freeze({ systemId: getSystemIntegration().id, characterPresentation: characterPresentation(getSystemIntegration().features) }),
     presentation,
     layout: () => pick(["mode", ]),
     frame: () => pick(["colorScheme", "headerArtworkOpacity", "protectMcStyling", ]),

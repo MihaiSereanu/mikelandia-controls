@@ -32,8 +32,10 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
         const tooltip = node("div", { className: "mc-profile-note-tooltip", children: [content],
           attrs: { id: `${prefix}-note-${row.id}`, popover: "auto", role: "tooltip" } });
         const trigger = node("button", { className: "mc-profile-note-trigger", text,
-          attrs: { type: "button", "aria-describedby": tooltip.id, "aria-expanded": "false" },
-          on: { click: () => {
+          attrs: { type: "button", "aria-describedby": tooltip.id, "popovertarget": tooltip.id, "aria-expanded": "false" },
+          on: { click: event => {
+            // Keep native light dismissal aware of the trigger; toggle here to position immediately.
+            event.preventDefault();
             if (tooltip.matches(":popover-open")) { tooltip.hidePopover(); return; }
             tooltip.showPopover();
             const anchor = trigger.getBoundingClientRect();

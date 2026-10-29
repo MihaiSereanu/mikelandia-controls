@@ -266,12 +266,14 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     openControlsGuide: anchor => frame?.openControlsGuide?.(anchor),
     readControlsContext: () => {
       const state = store.state;
-      return Object.freeze({ presentation: state.formFactor, canvasAvailable: false,
-
-        collective: Boolean(state.snapshot?.selectedActor?.collective),
+      const actor = state.snapshot?.selectedActor;
+      return Object.freeze({ ...preferencesGateway.controls?.(), presentation: state.formFactor,
+        actorType: actor?.type,
+        profileTabs: actor?.panels?.map(tab => tab.id),
+        notesAvailable: actor?.notesAvailable,
+        edition: actor?.edition,
         characterPresentation: state.snapshot?.selectedActor?.presentation ?? preferencesGateway.controls?.().characterPresentation ?? "legacy",
-
- });
+      });
     },
     readActionSummaryPreferences: () => preferencesGateway.actionSummaries?.() ?? { showActionSummaries: true },
     readSettings: () => {
