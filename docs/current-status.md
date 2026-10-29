@@ -16,6 +16,7 @@ Changes since the local installation remain unpackaged and uninstalled:
 
 - WFRP signed SL controls, a separate Effects tab with native condition actions and 5e references, and revised effect/item rows. Engaged is excluded from mobile condition tracking; Injuries moved from Combat to Effects. Native encumbrance penalties remain in WFRP Combat.
 - The main Combat route is labelled Initiative. Targets also appears in WFRP Character > Combat, Shadowdark Abilities, and D&D Overview.
+- Collapsible WFRP/Shadowdark descriptions and expanded Effects Notes preserve source formatting; D&D effect disclosures retain complete descriptions. Secret content and executable markup remain excluded.
 
 Behavioral contracts are in [architecture](architecture.md). Publication requires separate authorization: pushing main publishes the rolling `latest` release.
 
@@ -32,6 +33,7 @@ These records cover specific revisions and scopes, not all current changes. They
 
 | Scope | Result | Evidence |
 |---|---|---|
+| Description formatting | Full Node suite plus new D&D regression; 83 browser scenarios / 4,971 checks, followed by 5 final effect-layout scenarios / 94 checks | `dist/description-formatting-evidence.json` |
 | Conditions layout and current checkout | 383 Node tests; 84 browser scenarios / 5,860 checks, including native button defaults and mixed condition rows | `dist/conditions-layout-evidence.json` |
 | Loading | Light/dark fixtures / 38 checks | `dist/bootstrap-{light,dark}-phone.png` |
 | Native targeting animation | 12 v14 checks in an isolated copied Shadowdark world; no world document writes | `dist/targeting-animation-native-check.json` |

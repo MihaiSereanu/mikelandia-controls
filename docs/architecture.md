@@ -25,6 +25,8 @@ Resolve fresh Actor/Item state by UUID. Validate ownership, session/config revis
 
 Notes adapters use native fields: WFRP player biography `system.details.biography.value`, Shadowdark `system.notes`. The shared editor provides enrichment and Save/Cancel; writes require ownership and compare the original source to reject stale edits. GM notes are excluded.
 
+Collapsible profile descriptions and expanded Effects Notes use `ui/primitives/description.mjs` to copy source paragraphs, emphasis, headings, lists, tables, line breaks and images into read-only content. It excludes secret sections, executable markup, native controls, source classes/styles and unsafe URLs. Plain-text sources retain line breaks; wide content scrolls within its container. D&D effect disclosures retain the complete source rather than the truncated text preview. D&D item descriptions keep their existing renderer.
+
 Native Notes content participates in selected-Actor snapshot change detection, so Notes-only updates refresh the enriched display. The editor host remains attached during same-Actor Notes refreshes, preserving drafts, focus and selection. Actor/tab changes and scope disposal remove the editor. Pending native writes retain the duplicate-save guard until settlement; failures preserve the draft and permit retry.
 
 ## Combat targeting
@@ -79,7 +81,7 @@ The separate Effects tab contains a condition picker above independent condition
 
 Populated secondary sections are read-only: combat Aspects, Injuries, Criticals, Psychology, Corruption & Mutation, Disease and disabled effects. Omit Temporary and Passive lists. Native `allApplicableEffects(true)`, `show` and name consolidation govern disabled effects; native rules govern concealed disease sources/timing.
 
-Item rows show native values and player Notes (`system.description.value`). Keep names/values single-line at full width; only Notes ellipsizes, with a 44px minimum tap width. Oversized rows scroll within their card. Notes opens a viewport-bounded native popover with full text, light dismissal and Escape support. Shared inert HTML-to-text conversion excludes GM Notes, secrets, native links and editing controls. No effect creation or editing controls.
+Item rows show native values and player Notes (`system.description.value`). Keep names/values single-line at full width; only Notes ellipsizes, with a 44px minimum tap width. Oversized rows scroll within their card. Notes opens a viewport-bounded native popover with full formatted content, light dismissal and Escape support; the compact trigger remains plain text. Shared description rendering excludes GM Notes, secrets, native controls and executable markup. No effect creation or editing controls.
 
 In 5e, tapping a condition name toggles a formatted, scrollable native popover without a visible heading. Engaged is excluded from the picker, rows and mobile actions. References live in `src/systems/wfrp4e/condition-descriptions.mjs` and render code-owned text and bold spans without HTML injection or system rule changes. The 5e references are gated by native edition settings so they do not replace 4e rules.
 

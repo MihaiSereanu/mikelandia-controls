@@ -51,6 +51,17 @@ test("fallback never projects unknown actors through the D&D sheet", t => {
   assert.equal(gateway.selectCharacterSource(actor.uuid).selectedActor.sourceUuid, actor.uuid);
 });
 
+test("D&D effects retain complete source formatting for expanded descriptions", t => {
+  const description = `<p><strong>Effect rules</strong></p><p>${"Long description. ".repeat(40)}End of rules.</p>`;
+  const actor = createActor({ effects: [{ id: "effect", name: "Blessing", description, statuses: new Set() }] });
+  const game = createGame([actor]);
+  game.user.character = actor;
+  installGlobals(t, { game });
+  const effect = createFoundrySessionGateway().read().selectedActor.effects[0];
+  assert.equal(effect.descriptionHtml, description);
+  assert.ok(effect.descriptionHtml.endsWith("End of rules.</p>"));
+});
+
 test("injected integration supplies discovery, directory, detail, and references", t => {
   const actor = createActor({ type: "Player" });
   const game = createGame([actor], "shadowdark");

@@ -965,6 +965,7 @@ function effectRecords(actor) {
         disabled: Boolean(effect.disabled),
         isSuppressed: Boolean(effect.isSuppressed),
         description: effectDescription(effect),
+        descriptionHtml: effectDescriptionSource(effect),
         source: [source.name, source.type && source.type !== source.name ? source.type : ""].filter(Boolean).join(" · "),
         sourceName: source.name,
         sourceType: source.type,
@@ -1082,8 +1083,12 @@ function effectItemType(item) {
 }
 
 function effectDescription(effect) {
+  return plainEffectText(effectDescriptionSource(effect), 280);
+}
+
+function effectDescriptionSource(effect) {
   const value = effect?.description ?? effect?.system?.description?.value ?? effect?.flags?.dnd5e?.description ?? "";
-  return plainEffectText(value, 280);
+  return typeof value === "string" ? value : typeof value?.value === "string" ? value.value : "";
 }
 
 function plainEffectText(value, maximum = 280) {

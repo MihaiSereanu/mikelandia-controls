@@ -294,7 +294,7 @@ try {
   actor.system.status.encumbrance.state = 1.5;
   const fullInjuryNotes = "Keep the arm bound.\nRest daily. " + "Avoid strenuous use until recovered. ".repeat(12).trim();
   const injury = { id: "injury", name: "Broken Arm", type: "injury", parent: actor,
-    system: { description: { value: `<p>Keep the arm bound.</p><p>${fullInjuryNotes.split("\n")[1]}</p><span class="secret">Secret note</span><script>window.injuryInjected=true</script>` },
+    system: { description: { value: `<p>Keep the arm <strong>bound.</strong></p><p><em>${fullInjuryNotes.split("\n")[1]}</em></p><span class="secret">Secret note</span><script>window.injuryInjected=true</script>` },
       gmdescription: { value: "GM injury secret" }, duration: { value: "1d10", permanent: false } } };
   actor.items.push(injury);
   Hooks.emit("updateActor", actor, {}); await tick();
@@ -418,7 +418,8 @@ try {
     && getComputedStyle(noteTrigger()).whiteSpace === "nowrap" && noteTrigger().scrollWidth > noteTrigger().clientWidth);
   check("full injury note tooltip starts hidden", !noteTooltip().matches(':popover-open'));
   noteTrigger().click(); await tick();
-  check("pressing injury notes opens full safe text tooltip", noteTooltip().matches(':popover-open') && noteTooltip().textContent === fullInjuryNotes
+  check("pressing injury notes opens full formatted tooltip", noteTooltip().matches(':popover-open') && [...noteTooltip().querySelectorAll('p')].map(p => p.textContent).join('\n') === fullInjuryNotes
+    && noteTooltip().querySelector('strong') && noteTooltip().querySelector('em') && !noteTrigger().querySelector('strong, em')
     && noteTrigger().getAttribute('aria-expanded') === 'true');
   const tipBounds = noteTooltip().getBoundingClientRect();
   check("injury tooltip stays within viewport", tipBounds.left >= 0 && tipBounds.right <= innerWidth && tipBounds.top >= 0 && tipBounds.bottom <= innerHeight);
@@ -712,15 +713,27 @@ try {
   check("session watcher remains healthy after profile/native transitions", !watchError && state.snapshot.selectedActor.presentation === "profile");
   check("profile updates do not scroll to the actor chooser", window.scrollY === 0);
   for (const [id, type, system] of [
-    ["rope", "trapping", { quantity: { value: 2 }, description: { value: "<p>A sturdy rope</p>" } }],
-    ["talent", "talent", { description: { value: "<p>A native talent</p>" } }]
+    ["rope", "trapping", { quantity: { value: 2 }, description: { value: "<p>A <strong>sturdy rope</strong></p><p>Second paragraph<br>Next line</p><ul><li>Climb</li><li>Tie</li></ul>" } }],
+    ["talent", "talent", { description: { value: '<h5>Talent rules</h5><p>A <em>native talent</em></p><p>Second paragraph</p><ol><li>First step</li></ol><table><tr><th>Roll</th><th>Result</th></tr><tr><td>1</td><td>' + 'LongCell'.repeat(45) + '</td></tr></table><span class="secret">Talent secret</span><a href="javascript:window.descriptionInjected=true" onclick="window.descriptionInjected=true">Unsafe link</a><img src="x" onerror="window.descriptionInjected=true"><button>Native action</button><script>window.descriptionInjected=true</script>' } }]
   ]) { const item = { id, name: id, type, system, parent: actor, uuid: `${actor.uuid}.Item.${id}` }; actor.items.push(item); Hooks.emit("createItem", item, {}); }
   await tick(); await clickTab("trappings");
   check("Trappings has a mobile tab with native quantity", screen.querySelector('[data-profile-field="rope"]').textContent.includes("2"));
   screen.querySelector("details").open = true;
   check("Trappings descriptions are readable on mobile", screen.querySelector("details").textContent.includes("A sturdy rope"));
+  const ropeDescription = screen.querySelector('[data-profile-field="rope"] .mc-description-content');
+  check("Trappings retains paragraphs emphasis line breaks and lists", ropeDescription.querySelectorAll('p').length === 2
+    && ropeDescription.querySelector('strong') && ropeDescription.querySelector('br') && ropeDescription.querySelectorAll('li').length === 2);
+  const ropeParagraphs = ropeDescription.querySelectorAll('p');
+  check("description paragraphs have visible separation", ropeParagraphs[1].getBoundingClientRect().top > ropeParagraphs[0].getBoundingClientRect().bottom + 4);
   await clickTab("talents");
   check("Talents has its own nonempty mobile tab", screen.querySelector('[data-profile-field="talent"]').textContent.includes("A native talent"));
+  screen.querySelector('[data-profile-field="talent"] details').open = true; await tick();
+  const talentDescription = screen.querySelector('[data-profile-field="talent"] .mc-description-content');
+  check("Talents retains headings paragraphs emphasis numbered lists and tables", talentDescription.querySelector('h5')
+    && talentDescription.querySelectorAll('p').length === 2 && talentDescription.querySelector('em')
+    && talentDescription.querySelector('ol li') && talentDescription.querySelectorAll('td').length === 2);
+  check("formatted descriptions exclude secrets executable attributes and controls", !talentDescription.textContent.includes('Talent secret')
+    && !talentDescription.querySelector('script, button, [onclick], [onerror], [href^="javascript:"]') && !window.descriptionInjected);
   check("new tabs fit the phone and tablet widths", document.documentElement.scrollWidth <= innerWidth + 1);
   await clickTab("main");
   const restButton = () => screen.querySelector('[data-profile-action="rest"]');

@@ -14,6 +14,7 @@ import { resolveHeaderBanner } from "./appearance/header-banner.mjs";
 import { actorSheetTabs, actorOriginBack, collectiveHeaderContent, renderCollectivePanel } from "./sheets/collective-sheet.mjs";
 import { renderNativeCharacter } from "./sheets/native-sheet.mjs";
 import { renderTargets } from "../combat/targets.mjs";
+import { renderDescription } from "../../ui/primitives/description.mjs";
 
 const SHEET_TABS = Object.freeze([
   ["favourites", "favourites", "Favourites"],
@@ -2094,7 +2095,7 @@ function effectRow(effect, actor, commands, scope) {
   bindEffectContextMenu(summary, effect, actor, commands, scope);
   return node("details", { className: "mc-effect-detail", children: [
     summary,
-    effect.description ? node("p", { className: "mc-effect-description", text: effect.description }) : null,
+    effect.descriptionHtml || effect.description ? renderDescription(effect.descriptionHtml || effect.description, "mc-effect-description").content : null,
     node("p", { className: "mc-effect-metadata", text: meta })
   ] });
 }

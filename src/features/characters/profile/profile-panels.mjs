@@ -7,6 +7,7 @@ import { bindDetailsDisclosure } from "../../../ui/primitives/disclosure.mjs";
 import { renderProfileConditions } from "./profile-conditions.mjs";
 import { renderTargets } from "../../combat/targets.mjs";
 import { characterHasTargets } from "../../combat/targeting-surface.mjs";
+import { renderDescription } from "../../../ui/primitives/description.mjs";
 
 /** Profiles provide game labels. This renderer has no system IDs or rule paths. */
 export function renderProfilePanels(actor, state, commands, scope, renderNotes = null, presentation = { openSections: new Set() }) {
@@ -26,14 +27,9 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
   const renderRow = row => {
     let description;
     if (row.description) {
-      // Parse in an inert template and append text only, never native markup.
-      const template = document.createElement("template");
-      template.innerHTML = row.description;
-      template.content.querySelectorAll("script, style, iframe, object, embed, .secret").forEach(element => element.remove());
-      template.content.querySelectorAll("p, div, li, br, h1, h2, h3, h4").forEach(element => element.append("\n"));
-      const text = template.content.textContent.trim();
+      const { content, text } = renderDescription(row.description);
       if (text && row.descriptionDisplay === "tooltip") {
-        const tooltip = node("div", { className: "mc-profile-note-tooltip", text,
+        const tooltip = node("div", { className: "mc-profile-note-tooltip", children: [content],
           attrs: { id: `${prefix}-note-${row.id}`, popover: "auto", role: "tooltip" } });
         const trigger = node("button", { className: "mc-profile-note-trigger", text,
           attrs: { type: "button", "aria-describedby": tooltip.id, "aria-expanded": "false" },
@@ -51,7 +47,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
         description = node("div", { className: "mc-profile-note", children: [trigger, tooltip] });
       } else if (text) description = node("details", { className: "mc-profile-description", children: [
         node("summary", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Panels.Details", "Details") }),
-        node("p", { text })
+        content
       ] });
     }
     const label = row.action ? node("button", {

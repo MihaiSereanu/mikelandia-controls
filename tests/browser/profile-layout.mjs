@@ -1,5 +1,6 @@
 import { renderProfilePanels } from "/src/features/characters/profile/profile-panels.mjs";
 import { createTaskScope } from "/src/kernel/lifecycle/task-scope.mjs";
+import { renderDescription } from "/src/ui/primitives/description.mjs";
 
 const checks = [], check = (name, value) => { if (!value) throw new Error(name); checks.push(name); };
 const scope = createTaskScope("profile-layout");
@@ -62,6 +63,16 @@ try {
   main.querySelector('[data-profile-action="stat:Str"]').click(); await tick();
   check("native completion adds no status text to the sheet", !main.querySelector('[data-profile-field="Str"] [role="status"]') && !main.textContent.includes("Native workflow finished") && contained());
   check("profile never adds horizontal scrolling", document.documentElement.scrollWidth <= innerWidth);
+  const effect = document.createElement('details'); effect.className = 'mc-effect-detail'; effect.open = true;
+  const effectText = 'Effect rules. '.repeat(40) + 'End of rules.';
+  const richEffect = renderDescription(`<p><strong>Effect</strong></p><p>${effectText}</p><table><tr><td>${'WideCell'.repeat(80)}</td></tr></table>`, 'mc-effect-description').content;
+  const plainEffect = renderDescription('First line\nSecond line', 'mc-effect-description').content;
+  effect.append(richEffect, plainEffect); screen.append(effect); await tick();
+  check("expanded effect formatting retains complete text without line clamping", richEffect.querySelector('strong')
+    && richEffect.querySelectorAll('p')[1].textContent === effectText && getComputedStyle(richEffect).webkitLineClamp === 'none');
+  check("effect descriptions preserve plain text line breaks", getComputedStyle(plainEffect).whiteSpace === 'pre-line');
+  check("wide effect tables scroll inside their description", getComputedStyle(richEffect).overflowX === 'auto'
+    && document.documentElement.scrollWidth <= innerWidth);
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
 } catch (error) {
   document.querySelector("#results").textContent = JSON.stringify({ status: "failed", checks, error: error.stack });

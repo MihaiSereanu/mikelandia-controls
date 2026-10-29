@@ -323,7 +323,7 @@ try {
   f.actor.system.getSlotUsage = () => ({ total: 8, coins: 1 });
   const addItem = (id, type, system) => { const item = { id, name: id, type, system, parent: f.actor, uuid: `${f.actor.uuid}.Item.${id}` }; f.actor.items.push(item); Hooks.emit("createItem", item, {}); };
   addItem("stash", "Basic", { isPhysical: true, isIdentified: true, stashed: true, quantity: 2 });
-  addItem("talent", "Talent", { talentClass: "class", description: '<p>Native talent text</p><script>bad()</script><div class="secret">GM secret</div>' });
+  addItem("talent", "Talent", { talentClass: "class", description: '<p>Native <strong>talent text</strong></p><p>Second paragraph<br>Next line</p><ul><li><em>Talent benefit</em></li></ul><script>bad()</script><div class="secret">GM secret</div>' });
   await tick(); await tab("inventory");
   check("Gear displays native used and maximum Slots", screen.querySelector('[data-profile-metric="slots"]').textContent.includes("8 / 12"));
   check("Coins displays native denominations and slot use", screen.querySelector('[data-profile-section="coins"]').textContent.includes("25") && screen.querySelector('[data-profile-metric="coin-slots"]').textContent.includes("1"));
@@ -359,6 +359,8 @@ try {
   await tab("talents");
   const details = screen.querySelector("details"); details.open = true; await tick();
   check("Talents details are readable text without secret content or scripts", details.textContent.includes("Native talent text") && !details.textContent.includes("GM secret") && !details.querySelector("script"));
+  check("Talents retain native paragraph and list formatting", details.querySelectorAll('p').length === 2 && details.querySelector('strong')
+    && details.querySelector('br') && details.querySelector('ul li em'));
   check("Talents panel fits the viewport", document.documentElement.scrollWidth <= innerWidth + 1);
   await tab("abilities"); f.error = true; await begin("stat:str"); await confirm(); f.error = false;
   check("action errors use notifications without inline text", notices.at(-1) === "native roll failure" && !screen.textContent.includes("native roll failure") && !screen.querySelector('.mc-profile-action-status'));
