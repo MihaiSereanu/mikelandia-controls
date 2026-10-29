@@ -120,14 +120,11 @@ if (isGamePage && migrateBrowserState()) {
   const showBootstrapWakeControl = wakeLockSupported;
   const wakeLock = createScreenWakeLockController({ readEnabled: readWakeEnabled });
   const bootstrap = createMobileBootstrap({
-    readLocale,
-    localize: (key, fallback) => localizeFoundry(key, fallback),
-    iconUrl: new URL("../assets/mc-512.png", import.meta.url).href
+    localize: (key, fallback) => localizeFoundry(key, fallback)
   });
-  const refreshBootstrapLocalization = () => { bootstrap.refreshLocalization?.(); renderBootstrapPhase(currentBootstrapStage); if (bootstrapRecoveryReason) showBootstrapRecovery(bootstrapRecoveryReason); };
+  const refreshBootstrapLocalization = () => { bootstrap.refreshLocalization?.(); if (bootstrapRecoveryReason) showBootstrapRecovery(bootstrapRecoveryReason); };
   const localizationHook = Hooks.once("i18nInit", refreshBootstrapLocalization);
   window.addEventListener("pagehide", () => Hooks.off("i18nInit", localizationHook), { once: true });
-  let currentBootstrapStage = "module";
   let bootstrapRecoveryReason = "";
   let bootstrapScope = null;
   let bootstrapWatchdog = null;
@@ -147,20 +144,8 @@ if (isGamePage && migrateBrowserState()) {
     });
   };
 
-  const advanceBootstrap = (stage) => {
-    currentBootstrapStage = stage;
+  const reportBootstrapProgress = () => {
     bootstrapWatchdog?.progress();
-    bootstrap.advance(stage);
-    renderBootstrapPhase(stage);
-  };
-  const renderBootstrapPhase = stage => {
-    const labels = {
-      init: localizeFoundry("MIKELANDIA_CONTROLS.Boot.Phase.init", "Preparing game settings…"), world: localizeFoundry("MIKELANDIA_CONTROLS.Boot.Phase.world", "Preparing world data…"),
-      theme: localizeFoundry("MIKELANDIA_CONTROLS.Boot.Phase.theme", "Preparing mobile appearance…"),
-      recovery: localizeFoundry("MIKELANDIA_CONTROLS.Boot.Phase.recovery", "Checking session…"), session: localizeFoundry("MIKELANDIA_CONTROLS.Boot.Phase.session", "Restoring your session…"),
-      interface: localizeFoundry("MIKELANDIA_CONTROLS.Boot.Phase.interface", "Restoring mobile interface…")
-    };
-    bootstrap.setPhase?.({ label: labels[stage] ?? localizeFoundry("MIKELANDIA_CONTROLS.Boot.Phase.Default", "Loading Foundry…") });
   };
 
   const updateBootstrapWake = async (fromGesture = false) => {
@@ -217,7 +202,6 @@ if (isGamePage && migrateBrowserState()) {
       return;
     }
     bootstrap.mount(policy);
-    bootstrap.setTiming?.({ startedAt: fullLoadStartedAt, lastSuccessfulMs: loadTimingGateway.lastSuccessfulFullLoadMs });
     if (!bootstrapScope) {
       bootstrapScope = createTaskScope("bootstrap", performanceObserver);
       wakeLock.enable(bootstrapScope);
@@ -484,7 +468,7 @@ if (isGamePage && migrateBrowserState()) {
       if (!mobileBackGateway.install(backScope)) diagnostics.record("warn", "Browser Back protection could not install before Foundry's history listener.");
       backScope.listen(window, "pagehide", () => backScope.dispose(), { once: true, passive: true });
     }
-    advanceBootstrap("init");
+    reportBootstrapProgress();
     const reconcileApplicationPreference = ({ key, value } = {}) => {
       if (modeReloadPending || startupBlocked) return;
       if (key === KEYS.MUTE_MOBILE_AUDIO) mobileAudioController?.setEnabled(value !== false);
@@ -560,7 +544,7 @@ if (isGamePage && migrateBrowserState()) {
     performanceEnabled = readLoggingLevel() === "debug";
     bootstrapWakePreference.adopt(readKeepScreenAwake()); resolveSettingsReady(); reconcileBootstrap();
   });
-  Hooks.once("setup", () => { authoritativeGateway.bindInitialDocuments(); advanceBootstrap("world"); });
+  Hooks.once("setup", () => { authoritativeGateway.bindInitialDocuments(); reportBootstrapProgress(); });
   Hooks.once("ready", async () => {
     try { await migrateWorldBranding(game, () => bootstrapWatchdog?.progress()); }
     catch (error) {
@@ -569,7 +553,7 @@ if (isGamePage && migrateBrowserState()) {
     }
     const startup = await startupGate.prepare();
     if (startup.state !== "ready") { showRestorationRecovery(); return; }
-    advanceBootstrap("theme");
+    reportBootstrapProgress();
     if (mobilePerformanceAuthority.active()) {
       const entryHandoff = globalThis.game?.settings?.get?.(MODULE_ID, KEYS.MOBILE_ENTRY_HANDOFF);
       const entryToken = entryHandoff?.version === 1 ? String(entryHandoff.token ?? "") : "";
@@ -582,7 +566,7 @@ if (isGamePage && migrateBrowserState()) {
       });
       await themeGateway.whenIdle();
     }
-    advanceBootstrap("recovery");
+    reportBootstrapProgress();
     const module = game.modules.get(MODULE_ID);
     if (module) {
       module.api = Object.freeze({
@@ -600,10 +584,10 @@ if (isGamePage && migrateBrowserState()) {
         resetPerformance: () => performanceObserver.reset()
       });
     }
-    advanceBootstrap("session");
+    reportBootstrapProgress();
     try {
       kernel.reconcile();
-      advanceBootstrap("interface");
+      reportBootstrapProgress();
       finishBootstrap();
     } catch (error) {
       diagnostics.record("error", "Mikelandia Controls startup failed", error);

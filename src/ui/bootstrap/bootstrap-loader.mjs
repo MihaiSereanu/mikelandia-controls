@@ -1,16 +1,4 @@
-import { createElapsedWorkerClock } from "../timing/elapsed-worker-clock.mjs";
-import { createLoadingCheckpoints } from "./loading-checkpoints.mjs";
-import { localizedText, localizedNumber } from "../primitives/localized-text.mjs";
-
-export const BOOTSTRAP_STAGES = Object.freeze([
-  Object.freeze({ id: "module", labelKey: "MIKELANDIA_CONTROLS.Boot.Stage.Module", label: "Starting Mikelandia Controls" }),
-  Object.freeze({ id: "init", labelKey: "MIKELANDIA_CONTROLS.Boot.Stage.Init", label: "Reading your settings" }),
-  Object.freeze({ id: "world", labelKey: "MIKELANDIA_CONTROLS.Boot.Stage.World", label: "Loading your game world" }),
-  Object.freeze({ id: "theme", labelKey: "MIKELANDIA_CONTROLS.Boot.Stage.Theme", label: "Applying your interface theme" }),
-  Object.freeze({ id: "recovery", labelKey: "MIKELANDIA_CONTROLS.Boot.Stage.Recovery", label: "Checking graphics recovery" }),
-  Object.freeze({ id: "session", labelKey: "MIKELANDIA_CONTROLS.Boot.Stage.Session", label: "Building your mobile session" }),
-  Object.freeze({ id: "interface", labelKey: "MIKELANDIA_CONTROLS.Boot.Stage.Interface", label: "Getting the interface ready" })
-]);
+import { localizedText } from "../primitives/localized-text.mjs";
 
 /** Navigation startTime and performance.now() share the same monotonic origin. */
 export function navigationStartAt(performanceRef = globalThis.performance) {
@@ -35,17 +23,11 @@ export function suppressBootstrapSoftwareKeyboard(scope, surface, {
 /** A dependency-free boot surface which can render before Foundry is ready. */
 export function createMobileBootstrap({
   getDocument = () => globalThis.document,
-  iconUrl = "",
-  now = () => globalThis.performance?.now?.() ?? Date.now(),
-  elapsedUpdateMs = 200,
-  localize = (_key, fallback) => fallback,
-  readLocale = () => "en",
-  setTimer = (callback, delay) => globalThis.setTimeout(callback, delay),
-  clearTimer = (id) => globalThis.clearTimeout(id)
+  iconUrl = new URL("../../../assets/mc-512.png", import.meta.url).href,
+  localize = (_key, fallback) => fallback
 } = {}) {
   const document = getDocument();
   const text = (key, fallback, data) => localizedText(localize, key, fallback, data);
-  const stageLabel = stage => text(stage.labelKey, stage.label);
   const root = document.createElement("section");
   root.className = "mc-mobile-bootstrap";
   root.setAttribute("role", "status");
@@ -56,16 +38,20 @@ export function createMobileBootstrap({
   content.className = "mc-mobile-bootstrap__content";
   root.append(content);
 
+  const status = document.createElement("div");
+  status.className = "mc-mobile-bootstrap__status";
   const image = document.createElement("img");
   image.className = "mc-mobile-bootstrap__icon";
   image.src = iconUrl;
   image.alt = "Mikelandia Controls";
   image.decoding = "async";
-  content.append(image);
+  status.append(image);
+  content.append(status);
 
   const heading = document.createElement("h1");
   heading.className = "mc-mobile-bootstrap__heading";
   const headingText = document.createElement("span");
+  headingText.className = "mc-mobile-bootstrap__label";
   headingText.textContent = text("MIKELANDIA_CONTROLS.Boot.LoadingGame", "Loading your game");
   const ellipsis = document.createElement("span");
   ellipsis.className = "mc-mobile-bootstrap__ellipsis";
@@ -76,33 +62,7 @@ export function createMobileBootstrap({
     ellipsis.append(dot);
   }
   heading.append(headingText, ellipsis);
-  content.append(heading);
-
-  const activity = document.createElement("section");
-  activity.className = "mc-mobile-bootstrap__activity";
-  activity.setAttribute("aria-label", text("MIKELANDIA_CONTROLS.Boot.ProgressLabel", "Loading progress"));
-  const activityIndicator = document.createElement("span");
-  activityIndicator.className = "mc-mobile-bootstrap__activity-indicator";
-  activityIndicator.setAttribute("aria-hidden", "true");
-  const phase = document.createElement("p");
-  phase.className = "mc-mobile-bootstrap__phase";
-  phase.textContent = stageLabel(BOOTSTRAP_STAGES[0]);
-  const progress = document.createElement("span");
-  progress.className = "mc-mobile-bootstrap__phase-progress";
-  progress.hidden = true;
-  const timing = document.createElement("div");
-  timing.className = "mc-mobile-bootstrap__timing";
-  const elapsed = document.createElement("span");
-  elapsed.className = "mc-mobile-bootstrap__elapsed";
-  elapsed.textContent = text("MIKELANDIA_CONTROLS.Boot.Elapsed", "Elapsed · {duration}", { duration: "0 ms" });
-  const previous = document.createElement("span");
-  previous.className = "mc-mobile-bootstrap__previous";
-  previous.textContent = text("MIKELANDIA_CONTROLS.Boot.LastFullLoad", "Last full load · {duration}", { duration: "—" });
-  timing.append(elapsed, previous);
-  const checkpoints = createLoadingCheckpoints(document, BOOTSTRAP_STAGES, { label: "Loading checkpoints", followCurrent: true, localize });
-  const elapsedClock = createElapsedWorkerClock(elapsed, { now, elapsedLabel: text("MIKELANDIA_CONTROLS.Boot.ElapsedLabel", "Elapsed"), locale: readLocale() });
-  activity.append(activityIndicator, phase, progress, checkpoints.element, timing);
-  content.append(activity);
+  status.append(heading);
 
   const wake = document.createElement("button");
   wake.type = "button";
@@ -156,91 +116,16 @@ export function createMobileBootstrap({
   wakePromptYes.textContent = text("MIKELANDIA_CONTROLS.Boot.Continue", "Continue");
   wakePromptActions.append(wakePromptYes);
   wakePrompt.append(wakePromptMessage, wakePromptChoice, wakePromptActions);
-  activity.append(wakePrompt);
+  content.append(wakePrompt);
 
   let mounted = false;
-  let elapsedTimer = null;
-  let timerGeneration = 0;
-  let startedAt = null;
-  let lastSuccessfulMs = null;
   let wakePromptWaiter = null;
   let wakePromptVisible = false;
-  let activeStage = BOOTSTRAP_STAGES[0].id;
-  let customPhase = "";
   let recoveryCopy = null;
 
   const updatePolicy = (policy = {}) => {
     root.dataset.theme = policy.theme === "light" || policy.theme === "dark" ? policy.theme : "system";
     root.dataset.formFactor = policy.formFactor === "tablet" ? "tablet" : "phone";
-  };
-
-  const cancelElapsedTimer = () => {
-    timerGeneration += 1;
-    if (elapsedTimer !== null) clearTimer(elapsedTimer);
-    elapsedTimer = null;
-    elapsedClock.stop();
-  };
-
-  const renderTiming = () => {
-    const current = Number(startedAt);
-    const currentNow = Number(now());
-    const elapsedMs = startedAt !== null && startedAt !== undefined && Number.isFinite(current) && Number.isFinite(currentNow)
-      ? Math.max(0, currentNow - current)
-      : 0;
-    elapsed.textContent = text("MIKELANDIA_CONTROLS.Boot.Elapsed", "Elapsed · {duration}", { duration: formatDuration(elapsedMs, readLocale()) });
-    const prior = Number(lastSuccessfulMs);
-    const hasPrevious = lastSuccessfulMs !== null && lastSuccessfulMs !== undefined && Number.isFinite(prior) && prior >= 0;
-    previous.textContent = text("MIKELANDIA_CONTROLS.Boot.LastFullLoad", "Last full load · {duration}", { duration: hasPrevious ? formatDuration(prior, readLocale()) : "—" });
-  };
-
-  const scheduleElapsedTimer = () => {
-    if (!mounted || elapsedTimer !== null) return;
-    const generation = timerGeneration;
-    elapsedTimer = setTimer(() => {
-      elapsedTimer = null;
-      if (!mounted || generation !== timerGeneration) return;
-      renderTiming();
-      scheduleElapsedTimer();
-    }, elapsedUpdateMs);
-  };
-
-  const setTiming = (timingState = {}) => {
-    if (Number.isFinite(Number(timingState.startedAt))) startedAt = Number(timingState.startedAt);
-    if (timingState.lastSuccessfulMs === null || timingState.lastSuccessfulMs === undefined) lastSuccessfulMs = null;
-    else if (Number.isFinite(Number(timingState.lastSuccessfulMs)) && Number(timingState.lastSuccessfulMs) >= 0) {
-      lastSuccessfulMs = Number(timingState.lastSuccessfulMs);
-    }
-    renderTiming();
-    scheduleElapsedTimer();
-    elapsedClock.start(startedAt);
-  };
-
-  const setPhase = (next = {}) => {
-    const value = typeof next === "string" ? { label: next } : next;
-    const label = String(value?.label ?? "").trim();
-    if (label) { customPhase = label; phase.textContent = label; }
-    const parts = [];
-    const pct = Number(value?.pct);
-    const current = Number(value?.current);
-    const total = Number(value?.total);
-    if (value?.pct !== null && value?.pct !== undefined && Number.isFinite(pct)) {
-      parts.push(`${Math.round(Math.max(0, Math.min(100, pct)))}%`);
-    }
-    if (value?.current !== null && value?.current !== undefined
-      && value?.total !== null && value?.total !== undefined
-      && Number.isFinite(current) && Number.isFinite(total) && total > 0) {
-      parts.push(text("MIKELANDIA_CONTROLS.Recovery.Progress", "{current} of {total}", { current: localizedNumber(Math.max(0, current), readLocale()), total: localizedNumber(Math.max(0, total), readLocale()) }));
-    }
-    progress.textContent = parts.join(" · ");
-    progress.hidden = parts.length === 0;
-    const activeLabel = stageLabel(BOOTSTRAP_STAGES.find((stage) => stage.id === activeStage) ?? BOOTSTRAP_STAGES[0]);
-    const hasExtraDetail = label !== activeLabel || parts.length > 0;
-    phase.hidden = !hasExtraDetail;
-    activityIndicator.hidden = !hasExtraDetail;
-    root.dataset.progress = progress.hidden ? "indeterminate" : "determinate";
-    if (value?.pct !== null && value?.pct !== undefined && Number.isFinite(pct)) {
-      activity.setAttribute("aria-valuenow", String(Math.round(Math.max(0, Math.min(100, pct)))));
-    } else activity.removeAttribute("aria-valuenow");
   };
 
   const showRecovery = (copy = {}) => {
@@ -249,9 +134,8 @@ export function createMobileBootstrap({
       message: copy.message ?? text("MIKELANDIA_CONTROLS.Boot.FoundryStopped", "Foundry stopped responding during startup."),
       actionLabel: copy.actionLabel ?? text("MIKELANDIA_CONTROLS.Boot.RefreshGame", "Refresh game")
     };
-    cancelElapsedTimer();
-    checkpoints.update(activeStage, { failed: true });
     headingText.textContent = recoveryCopy.title;
+    heading.classList.remove("is-loading");
     ellipsis.hidden = true;
     recoveryMessage.textContent = recoveryCopy.message;
     recoveryButton.textContent = recoveryCopy.actionLabel;
@@ -264,8 +148,8 @@ export function createMobileBootstrap({
   const promptForWakeChoice = () => {
     if (!mounted) return Promise.resolve(null);
     if (wakePromptWaiter) return wakePromptWaiter.promise;
-    activity.classList.add("is-wake-prompt");
     headingText.textContent = text("MIKELANDIA_CONTROLS.Boot.LoadingComplete", "Loading Complete");
+    heading.classList.remove("is-loading");
     ellipsis.hidden = true;
     wakePromptVisible = true;
     wake.hidden = true;
@@ -283,12 +167,9 @@ export function createMobileBootstrap({
     if (!waiter) return false;
     wakePromptWaiter = null;
     wakePrompt.hidden = true;
-    activity.classList.remove("is-wake-prompt");
     waiter.resolve(Boolean(keepAwake));
     return true;
   };
-
-  setPhase({ label: stageLabel(BOOTSTRAP_STAGES[0]) });
 
   return Object.freeze({
     get mounted() {
@@ -315,53 +196,27 @@ export function createMobileBootstrap({
       root.setAttribute("role", "status");
       root.setAttribute("aria-label", text("MIKELANDIA_CONTROLS.Boot.LoadingLabel", "Mikelandia Controls is loading"));
       root.classList.remove("is-complete", "is-failed");
+      heading.classList.add("is-loading");
       headingText.textContent = text("MIKELANDIA_CONTROLS.Boot.LoadingGame", "Loading your game");
       ellipsis.hidden = false;
       recovery.hidden = true;
-      activity.classList.remove("is-wake-prompt");
       wakePromptVisible = false;
       wakePrompt.hidden = true;
-      activeStage = BOOTSTRAP_STAGES[0].id;
-      checkpoints.update(activeStage);
-      customPhase = "";
-      setPhase({ label: stageLabel(BOOTSTRAP_STAGES[0]) });
       mounted = true;
-      if (startedAt === null || startedAt === undefined || !Number.isFinite(Number(startedAt))) startedAt = Number(now());
       updatePolicy(policy);
-      renderTiming();
-      scheduleElapsedTimer();
-      elapsedClock.start(startedAt);
     },
     updatePolicy,
     refreshLocalization() {
       root.setAttribute("aria-label", text("MIKELANDIA_CONTROLS.Boot.LoadingLabel", "Mikelandia Controls is loading"));
-      activity.setAttribute("aria-label", text("MIKELANDIA_CONTROLS.Boot.ProgressLabel", "Loading progress"));
       wakeText.textContent = text("MIKELANDIA_CONTROLS.Boot.KeepScreenAwake", "KEEP SCREEN AWAKE");
       wakeWarning.textContent = text("MIKELANDIA_CONTROLS.Boot.KeepAwakeHint", "Prevents your device from sleeping while Mikelandia Controls is open.");
       wakePromptMessage.textContent = text("MIKELANDIA_CONTROLS.Boot.WakePrompt", "Keep Awake needs a browser-confirmed tap. Continue to enter Mikelandia Controls and activate it.");
       wakePromptChoiceText.textContent = text("MIKELANDIA_CONTROLS.Boot.KeepScreenAwake", "KEEP SCREEN AWAKE");
       wakePromptYes.textContent = text("MIKELANDIA_CONTROLS.Boot.Continue", "Continue");
-      checkpoints.refreshLabels();
-      elapsedClock.setElapsedLabel(text("MIKELANDIA_CONTROLS.Boot.ElapsedLabel", "Elapsed"));
-      elapsedClock.setLocale(readLocale());
       if (mounted && root.classList.contains("is-failed") && recoveryCopy) showRecovery(recoveryCopy);
       else if (mounted && wakePromptVisible) headingText.textContent = text("MIKELANDIA_CONTROLS.Boot.LoadingComplete", "Loading Complete");
       else if (mounted && !root.classList.contains("is-complete")) {
         headingText.textContent = text("MIKELANDIA_CONTROLS.Boot.LoadingGame", "Loading your game");
-        const stage = BOOTSTRAP_STAGES.find(candidate => candidate.id === activeStage) ?? BOOTSTRAP_STAGES[0];
-        if (!customPhase || customPhase === stage.label || customPhase === stageLabel(stage)) setPhase({ label: stageLabel(stage) });
-      }
-      renderTiming();
-    },
-    setTiming,
-    setPhase,
-    advance(stageId) {
-      const stage = BOOTSTRAP_STAGES.find((candidate) => candidate.id === stageId);
-      if (stage) {
-        activeStage = stage.id;
-        checkpoints.update(activeStage);
-        customPhase = "";
-        setPhase({ label: stageLabel(stage) });
       }
     },
     setWakeState(state = "pending", {
@@ -378,9 +233,7 @@ export function createMobileBootstrap({
       wakePromptChoice.setAttribute("aria-checked", String(Boolean(checked)));
     },
     complete({ beforeDismiss } = {}) {
-      renderTiming();
-      checkpoints.update(activeStage, { complete: true });
-      setPhase({ label: text("MIKELANDIA_CONTROLS.Boot.Ready", "Ready") });
+      heading.classList.remove("is-loading");
       return Promise.resolve(beforeDismiss?.()).then(() => {
         if (mounted) root.classList.add("is-complete");
         return mounted;
@@ -393,24 +246,16 @@ export function createMobileBootstrap({
       showRecovery({ title: message });
     },
     unmount() {
-      cancelElapsedTimer();
       if (wakePromptWaiter) {
         wakePromptWaiter.resolve(null);
         wakePromptWaiter = null;
       }
       wakePrompt.hidden = true;
       wakePromptVisible = false;
-      activity.classList.remove("is-wake-prompt");
       document.body?.classList.remove("mc-mobile-booting");
       root.remove();
       root.classList.remove("is-complete", "is-failed");
       mounted = false;
     }
   });
-}
-
-export function formatDuration(value, locale = "en") {
-  const milliseconds = Math.max(0, Number(value) || 0);
-  if (milliseconds < 1_000) return `${localizedNumber(Math.round(milliseconds), locale)} ms`;
-  return `${localizedNumber(milliseconds / 1_000, locale, 1)} s`;
 }

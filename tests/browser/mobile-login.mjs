@@ -29,7 +29,11 @@ try {
     const ctx = canvas.getContext("2d"); ctx.drawImage(image, 0, 0);
     const pixel = ctx.getImageData(0, 0, 1, 1).data;
     check("icon background matches platform purpose " + icon.src, icon.purpose === "any" ? pixel[3] === 0 : pixel[3] === 255 && pixel[0] === 0 && pixel[1] === 0 && pixel[2] === 0);
+    const gold = ctx.getImageData(Math.floor(image.width / 2), Math.floor(image.height / 4), 1, 1).data;
+    const lettering = ctx.getImageData(Math.floor(image.width / 2), Math.floor(image.height / 2), 1, 1).data;
+    check("selected gold MC artwork is used " + icon.src, gold[0] > 190 && gold[1] > 130 && gold[1] < 190 && gold[2] < 100 && lettering[0] < 70 && lettering[1] < 90 && lettering[2] < 90);
   }
+  check("login mark uses the same MC artwork as the installed app", doc.querySelector("img.mark")?.src === doc.querySelector('link[rel="icon"]').href && !doc.querySelector("svg.mark"));
   for (const base of ["https://example.test/mobile/", "https://example.test/foundry/mobile/"]) {
     const url = new URL("manifest.webmanifest", base);
     const scope = new URL(manifest.scope, url);

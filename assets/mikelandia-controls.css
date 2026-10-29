@@ -78,7 +78,7 @@ body.mc-mobile-booting {
   inset: 0;
   z-index: var(--mc-layer-critical);
   display: grid;
-  align-items: safe center;
+  align-items: stretch;
   justify-items: center;
   box-sizing: border-box;
   width: 100%;
@@ -87,9 +87,7 @@ body.mc-mobile-booting {
   overflow-x: hidden;
   overflow-y: auto;
   color: var(--mc-boot-text);
-  background:
-    radial-gradient(circle at 50% 16%, rgb(207 35 71 / 0.18), transparent 34%),
-    var(--mc-boot-bg);
+  background: var(--mc-boot-bg);
   color-scheme: dark;
   font: 400 16px/1.35 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   opacity: 1;
@@ -129,21 +127,28 @@ body.mc-mobile-booting {
   display: grid;
   justify-items: center;
   width: min(100%, 390px);
+  min-height: min-content;
+  grid-template-rows: 1fr auto;
+}
+
+.mc-mobile-bootstrap__status {
+  align-self: center;
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+  padding: 24px 0;
 }
 
 .mc-mobile-bootstrap__icon {
   display: block;
-  width: min(clamp(132px, 29vw, 184px), 18dvh);
-  height: min(clamp(132px, 29vw, 184px), 18dvh);
-  margin: 0 0 18px;
+  width: min(160px, 28vw, 22dvh);
+  height: min(160px, 28vw, 22dvh);
   object-fit: contain;
-  pointer-events: none;
-  animation: mc-mobile-bootstrap-glow 2.8s ease-in-out infinite;
-  will-change: filter;
 }
 
 .mc-mobile-bootstrap .mc-mobile-bootstrap__heading {
-  margin: 0 0 18px;
+  margin: 0;
+  text-align: center;
   color: var(--mc-boot-text);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
   font-size: clamp(1.2rem, 4.5vw, 1.5rem) !important;
@@ -151,6 +156,15 @@ body.mc-mobile-booting {
   font-weight: 700 !important;
   line-height: 1.2 !important;
   letter-spacing: 0.01em;
+}
+
+.mc-mobile-bootstrap__heading.is-loading .mc-mobile-bootstrap__label {
+  animation: mc-mobile-bootstrap-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes mc-mobile-bootstrap-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.72; }
 }
 
 .mc-mobile-bootstrap__ellipsis {
@@ -172,115 +186,9 @@ body.mc-mobile-booting {
   animation-name: mc-mobile-bootstrap-dot-three;
 }
 
-.mc-mobile-bootstrap__activity {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  align-items: center;
-  gap: 6px 12px;
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 126px;
-  margin: 0;
-  padding: 17px 18px 14px;
-  border: 1px solid var(--mc-boot-border);
-  border-radius: 16px;
-  background: var(--mc-boot-panel);
-  background: color-mix(in srgb, var(--mc-boot-panel) 92%, transparent);
-}
-
-.mc-mobile-bootstrap__activity.is-wake-prompt {
-  min-height: 0;
-}
-
-.mc-mobile-bootstrap__activity-indicator {
-  grid-row: 1 / span 2;
-  box-sizing: border-box;
-  width: 24px;
-  height: 24px;
-  border: 2px solid currentcolor;
-  border-top-color: transparent;
-  border-radius: 50%;
-  color: var(--mc-red-bright);
-  animation: mc-mobile-bootstrap-spin 800ms linear infinite;
-}
-
-.mc-mobile-bootstrap__phase {
-  min-width: 0;
-  margin: 0;
-  overflow-wrap: anywhere;
-  color: var(--mc-boot-text);
-  font-size: 0.98rem;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.mc-mobile-bootstrap__phase[hidden],
-.mc-mobile-bootstrap__activity-indicator[hidden] {
-  display: none !important;
-}
-
-.mc-mobile-bootstrap__phase-progress {
-  grid-column: 2;
-  justify-self: start;
-  padding: 3px 7px;
-  border: 1px solid color-mix(in srgb, var(--mc-red-bright) 46%, var(--mc-boot-border));
-  border-radius: 999px;
-  color: var(--mc-boot-muted);
-  background: color-mix(in srgb, var(--mc-red) 10%, transparent);
-  font-size: 0.72rem;
-  font-weight: 750;
-  font-variant-numeric: tabular-nums;
-}
-
-.mc-mobile-bootstrap__phase-progress[hidden],
-.mc-mobile-bootstrap__timing > span[hidden] {
-  display: none !important;
-}
-
-.mc-mobile-bootstrap__timing {
-  grid-column: 1 / -1;
-  margin-top: 5px;
-  padding-top: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px 14px;
-  border-top: 1px solid color-mix(in srgb, var(--mc-boot-border) 72%, transparent);
-  color: var(--mc-boot-muted);
-  font-size: 0.7rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.mc-mobile-bootstrap .mc-loading-checkpoints {
-  grid-column: 1 / -1;
-  max-height: min(260px, 30dvh);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  color: var(--mc-boot-muted);
-}
-
-@media (max-height: 520px) {
-  .mc-mobile-bootstrap {
-    padding-top: max(12px, var(--mc-safe-top));
-    padding-bottom: max(12px, var(--mc-safe-bottom));
-  }
-
-  .mc-mobile-bootstrap__icon,
-  .mc-mobile-bootstrap .mc-mobile-bootstrap__heading {
-    margin-bottom: 8px;
-  }
-
-  .mc-mobile-bootstrap .mc-loading-checkpoints {
-    max-height: min(100px, 25dvh);
-  }
-}
-
-.mc-mobile-bootstrap .mc-loading-checkpoints > li[data-state="current"],
-.mc-mobile-bootstrap .mc-loading-checkpoints > li[data-state="complete"] {
-  color: var(--mc-boot-text);
-}
-.mc-mobile-bootstrap .mc-loading-checkpoints > li[data-state="pending"] {
-  color: color-mix(in srgb, var(--mc-boot-muted) 72%, transparent);
+.mc-mobile-bootstrap__heading:not(.is-loading) .mc-mobile-bootstrap__ellipsis > span {
+  animation: none;
+  opacity: 1;
 }
 
 .mc-elapsed-worker-text {
@@ -433,7 +341,7 @@ body.mc-mobile-booting {
   outline-offset: 3px;
 }
 
-.mc-mobile-bootstrap__activity > .mc-mobile-bootstrap__wake-prompt {
+.mc-mobile-bootstrap__wake-prompt {
   box-sizing: border-box;
   width: 100%;
   grid-column: 1 / -1;
@@ -445,10 +353,6 @@ body.mc-mobile-booting {
   color: var(--mc-boot-text);
   list-style: none;
   text-align: center;
-}
-
-.mc-mobile-bootstrap__activity.is-wake-prompt > :not(.mc-mobile-bootstrap__wake-prompt) {
-  display: none !important;
 }
 
 .mc-mobile-bootstrap__wake-prompt[hidden] {
@@ -524,22 +428,6 @@ body.mc-mobile-booting {
 .mc-mobile-bootstrap__wake[data-state="unsupported"],
 .mc-mobile-bootstrap.is-failed .mc-mobile-bootstrap__heading {
   color: var(--mc-gold);
-}
-
-@keyframes mc-mobile-bootstrap-spin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes mc-mobile-bootstrap-glow {
-  0%, 100% {
-    filter: drop-shadow(0 0 5px rgb(209 190 135 / 0.14));
-  }
-
-  50% {
-    filter:
-      drop-shadow(0 0 10px rgb(209 190 135 / 0.26))
-      drop-shadow(0 0 20px rgb(209 190 135 / 0.12));
-  }
 }
 
 @keyframes mc-mobile-bootstrap-dot-one {
@@ -621,16 +509,7 @@ body.mc-mobile-booting {
     transition: none;
   }
 
-  .mc-mobile-bootstrap__activity-indicator {
-    animation: none;
-    border-color: var(--mc-red-bright);
-    background: var(--mc-red-bright);
-  }
-
-  .mc-mobile-bootstrap__icon {
-    animation: none;
-  }
-
+  .mc-mobile-bootstrap__heading.is-loading .mc-mobile-bootstrap__label,
   .mc-mobile-bootstrap__ellipsis > span {
     opacity: 1;
     animation: none;
