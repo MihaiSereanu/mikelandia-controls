@@ -3,9 +3,10 @@ import { localizedNumber, localizedText } from "../../../ui/primitives/localized
 import { ACTOR_COMMANDS } from "../../../kernel/state/command-names.mjs";
 import { renderProfileInventory } from "./profile-inventory.mjs";
 import { renderProfileResourceEditor } from "./profile-resource-editor.mjs";
+import { bindDetailsDisclosure } from "../../../ui/primitives/disclosure.mjs";
 
 /** Profiles provide game labels. This renderer has no system IDs or rule paths. */
-export function renderProfilePanels(actor, state, commands, scope, renderNotes = null) {
+export function renderProfilePanels(actor, state, commands, scope, renderNotes = null, presentation = { openSections: new Set() }) {
   const tabs = [...(actor.panels ?? []), ...(actor.notesAvailable && renderNotes ? [{ id: "notes", label: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Notes", "Notes"), sections: [] }] : [])];
   if (!tabs.length) return [];
   const active = tabs.find(tab => tab.id === state.characterTab) ?? tabs[0];
@@ -28,7 +29,24 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
       template.content.querySelectorAll("script, style, iframe, object, embed, .secret").forEach(element => element.remove());
       template.content.querySelectorAll("p, div, li, br, h1, h2, h3, h4").forEach(element => element.append("\n"));
       const text = template.content.textContent.trim();
-      if (text) description = node("details", { className: "mc-profile-description", children: [
+      if (text && row.descriptionDisplay === "tooltip") {
+        const tooltip = node("div", { className: "mc-profile-note-tooltip", text,
+          attrs: { id: `${prefix}-note-${row.id}`, popover: "auto", role: "tooltip" } });
+        const trigger = node("button", { className: "mc-profile-note-trigger", text,
+          attrs: { type: "button", "aria-describedby": tooltip.id, "aria-expanded": "false" },
+          on: { click: () => {
+            if (tooltip.matches(":popover-open")) { tooltip.hidePopover(); return; }
+            tooltip.showPopover();
+            const anchor = trigger.getBoundingClientRect();
+            const bounds = tooltip.getBoundingClientRect();
+            const left = Math.max(8, Math.min(anchor.left, innerWidth - bounds.width - 8));
+            const top = anchor.bottom + bounds.height + 8 <= innerHeight ? anchor.bottom + 4 : Math.max(8, anchor.top - bounds.height - 4);
+            tooltip.style.left = `${left}px`; tooltip.style.top = `${top}px`;
+          } }
+        }, scope);
+        scope.listen(tooltip, "toggle", () => trigger.setAttribute("aria-expanded", String(tooltip.matches(":popover-open"))));
+        description = node("div", { className: "mc-profile-note", children: [trigger, tooltip] });
+      } else if (text) description = node("details", { className: "mc-profile-description", children: [
         node("summary", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Panels.Details", "Details") }),
         node("p", { text })
       ] });
@@ -86,13 +104,23 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
     const heading = [node("h3", { text: section.label }), ...(section.summary ?? []).map(row => node("span", {
       className: "mc-profile-section-metric", dataset: { profileMetric: row.id }, text: `${row.label} ${valueText(row)}`
     }))];
+    let disclosure;
+    if (section.disclosure) {
+      const key = `${active.id}:${section.id}`;
+      const summary = node("summary", { text: section.disclosure.label });
+      disclosure = node("details", { className: "mc-profile-description", children: [summary, node("p", { text: section.disclosure.text })] });
+      disclosure.open = presentation.openSections.has(key);
+      bindDetailsDisclosure(disclosure, summary, open => {
+        if (open) presentation.openSections.add(key); else presentation.openSections.delete(key);
+      }, scope);
+    }
     const element = node("section", {
-      className: `mc-profile-section mc-profile-${section.kind}${section.layout === "inline" ? " mc-profile-section-inline" : section.layout === "table" ? " mc-profile-section-table" : ""}`, dataset: { profileSection: section.id },
+      className: `mc-profile-section mc-profile-${section.kind}${section.layout === "inline" ? " mc-profile-section-inline" : section.layout === "table" ? " mc-profile-section-table" : section.layout === "rows" ? " mc-profile-section-rows" : ""}`, dataset: { profileSection: section.id },
       children: [compact && section.label === section.rows[0].label && !section.summary?.length ? null : node("header", { className: "mc-profile-section-heading", children: [
         ...(inventorySection ? [node("div", { className: "mc-profile-section-title", children: heading }), inventory.button] : heading)
       ] }), inventorySection ? inventory.body : null, section.kind === "text" ? node("p", { text: section.text }) : node("dl", {
         children: section.rows.map(renderRow)
-      })]
+      }), disclosure]
     });
     if (compact) {
       if (!summary) { summary = node("div", { className: `mc-profile-summary${active.summaryLayout === "counter-pairs" ? " mc-profile-summary-triple mc-profile-summary-counter-pairs" : ["paired", "triple"].includes(active.summaryLayout) ? ` mc-profile-summary-${active.summaryLayout}` : ""}` }); sections.push(summary); }

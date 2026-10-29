@@ -11,6 +11,46 @@ const sections = actor => actor.panels.flatMap(tab => tab.sections);
 const fields = actor => sections(actor).flatMap(section => section.rows ?? []);
 
 for (const use5e of [false, true]) {
+  test(`Warhammer ${use5e ? "5e" : "4e"} Combat mirrors native encumbrance tiers and read-only injuries`, t => {
+    const actor = createWarhammerActor();
+    installGlobals(t, { game: createWarhammerGame([actor], { use5e }) });
+    game.i18n = { localize: key => ({
+      "SHEET.Encumbered": "Encumbered", "SHEET.VeryEnc": "Very Encumbered", "SHEET.MaxEnc": "Maximum Encumbrance",
+      "WFRP4E.EncumbrancePenalties.Encumbered": "Native first penalty",
+      "WFRP4E.EncumbrancePenalties.VeryEnc": "Native second penalty",
+      "WFRP4E.EncumbrancePenalties.MaxEnc": "Native third penalty"
+    })[key] ?? key };
+    const tabs = () => integration.createActorViewRecord(actor, game.user).panels;
+    const combat = () => tabs().find(tab => tab.id === "combat").sections;
+    for (const [state, text] of [[1, undefined], [1.01, "Encumbered: Native first penalty"], [2, "Encumbered: Native first penalty"],
+      [2.01, "Very Encumbered: Native second penalty"], [3, "Very Encumbered: Native second penalty"], [3.01, "Maximum Encumbrance: Native third penalty"],
+      [undefined, undefined], [NaN, undefined]]) {
+      actor.system.status.encumbrance.state = state;
+      assert.equal(combat()[0].disclosure?.text, text);
+      assert.equal(tabs().find(tab => tab.id === "trappings").sections[0].disclosure, undefined);
+    }
+    assert.equal(combat().some(section => section.id === "injuries"), false);
+    const injury = { id: "injury", name: "Broken Arm", type: "injury", parent: actor,
+      system: { description: { value: "<p>Player notes</p>" }, gmdescription: { value: "GM secret" }, duration: { value: "1d10", permanent: false } } };
+    actor.items.push(injury);
+    assert.deepEqual(combat().slice(0, 2).map(section => section.id), ["encumbrance", "injuries"]);
+    const row = () => combat().find(section => section.id === "injuries").rows[0];
+    assert.equal(row().value, "1d10 days");
+    assert.equal(row().description, "<p>Player notes</p>");
+    assert.equal(row().descriptionDisplay, "tooltip");
+    assert.equal(row().valueLabel, undefined);
+    assert.equal(combat().find(section => section.id === "injuries").layout, "rows");
+    assert.ok(!row().action && !row().edit && !JSON.stringify(row()).includes("GM secret"));
+    injury.system.duration.permanent = true;
+    injury.system.description.value = "";
+    assert.equal(row().value, "Permanent");
+    assert.equal(row().description, "");
+    injury.visible = false;
+    assert.equal(combat().some(section => section.id === "injuries"), false);
+  });
+}
+
+for (const use5e of [false, true]) {
   test(`Warhammer ${use5e ? "5e" : "4e"} shows prepared Social Status only when available`, t => {
     const actor = createWarhammerActor();
     installGlobals(t, { game: createWarhammerGame([actor], { use5e }) });

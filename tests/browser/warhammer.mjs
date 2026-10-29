@@ -278,6 +278,59 @@ try {
   check("movement values are centered within their cells", centeredValues('movement'));
   if (use5e && innerWidth < 500) check("phone Momentum stacks below Encumbrance", screen.querySelector('[data-profile-section="momentum"]').getBoundingClientRect().top
     >= screen.querySelector('[data-profile-section="encumbrance"]').getBoundingClientRect().bottom);
+  const penalty = () => screen.querySelector('[data-profile-section="encumbrance"] details');
+  const injuries = () => screen.querySelector('[data-profile-section="injuries"]');
+  check("no penalty toggle or injury card without native data", !penalty() && !injuries());
+  actor.system.status.encumbrance.state = 1.5;
+  const fullInjuryNotes = "Keep the arm bound.\nRest daily. " + "Avoid strenuous use until recovered. ".repeat(12).trim();
+  const injury = { id: "injury", name: "Broken Arm", type: "injury", parent: actor,
+    system: { description: { value: `<p>Keep the arm bound.</p><p>${fullInjuryNotes.split("\n")[1]}</p><span class="secret">Secret note</span><script>window.injuryInjected=true</script>` },
+      gmdescription: { value: "GM injury secret" }, duration: { value: "1d10", permanent: false } } };
+  actor.items.push(injury);
+  Hooks.emit("updateActor", actor, {}); await tick();
+  check("penalties start collapsed", penalty() && !penalty().open && penalty().querySelector("summary").textContent === "Penalties");
+  penalty().querySelector("summary").click();
+  check("penalties expand on press", penalty().open);
+  check("injuries follow Encumbrance", [...screen.querySelectorAll('.mc-profile-content [data-profile-section]')].slice(0, 2).map(el => el.dataset.profileSection).join() === "encumbrance,injuries");
+  const noteTrigger = () => injuries().querySelector('.mc-profile-note-trigger');
+  const noteTooltip = () => injuries().querySelector('.mc-profile-note-tooltip');
+  check("injury row removes Notes and Duration labels and retains duration", injuries()?.textContent.includes("Broken Arm")
+    && injuries().textContent.includes("1d10 days") && !injuries().querySelector(".mc-profile-value-label, input, a, details")
+    && !injuries().textContent.includes("Notes") && !injuries().textContent.includes("Duration"));
+  const nameBounds = injuries().querySelector('dt').getBoundingClientRect();
+  const noteBounds = noteTrigger().getBoundingClientRect();
+  const durationBounds = injuries().querySelector('dd').getBoundingClientRect();
+  check("injury name notes and duration share one horizontal row", Math.abs(nameBounds.top + nameBounds.height / 2 - noteBounds.top - noteBounds.height / 2) < 2
+    && Math.abs(durationBounds.top + durationBounds.height / 2 - noteBounds.top - noteBounds.height / 2) < 2
+    && nameBounds.right <= noteBounds.left && noteBounds.right <= durationBounds.left);
+  check("long injury notes truncate with ellipses", getComputedStyle(noteTrigger()).textOverflow === "ellipsis"
+    && getComputedStyle(noteTrigger()).whiteSpace === "nowrap" && noteTrigger().scrollWidth > noteTrigger().clientWidth);
+  check("full injury note tooltip starts hidden", !noteTooltip().matches(':popover-open'));
+  noteTrigger().click(); await tick();
+  check("pressing injury notes opens full safe text tooltip", noteTooltip().matches(':popover-open') && noteTooltip().textContent === fullInjuryNotes
+    && noteTrigger().getAttribute('aria-expanded') === 'true');
+  const tipBounds = noteTooltip().getBoundingClientRect();
+  check("injury tooltip stays within viewport", tipBounds.left >= 0 && tipBounds.right <= innerWidth && tipBounds.top >= 0 && tipBounds.bottom <= innerHeight);
+  noteTrigger().click(); await tick();
+  check("pressing notes again dismisses the tooltip", !noteTooltip().matches(':popover-open') && noteTrigger().getAttribute('aria-expanded') === 'false');
+  check("injury notes exclude GM notes and unsafe markup", !injuries().textContent.includes("secret") && !injuries().textContent.includes("Secret") && !window.injuryInjected && !injuries().querySelector("script"));
+  check("expanded penalties and injuries fit the viewport", document.documentElement.scrollWidth <= innerWidth + 1
+    && injuries().getBoundingClientRect().top >= screen.querySelector('[data-profile-section="encumbrance"]').getBoundingClientRect().bottom);
+  injury.system.duration.permanent = true;
+  Hooks.emit("updateItem", injury, {}); await tick();
+  check("native refresh preserves open penalties and updates injuries", penalty().open && injuries().textContent.includes("Permanent") && !injuries().textContent.includes("1d10"));
+  await clickTab("main"); await clickTab("combat");
+  check("tab changes preserve open penalties", penalty().open);
+  commands.selectActor(npc.uuid); await tick();
+  commands.selectActor(actor.uuid); await tick(); await clickTab("combat");
+  check("switching characters resets penalties closed", penalty() && !penalty().open);
+  penalty().querySelector("summary").click(); penalty().querySelector("summary").click();
+  check("penalties collapse on second press", !penalty().open);
+  injury.visible = false;
+  actor.system.status.encumbrance.state = 1;
+  Hooks.emit("updateActor", actor, {}); await tick();
+  check("penalties and hidden injuries disappear after native updates", !penalty() && !injuries());
+  actor.items.splice(actor.items.indexOf(injury), 1);
   actor.system.status.encumbrance.current = "9.75"; actor.system.status.encumbrance.max = 10;
   Hooks.emit("updateActor", actor, { "system.status.encumbrance.current": "9.75" }); await tick();
   check("Combat encumbrance refreshes prepared decimal strings", field("encumbrance")?.textContent === "Encumbrance9.75 / 10");

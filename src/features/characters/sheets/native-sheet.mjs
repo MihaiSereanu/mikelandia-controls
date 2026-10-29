@@ -12,6 +12,7 @@ export function renderNativeCharacter({ state, commands, scope, createChooser, r
   shell.scope?.dispose();
   scope = shell.scope = owner.child("native-character-pane");
   const actor = state.snapshot.selectedActor;
+  if (shell.profilePresentation?.sourceUuid !== actor.sourceUuid) shell.profilePresentation = { sourceUuid: actor.sourceUuid, openSections: new Set() };
   const editorContext = state.characterTab === "notes" && actor.notesAvailable ? actor.sourceUuid : "";
   if (shell.editorContext !== editorContext || !shell.editorScope) {
     shell.editorScope?.dispose();
@@ -64,7 +65,7 @@ export function renderNativeCharacter({ state, commands, scope, createChooser, r
     node("p", { text: actor.presentation === "profile"
       ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Panels.NativeHint", "Open the sheet to make other changes.")
       : text("Hint", "Use the character sheet for inventory and game actions.") }),
-    ...renderProfilePanels(actor, state, commands, scope, renderNotes ? () => renderNotes(actor, commands, status, scope, shell.editorScope) : null),
+    ...renderProfilePanels(actor, state, commands, scope, renderNotes ? () => renderNotes(actor, commands, status, scope, shell.editorScope) : null, shell.profilePresentation),
     status, chooser.element,
     state.portraitImage ? renderImageViewer(state.portraitImage, commands.closeCharacterPortrait, scope, { localize: commands.localize }) : null
   ];

@@ -14,6 +14,22 @@ const encumbrance = { id: "encumbrance", kind: "counters", labelKey: "Encumbranc
     return Number.isFinite(numeric) ? numeric : undefined;
   } }
 ] };
+const combatEncumbrance = { ...encumbrance, disclosure: {
+  label: "Penalties", read: actor => {
+    const state = actor.system?.status?.encumbrance?.state;
+    if (!["number", "string"].includes(typeof state) || !Number.isFinite(Number(state))) return undefined;
+    const tier = state > 3 ? "MaxEnc" : state > 2 ? "VeryEnc" : state > 1 ? "Encumbered" : null;
+    if (!tier) return undefined;
+    return `${localizeFoundry(`SHEET.${tier}`, tier)}: ${localizeFoundry(`WFRP4E.EncumbrancePenalties.${tier}`, tier)}`;
+  }
+} };
+const injuries = { id: "injuries", kind: "items", labelKey: "Injuries", label: "Injuries",
+  collectionPath: "items", itemTypes: ["injury"], format: "display",
+  layout: "rows", descriptionPath: "system.description.value", descriptionDisplay: "tooltip",
+  readValue: item => item.system?.duration?.permanent === true ? localizeFoundry("Permanent", "Permanent")
+    : `${item.system?.duration?.value ?? ""} ${localizeFoundry("days", "days")}`.trim(),
+  include: (item, _context, owner) => ownedWarhammerItem(owner, String(item.id), "injury") === item
+};
 
 /** Mappings verified against wfrp4e 10.1.2 native models and sheet templates. */
 export const warhammerCharacterProfile = {
@@ -47,7 +63,8 @@ export const warhammerCharacterProfile = {
       ] }
     ] },
     { id: "combat", labelKey: "Combat", label: "Combat", sections: [
-      encumbrance,
+      combatEncumbrance,
+      injuries,
       { id: "movement", kind: "values", layout: "table", labelKey: "Move", label: "Movement", fields: [
         { id: "move", labelKey: "Move", label: "Move", path: "system.details.move.value" },
         ...["walk", "run"].map(id => ({ id, labelKey: id[0].toUpperCase() + id.slice(1), label: id[0].toUpperCase() + id.slice(1), format: "display",

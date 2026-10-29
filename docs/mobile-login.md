@@ -1,6 +1,6 @@
 # Mobile login and PWA runbook
 
-The login page is hosted at `https://mikelandia.duckdns.org/mobile/` from `/srv/mikelandia-mobile`. The current builder packages eleven static files. Foundry owns users, passwords, and sessions; the page remembers only a per-world player ID, clears submitted passwords, and disables connected users. Visiting establishes a native `/join` session, logging out an existing world login in that browser. Module activation and mode selection remain independent.
+The login page is hosted at `https://mikelandia.duckdns.org/mobile/` from `/srv/mikelandia-mobile`. Foundry owns users, passwords, and sessions; the page remembers only a per-world player ID, clears submitted passwords, and disables connected users. Visiting establishes a native `/join` session, logging out an existing world login in that browser. Module activation and mode selection remain independent.
 
 ## Build and check
 
@@ -43,9 +43,11 @@ Caddy can serve the page while Foundry is stopped; connection failures offer ret
 
 ## Rollback
 
-- PWA fixes deployed 2026-10-28: `/var/backups/mikelandia-mobile/20261028-095230-pwa-fixes/` contains `static/` originals, `module/assets/` originals, and the deployment hash receipt. Restore these over `/srv/mikelandia-mobile/` and `/home/ubuntu/foundrydata/Data/modules/ve-mobile/` respectively. No service restart; reload clients. Only the spacing delta was applied to the still-named `ve-mobile` runtime, version 1.1.15. The local Profile wording edit was excluded.
-- PWA update deployed 2026-10-28: restore the five prior files from `/var/backups/mikelandia-mobile/20261027-225515-pwa/static/` to the static root; remove `pwa.mjs`, `manifest.webmanifest`. No service restart; reload clients. Backup name uses server time. This update left Caddy configuration unchanged.
-- Original login deployment: restore `/var/backups/mikelandia-mobile/20261027-210837/Caddyfile` to `/etc/caddy/Caddyfile`, validate, and reload. Static files may remain unserved. That backup also holds original deployment hashes.
+Verify backup availability before restoring. The latest recorded static update uses `/var/backups/mikelandia-mobile/20261029-121703-gold-icon`; its affected files and hashes are in `dist/pwa-gold-live-deployment.json`. Restore only those files to `/srv/mikelandia-mobile/`, verify public hashes, and reload clients. No service restart is needed.
+
+The earlier standalone-spacing backup at `/var/backups/mikelandia-mobile/20261028-095230-pwa-fixes/` contains `static/` originals and `module/assets/` originals for `/home/ubuntu/foundrydata/Data/modules/ve-mobile/`. Restore those groups only when rolling back that spacing change.
+
+To remove the hosted login route, restore `/var/backups/mikelandia-mobile/20261027-210837/Caddyfile` to `/etc/caddy/Caddyfile`, validate, and reload Caddy.
 
 ## Native compatibility
 

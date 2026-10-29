@@ -3252,6 +3252,55 @@ body.mc-mobile-running #pause {
   grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
 }
 
+.mc-profile-section-rows dl { grid-template-columns: minmax(0, 1fr); }
+.mc-profile-section-rows .mc-profile-row {
+  display: grid;
+  grid-template-columns: minmax(0, 28%) minmax(0, 1fr) minmax(0, max-content);
+  gap: 8px;
+  padding: 4px 8px;
+  font-size: 14px;
+}
+.mc-profile-section-rows .mc-profile-row dt { grid-column: 1; grid-row: 1; }
+.mc-profile-section-rows .mc-profile-row dd { grid-column: 3; grid-row: 1; margin: 0; }
+.mc-profile-section-rows .mc-profile-row :is(dt, dd),
+.mc-profile-note-trigger {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mc-profile-note { grid-column: 2; grid-row: 1; min-width: 0; }
+.mc-mobile-app button.mc-profile-note-trigger {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--mc-text);
+  font: inherit;
+  text-align: start;
+}
+.mc-profile-note-tooltip {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: min(420px, calc(100vw - 16px));
+  max-height: min(320px, calc(100dvh - 16px));
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--mc-border);
+  border-radius: 8px;
+  background: var(--mc-surface);
+  color: var(--mc-text);
+  font: inherit;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
 .mc-profile-section-inline dl {
   display: flex;
   gap: 6px;

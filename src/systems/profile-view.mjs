@@ -64,7 +64,13 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
     if (!entry || !validId(entry.id) || !enabled(entry) || !label(entry)) return null;
     if (["values", "counters"].includes(entry.kind)) {
       const projected = rows(entry.fields);
+      let disclosure;
+      try {
+        const text = entry.disclosure?.read?.(actor, context);
+        if (scalar(text, "text") && label(entry.disclosure)) disclosure = Object.freeze({ label: label(entry.disclosure), text });
+      } catch { /* Missing native data leaves the disclosure unavailable. */ }
       return projected.length ? Object.freeze({ id: entry.id, label: label(entry), kind: entry.kind, rows: projected, summary: rows(entry.summary),
+        ...(disclosure ? { disclosure } : {}),
         ...(["inline", "table"].includes(entry.layout) ? { layout: entry.layout } : {}) }) : null;
     }
     if (entry.kind === "text") {
@@ -83,11 +89,12 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
             || (entry.include && entry.include(item, context, actor) !== true)) continue;
           const id = String(item.id ?? "");
           const name = readProfilePath(item, entry.namePath ?? "name");
-          const value = readProfilePath(item, entry.valuePath);
-          if (!id || seen.has(id) || !scalar(name, "text") || (entry.valuePath !== undefined && !scalar(value, entry.format))) continue;
+          const value = typeof entry.readValue === "function" ? entry.readValue(item, context, actor) : readProfilePath(item, entry.valuePath);
+          if (!id || seen.has(id) || !scalar(name, "text") || ((entry.valuePath !== undefined || typeof entry.readValue === "function") && !scalar(value, entry.format))) continue;
           seen.add(id);
           projected.push(Object.freeze({ id, label: name, value, format: entry.format ?? "number",
             ...(typeof readProfilePath(item, entry.descriptionPath) === "string" ? { description: readProfilePath(item, entry.descriptionPath) } : {}),
+            ...(entry.descriptionDisplay === "tooltip" ? { descriptionDisplay: "tooltip" } : {}),
             ...(typeof entry.valueLabel === "string" && entry.valueLabel.trim() ? { valueLabel: localizedText(localize, entry.valueLabelKey ?? entry.valueLabel, entry.valueLabel) } : {}),
             ...(typeof entry.valuePrefix === "string" ? { valuePrefix: entry.valuePrefix } : {}),
             ...(entry.quantityEditable ? editFor(`quantity:${id}`, value) : {}),
@@ -95,7 +102,8 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
         } catch { /* A malformed item cannot expose extra fields or break a section. */ }
       }
       projected.sort((a, b) => a.label.localeCompare(b.label));
-      return projected.length || entry.keepEmpty === true ? Object.freeze({ id: entry.id, label: label(entry), kind: "items", rows: Object.freeze(projected), summary: rows(entry.summary) }) : null;
+      return projected.length || entry.keepEmpty === true ? Object.freeze({ id: entry.id, label: label(entry), kind: "items", rows: Object.freeze(projected), summary: rows(entry.summary),
+        ...(entry.layout === "rows" ? { layout: "rows" } : {}) }) : null;
     }
     return null;
   };

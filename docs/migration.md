@@ -25,7 +25,7 @@ Legacy identifiers remain where migration, release-asset retirement, and deploym
 
 Disable the new module and re-enable the original installation. Its retained browser preferences and document flags represent the pre-migration state; later changes made under the new namespace are separate.
 
-The earlier source snapshot was recorded as `dist/diagnosis/rebrand-before.zip`; it is absent from this checkout. Deployment backups were recorded at the following paths; verify availability before rollback:
+Recorded legacy deployment backups; verify availability before rollback:
 
 - `/home/ubuntu/backups/ve-mobile/20261028-momentum-cancellation/`
 - `/home/ubuntu/backups/ve-mobile-journals/20261027-212646/`
