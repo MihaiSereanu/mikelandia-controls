@@ -49,6 +49,8 @@ While Targets is expanded and a target surface is visible, relevant native refre
 
 ## Mobile frame and upgrades
 
+In WFRP worlds, Phone/Tablet mode permanently saves all five `wfrp4e.theme` sections as disabled in the browser, preserving font choices. The policy also removes native theming from open sheets, journals, sidebar and applications, and corrects theme previews or saved re-enabling while mobile mode is selected. Desktop mode stops enforcement without restoring the previous WFRP theme. Other systems and browsers that remain in Desktop mode are unaffected. This uses the installed WFRP 10.1.2 client schema; unsupported schemas are reported without writes.
+
 The in-game companion frame reserves the top safe-area inset plus 8px in standalone mode. Both base and protected-style CSS use border-box sizing to keep navigation within the viewport and preserve the phone character header's additional 4px inset. Login/PWA behavior and operations are in the [runbook](mobile-login.md).
 
 Mobile Logout navigates to Foundry's prefix-aware `mobile` route with a trailing slash. The mobile login establishes the native `/join` session to end the world login.

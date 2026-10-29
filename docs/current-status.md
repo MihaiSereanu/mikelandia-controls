@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-10-29. Source contracts: [architecture](architecture.md). Operations: [mobile login](mobile-login.md) and [migration](migration.md).
+Updated 2026-10-30. Source contracts: [architecture](architecture.md). Operations: [mobile login](mobile-login.md) and [migration](migration.md).
 
 ## Deployment
 
@@ -13,6 +13,8 @@ Recorded deployment facts; installed files and the remote host were not rechecke
 ## Checkout-only work
 
 Changes since the local installation remain unpackaged and uninstalled:
+
+- Phone/Tablet mode saves all WFRP Theme sections off in the browser and enforces that preference while mobile mode runs. Desktop does not restore the old WFRP theme. Native-world verification remains pending.
 
 - WFRP signed SL controls, a separate Effects tab with native condition actions and 5e references, and revised effect/item rows. Engaged is excluded from mobile condition tracking; Injuries moved from Combat to Effects. Native encumbrance penalties remain in WFRP Combat.
 - The main Combat route is labelled Initiative. Targets also appears in WFRP Character > Combat, Shadowdark Abilities, and D&D Overview.
@@ -36,6 +38,7 @@ These records cover specific revisions and scopes, not all current changes. They
 
 | Scope | Result | Evidence |
 |---|---|---|
+| WFRP Theme policy | Full Node suite; 88 browser scenarios / 5,645 checks, including 18 phone/tablet policy checks for persistence, native surfaces, enforcement, Desktop behavior and cleanup | `tests/wfrp-theme-policy.test.mjs`, `tests/browser/wfrp-theme-policy.mjs` |
 | Controls guide | Full Node suite; 86 browser scenarios / 5,627 checks, including phone/tablet help content and formatting | `dist/controls-guide-evidence.json` |
 | Tooltip dismissal | Full Node suite; 87 browser scenarios / 6,529 checks, including trusted touch input at phone, tablet and narrow widths | `dist/tooltip-dismissal-evidence.json` |
 | Description formatting | Full Node suite plus new D&D regression; 83 browser scenarios / 4,971 checks, followed by 5 final effect-layout scenarios / 94 checks | `dist/description-formatting-evidence.json` |

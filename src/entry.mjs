@@ -54,6 +54,7 @@ import { createChatDomGateway, installMcChatWindowClass } from "./foundry/chat/c
 import { createFoundryMobileBackGateway } from "./foundry/presentation/mobile-back-gateway.mjs";
 import { createActorEditorGateway } from "./foundry/actors/actor-editor-gateway.mjs";
 import { createMobileModuleCompatibilityGateway } from "./foundry/compatibility/mobile-module-compatibility.mjs";
+import { createWfrpThemePolicy } from "./foundry/compatibility/wfrp-theme-policy.mjs";
 
 import { createLegacyClientRestoration } from "./foundry/compatibility/legacy-client-restoration.mjs";
 const isGamePage = /\/game\/?$/.test(window.location.pathname);
@@ -457,6 +458,7 @@ if (isGamePage && migrateBrowserState()) {
     const mobilePresentationSelected = () => ["phone", "tablet"].includes(readRequestedPolicy().runtimeMode);
     mobileModuleCompatibility.suppress(compatibilityScope, mobilePresentationSelected());
     Hooks.once("setup", () => {
+      createWfrpThemePolicy({ readMobile: mobilePresentationSelected }).start(compatibilityScope);
       void mobileModuleCompatibility.reconcileCarolingianUi(mobilePresentationSelected()).catch(error => {
         console.error("Mikelandia Controls | Could not apply Carolingian UI mobile compatibility", error);
       });

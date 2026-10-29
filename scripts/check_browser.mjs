@@ -8,6 +8,8 @@ import { checkTooltipTouches } from "./browser/tooltip-touches.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ["wfrp-theme-policy-phone", 390, 844, "wfrp-theme-policy", "layout=phone"],
+  ["wfrp-theme-policy-tablet", 1024, 768, "wfrp-theme-policy", "layout=tablet"],
   ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844]].map(([layout, width, height]) =>
     [`tooltip-touch-${layout}`, width, height, "warhammer", `layout=${layout === "tablet" ? "tablet" : "phone"}&edition=5e&preview=effects`]),
   ["control-contrast-native", 390, 844, "control-contrast", "native-forms=true"],
