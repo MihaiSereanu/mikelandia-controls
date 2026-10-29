@@ -1,10 +1,12 @@
 import { warhammerNotes } from "../actor-notes.mjs";
+import { localizeFoundry } from "../../foundry/settings/localization.mjs";
 import { readCombatHealth } from "../combat-health.mjs";
 import { fallbackIntegration } from "../fallback/integration.mjs";
 import { createProfilePanels } from "../profile-view.mjs";
 import { createWarhammerCharacterProfile } from "./profile.mjs";
 import { readWarhammerContext } from "./context.mjs";
 import { createWarhammerCommands } from "./commands.mjs";
+import { conditionSection, warhammerEffectSections } from "./effects.mjs";
 
 export const warhammerIntegration = Object.freeze({
   ...fallbackIntegration,
@@ -28,7 +30,11 @@ export const warhammerIntegration = Object.freeze({
     if (!context) return identity;
     const capabilities = capabilitiesForActor(actor, user);
     const notesFields = warhammerNotes.fields(actor, globalThis.game);
-    const panels = createProfilePanels(actor, createWarhammerCharacterProfile(actor, context), { ...context, actions: capabilities?.profileActions, edits: capabilities?.profileEdits });
+    const basePanels = createProfilePanels(actor, createWarhammerCharacterProfile(actor, context), { ...context, actions: capabilities?.profileActions, edits: capabilities?.profileEdits });
+    const effects = basePanels.find(tab => tab.id === "effects");
+    const sections = warhammerEffectSections(actor);
+    const panels = [...basePanels.filter(tab => tab.id !== "effects"), { id: "effects", label: localizeFoundry("Effects", "Effects"),
+      sections: [conditionSection(actor, capabilities?.profileActions), ...(effects?.sections ?? []), ...sections] }];
     return panels.length ? Object.freeze({ ...identity, presentation: "profile", profileId: "wfrp4e-character",
       edition: context.revision, notesAvailable: warhammerNotes.available(actor), notesFields,
       notesRevision: JSON.stringify([warhammerNotes.available(actor) ? warhammerNotes.read(actor) : "", notesFields]), capabilities: { editBiography: true }, panels }) : identity;

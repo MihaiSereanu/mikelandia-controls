@@ -2,6 +2,7 @@ import { localizedText } from "../ui/primitives/localized-text.mjs";
 import { runMobileApplicationWorkflow } from "../foundry/presentation/mobile-ui-isolation.mjs";
 import { createTaskScope } from "./lifecycle/task-scope.mjs";
 import { createAppFrame } from "../ui/frame/app-frame.mjs";
+import { targetsVisible } from "../features/combat/targeting-surface.mjs";
 import { createAuthoritativeResynchronizer } from "./connection/authoritative-resync.mjs";
 
 import { ACTOR_COMMANDS } from "./state/command-names.mjs";
@@ -500,11 +501,14 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       if (targetingGateway) {
         targetingGateway.watch(runtimeScope, () => store.state.selectedActorSourceUuid,
           targeting => store.dispatch({ type: "targeting-updated", targeting }),
-          { isVisible: () => store.state.route === "combat" });
+          { isVisible: () => targetsVisible(store.state) });
         let source = store.state.selectedActorSourceUuid;
+        let visible = targetsVisible(store.state);
         runtimeScope.own(store.subscribe(state => {
-          if (source === state.selectedActorSourceUuid) return;
+          const nextVisible = targetsVisible(state);
+          if (source === state.selectedActorSourceUuid && visible === nextVisible) return;
           source = state.selectedActorSourceUuid;
+          visible = nextVisible;
           targetingGateway.refresh(source);
         }, { immediate: false }));
       }

@@ -33,20 +33,21 @@ for (const use5e of [false, true]) {
     const injury = { id: "injury", name: "Broken Arm", type: "injury", parent: actor,
       system: { description: { value: "<p>Player notes</p>" }, gmdescription: { value: "GM secret" }, duration: { value: "1d10", permanent: false } } };
     actor.items.push(injury);
-    assert.deepEqual(combat().slice(0, 2).map(section => section.id), ["encumbrance", "injuries"]);
-    const row = () => combat().find(section => section.id === "injuries").rows[0];
+    const effects = () => tabs().find(tab => tab.id === "effects").sections;
+    assert.equal(combat().some(section => section.id === "injuries"), false);
+    const row = () => effects().find(section => section.id === "injuries").rows[0];
     assert.equal(row().value, "1d10 days");
     assert.equal(row().description, "<p>Player notes</p>");
     assert.equal(row().descriptionDisplay, "tooltip");
     assert.equal(row().valueLabel, undefined);
-    assert.equal(combat().find(section => section.id === "injuries").layout, "rows");
+    assert.equal(effects().find(section => section.id === "injuries").layout, "rows");
     assert.ok(!row().action && !row().edit && !JSON.stringify(row()).includes("GM secret"));
     injury.system.duration.permanent = true;
     injury.system.description.value = "";
     assert.equal(row().value, "Permanent");
     assert.equal(row().description, "");
     injury.visible = false;
-    assert.equal(combat().some(section => section.id === "injuries"), false);
+    assert.equal(effects().some(section => section.id === "injuries"), false);
   });
 }
 
@@ -73,7 +74,7 @@ for (const use5e of [false, true]) {
     const record = integration.createActorViewRecord(actor, game.user);
     assert.equal(record.presentation, "profile");
     assert.equal(record.edition, use5e ? "5e" : "4e");
-    assert.deepEqual(record.panels.map(tab => tab.label), ["Main", "Combat", "Skills", "Trappings"]);
+    assert.deepEqual(record.panels.map(tab => tab.label), ["Main", "Combat", "Skills", "Trappings", "Effects"]);
     assert.equal(fields(record).find(field => field.id === "ws").value, 41, "use prepared value; do not recompute from initial/advances");
     assert.deepEqual(fields(record).find(field => field.id === "wounds"), { id: "wounds", label: "Wounds", value: 9, max: 13, format: "number", editControl: "counter" });
     for (const id of ["wounds", "fortune", "fate", "corruption"]) {
@@ -155,7 +156,7 @@ test("missing fields disappear without inferred zeroes and the native path remai
   const actor = createWarhammerActor({ system: { status: { wounds: { value: 0 } } }, items: [] });
   installGlobals(t, { game: createWarhammerGame([actor]) });
   const record = integration.createActorViewRecord(actor, game.user);
-  assert.deepEqual(record.panels.map(tab => tab.id), ["main"]);
+  assert.deepEqual(record.panels.map(tab => tab.id), ["main", "effects"]);
   assert.equal(fields(record).length, 1);
   assert.equal(fields(record)[0].value, 0);
   assert.equal(fields(record)[0].max, undefined);

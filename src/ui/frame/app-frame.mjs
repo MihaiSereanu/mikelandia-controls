@@ -69,7 +69,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
   const rotateSuggestion = tabletRotateSuggestion(commands.localize);
   const navSideToggle = node("button", { className: "mc-tablet-nav-side-toggle", attrs: { type: "button" }, children: [navSideIcon], on: { click: () => commands.toggleTabletNavSide() } }, scope);
   const combatControlsHost = node("div", { className: "mc-gm-combat-control-host", attrs: { hidden: true } });
-  const navItems = [["characters", "fa-user", "Character"], ["chat", "fa-comments", "Chat"], ["journals", "fa-book-open", "Journals"], ["combat", combatNavIcon, "Combat"], ["settings", "fa-gear", "Settings"]];
+  const navItems = [["characters", "fa-user", "Character"], ["chat", "fa-comments", "Chat"], ["journals", "fa-book-open", "Journals"], ["combat", combatNavIcon, "Initiative"], ["settings", "fa-gear", "Settings"]];
   const navButtons = new Map(navItems.map(([route, createIcon, label]) => {
     const button = node("button", { className: "mc-main-nav-item", attrs: { type: "button" }, dataset: { route }, on: { click: () => commands.navigate(route) }, children: [typeof createIcon === "function" ? createIcon() : icon(createIcon), node("span", { text: commands.localize?.(`MIKELANDIA_CONTROLS.Navigation.${label}`, label) ?? label })] }, scope);
     return [route, button];
@@ -283,6 +283,14 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     }
 
     const routeSnapshotChanged = snapshotChanged && snapshotPresentationChangedForRoute(renderedState, state);
+    if (sameScreen && state.status === "ready" && state.route === "characters" && !viewChanged && !selectionChanged
+      && !characterTabChanged && !rollResultChanged && !actionSessionChanged && !characterItemChanged
+      && !hitPointEditorChanged && !restEditorChanged && !spellSlotEditorChanged && !xpEditorChanged && !portraitImageChanged
+      && renderedState?.snapshot === state.snapshot && renderedState?.targeting !== state.targeting
+      && viewport.querySelector(".mc-targets")?.__mcUpdateTargetDistances?.(state.targeting)) {
+      renderedState = screenState(state, layoutKey);
+      return;
+    }
     if (sameScreen && state.status === "ready" && state.route === "combat" && !viewChanged && !selectionChanged
       && (renderedState?.snapshot?.combat !== state.snapshot?.combat || renderedState?.targeting !== state.targeting)
       && viewport.firstElementChild?.__mcUpdateCombatState?.(state.snapshot?.combat, state.targeting)) {
@@ -629,6 +637,7 @@ function clearThemeBlend(element) {
 export function snapshotPresentationChangedForRoute(previous, current) {
   if (!previous?.snapshot || !current?.snapshot) return previous?.snapshot !== current?.snapshot;
   if (current.route === "characters") {
+    if (previous.targeting !== current.targeting) return true;
     if (!previous.snapshot.selectedActor && !current.snapshot.selectedActor) {
       if (previous.snapshot.actors === current.snapshot.actors) return false;
       const actorId = current.selectedActorId;

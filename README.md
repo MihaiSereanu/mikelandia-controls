@@ -1,6 +1,6 @@
 # Mikelandia Controls
 
-A phone and tablet companion for in-person Foundry VTT: Character, Chat, Journals, Combat, and Settings. Combat supports initiative, End Turn, and GM encounter progression. Map, token, placement, and light controls are excluded.
+A phone and tablet companion for in-person Foundry VTT: Character, Chat, Journals, Initiative, and Settings. Initiative supports initiative, End Turn, and GM encounter progression. Map, token, placement, and light controls are excluded.
 
 Supports D&D5e, experimental Warhammer 4e/5e and Shadowdark PC panels, and native-sheet fallback. Based on [Silvestrae](https://github.com/Silvestrae); original license and author credits are preserved.
 

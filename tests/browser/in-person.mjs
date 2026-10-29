@@ -1,4 +1,5 @@
 import { createShadowdarkFixture } from "/tests/helpers/shadowdark.mjs";
+import { createWarhammerActor, createWarhammerGame } from "/tests/helpers/warhammer.mjs";
 import { createActor, createGame, createHooks, collection } from "/tests/helpers/foundry.mjs";
 import { createAppKernel } from "/src/kernel/app-kernel.mjs";
 import { createSignalStore } from "/src/kernel/state/signal-store.mjs";
@@ -18,8 +19,9 @@ let kernel;
 try {
   const params = new URLSearchParams(location.search);
   const legacy = params.get("system") === "dnd5e";
-  const actor = legacy ? createActor() : null;
-  const f = legacy ? { actor, game: createGame([actor]), hooks: createHooks() } : createShadowdarkFixture();
+  const warhammer = params.get("system") === "wfrp4e";
+  const actor = warhammer ? createWarhammerActor() : legacy ? createActor() : null;
+  const f = legacy || warhammer ? { actor, game: warhammer ? createWarhammerGame([actor], { use5e: true }) : createGame([actor]), hooks: createHooks() } : createShadowdarkFixture();
   f.game.user.character = f.actor;
   globalThis.game = f.game; globalThis.Hooks = f.hooks;
   const dictionary = await fetch("/locales/en.json").then(r => r.json());
@@ -80,6 +82,7 @@ try {
   kernel.reconcile(); await tick(); await tick();
   check("complete kernel starts without a canvas", kernel.active);
   const root = document.querySelector(".mc-mobile-app");
+  check("main Combat navigation is now Initiative", root.querySelector('[data-route="combat"]').textContent === "Initiative");
   check("application uses Mikelandia Controls name", root?.getAttribute("aria-label") === "Mikelandia Controls");
   check("exactly five navigation screens remain", [...root.querySelectorAll(".mc-main-nav-item")].map(b => b.dataset.route).join(",") === "characters,chat,journals,combat,settings");
   const nav = root.querySelector(".mc-bottom-nav");
@@ -147,6 +150,23 @@ try {
   check("kernel patches animation distance without replacing rows or focus", enemyRow.querySelector(".mc-target-distance").textContent === "25 ft" && root.querySelector(".mc-combat-screen") === combatScreen && root.querySelector('[data-target-id="enemy"]') === enemyRow && document.activeElement === enemyRow);
   targeting.pc.x = 100; Hooks.emit("refreshToken", canvas.tokens.get("pc"), { refreshPosition: true }); await tick();
   check("kernel patches source movement distances", enemyRow.querySelector(".mc-target-distance").textContent === "20 ft" && root.querySelector('[data-target-id="enemy"]') === enemyRow);
+  root.querySelector('[data-route="characters"]').click(); await tick();
+  root.querySelector(warhammer ? '[data-profile-tab="combat"]' : legacy ? '[data-character-tab="overview"]' : '[data-profile-tab="abilities"]').click(); await tick();
+  check("character tab reuses native Target Selector", root.querySelector('[data-target-id="enemy"]')?.getAttribute("aria-pressed") === "true");
+  const characterEnemy = root.querySelector('[data-target-id="enemy"]');
+  characterEnemy.focus(); targeting.enemy.x = 600;
+  Hooks.emit("refreshToken", canvas.tokens.get("enemy"), { refreshPosition: true }); await tick();
+  check("character animation patches distance and preserves focus", root.querySelector('[data-target-id="enemy"]') === characterEnemy
+    && document.activeElement === characterEnemy && characterEnemy.querySelector(".mc-target-distance").textContent === "25 ft");
+  characterEnemy.click(); await tick();
+  check("character target toggle updates native selection", root.querySelector('[data-target-id="enemy"]').getAttribute("aria-pressed") === "false" && !game.user.targets.has(canvas.tokens.get("enemy")));
+  root.querySelector(".mc-targets-heading").click(); await tick();
+  check("character selector collapses on state update", !root.querySelector(".mc-target-row"));
+  root.querySelector(".mc-targets-heading").click(); await tick();
+  game.combat.started = false; Hooks.emit("updateCombat", game.combat, {}); await tick();
+  check("character selector disappears after combat ends", !root.querySelector(".mc-targets"));
+  game.combat.started = true; Hooks.emit("updateCombat", game.combat, {}); await tick();
+  root.querySelector('[data-route="combat"]').click(); await tick();
   root.querySelector(".mc-targets-heading").click(); await tick();
   check("kernel remembers collapsed targeting state", !root.querySelector(".mc-target-row"));
   check("navigation fits viewport", document.documentElement.scrollWidth <= innerWidth + 1);

@@ -19,7 +19,7 @@ const shadowdark = `<div data-application-part="content"><h2>Longbow Attack</h2>
   </div><footer class="roll-footer"><select name="rollMode"><option value="publicroll">Public Roll</option><option value="gmroll">Private GM Roll</option></select><button type="submit" class="default">Roll</button></footer>`;
 const warhammer = edition => `<div class="dialog-base"><div class="dialog-fields"><div data-application-part="default">
   ${field(edition === "4e" ? "Advantage" : "Modifier", edition === "4e" ? "advantage" : "modifier")}
-  ${edition === "4e" ? field("Modifier", "modifier") + field("SL Bonus", "slBonus") + field("Success Bonus", "successBonus") : field("SL Bonus", "slBonus")}
+  ${edition === "4e" ? field("Modifier", "modifier") + field("SL Bonus", "slBonus") + field("Success Bonus", "successBonus") : field("SL", "SL")}
   </div><div data-application-part="specific"><div class="form-group stacked"><label>Difficulty</label><div class="form-fields"><select name="difficulty"><option value="challenging">Challenging (+0)</option></select></div></div>
   ${edition === "5e" ? `<div class="flexrow gap">${field("Damage", "damage", "6")}<div class="form-group"><label>Charging <input type="checkbox" name="charging"></label></div></div>` : '<div class="form-group"><label>Charging</label><div class="form-fields"><input type="checkbox" name="charging"></div></div>'}</div></div>
   <div class="dialog-modifiers" data-application-part="modifiers"><label>Modifiers</label><ul class="modifier-list">
@@ -89,6 +89,24 @@ try {
     check("all advantage choices have touch height", [...root.querySelectorAll(".advantage-buttons label")].every(label => label.getBoundingClientRect().height >= 44));
     check("situational description remains legible", contrast(style(root.querySelector(".tooltips")).color, style(root).backgroundColor) >= 4.5);
   } else {
+    const sl = root.querySelector(system === "4e" ? '[name="slBonus"]' : '[name="SL"]');
+    const counter = sl.closest(".mc-roll-counter");
+    let changes = 0;
+    sl.addEventListener("change", () => changes++);
+    counter.querySelector("button").click();
+    check("SL decrement crosses zero and dispatches native change", sl.value === "-1" && changes === 1);
+    counter.querySelector("button:last-child").click();
+    check("SL increment dispatches native change", sl.value === "0" && changes === 2);
+    check("SL buttons retain touch targets", [...counter.querySelectorAll("button")].every(button => button.getBoundingClientRect().width >= 44));
+    const nativeFields = counter.parentElement;
+    nativeFields.replaceChildren(sl.cloneNode(true));
+    admissions.admit(application, root, false, null, application);
+    const rerenderedSL = nativeFields.querySelector("input");
+    let rerenderChanges = 0;
+    rerenderedSL.addEventListener("change", () => rerenderChanges++);
+    nativeFields.querySelector("button").click();
+    check("native partial rerender receives one working SL stepper", nativeFields.querySelectorAll(".mc-roll-counter").length === 1
+      && rerenderedSL.value === "-1" && rerenderChanges === 1 && rerenderedSL !== sl);
     const charging = root.querySelector('input[name="charging"]');
     const chargingLabel = charging.closest(".form-group").querySelector("label");
     const labelText = document.createRange(); labelText.selectNode(chargingLabel.firstChild);
@@ -142,6 +160,7 @@ try {
   admissions.release(application);
   check("release restores native appearance", palette(root) === nativePalette);
   check("release removes presentation labels", !root.querySelector(".mc-roll-state-full, .mc-roll-state-short"));
+  check("release restores unwrapped native SL field", !root.querySelector(".mc-roll-counter"));
   admissions.admit(application, root, isSD, null, application);
   document.body.classList.remove("mc-mobile-running");
   check("desktop never receives the mobile palette", palette(root) === nativePalette);

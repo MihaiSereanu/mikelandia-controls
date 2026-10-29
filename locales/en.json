@@ -28,6 +28,12 @@
       "Unavailable": "This token is no longer available for targeting."
     },
     "Panels": {
+      "ChooseCondition": "Choose condition",
+      "RemoveConditionRow": "Remove from list",
+      "Decrease": "Decrease",
+      "Increase": "Increase",
+      "DecreaseSL": "Decrease SL",
+      "IncreaseSL": "Increase SL",
       "XP": "XP",
       "ActionUnavailable": "This game action is no longer available.",
       "InvalidAction": "Invalid game action request.",
@@ -91,6 +97,7 @@
       "Chat": "Chat",
       "Journals": "Journals",
       "Combat": "Combat",
+      "Initiative": "Initiative",
       "Settings": "Settings",
       "MoveRight": "Move navigation to right side"
     },

@@ -4,31 +4,34 @@ Updated 2026-10-29. Source contracts: [architecture](architecture.md). Operation
 
 ## Deployment
 
-These are recorded deployment facts; the remote host was not rechecked during this cleanup.
+Recorded deployment facts; installed files and the remote host were not rechecked for this documentation pass.
 
-- Static PWA update on 2026-10-29: six targeted `/mobile/` files were deployed and their public HTTPS hashes verified. Foundry process remained unchanged; native routes returned HTTP 200. Receipt: `dist/pwa-gold-live-deployment.json`. Backup: `/var/backups/mikelandia-mobile/20261029-121703-gold-icon`. Physical installed-app review remains pending.
-- Local installation on 2026-10-29: package 1.1.0 was copied into `D:/FoundryVTT/Data/modules/mikelandia-controls`; all 186 packaged file hashes matched. Receipt: `dist/local-install-evidence.json`. Backup: `D:/FoundryVTT/module-backups/mikelandia-controls-20261029-120408.zip`. Foundry was not restarted and world activation was not checked.
-- Last recorded remote module: `ve-mobile` 1.1.15. Renamed-module publication and per-world migration remain pending. Use the [migration runbook](migration.md); local and remote package versions are separate.
+- Static PWA: six `/mobile/` files deployed on 2026-10-29; public HTTPS hashes verified and native routes returned HTTP 200. Receipt: `dist/pwa-gold-live-deployment.json`. Rollback: [mobile login](mobile-login.md#rollback). Installed-app review remains pending.
+- Local module: package 1.1.0 installed on 2026-10-29 at `D:/FoundryVTT/Data/modules/mikelandia-controls`; 186 packaged file hashes matched. Receipt: `dist/local-install-evidence.json`. Backup: `D:/FoundryVTT/module-backups/mikelandia-controls-20261029-120408.zip`. Foundry was not restarted; world activation was not checked.
+- Last recorded remote module: `ve-mobile` 1.1.15. Renamed-module publication and per-world migration remain pending. Last recorded local/remote Foundry versions: 14.369 / 14.367.
 
 ## Checkout-only work
 
-The latest WFRP additions and layout/contrast corrections have not been packaged or copied into the installed module. Combat now includes native encumbrance penalties in a conditional disclosure and a conditional read-only Injuries card. Each injury uses one horizontal row with its name, truncated player notes (press for the full-text tooltip), and duration. The recorded local package therefore does not contain every checkout change.
+Changes since the local installation remain unpackaged and uninstalled:
 
-Publication requires separate authorization. Pushing main publishes the rolling `latest` release; see [packaging](architecture.md#packaging).
+- WFRP signed SL controls, a separate Effects tab with native condition actions and 5e references, and revised effect/item rows. Engaged is excluded from mobile condition tracking; Injuries moved from Combat to Effects. Native encumbrance penalties remain in WFRP Combat.
+- The main Combat route is labelled Initiative. Targets also appears in WFRP Character > Combat, Shadowdark Abilities, and D&D Overview.
+
+Behavioral contracts are in [architecture](architecture.md). Publication requires separate authorization: pushing main publishes the rolling `latest` release.
 
 ## Remaining verification and known issues
 
-- Native-world review: Combat health, Notes/ambition saves, Warhammer counters/recovery/movement/XP and Social Status, character selection, roll dialogs, Shadowdark counters, Logout/loading, and renamed-module activation. Current coverage is primarily source and browser fixtures.
-- Combat targeting: native v13 runtime, actual system roll/chat, and persisted two-player deletion checks remain pending.
-- Physical-device review: character and Combat UI, roll dialogs, isolation/Settings with Hide UI, PWA installation and login-to-game display, keyboard behavior, and audible mute. Browser fixtures and Android emulation do not establish phone behavior or audible silence.
-- Native 4e-world cancellation review remains pending. The reported 5e lock was not reproduced in a fresh session.
-- WFRP 10.1.2 / Warhammer Library 3.5.1 missing-ammo cancellation remains a [native bug](architecture.md#warhammer-resources) controlled by **Details > Consumes Ammo**.
-- Last recorded local/remote Foundry versions: 14.369 / 14.367.
+- Native worlds: Effects/condition actions, signed SL controls, character-tab Targets and health, Notes/ambition saves, WFRP resources/recovery/movement/XP/Social Status, character selection, roll dialogs, Shadowdark counters, Logout/loading, and renamed-module activation. Current coverage is primarily source and browser fixtures.
+- Targeting: native v13 runtime, actual system roll/chat, and persisted two-player deletion checks.
+- Physical devices: character/Initiative UI, roll dialogs, isolation/Settings with Hide UI, installed PWA/login-to-game display, keyboard behavior, and audible mute.
+- WFRP cancellation: native 4e-world review remains pending; the reported 5e lock was not reproduced in a fresh session. WFRP 10.1.2 / Warhammer Library 3.5.1 missing-ammo cancellation remains a [native bug](architecture.md#warhammer-resources) controlled by **Details > Consumes Ammo**.
 
 ## Latest recorded evidence
 
-- WFRP Combat additions: 380 Node tests and 79 browser scenarios / 5,022 checks passed with `--native-assets`. This includes native penalty thresholds, single-row injuries, truncated notes with press-to-open full-text tooltips, GM-note exclusion, disclosure refresh/character-switch behavior, and viewport bounds. Receipt: `dist/wfrp-combat-evidence.json`; logs: `dist/wfrp-combat-{node,browser}-checks.txt`.
-- Loading: light/dark fixtures passed 38 checks; previews: `dist/bootstrap-{light,dark}-phone.png`.
-- Native targeting: 12 v14 animation checks passed in an isolated copied Shadowdark world without world document writes. Receipt: `dist/targeting-animation-native-check.json`.
+These records cover specific revisions and scopes, not all current changes. They do not establish physical-device behavior.
 
-The WFRP Combat checks were run for the checkout additions; other entries retain their earlier evidence. Native-world and physical-device gaps above remain open.
+| Scope | Result | Evidence |
+|---|---|---|
+| Conditions layout and current checkout | 383 Node tests; 84 browser scenarios / 5,860 checks, including native button defaults and mixed condition rows | `dist/conditions-layout-evidence.json` |
+| Loading | Light/dark fixtures / 38 checks | `dist/bootstrap-{light,dark}-phone.png` |
+| Native targeting animation | 12 v14 checks in an isolated copied Shadowdark world; no world document writes | `dist/targeting-animation-native-check.json` |

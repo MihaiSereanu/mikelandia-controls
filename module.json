@@ -15,15 +15,13 @@
   "authors": [
     {
       "name": "Silvestrae"
+    },
+    {
+      "name": "MikeS"
     }
   ],
-  "esmodules": [
-    "src/entry.mjs"
-  ],
-  "styles": [
-    "assets/mikelandia-controls.css",
-    "assets/mc-style-authority.css"
-  ],
+  "esmodules": ["src/entry.mjs"],
+  "styles": ["assets/mikelandia-controls.css", "assets/mc-style-authority.css"],
   "languages": [
     {
       "lang": "en",

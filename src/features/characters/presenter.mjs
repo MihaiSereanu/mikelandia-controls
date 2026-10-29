@@ -13,6 +13,7 @@ import { renderRollResultOverlay } from "../../ui/media/roll-result-overlay.mjs"
 import { resolveHeaderBanner } from "./appearance/header-banner.mjs";
 import { actorSheetTabs, actorOriginBack, collectiveHeaderContent, renderCollectivePanel } from "./sheets/collective-sheet.mjs";
 import { renderNativeCharacter } from "./sheets/native-sheet.mjs";
+import { renderTargets } from "../combat/targets.mjs";
 
 const SHEET_TABS = Object.freeze([
   ["favourites", "favourites", "Favourites"],
@@ -130,6 +131,10 @@ export function renderCharacters({ state, commands, scope, overlayHost = null, r
       traits: () => traitsPanel(actor, commands.localize),
       effects: owner => effectsPanel(actor, commands, status, state.characterOpenSections, owner, settings)
     }) : renderSheetPanel(activePage, actor, commands, status, openItem, state.expandedCharacterItemId, state.characterOpenSections, scope, settings, shell.spellcastingSelection)] });
+  if (!collectiveTabs && activePage === "overview") {
+    const targets = renderTargets({ targeting: state.targeting, commands, scope });
+    if (targets) panel.prepend(targets);
+  }
   const screen = shell.screen ??= node("section", {
     className: "mc-character-screen mc-character-shared-shell",
     dataset: { characterTheme, actorType: actor.type },

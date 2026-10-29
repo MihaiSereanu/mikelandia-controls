@@ -10,6 +10,7 @@ import { spellForActor, castChannelSheet, cancellableCastOrChannel, magicWinds }
 import { ownedWarhammerItem, weaponForActor, warhammerWeaponMode } from "./items.mjs";
 import { warhammerResourceEdits, editWarhammerResource } from "./resources.mjs";
 import { warhammerRestState } from "./rest.mjs";
+import { warhammerConditionActions, executeWarhammerCondition } from "./effects.mjs";
 
 const allowedKeys = new Set(["actorSourceUuid", "actorId", "actionId", "actionRevision"]);
 const unavailable = () => new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Panels.ActionUnavailable", "This game action is no longer available."));
@@ -22,7 +23,7 @@ function availableActions(actor, game, user = game?.user) {
   const context = readWarhammerContext(game);
   if (!context || actor?.type !== "character" || !fallbackIntegration.isActorEligible(actor, user)) return [];
   const tabs = createProfilePanels(actor, createWarhammerCharacterProfile(actor, context), context);
-  const actions = [];
+  const actions = [...warhammerConditionActions(actor, game, context.revision)];
   const rest = warhammerRestState(actor, context);
   if (rest) actions.push(Object.freeze({ id: "rest", revision: rest.revision, label: localizeFoundry("RestRecover", "Rest and recover"), icon: "fa-bed" }));
   for (const tab of tabs) for (const section of tab.sections) {
@@ -70,6 +71,11 @@ export function createWarhammerCommands({ getGame = () => globalThis.game } = {}
       const action = actions.find(action => action.id === payload.actionId);
       if (!action) throw unavailable();
       if (action.revision !== payload.actionRevision) throw new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Panels.EditionChanged", "The game edition changed. Reopen the action."));
+      if (action.id.startsWith("condition:")) {
+        assertCurrent();
+        await executeWarhammerCondition(actor, action);
+        return Object.freeze({ ok: true, actorId: String(actor.id), actorSourceUuid: sourceUuid });
+      }
       if (action.id === "rest") {
         const rest = warhammerRestState(actor, readWarhammerContext(getGame()));
         if (!rest || rest.revision !== action.revision) throw unavailable();

@@ -64,7 +64,6 @@ export const warhammerCharacterProfile = {
     ] },
     { id: "combat", labelKey: "Combat", label: "Combat", sections: [
       combatEncumbrance,
-      injuries,
       { id: "movement", kind: "values", layout: "table", labelKey: "Move", label: "Movement", fields: [
         { id: "move", labelKey: "Move", label: "Move", path: "system.details.move.value" },
         ...["walk", "run"].map(id => ({ id, labelKey: id[0].toUpperCase() + id.slice(1), label: id[0].toUpperCase() + id.slice(1), format: "display",
@@ -117,6 +116,21 @@ export function createWarhammerCharacterProfile(actor, context) {
     valuePath: "system.quantity.value", descriptionPath: "system.description.value",
     include: (item, _context, owner) => ownedWarhammerItem(owner, String(item.id), item.type) === item });
   return { tabs: [...warhammerCharacterProfile.tabs,
+  { id: "effects", labelKey: "Effects", label: "Effects", sections: [
+    injuries,
+    ...[["critical", "Criticals"], ["psychology", "Psychology"], ["mutation", "Corruption&Mutation"], ["disease", "Disease"]].map(([type, label]) => ({
+      id: type, kind: "items", labelKey: label, label, collectionPath: "items", itemTypes: [type],
+      layout: "rows", format: "display", descriptionPath: "system.description.value", descriptionDisplay: "tooltip",
+      ...(["critical", "disease"].includes(type) ? { readValue: item => type === "critical" ? String(item.system?.location?.value || "—")
+        : globalThis.game?.user?.isGM ? [item.system?.incubation, item.system?.duration].map(value => `${value?.value ?? ""} ${value?.unit ?? ""} ${value?.text ?? ""}`.trim()).join(" / ") : "??? / ???" } : {}),
+      include: (item, _context, owner) => ownedWarhammerItem(owner, String(item.id), type) === item && (type !== "disease" || Boolean(item.system?.show))
+    })),
+    ...Object.entries(Object.groupBy(Array.from(actor.itemTags?.aspect ?? []).filter(item => item.system?.placement === "combat"), item => item.system.pluralLabel)).map(([label, items], index) => ({
+      id: `aspects-${index}`, kind: "items", label, collectionPath: "items", itemTypes: [...new Set(items.map(item => item.type))],
+      layout: "rows", descriptionPath: "system.description.value", descriptionDisplay: "tooltip",
+      include: item => items.includes(item)
+    }))
+  ] },
   { id: "trappings", labelKey: "Trappings", label: "Trappings", sections: [
     encumbrance,
     { id: "social-status", kind: "values", label: "Social Status", fields: [

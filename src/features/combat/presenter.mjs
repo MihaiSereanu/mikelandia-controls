@@ -39,7 +39,7 @@ export function renderCombat({ state, commands, scope }) {
   const screen = node("section", { className: "mc-combat-screen", children: [
     node("header", { className: "mc-combat-heading", children: [
       node("span", { className: "mc-combat-round", children: [node("small", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.Round", "Round") }), node("strong", { text: combat.round || "—" })] }),
-      node("div", { className: "mc-combat-heading-copy", children: [node("h2", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.Combat", "Combat") }), node("p", { text: combat.started ? localizedCount(commands.localize, "MIKELANDIA_CONTROLS.Combat.Count", { one: "{count} combatant", other: "{count} combatants" }, combat.combatants.length, commands.readLocale?.() ?? "en") : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.WaitingToBegin", "Waiting to begin") })] }),
+      node("div", { className: "mc-combat-heading-copy", children: [node("h2", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Navigation.Initiative", "Initiative") }), node("p", { text: combat.started ? localizedCount(commands.localize, "MIKELANDIA_CONTROLS.Combat.Count", { one: "{count} combatant", other: "{count} combatants" }, combat.combatants.length, commands.readLocale?.() ?? "en") : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.WaitingToBegin", "Waiting to begin") })] }),
       endTurn
     ].filter(Boolean) }),
     status,

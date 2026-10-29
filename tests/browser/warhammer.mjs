@@ -4,7 +4,7 @@ import { enableMobileApplications } from "/src/foundry/presentation/mobile-prese
 import { renderCharacters } from "/src/features/characters/presenter.mjs";
 import { createTaskScope } from "/src/kernel/lifecycle/task-scope.mjs";
 import { createHooks } from "/tests/helpers/foundry.mjs";
-import { createWarhammerActor, createWarhammerGame, addWarhammerMagic } from "/tests/helpers/warhammer.mjs";
+import { createWarhammerActor, createWarhammerGame, addWarhammerMagic, addWarhammerConditions } from "/tests/helpers/warhammer.mjs";
 
 const checks = [];
 const check = (name, condition) => { if (!condition) throw new Error(name); checks.push(name); };
@@ -14,6 +14,15 @@ try {
   const params = new URLSearchParams(location.search);
   const initial5e = params.get("edition") === "5e";
   if (params.has("native-assets")) {
+    // Exercise the installed core button defaults without importing unrelated
+    // page typography into this focused system fixture.
+    const nativeResponse = await fetch("/native-fixture/foundry2.css");
+    check("native Foundry stylesheet available for condition buttons", nativeResponse.ok);
+    const nativeButtonRule = (await nativeResponse.text()).match(/a\.button,\s*button\s*\{[^}]+\}/u)?.[0];
+    check("native Foundry button defaults found", Boolean(nativeButtonRule));
+    const nativeStyles = document.createElement("style");
+    nativeStyles.textContent = `@layer modules { ${nativeButtonRule} }`;
+    document.head.prepend(nativeStyles);
     const font = new FontFace("Native fixture icons", 'url("/native-fixture/fa-solid-900.woff2")', { weight: "900" });
     document.fonts.add(await font.load());
     const style = document.createElement("style");
@@ -62,6 +71,7 @@ try {
   actor.items.push({ id: "injection", type: "skill", name: '<img id="profile-injection" src=x onerror="window.profileInjected=true">',
     system: { total: { value: 10 }, advanced: { value: "bsc" }, grouped: { value: "noSpec" } } });
   globalThis.game = createWarhammerGame([actor, npc]);
+  const conditionCalls = addWarhammerConditions(actor, game, Hooks);
   game.user.character = actor;
   game.settings.get = (namespace, key) => namespace === "wfrp4e" ? key === "editionSettings" ? { use5e }
     : key === "useGroupAdvantage" ? groupAdvantage : key === "groupAdvantageValues" ? groupAdvantageValues : key === "advantagemax" ? 10 : false : undefined;
@@ -291,8 +301,109 @@ try {
   check("penalties start collapsed", penalty() && !penalty().open && penalty().querySelector("summary").textContent === "Penalties");
   penalty().querySelector("summary").click();
   check("penalties expand on press", penalty().open);
-  check("injuries follow Encumbrance", [...screen.querySelectorAll('.mc-profile-content [data-profile-section]')].slice(0, 2).map(el => el.dataset.profileSection).join() === "encumbrance,injuries");
+  check("Combat no longer includes Injuries", !injuries());
+  await clickTab("effects");
+  check("Effects includes Conditions followed by Injuries", [...screen.querySelectorAll('.mc-profile-content [data-profile-section]')].slice(0, 2).map(el => el.dataset.profileSection).join() === "conditions,injuries");
+  check("Engaged is excluded from condition tracking", !screen.querySelector('.mc-profile-condition-picker option[value="engaged"], [data-condition-id="engaged"]'));
+  const psychology = { id: "hatred", type: "psychology", name: "Hatred (Gabriella)", parent: actor,
+    system: { description: { value: "Remember what happened in the village. ".repeat(12) } } };
+  actor.items.push(psychology); Hooks.emit("updateItem", psychology, {}); await tick();
+  const hatred = screen.querySelector('[data-profile-field="hatred"]');
+  const hatredName = hatred.querySelector("dt"), hatredNotes = hatred.querySelector(".mc-profile-note-trigger");
+  const nameRange = document.createRange(); nameRange.selectNodeContents(hatredName.firstElementChild);
+  check("Psychology name takes its natural single-line width", hatredName.textContent === "Hatred (Gabriella)"
+    && hatredName.scrollWidth <= hatredName.clientWidth + 1 && getComputedStyle(hatredName).textOverflow !== "ellipsis"
+    && [...nameRange.getClientRects()].filter(rect => rect.width > 0).length === 1);
+  check("only Notes shrink and ellipsize beside full item names", hatredNotes.scrollWidth > hatredNotes.clientWidth
+    && getComputedStyle(hatredNotes).textOverflow === "ellipsis" && hatredName.getBoundingClientRect().right <= hatredNotes.getBoundingClientRect().left);
+  psychology.name = "Hatred (Gabriella and every inhabitant of the village of Wolfenburg) ".repeat(8).trim();
+  Hooks.emit("updateItem", psychology, {}); await tick();
+  const longRow = screen.querySelector('[data-profile-field="hatred"]');
+  check("oversized names remain single-line with local scrolling and tappable Notes", longRow.scrollWidth > longRow.clientWidth
+    && longRow.querySelector("dt").scrollWidth <= longRow.querySelector("dt").clientWidth + 1
+    && longRow.querySelector(".mc-profile-note-trigger").getBoundingClientRect().width >= 44
+    && document.documentElement.scrollWidth <= innerWidth + 1);
+  actor.items.splice(actor.items.indexOf(psychology), 1); Hooks.emit("updateActor", actor, {}); await tick();
+  let editedCondition;
+  const chooseCondition = id => {
+    editedCondition = id;
+    const select = screen.querySelector(".mc-profile-condition-picker");
+    select.value = id; select.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  const conditionEditor = () => screen.querySelector(`[data-condition-id="${editedCondition}"]`);
+  chooseCondition("bleeding");
+  check("condition selection reveals zero without applying", conditionEditor().querySelector("output").value === "0" && !actor.hasCondition("bleeding")
+    && conditionEditor().querySelector(".mc-profile-condition-controls button").disabled && !conditionEditor().querySelector("[data-condition-apply]"));
+  conditionEditor().querySelector('[aria-label="Increase Bleeding"]').click(); await tick();
+  check("increment preserves selection and shows native condition action", actor.hasCondition("bleeding").conditionValue === 1
+    && conditionEditor().querySelector("[data-condition-apply]"));
+  const picker = screen.querySelector(".mc-profile-condition-picker");
+  const bounds = [...conditionEditor().querySelectorAll(".mc-profile-condition-name, output, button")].map(element => element.getBoundingClientRect());
+  check("picker stays separate above condition rows", picker.getBoundingClientRect().bottom <= conditionEditor().getBoundingClientRect().top);
+  check("condition name count and Apply share one row", bounds.every(rect => Math.abs(rect.top + rect.height / 2 - bounds[0].top - bounds[0].height / 2) < 2)
+    && bounds.every(rect => rect.right <= innerWidth + 1) && document.documentElement.scrollWidth <= innerWidth + 1);
+  check("condition dropdown and buttons retain touch height", [picker, ...conditionEditor().querySelectorAll("button")].every(element => element.getBoundingClientRect().height >= 44));
+  check("listed conditions leave dropdown and show count in their row", !picker.querySelector('option[value="bleeding"]') && conditionEditor().querySelector("output").value === "1");
+  conditionEditor().querySelector("[data-condition-apply]").click(); await tick();
+  check("same-row Apply executes native script with selected Actor", conditionCalls.at(-1)[0] === "apply" && conditionCalls.at(-1)[1] === actor);
+  await actor.addCondition("fatigued", 1); await tick();
+  const bleedingRow = screen.querySelector('[data-condition-id="bleeding"]');
+  const fatiguedRow = screen.querySelector('[data-condition-id="fatigued"]');
+  const stepperPositions = row => [...row.querySelectorAll(".mc-profile-condition-controls > button, output")]
+    .slice(0, 3).map(element => element.getBoundingClientRect().left);
+  check("numbered conditions align steppers with and without native actions", stepperPositions(bleedingRow)
+    .every((left, index) => Math.abs(left - stepperPositions(fatiguedRow)[index]) < 1));
+  check("condition names start at the same left edge under native button styling", [bleedingRow, fatiguedRow].every(row => {
+    const name = row.querySelector(".mc-profile-condition-name");
+    const range = document.createRange(); range.selectNodeContents(name);
+    return Math.abs(range.getBoundingClientRect().left - row.getBoundingClientRect().left) < 1;
+  }));
+  await actor.removeCondition("fatigued", 1); await tick();
+  screen.querySelector('[data-condition-dismiss="fatigued"]').click();
+  if (use5e) {
+    const conditionName = conditionEditor().querySelector(".mc-profile-condition-name");
+    conditionName.click(); await tick();
+    const tooltip = conditionEditor().querySelector(".mc-profile-condition-tooltip");
+    check("condition click opens supplied formatted bullets without headings", tooltip.matches(":popover-open")
+      && tooltip.querySelectorAll("li").length === 7 && tooltip.querySelectorAll("strong").length > 0
+      && !tooltip.querySelector("h1, h2, h3") && !tooltip.textContent.includes("**"));
+    const rect = tooltip.getBoundingClientRect();
+    check("long condition reference is scrollable and viewport bounded", tooltip.scrollHeight > tooltip.clientHeight
+      && rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight);
+    conditionName.click(); await tick();
+    check("clicking condition again closes reference", !tooltip.matches(":popover-open") && conditionName.getAttribute("aria-expanded") === "false");
+  }
+  conditionEditor().querySelector(".mc-profile-condition-controls button").click(); await tick();
+  check("decrement to zero removes native condition and Apply", !actor.hasCondition("bleeding") && !conditionEditor().querySelector("[data-condition-apply]"));
+  chooseCondition("prone");
+  check("picker adds a second independent inactive row", screen.querySelectorAll(".mc-profile-condition-editor").length === 2 && !actor.hasCondition("prone"));
+  conditionEditor().querySelector(".mc-profile-condition-controls button").click(); await tick();
+  check("unnumbered condition uses native toggle", actor.hasCondition("prone") && conditionEditor().querySelector(".mc-profile-condition-controls button").getAttribute("aria-pressed") === "true"
+    && !conditionEditor().querySelector("output"));
+  conditionEditor().querySelector(".mc-profile-condition-controls button").click(); await tick();
+  check("toggle removes condition", !actor.hasCondition("prone"));
+  conditionEditor().querySelector("[data-condition-dismiss]").click();
+  check("inactive row can leave list without changing native conditions", !conditionEditor() && screen.querySelector('.mc-profile-condition-picker option[value="prone"]'));
+  await actor.addCondition("prone", 1); await tick();
+  check("externally active condition appears automatically", conditionEditor()?.querySelector('button[aria-pressed="true"]'));
+  conditionEditor().querySelector(".mc-profile-condition-controls button").click(); await tick();
   const noteTrigger = () => injuries().querySelector('.mc-profile-note-trigger');
+  if (use5e) {
+    const beforeReferences = conditionCalls.length;
+    for (const definition of game.wfrp4e.config.statusEffects.filter(entry => !["dead", "engaged"].includes(entry.id))) {
+      if (!screen.querySelector(`[data-condition-id="${definition.id}"]`)) chooseCondition(definition.id);
+      const row = screen.querySelector(`[data-condition-id="${definition.id}"]`);
+      const trigger = row.querySelector(".mc-profile-condition-name");
+      trigger.scrollIntoView({ block: "center", behavior: "instant" }); trigger.click();
+      const tooltip = row.querySelector(".mc-profile-condition-tooltip");
+      check(`${definition.name} reference retains formatted bullets without headers`, tooltip?.matches(":popover-open")
+        && tooltip.querySelector("li") && tooltip.querySelector("strong, li") && !tooltip.querySelector("h1, h2, h3")
+        && !tooltip.textContent.includes("**"));
+      if (definition.id === "grappling") check("Grappling uses the 5e Strength rules", tooltip.textContent.includes("Opposed Strength Test") && !tooltip.textContent.includes("higher Advantage"));
+      trigger.click(); row.querySelector("[data-condition-dismiss]").click();
+    }
+    check("viewing condition references never applies conditions", conditionCalls.length === beforeReferences);
+  }
   const noteTooltip = () => injuries().querySelector('.mc-profile-note-tooltip');
   check("injury row removes Notes and Duration labels and retains duration", injuries()?.textContent.includes("Broken Arm")
     && injuries().textContent.includes("1d10 days") && !injuries().querySelector(".mc-profile-value-label, input, a, details")
@@ -314,11 +425,10 @@ try {
   noteTrigger().click(); await tick();
   check("pressing notes again dismisses the tooltip", !noteTooltip().matches(':popover-open') && noteTrigger().getAttribute('aria-expanded') === 'false');
   check("injury notes exclude GM notes and unsafe markup", !injuries().textContent.includes("secret") && !injuries().textContent.includes("Secret") && !window.injuryInjected && !injuries().querySelector("script"));
-  check("expanded penalties and injuries fit the viewport", document.documentElement.scrollWidth <= innerWidth + 1
-    && injuries().getBoundingClientRect().top >= screen.querySelector('[data-profile-section="encumbrance"]').getBoundingClientRect().bottom);
+  check("Effects injuries fit the viewport", document.documentElement.scrollWidth <= innerWidth + 1);
   injury.system.duration.permanent = true;
   Hooks.emit("updateItem", injury, {}); await tick();
-  check("native refresh preserves open penalties and updates injuries", penalty().open && injuries().textContent.includes("Permanent") && !injuries().textContent.includes("1d10"));
+  check("native refresh updates Effects injuries", injuries().textContent.includes("Permanent") && !injuries().textContent.includes("1d10"));
   await clickTab("main"); await clickTab("combat");
   check("tab changes preserve open penalties", penalty().open);
   commands.selectActor(npc.uuid); await tick();
@@ -330,6 +440,9 @@ try {
   actor.system.status.encumbrance.state = 1;
   Hooks.emit("updateActor", actor, {}); await tick();
   check("penalties and hidden injuries disappear after native updates", !penalty() && !injuries());
+  await clickTab("effects");
+  check("hidden injuries disappear from Effects", !injuries());
+  await clickTab("combat");
   actor.items.splice(actor.items.indexOf(injury), 1);
   actor.system.status.encumbrance.current = "9.75"; actor.system.status.encumbrance.max = 10;
   Hooks.emit("updateActor", actor, { "system.status.encumbrance.current": "9.75" }); await tick();
@@ -641,6 +754,19 @@ try {
   check("recovery rolls once into Chat without direct Wounds writes", nativeRolls.length === beforeRecovery.rolls + 1 && game.messages.length === beforeRecovery.messages + 1 && nativeWrites.length === beforeRecovery.writes);
   }
   if (params.has("layout-only")) {
+    await clickTab("effects");
+    const conditionSelect = screen.querySelector(".mc-profile-condition-picker");
+    conditionSelect.value = "bleeding"; conditionSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    screen.querySelector('.mc-profile-condition-controls [aria-label="Increase Bleeding"]').click(); await tick();
+    const editorBounds = [...screen.querySelectorAll(".mc-profile-condition-editor :is(.mc-profile-condition-name, button, output)")].map(element => element.getBoundingClientRect());
+    check("conditions remain one row at narrow enlarged text", editorBounds.every(rect => Math.abs(rect.top + rect.height / 2 - editorBounds[0].top - editorBounds[0].height / 2) < 2)
+      && editorBounds.every(rect => rect.right <= innerWidth + 1) && document.documentElement.scrollWidth <= innerWidth + 1);
+    await actor.addCondition("fatigued", 1); await tick();
+    const narrowRows = ["bleeding", "fatigued"].map(id => screen.querySelector(`[data-condition-id="${id}"]`));
+    check("mixed condition counters align at narrow enlarged text", Math.abs(narrowRows[0].querySelector("output").getBoundingClientRect().left
+      - narrowRows[1].querySelector("output").getBoundingClientRect().left) < 1);
+    check("mixed condition rows retain local overflow at narrow enlarged text", document.documentElement.scrollWidth <= innerWidth + 1
+      && narrowRows.every(row => row.getBoundingClientRect().right <= innerWidth + 1));
     await clickTab("combat");
     const movementCells = [...screen.querySelectorAll('[data-profile-section="movement"] .mc-profile-row')].map(element => element.getBoundingClientRect());
     check("movement retains three readable cells at narrow enlarged text", movementCells.length === 3
@@ -649,6 +775,26 @@ try {
     check("movement values are centered at narrow enlarged text", centeredValues('movement'));
     await clickTab("main");
     screen.querySelector('.mc-profile-summary-counter-pairs').scrollIntoView({ block: "center" });
+  }
+  if (["effects", "condition-reference"].includes(params.get("preview"))) {
+    await clickTab("effects");
+    const select = screen.querySelector(".mc-profile-condition-picker");
+    select.value = "bleeding"; select.dispatchEvent(new Event("change", { bubbles: true }));
+    if (!actor.hasCondition("bleeding")) { screen.querySelector('.mc-profile-condition-controls [aria-label="Increase Bleeding"]').click(); await tick(); }
+    if (params.get("preview") === "effects") {
+      for (const id of ["ablaze", "fatigued", "blinded"]) {
+        if (!actor.hasCondition(id)) { await actor.addCondition(id, 1); await tick(); }
+      }
+    }
+    if (!actor.items.some(item => item.type === "injury")) {
+      actor.items.push({ id: "preview-injury", type: "injury", name: "Broken Arm", parent: actor,
+        system: { description: { value: "Keep the arm bound until it heals." }, duration: { value: "1d10", permanent: false } } });
+      Hooks.emit("updateActor", actor, {}); await tick();
+    }
+    if (params.get("preview") === "condition-reference") {
+      const trigger = screen.querySelector('[data-condition-id="bleeding"] .mc-profile-condition-name');
+      trigger.scrollIntoView({ block: "center" }); await tick(); trigger.click(); await tick();
+    }
   }
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
 } catch (error) {

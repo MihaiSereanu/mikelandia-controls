@@ -17,9 +17,9 @@ The entry point wires the runtime together. Keep orchestration in `kernel`, Foun
 
 Character themes, header artwork, and header scrolling live in `features/characters/appearance/`. The banner catalogue resolves artwork relative to its own module; the elapsed clock loads its worker from `ui/timing/`. Preserve these URLs when moving their modules.
 
-## Scope and validated actions
+## Scope and action validation
 
-Five routes: Character, Chat, Journals, Combat, Settings. Character selection never controls tokens. Synthetic Actor UUIDs support character data and chat provenance. Combat retains initiative, End Turn, and GM encounter progression with native permissions, stale-state checks, and end confirmation. Map/token/light controls, placement, scene overlays, and graphics profiles are removed.
+Five routes: Character, Chat, Journals, Initiative, Settings (internal route key: `combat`). Character selection never controls tokens. Synthetic Actor UUIDs support character data and chat provenance. Initiative retains End Turn and GM encounter progression with native permissions, stale-state checks, and end confirmation. Map/token/light controls, placement, scene overlays, and graphics profiles are removed.
 
 Resolve fresh Actor/Item state by UUID. Validate ownership, session/config revisions, and duplicate submissions; clean up pending actions on cancellation. Never accept arbitrary client paths or native method names. Refresh after native updates; system models own derived values. Share implementation while retaining each game's terminology/grouping. Unsupported systems get identity and native sheets; isolate D&D handlers.
 
@@ -29,13 +29,15 @@ Native Notes content participates in selected-Actor snapshot change detection, s
 
 ## Combat targeting
 
+The main navigation tab and tracker heading are named Initiative. Targets remains there and also appears above WFRP Character > Combat, Shadowdark Abilities, and D&D Overview. All locations share the native target state, disclosure and token-source choice; initiative scores and turn markers stay in Initiative. Native movement refreshes run while any of these target surfaces is visible, and entering one refreshes its snapshot. Character distance-only updates retain rows and focus.
+
 Combat targeting uses native user targets through `targeting-gateway.mjs`; it never controls or moves tokens. The selector appears for started combat linked to the loaded scene, or a global (unlinked) encounter containing combatants in that scene. Each combatant is filtered by its own scene before resolving its token, so cross-scene token IDs cannot admit foreign combatants. Eligible tokens must belong to that combat and have neither token nor combatant hidden, regardless of ownership or line of sight. Friendly disposition forms Friendly; other dispositions form Enemies. The selected character must have a matching scene token; synthetic sources require their exact token, and ambiguous world Actors require a source choice. Automatic cleanup affects only targets acquired through this feature; individual toggles handle manual deselection. Native external target changes relinquish feature ownership on release. Selection persists across turns, rolls, and routes, with reconciliation active throughout the mobile runtime. Post-roll targeting remains system-native; there is no bulk-clear action.
 
 System integrations declare `readCombatHealth(actor)` for native remaining/max health. Read each token's Actor, including synthetic Actors. Every listed Friendly token shows exact current/max health regardless of sheet permissions; Enemies receive only Healthy (>50%), Bloodied (<=50%), or Critical (<=10%, including zero). Defeated remains independent. Missing or invalid health is omitted. Health and distance changes patch existing rows to preserve focus.
 
 Targets and the module's Initiative Tracker share health projection and formatting beside Actor names, wrapping on narrow screens. Each list retains its own visibility rules; tokenless Initiative entries omit health when disposition is unavailable. Integrations declare `combatHealthPaths` for precise Actor-update invalidation, including native parent-object replacements. Health-only updates patch both lists without replacing focused rows.
 
-While Targets is expanded and Combat is visible, relevant native refreshToken position/size events refresh distances once per animation frame. Equal snapshots are suppressed; distance-only changes patch existing text nodes without replacing rows or focus. Structural updates still rerender normally, and disposal cancels queued frames. Distance uses minimum native occupied-space measurement on square/hex grids, stripping elevation. Foundry v14 requires `{level:null,elevation:0,depth:1}` to bypass level-based wall/surface filtering; v13 uses its unconstrained occupied-space API. Gridless measurement uses nearest rectangular footprint edges. Scene grid rules, distance scale and units remain authoritative. Failed measurement is unavailable; no range enforcement or roll metadata is added. Warhammer consumes native targets; Shadowdark retains its targeting setting and first-target semantics.
+While Targets is expanded and a target surface is visible, relevant native refreshToken position/size events refresh distances once per animation frame. Equal snapshots are suppressed; distance-only changes patch existing text nodes without replacing rows or focus. Structural updates still rerender normally, and disposal cancels queued frames. Distance uses minimum native occupied-space measurement on square/hex grids, stripping elevation. Foundry v14 requires `{level:null,elevation:0,depth:1}` to bypass level-based wall/surface filtering; v13 uses its unconstrained occupied-space API. Gridless measurement uses nearest rectangular footprint edges. Scene grid rules, distance scale and units remain authoritative. Failed measurement is unavailable; no range enforcement or roll metadata is added. Warhammer consumes native targets; Shadowdark retains its targeting setting and first-target semantics.
 
 ## Mobile frame and upgrades
 
@@ -51,6 +53,8 @@ Admitted Shadowdark `#sd-roll-dialog` and Warhammer `.warhammer.roll-dialog-v2` 
 
 `native-roll-presentation.mjs` restores decorated native labels on release. Warhammer 5e per-test ADV/DISADV states remain distinct from 4e combat Advantage. Desktop and D&D 5E retain their styling. `node scripts/check_browser.mjs --filter "^roll-dialogs-" --native-assets --screenshots` reads the installed Foundry icon font without copying or shipping it (`FOUNDRY_APP_PATH` overrides the application path). This establishes fixture/font evidence, not live-system behavior.
 
+WFRP 4e `slBonus` and 5e `SL` inputs gain one-point minus/plus buttons that cross zero. They retain native input elements and dispatch native `change` events; WFRP owns recalculation and rerendering. Decoration is idempotent across partial renders and restores unwrapped inputs on release.
+
 Inspect ancestry: Shadowdark 4.0.6 `PlayerSheetSD` is V1; `RollDialogSD` is V2; Warhammer sheets use V2. CSS suppresses maximum-height transitions, so admitted V2 windows close with `{animate: false}`; keep V1 lifecycle native.
 
 Warhammer uses the edition manager and native setup, then returned test `.roll()`. Pass `{resolveClose: true}` as setup's third argument to release locks on cancellation. The 4e Cast/Channel chooser omits options: temporarily observe renders, attach one-time close listeners to that Actor's `WarhammerRollDialogV2` instances, resolve unsubmitted closes, and remove listeners in `finally`. Never mutate frozen application options.
@@ -63,9 +67,23 @@ List/read policy requires effective native OBSERVER permission and sheet page vi
 
 ## Warhammer resources
 
+### Encumbrance
+
 Combat/Trappings share read-only native `system.status.encumbrance.{current,max}`; accept finite numeric strings, omit malformed values, and never recompute weight.
 
-Combat alone adds a collapsed Penalties disclosure when native prepared `system.status.encumbrance.state` exceeds 1. The native thresholds (>1, >2, >3) select localized Encumbered/VeryEnc/MaxEnc labels and penalty text. Its open state survives refreshes and tab changes in the retained character shell and resets on character changes. Injuries appear immediately below Encumbrance only for visible owned Injury Items. Each occupies one full-width horizontal row: name, player Notes (`system.description.value`), and Duration (`system.duration.value` plus native days, or Permanent), without Notes/Duration labels. Notes truncate with an ellipsis; pressing them toggles a viewport-bounded native popover with the full text. Native light dismissal and Escape close it. Notes use the shared inert HTML-to-text conversion; GM Notes, secret elements, native links and editing controls are excluded.
+Combat alone adds a collapsed Penalties disclosure when native prepared `system.status.encumbrance.state` exceeds 1. The native thresholds (>1, >2, >3) select localized Encumbered/VeryEnc/MaxEnc labels and penalty text. Its open state survives refreshes and tab changes in the retained character shell and resets on character changes.
+
+### Effects and conditions
+
+The separate Effects tab contains a condition picker above independent condition rows. Choosing an entry adds a session row at zero/off without changing the Actor; active conditions appear automatically. Rows persist across refreshes and tab navigation for the exact Actor source, and inactive rows can be dismissed without a document write. Native edition configuration owns available conditions and `system.condition.numbered`. Names align left; shared stepper/action columns keep rows aligned when native actions are absent. Numbered rows use minus/count/plus; other rows toggle. Commands revalidate ownership, edition and condition revision, then call native `addCondition`/`removeCondition`. Active conditions expose available native `manualScripts` on the same row, executed with `{actor}` so native rolls, damage and chat remain authoritative.
+
+Populated secondary sections are read-only: combat Aspects, Injuries, Criticals, Psychology, Corruption & Mutation, Disease and disabled effects. Omit Temporary and Passive lists. Native `allApplicableEffects(true)`, `show` and name consolidation govern disabled effects; native rules govern concealed disease sources/timing.
+
+Item rows show native values and player Notes (`system.description.value`). Keep names/values single-line at full width; only Notes ellipsizes, with a 44px minimum tap width. Oversized rows scroll within their card. Notes opens a viewport-bounded native popover with full text, light dismissal and Escape support. Shared inert HTML-to-text conversion excludes GM Notes, secrets, native links and editing controls. No effect creation or editing controls.
+
+In 5e, tapping a condition name toggles a formatted, scrollable native popover without a visible heading. Engaged is excluded from the picker, rows and mobile actions. References live in `src/systems/wfrp4e/condition-descriptions.mjs` and render code-owned text and bold spans without HTML injection or system rule changes. The 5e references are gated by native edition settings so they do not replace 4e rules.
+
+### Resources, recovery and Notes
 
 Trappings displays nonblank prepared `system.details.status.value` as read-only Social Status in both editions; native preparation owns rank and modifiers.
 
@@ -80,6 +98,8 @@ WFRP Notes also exposes plain-text Personal and Party Ambitions from the selecte
 Momentum uses `editControl: "checkbox"` and validated saves. Disable during saves and restore on failure/cancellation; other booleans retain their editors.
 
 Base and protected styles preserve native checkbox glyphs and handlers, 44px touch targets, control contrast of at least 3:1, and button-text contrast of at least 4.5:1. Check installed Foundry CSS/fonts with `node scripts/check_browser.mjs --native-assets --filter '^control-contrast-native$'`; this is fixture evidence.
+
+### Native ammunition issue
 
 WFRP 10.1.2 / Library 3.5.1 missing-ammo cancellation can pass undefined setup data into `awaitSubmit`, causing `data.scripts.concat` failure. Native **Consumes Ammo** controls this path; loading is separate. Do not bypass ammo or patch the library.
 

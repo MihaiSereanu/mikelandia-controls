@@ -3253,16 +3253,63 @@ body.mc-mobile-running #pause {
 }
 
 .mc-profile-section-rows dl { grid-template-columns: minmax(0, 1fr); }
+.mc-profile-condition-editor,
+.mc-profile-condition-controls { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.mc-profile-condition-list { display: grid; gap: 8px; margin-top: 8px; }
+.mc-profile-condition-list:empty { display: none; }
+.mc-profile-condition-editor { display: grid; grid-template-columns: minmax(max-content, 1fr) max-content; overflow-x: auto; }
+.mc-profile-condition-name { flex: 1 0 auto; white-space: nowrap; }
+.mc-mobile-app .mc-profile-condition-picker,
+.mc-mobile-app .mc-profile-condition-editor button {
+  min-height: 44px; margin: 0;
+  border: 1px solid color-mix(in srgb, var(--mc-text) 55%, var(--mc-surface));
+  border-radius: 8px; background: var(--mc-surface); color: var(--mc-text); font: inherit;
+}
+.mc-mobile-app .mc-profile-condition-picker { width: 100%; min-width: 0; padding: 6px; }
+.mc-mobile-app .mc-profile-condition-controls button:disabled { opacity: 0.4; }
+.mc-mobile-app button.mc-profile-condition-name {
+  min-width: max-content; min-height: 44px; padding: 0; border: 0; border-radius: 0;
+  background: transparent; text-align: start; justify-content: flex-start; font: inherit;
+  text-decoration: underline dotted; text-underline-offset: 4px;
+}
+.mc-profile-condition-tooltip { white-space: normal; }
+.mc-profile-condition-tooltip ul { margin: 0; padding-left: 20px; }
+.mc-profile-condition-tooltip li + li { margin-top: 8px; }
+.mc-mobile-app .mc-profile-condition-controls button[aria-pressed="true"] {
+  background: var(--mc-red); color: var(--mc-paper);
+}
+.mc-profile-condition-controls {
+  display: grid;
+  grid-template-columns: 44px 22px 44px repeat(var(--mc-condition-action-slots, 1), 44px);
+}
+.mc-profile-condition-controls[data-numbered="false"] > button:first-child { grid-column: 1 / 4; justify-self: center; }
+.mc-mobile-app .mc-profile-condition-controls button {
+  width: 44px; min-width: 44px; min-height: 44px; padding: 0; flex: 0 0 44px;
+}
+.mc-profile-condition-controls output { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .mc-roll-counter {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-width: 0;
+}
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .mc-roll-counter input {
+  flex: 1; width: 0; min-width: 0; text-align: center;
+}
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .mc-roll-counter button {
+  flex: 0 0 44px; width: 44px; min-width: 44px; min-height: 44px; padding: 0;
+}
 .mc-profile-section-rows .mc-profile-row {
   display: grid;
-  grid-template-columns: minmax(0, 28%) minmax(0, 1fr) minmax(0, max-content);
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
   gap: 8px;
   padding: 4px 8px;
   font-size: 14px;
+  overflow-x: auto;
 }
 .mc-profile-section-rows .mc-profile-row dt { grid-column: 1; grid-row: 1; }
+.mc-profile-section-rows .mc-profile-row:has(.mc-profile-note) {
+  grid-template-columns: max-content minmax(44px, 1fr) max-content;
+}
 .mc-profile-section-rows .mc-profile-row dd { grid-column: 3; grid-row: 1; margin: 0; }
-.mc-profile-section-rows .mc-profile-row :is(dt, dd),
+.mc-profile-section-rows .mc-profile-row :is(dt, dd) { white-space: nowrap; overflow: visible; }
 .mc-profile-note-trigger {
   overflow: hidden;
   text-overflow: ellipsis;

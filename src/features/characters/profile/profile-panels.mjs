@@ -4,6 +4,9 @@ import { ACTOR_COMMANDS } from "../../../kernel/state/command-names.mjs";
 import { renderProfileInventory } from "./profile-inventory.mjs";
 import { renderProfileResourceEditor } from "./profile-resource-editor.mjs";
 import { bindDetailsDisclosure } from "../../../ui/primitives/disclosure.mjs";
+import { renderProfileConditions } from "./profile-conditions.mjs";
+import { renderTargets } from "../../combat/targets.mjs";
+import { characterHasTargets } from "../../combat/targeting-surface.mjs";
 
 /** Profiles provide game labels. This renderer has no system IDs or rule paths. */
 export function renderProfilePanels(actor, state, commands, scope, renderNotes = null, presentation = { openSections: new Set() }) {
@@ -97,8 +100,17 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
   // Keep related small sections together, with the last card using spare width.
   // Larger collections retain the full sheet width for their own responsive rows.
   const sections = active.id === "notes" ? [renderNotes()] : [];
+  if (characterHasTargets(actor, active.id)) {
+    const targets = renderTargets({ targeting: state.targeting, commands, scope });
+    if (targets) sections.push(targets);
+  }
   let summary;
   for (const section of active.sections) {
+    if (section.kind === "conditions") {
+      summary = null;
+      sections.push(renderProfileConditions(section, actor, commands, scope, presentation));
+      continue;
+    }
     const compact = section.layout !== "table" && ["values", "counters"].includes(section.kind) && section.rows.length === 1;
     const inventorySection = inventory && section.id === "gear";
     const heading = [node("h3", { text: section.label }), ...(section.summary ?? []).map(row => node("span", {

@@ -45,3 +45,33 @@ export function addWarhammerMagic(actor, use5e) {
   actor.system.status.channelling = { wind: "aqshy", value: 3, winds: { aqshy: { label: "Aqshy" } },
     getWinds(spells) { return spells.some(spell => spell.system.lore.value.includes("fire")) ? { aqshy: { label: "Aqshy" } } : {}; } };
 }
+
+/** Minimal native condition fixture; real WFRP rules remain outside this harness. */
+export function addWarhammerConditions(actor, game, hooks = null) {
+  game.wfrp4e = { config: { statusEffects: [
+    ["bleeding", true], ["poisoned", true], ["ablaze", true], ["deafened", true], ["stunned", true],
+    ["entangled", true], ["fatigued", true], ["blinded", true], ["broken", true], ["prone", false],
+    ["besmirched", false], ["surprised", false], ["unconscious", false], ["grappling", false], ["engaged", false], ["dead", false]
+  ].map(([id, numbered]) => ({ id, name: id[0].toUpperCase() + id.slice(1), system: { condition: { numbered } } })) } };
+  const calls = [];
+  actor.hasCondition = id => actor.effects.find(effect => effect.conditionId === id);
+  actor.addCondition = async (id, value) => {
+    calls.push(["add", id, value]);
+    let effect = actor.hasCondition(id);
+    if (!effect) {
+      effect = { id: `effect-${id}`, uuid: `${actor.uuid}.ActiveEffect.effect-${id}`, parent: actor,
+        conditionId: id, name: id, conditionValue: 0, manualScripts: id === "bleeding" ? [{ label: "Apply Bleeding", execute: async context => { calls.push(["apply", context.actor]); } }] : [] };
+      actor.effects.push(effect);
+    }
+    effect.conditionValue += value;
+    hooks?.emit("updateActor", actor, {});
+  };
+  actor.removeCondition = async (id, value) => {
+    calls.push(["remove", id, value]);
+    const effect = actor.hasCondition(id);
+    effect.conditionValue -= value;
+    if (!effect.conditionValue) actor.effects.splice(actor.effects.indexOf(effect), 1);
+    hooks?.emit("updateActor", actor, {});
+  };
+  return calls;
+}
