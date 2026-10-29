@@ -1,3 +1,4 @@
+import { shadowdarkNotes } from "../actor-notes.mjs";
 import { ACTOR_COMMANDS } from "../../kernel/state/command-names.mjs";
 import { CommandError } from "../../foundry/commands/command-error.mjs";
 import { localizeFoundry } from "../../foundry/settings/localization.mjs";
@@ -38,12 +39,13 @@ export function createShadowdarkCommands({ getGame = () => globalThis.game, getH
     // Native RollDialogSD uses one fixed DOM ID across actors and roll types.
     // Opening a second workflow would replace the first unresolved prompt.
     commandKey: name => name === ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION ? JSON.stringify([name, "shadowdark-native-roll"]) : undefined,
-    supportsCommand: name => [ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name),
+    supportsCommand: name => [ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION, ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name),
     capabilitiesForActor(actor, user) {
       const profileActions = actionsFor(actor, getGame(), getHooks(), user), profileEdits = [...shadowdarkResourceEdits(actor, getGame(), user), ...inventoryEdits(actor, getGame(), user)];
       return Object.freeze({ ...(inventoryAvailable(actor, getGame(), user) ? { profileInventory: true } : {}), ...(profileActions.length ? { profileActions } : {}), ...(profileEdits.length ? { profileEdits } : {}) });
     },
     async execute(name, payload, _expected, _observer, context) {
+      if (name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION) return shadowdarkNotes.save(context.actor, payload, context.assertCurrent);
       if ([ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name)
         || (name === ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE && payload.resourceId?.startsWith("quantity:"))) return executeInventory(name, payload, context, getGame());
       if (name === ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE) return editShadowdarkResource(payload, context, getGame());

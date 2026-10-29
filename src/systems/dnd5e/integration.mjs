@@ -1,9 +1,12 @@
+import { readCombatHealth } from "../combat-health.mjs";
 import { createActorDirectoryRecord, createActorViewRecord } from "../../foundry/actors/actor-view.mjs";
 import { collectiveReferenceUuids } from "../../foundry/actors/collective-actor-view.mjs";
 import { createDnd5eCommandGateway } from "./legacy-gateway.mjs";
 
 export const dnd5eIntegration = Object.freeze({
   id: "dnd5e",
+  readCombatHealth: actor => readCombatHealth(actor, "system.attributes.hp", "DND5E.HitPoints", "HP"),
+  combatHealthPaths: Object.freeze(["system.attributes.hp.value", "system.attributes.hp.max"]),
   settingInvalidation(key) {
     if (["dnd5e.levelingMode", "dnd5e.metricLengthUnits", "dnd5e.metricWeightUnits", "dnd5e.metricTravelUnits"].includes(key)) {
       return { domains: ["actors"], refreshSelectedActor: true };

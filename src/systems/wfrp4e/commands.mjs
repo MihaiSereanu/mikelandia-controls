@@ -1,3 +1,4 @@
+import { warhammerNotes } from "../actor-notes.mjs";
 import { ACTOR_COMMANDS } from "../../kernel/state/command-names.mjs";
 import { CommandError } from "../../foundry/commands/command-error.mjs";
 import { localizeFoundry } from "../../foundry/settings/localization.mjs";
@@ -8,6 +9,7 @@ import { createWarhammerCharacterProfile } from "./profile.mjs";
 import { spellForActor, castChannelSheet, cancellableCastOrChannel, magicWinds } from "./magic.mjs";
 import { ownedWarhammerItem, weaponForActor, warhammerWeaponMode } from "./items.mjs";
 import { warhammerResourceEdits, editWarhammerResource } from "./resources.mjs";
+import { warhammerRestState } from "./rest.mjs";
 
 const allowedKeys = new Set(["actorSourceUuid", "actorId", "actionId", "actionRevision"]);
 const unavailable = () => new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Panels.ActionUnavailable", "This game action is no longer available."));
@@ -21,6 +23,8 @@ function availableActions(actor, game, user = game?.user) {
   if (!context || actor?.type !== "character" || !fallbackIntegration.isActorEligible(actor, user)) return [];
   const tabs = createProfilePanels(actor, createWarhammerCharacterProfile(actor, context), context);
   const actions = [];
+  const rest = warhammerRestState(actor, context);
+  if (rest) actions.push(Object.freeze({ id: "rest", revision: rest.revision, label: localizeFoundry("RestRecover", "Rest and recover"), icon: "fa-bed" }));
   for (const tab of tabs) for (const section of tab.sections) {
     if (section.id === "characteristics" && typeof actor.setupCharacteristic === "function") {
       for (const row of section.rows) actions.push(Object.freeze({ id: `characteristic:${row.id}`, revision: context.revision, label: row.label }));
@@ -47,13 +51,14 @@ function availableActions(actor, game, user = game?.user) {
 /** Dispatch allowlisted native tests and resource edits without rules calculations. */
 export function createWarhammerCommands({ getGame = () => globalThis.game } = {}) {
   return Object.freeze({
-    supportsCommand: name => [ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE].includes(name),
+    supportsCommand: name => [ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION, ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE].includes(name),
     capabilitiesForActor(actor, user) {
       const profileActions = availableActions(actor, getGame(), user);
       const profileEdits = warhammerResourceEdits(actor, getGame(), user);
       return Object.freeze({ ...(profileActions.length ? { profileActions } : {}), ...(profileEdits.length ? { profileEdits } : {}) });
     },
     async execute(name, payload, _expected, _observer, context) {
+      if (name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION) return warhammerNotes.save(context.actor, payload, context.assertCurrent, getGame());
       const { actor, assertCurrent, sourceUuid } = context;
       if (name === ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE) return editWarhammerResource(payload, context, getGame());
       const actions = availableActions(actor, getGame());
@@ -65,6 +70,23 @@ export function createWarhammerCommands({ getGame = () => globalThis.game } = {}
       const action = actions.find(action => action.id === payload.actionId);
       if (!action) throw unavailable();
       if (action.revision !== payload.actionRevision) throw new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Panels.EditionChanged", "The game edition changed. Reopen the action."));
+      if (action.id === "rest") {
+        const rest = warhammerRestState(actor, readWarhammerContext(getGame()));
+        if (!rest || rest.revision !== action.revision) throw unavailable();
+        assertCurrent();
+        const options = { rest: true, tb: rest.tb, skipTargets: true };
+        const test = rest.skill ? await actor.setupSkill(rest.skill, options, { resolveClose: true })
+          : await actor.setupCharacteristic("t", options, { resolveClose: true });
+        if (test === undefined || test === null || test === false) return Object.freeze({ ok: true, cancelled: true, actorSourceUuid: sourceUuid });
+        assertCurrent();
+        const current = warhammerRestState(actor, readWarhammerContext(getGame()));
+        if (!current || current.revision !== rest.revision || current.skill !== rest.skill
+          || (test.actor && test.actor !== actor) || typeof test.roll !== "function") throw unavailable();
+        if (rest.skill && test.item && (String(test.item.id) !== String(rest.skill.id)
+          || test.item.type !== "skill" || test.item.parent !== actor)) throw unavailable();
+        await test.roll();
+        return Object.freeze({ ok: true, actorId: String(actor.id), actorSourceUuid: sourceUuid });
+      }
       const [kind, id] = action.id.split(":");
       const skill = kind === "skill" ? skillForActor(actor, id) : null;
       const weapon = kind === "weapon" ? weaponForActor(actor, id) : null;

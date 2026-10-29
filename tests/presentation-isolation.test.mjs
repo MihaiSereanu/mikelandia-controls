@@ -73,8 +73,8 @@ for (const presentation of ["profile", "native"]) {
   test(`${presentation} guide describes actual controls and omits D&D gestures`, () => {
     const sections = controlsGuideSections({ characterPresentation: presentation, actionBarSource: "foundry", canPlaceActor: true, split: true, presentation: "tablet" });
     const keys = sections.flatMap(section => section.entries);
-    for (const key of ["Portrait", "Chooser", "Rows", "Quickbar", "Members", "ActorPlace", "SplitDrop", "TabletSplit"]) assert.equal(keys.includes(key), false);
-    for (const key of ["NativeChooser", "NativeSheet", "Tablet"]) assert.equal(keys.includes(key), true);
+    for (const key of ["Chooser", "Rows", "Quickbar", "Members", "ActorPlace", "SplitDrop", "TabletSplit"]) assert.equal(keys.includes(key), false);
+    for (const key of ["Portrait", "NativeChooser", "NativeSheet", "Tablet"]) assert.equal(keys.includes(key), true);
     assert.equal(keys.includes("ProfileActions"), presentation === "profile");
   });
 }

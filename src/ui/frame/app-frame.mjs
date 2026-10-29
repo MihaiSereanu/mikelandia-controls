@@ -284,8 +284,8 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
 
     const routeSnapshotChanged = snapshotChanged && snapshotPresentationChangedForRoute(renderedState, state);
     if (sameScreen && state.status === "ready" && state.route === "combat" && !viewChanged && !selectionChanged
-      && renderedState?.snapshot?.combat === state.snapshot?.combat && renderedState?.targeting !== state.targeting
-      && viewport.firstElementChild?.__mcUpdateCombatTargets?.(state.targeting)) {
+      && (renderedState?.snapshot?.combat !== state.snapshot?.combat || renderedState?.targeting !== state.targeting)
+      && viewport.firstElementChild?.__mcUpdateCombatState?.(state.snapshot?.combat, state.targeting)) {
       renderedState = screenState(state, layoutKey);
       return;
     }

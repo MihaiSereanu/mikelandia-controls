@@ -1,5 +1,6 @@
 import { resolveSystemIntegration } from "../../systems/registry.mjs";
 import { localizeFoundry } from "../settings/localization.mjs";
+import { projectCombatHealth } from "../../systems/combat-health.mjs";
 
 export class CombatError extends Error {
   constructor(code, message, options = {}) {
@@ -38,7 +39,7 @@ export function createFoundryCombatGateway({
     const currentId = String(combat.combatant?.id ?? turns[Number(combat.turn)]?.id ?? "");
     const combatants = turns
       .filter((combatant) => combatant?.visible !== false)
-      .map((combatant) => combatantRecord(combatant, currentId, game));
+      .map((combatant) => combatantRecord(combatant, currentId, game, getSystemIntegration()));
     return Object.freeze({
       id: String(combat.id ?? ""),
       instanceRevision,
@@ -223,7 +224,7 @@ export function createFoundryCombatGateway({
     });
 }
 
-function combatantRecord(combatant, currentId, game) {
+function combatantRecord(combatant, currentId, game, integration) {
   const token = combatant.token;
   const owned = combatantOwned(combatant, game?.user);
   return Object.freeze({
@@ -238,6 +239,8 @@ function combatantRecord(combatant, currentId, game) {
       : null,
     current: String(combatant.id ?? "") === currentId,
     defeated: Boolean(combatant.isDefeated ?? combatant.defeated),
+    enemy: typeof token?.disposition === "number" && Number.isFinite(token.disposition) && token.disposition !== 1,
+    health: projectCombatHealth(integration, token),
     owned,
     canRollInitiative: canRollInitiative(combatant),
 

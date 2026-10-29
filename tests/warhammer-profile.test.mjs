@@ -11,6 +11,22 @@ const sections = actor => actor.panels.flatMap(tab => tab.sections);
 const fields = actor => sections(actor).flatMap(section => section.rows ?? []);
 
 for (const use5e of [false, true]) {
+  test(`Warhammer ${use5e ? "5e" : "4e"} shows prepared Social Status only when available`, t => {
+    const actor = createWarhammerActor();
+    installGlobals(t, { game: createWarhammerGame([actor], { use5e }) });
+    const status = () => integration.createActorViewRecord(actor, game.user).panels
+      .find(tab => tab.id === "trappings")?.sections.find(section => section.id === "social-status");
+    assert.equal(status(), undefined);
+    actor.system.details = { status: { value: "Brass 3" } };
+    assert.deepEqual(status().rows, [{ id: "social-status", label: "Social Status", value: "Brass 3", format: "text" }]);
+    actor.system.details.status.value = "Silver 2 (modified)";
+    assert.equal(status().rows[0].value, "Silver 2 (modified)", "retain the native prepared display text");
+    for (const value of [undefined, null, "", "  ", 3, {}]) {
+      actor.system.details.status.value = value;
+      assert.equal(status(), undefined);
+    }
+  });
+
   test(`Warhammer ${use5e ? "5e" : "4e"} reads prepared characteristics and native edition resources`, t => {
     const actor = createWarhammerActor();
     installGlobals(t, { game: createWarhammerGame([actor], { use5e }) });
@@ -19,7 +35,17 @@ for (const use5e of [false, true]) {
     assert.equal(record.edition, use5e ? "5e" : "4e");
     assert.deepEqual(record.panels.map(tab => tab.label), ["Main", "Combat", "Skills", "Trappings"]);
     assert.equal(fields(record).find(field => field.id === "ws").value, 41, "use prepared value; do not recompute from initial/advances");
-    assert.deepEqual(fields(record).find(field => field.id === "wounds"), { id: "wounds", label: "Wounds", value: 9, max: 13, format: "number" });
+    assert.deepEqual(fields(record).find(field => field.id === "wounds"), { id: "wounds", label: "Wounds", value: 9, max: 13, format: "number", editControl: "counter" });
+    for (const id of ["wounds", "fortune", "fate", "corruption"]) {
+      const card = record.panels.find(tab => tab.id === "main").sections.find(section => section.id === id);
+      assert.equal(card.rows.length, 1, `${id} has its own card`);
+      assert.equal(card.rows[0].editControl, "counter");
+    }
+    for (const id of ["resolve", "resilience"]) assert.equal(fields(record).find(field => field.id === id)?.editControl, undefined);
+    const main = record.panels.find(tab => tab.id === "main");
+    assert.equal(main.summaryLayout, "counter-pairs");
+    assert.deepEqual(main.sections.filter(section => section.rows.some(row => row.editControl === "counter")).map(section => section.id),
+      ["wounds", "corruption", "fate", "fortune"]);
     assert.equal(fields(record).find(field => field.id === "fortune").value, 0);
     assert.equal(fields(record).some(field => field.id === "resolve"), !use5e);
     assert.equal(fields(record).some(field => field.id === "resilience"), !use5e);

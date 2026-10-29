@@ -1,3 +1,5 @@
+import { warhammerNotes } from "../actor-notes.mjs";
+import { readCombatHealth } from "../combat-health.mjs";
 import { fallbackIntegration } from "../fallback/integration.mjs";
 import { createProfilePanels } from "../profile-view.mjs";
 import { createWarhammerCharacterProfile } from "./profile.mjs";
@@ -7,7 +9,10 @@ import { createWarhammerCommands } from "./commands.mjs";
 export const warhammerIntegration = Object.freeze({
   ...fallbackIntegration,
   id: "wfrp4e",
-  features: Object.freeze({ ...fallbackIntegration.features, profilePanels: true }),
+  readCombatHealth: actor => readCombatHealth(actor, "system.status.wounds", "Wounds", "Wounds"),
+  combatHealthPaths: Object.freeze(["system.status.wounds.value", "system.status.wounds.max"]),
+  features: Object.freeze({ ...fallbackIntegration.features, profilePanels: true, biography: true }),
+  notes: warhammerNotes,
   createCommands: createWarhammerCommands,
   refreshSelectedActorForHook(hook) {
     return ["createCombat", "updateCombat", "deleteCombat", "createCombatant", "updateCombatant", "deleteCombatant"].includes(hook);
@@ -22,8 +27,10 @@ export const warhammerIntegration = Object.freeze({
     const context = readWarhammerContext(globalThis.game);
     if (!context) return identity;
     const capabilities = capabilitiesForActor(actor, user);
+    const notesFields = warhammerNotes.fields(actor, globalThis.game);
     const panels = createProfilePanels(actor, createWarhammerCharacterProfile(actor, context), { ...context, actions: capabilities?.profileActions, edits: capabilities?.profileEdits });
     return panels.length ? Object.freeze({ ...identity, presentation: "profile", profileId: "wfrp4e-character",
-      edition: context.revision, panels }) : identity;
+      edition: context.revision, notesAvailable: warhammerNotes.available(actor), notesFields,
+      notesRevision: JSON.stringify([warhammerNotes.available(actor) ? warhammerNotes.read(actor) : "", notesFields]), capabilities: { editBiography: true }, panels }) : identity;
   }
 });

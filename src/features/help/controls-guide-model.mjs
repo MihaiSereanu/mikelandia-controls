@@ -3,7 +3,7 @@ export function controlsGuideSections({ presentation = "desktop", collective = f
   const legacy = characterPresentation === "legacy";
   const sections = [
     { id: "common", entries: ["Tap", legacy ? "Hold" : "NativeHold", "Back", "Availability"] },
-    { id: "character", entries: legacy ? ["Portrait", "Chooser", "Rows", ...(collective ? ["Members"] : [])] : ["NativeChooser", "NativeSheet", ...(characterPresentation === "profile" ? ["ProfileActions", "ProfileResources"] : [])] },
+    { id: "character", entries: legacy ? ["Portrait", "Chooser", "Rows", ...(collective ? ["Members"] : [])] : ["Portrait", "NativeChooser", "NativeSheet", ...(characterPresentation === "profile" ? ["ProfileActions", "ProfileResources"] : [])] },
     { id: "layout", entries: presentation === "desktop" ? ["DesktopReview", "Phone", "Tablet"] : [presentation === "phone" ? "Phone" : "Tablet"] }
   ];
   return Object.freeze(sections.map(section => Object.freeze({ ...section, entries: Object.freeze(section.entries) })));

@@ -33,7 +33,7 @@ export function renderCharacters({ state, commands, scope, overlayHost = null, r
     ? state.snapshot.selectedActor
     : actors.find((entry) => entry.id === state.selectedActorId) ?? null;
   if (["native", "profile"].includes(actor?.presentation)) {
-    return renderNativeCharacter({ state, commands, scope, createChooser: createCharacterMenuController, retained });
+    return renderNativeCharacter({ state, commands, scope, createChooser: createCharacterMenuController, renderNotes: (actor, commands, status, scope, editorScope) => biographyPanel(actor, commands, status, scope, true, editorScope), retained });
   }
   if (!actor) {
     const chooser = createCharacterMenuController({ actors, selectedActor: null, commands, onClose: () => {}, scope, embedded: true });
@@ -1726,28 +1726,29 @@ function npcResourceStrip(actor, commands) {
   ] });
 }
 
-function biographyPanel(actor, commands, status, scope) {
+function biographyPanel(actor, commands, status, scope, notes = false, editorScope = scope) {
+  const storyLabel = notes ? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Notes", "Notes") : localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Biography", "Biography");
   const biography = actor.biography ?? {};
   const sourceUuid = characterRecordSourceUuid(actor);
   const canEdit = Boolean(actor.capabilities?.editBiography);
   let storyEditor = null;
-  const storyEdit = biographyEditAction(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Biography", "Biography"), false, (anchor) => {
+  const storyEdit = biographyEditAction(storyLabel, false, (anchor) => {
     if (!storyEditor) return;
     openBiographyEditor(anchor, {
       actor,
-      section: "biography",
-      label: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Biography", "Biography"),
+      section: notes ? "notes" : "biography",
+      label: storyLabel,
       iconName: "fa-feather-pointed",
       value: storyEditor.editorText,
       originalValue: storyEditor.originalSource,
       biographyField: storyEditor.editField,
       richText: true
-    }, commands, status, scope);
+    }, commands, status, editorScope);
   }, scope, commands.localize);
   const description = node("div", {
     className: "mc-character-biography-prose is-loading",
     attrs: { "aria-busy": "true", "data-actor-source-uuid": sourceUuid },
-    children: [node("p", { className: "mc-sheet-empty", text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.LoadingBiography", "Loading biography…") })]
+    children: [node("p", { className: "mc-sheet-empty", text: localizedText(commands.localize, notes ? "MIKELANDIA_CONTROLS.Character.Presenter.LoadingNotes" : "MIKELANDIA_CONTROLS.Character.Presenter.LoadingBiography", notes ? "Loading notes..." : "Loading biography…") })]
   });
   scope.listen(description, "click", (event) => {
     const roll = event.target.closest?.("a.inline-roll:not(.inline-result)");
@@ -1775,11 +1776,11 @@ function biographyPanel(actor, commands, status, scope) {
     description.classList.remove("is-loading");
     description.removeAttribute("aria-busy");
     if (result.html) description.innerHTML = result.html;
-    else description.replaceChildren(node("p", { className: "mc-sheet-empty", text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Nobiographyhasbeenrecorded", "No biography has been recorded.") }));
+    else description.replaceChildren(node("p", { className: "mc-sheet-empty", text: localizedText(commands.localize, notes ? "MIKELANDIA_CONTROLS.Character.Copy.NoNotesRecorded" : "MIKELANDIA_CONTROLS.Character.Copy.Nobiographyhasbeenrecorded", notes ? "No notes have been recorded." : "No biography has been recorded.") }));
     storyEditor = result.editable && result.editField ? result : null;
     storyEdit.disabled = !(canEdit && storyEditor);
     storyEdit.setAttribute("aria-disabled", String(storyEdit.disabled));
-    storyEdit.title = storyEdit.disabled ? "Biography is read-only" : "Edit Biography";
+    storyEdit.title = storyEdit.disabled ? `${storyLabel} is read-only` : `Edit ${storyLabel}`;
     if (!result.inlineRollsInteractive) {
       for (const roll of description.querySelectorAll("a.inline-roll:not(.inline-result)")) {
         roll.classList.add("is-disabled");
@@ -1791,11 +1792,12 @@ function biographyPanel(actor, commands, status, scope) {
     if (scope.disposed || description.dataset.actorSourceUuid !== sourceUuid) return;
     description.classList.remove("is-loading");
     description.removeAttribute("aria-busy");
-    description.replaceChildren(node("p", { className: "mc-sheet-empty", text: error?.message ?? "Biography could not be loaded." }));
+    description.replaceChildren(node("p", { className: "mc-sheet-empty", text: error?.message ?? (notes ? "Notes could not be loaded." : "Biography could not be loaded.") }));
   });
-  if (["npc", "group", "vehicle"].includes(actor.type)) {
+  if (notes || ["npc", "group", "vehicle"].includes(actor.type)) {
     return node("div", { className: "mc-sheet-stack mc-character-biography", children: [
-      node("section", { className: "mc-sheet-card mc-character-biography-story", children: [sectionHeading(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Biography", "Biography"), "fa-feather-pointed", storyEdit), description] })
+      node("section", { className: "mc-sheet-card mc-character-biography-story", children: [sectionHeading(storyLabel, "fa-feather-pointed", storyEdit), description] }),
+      ...(notes ? renderNotesFields(actor, commands, status, scope, editorScope) : [])
     ] });
   }
   const textBlocks = [
@@ -1837,8 +1839,29 @@ function biographyPanel(actor, commands, status, scope) {
         originalValue: value ?? ""
       }, commands, status, scope), scope, commands.localize)), node("p", { text: value || localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NotRecorded", "Not recorded.") })]
     }); }) }),
-    node("section", { className: "mc-sheet-card mc-character-biography-story", children: [sectionHeading(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Biography", "Biography"), "fa-feather-pointed", storyEdit), description] })
+    node("section", { className: "mc-sheet-card mc-character-biography-story", children: [sectionHeading(storyLabel, "fa-feather-pointed", storyEdit), description] })
   ] });
+}
+
+function renderNotesFields(actor, commands, status, scope, editorScope) {
+  const groups = new Map();
+  for (const field of actor.notesFields ?? []) {
+    if (!groups.has(field.group)) groups.set(field.group, []);
+    groups.get(field.group).push(field);
+  }
+  return [...groups.values()].map(fields => node("section", { className: "mc-sheet-card mc-character-notes-fields", children: [
+    ...(fields.length > 1 ? [sectionHeading(localizedText(commands.localize, fields[0].groupLabelKey, fields[0].groupLabelKey), "fa-bullseye")] : []),
+    ...fields.map(field => {
+      const label = localizedText(commands.localize, field.labelKey, field.labelKey);
+      const editorLabel = fields.length > 1 ? `${localizedText(commands.localize, field.groupLabelKey, field.groupLabelKey)}: ${label}` : label;
+      const edit = biographyEditAction(editorLabel, Boolean(actor.capabilities?.editBiography), anchor => openBiographyEditor(anchor, {
+        actor, section: "notes", label: editorLabel, iconName: "fa-bullseye", richText: false,
+        value: field.value, originalValue: field.value, biographyField: field.id, notesContextRevision: field.revision
+      }, commands, status, editorScope), scope, commands.localize);
+      return node("div", { dataset: { notesField: field.id }, children: [sectionHeading(label, "fa-bullseye", edit),
+        node("p", { text: field.value || localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NotRecorded", "Not recorded.") })] });
+    })
+  ] }));
 }
 
 function biographyEditAction(label, enabled, onEdit, scope, localize) {
@@ -1919,7 +1942,8 @@ function openBiographyEditor(anchor, config, commands, pageStatus, scope) {
             section: config.section,
             value: composer.value,
             originalValue: config.originalValue,
-            biographyField: config.biographyField
+            biographyField: config.biographyField,
+            ...(config.notesContextRevision !== undefined ? { notesContextRevision: config.notesContextRevision } : {})
           };
       try {
         await commands.execute(ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION, payload);

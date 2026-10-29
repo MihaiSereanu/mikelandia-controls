@@ -1,5 +1,6 @@
 import { node, vectorIcon } from "../../ui/primitives/dom.mjs";
 import { localizedText, localizedNumber } from "../../ui/primitives/localized-text.mjs";
+import { combatHealthText } from "./health.mjs";
 
 export function renderTargets({ targeting, commands, scope }) {
   if (!targeting) return null;
@@ -16,6 +17,13 @@ export function renderTargets({ targeting, commands, scope }) {
   const distanceText = (entry, units) => entry.distance === null ? t("DistanceUnavailable", "Distance unavailable")
     : `${localizedNumber(Math.round(entry.distance * 100) / 100, commands.readLocale?.() ?? "en")} ${units}`.trim();
   const distances = new Map();
+  const healthNodes = new Map();
+  const healthText = health => combatHealthText(health, commands);
+  const healthNode = entry => {
+    const element = node("small", { className: "mc-target-health", text: healthText(entry.health), attrs: { hidden: !entry.health } });
+    healthNodes.set(entry.id, element);
+    return element;
+  };
   const distanceNode = entry => {
     if (entry.self) return null;
     const element = node("span", { className: "mc-target-distance", text: distanceText(entry, targeting.units) });
@@ -28,9 +36,9 @@ export function renderTargets({ targeting, commands, scope }) {
     dataset: { targetId: entry.id },
     on: { click: event => run(event.currentTarget, () => commands.toggleCombatTarget(request(entry.id))) },
     children: [entry.img ? node("img", { attrs: { src: entry.img, alt: "" } }) : null,
-      node("span", { className: "mc-target-name", children: [node("strong", { children: [entry.name,
+      node("span", { className: "mc-target-name", children: [node("span", { className: "mc-combat-name-line", children: [node("strong", { children: [entry.name,
         entry.self ? node("span", { className: "mc-target-you", text: ` (${t("You", "You")})` }) : null] }),
-        entry.defeated ? node("small", { text: t("Defeated", "Defeated") }) : null] }),
+        healthNode(entry)] }), entry.defeated ? node("small", { text: t("Defeated", "Defeated") }) : null] }),
       distanceNode(entry),
       node("span", { className: "mc-target-check", attrs: { "aria-hidden": "true" }, text: entry.selected ? "✓" : "○" })]
   }, scope);
@@ -59,11 +67,17 @@ export function renderTargets({ targeting, commands, scope }) {
       ...groups, targeting.entries.length ? null : node("p", { text: t("Empty", "No visible combat tokens.") })] }) : null
   ] });
   // Preserve rows, focused controls and disclosure state during token animation.
-  const structure = state => JSON.stringify({ ...state, entries: state.entries.map(({ distance, ...entry }) => entry) });
+  const structure = state => JSON.stringify({ ...state, entries: state.entries.map(({ distance, health, ...entry }) => entry) });
   const initialStructure = structure(targeting);
   section.__mcUpdateTargetDistances = next => {
     if (!next || structure(next) !== initialStructure) return false;
     for (const entry of next.entries) {
+      const healthElement = healthNodes.get(entry.id);
+      if (healthElement) {
+        const text = healthText(entry.health);
+        if (healthElement.textContent !== text) healthElement.textContent = text;
+        healthElement.hidden = !entry.health;
+      }
       const element = distances.get(entry.id);
       if (!element) continue;
       const text = distanceText(entry, next.units);

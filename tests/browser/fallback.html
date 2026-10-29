@@ -149,6 +149,7 @@ try {
   apps.admissions.closeTopmost();
   await tick();
   check("native close restores fallback", apps.admissions.size === 0 && button() && !button().disabled);
+  screen.querySelector('.mc-character-select-trigger').click();
   const bryn = screen.querySelector('[data-actor-source="Actor.other"]');
   bryn.click();
   await tick();

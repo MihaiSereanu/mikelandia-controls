@@ -1,6 +1,14 @@
 {
   "MIKELANDIA_CONTROLS": {
+    "Notes": {
+      "Unavailable": "Notes are unavailable for this actor.",
+      "Invalid": "Invalid notes request.",
+      "Changed": "Notes changed while being edited. Reopen the editor and try again."
+    },
     "Targets": {
+      "Healthy": "Healthy",
+      "Bloodied": "Bloodied",
+      "Critical": "Critical",
       "Title": "Targets",
       "None": "No targets selected",
       "Friendly": "Friendly",
@@ -296,7 +304,8 @@
         "Inventory": "Inventory",
         "Spells": "Spells",
         "Features": "Features",
-        "Biography": "Biography"
+        "Biography": "Biography",
+        "Notes": "Notes"
       },
       "ViewPortrait": "View {name} portrait",
       "HoldActions": "Hold for portrait actions",
@@ -396,6 +405,7 @@
         "NoPreparedOrAlwaysAvailableSpellsAreVisible": "No prepared or always-available spells are visible.",
         "NoSpellsAreVisible": "No spells are visible.",
         "NoFeaturesAreVisible": "No features are visible.",
+        "LoadingNotes": "Loading notes...",
         "LoadingBiography": "Loading biography…",
         "InlineRollsRequireCurrentOWNERPermissionForThisExact": "Inline rolls require current OWNER permission for this exact actor.",
         "FoundryCouldNotCompleteThatInlineRoll": "Foundry could not complete that inline roll.",
@@ -762,6 +772,7 @@
         "Description": "Description",
         "Properties": "Properties",
         "Sourcesource": "Source: {source}",
+        "NoNotesRecorded": "No notes have been recorded.",
         "Nobiographyhasbeenrecorded": "No biography has been recorded.",
         "Castname": "Cast {name}",
         "Usename": "Use {name}",
@@ -920,10 +931,10 @@
         "Availability": "Available actions depend on the character, game system and your permissions.",
         "Portrait": "Tap the portrait to view its image.",
         "NativeHold": "Hold a supported control still to reveal its available actions. Moving early usually scrolls or pans.",
-        "NativeChooser": "Select an available Actor from the list below the character view. Scroll the list to find another Actor.",
+        "NativeChooser": "Tap the arrow beside the portrait to choose another character. Browse folders inside the dropdown.",
         "NativeSheet": "Open Character Sheet opens the Actor's native sheet for available game actions and inventory controls.",
         "ProfileActions": "Use the labeled action buttons to open the game's native workflows. Native dialogs and Chat handle game results.",
-        "ProfileResources": "Choose Edit on an available resource, then Save or Cancel. Save before changing tabs or Actors.",
+        "ProfileResources": "Unlock a counter to use the minus/plus buttons or tap its value. Choose Edit on an available resource, then Save or Cancel. Save before changing tabs or Actors.",
         "Chooser": "Tap the character name to open the Actor chooser, then tap an available row to select it. Scroll the list to find another Actor.",
         "Rows": "Tap item, spell and feature rows to view their details. Hold a row for its available action menu. Choose Use or a roll explicitly; available menu actions vary.",
         "Members": "Tap an available Group member to open their character. Back returns to the Group and restores the previous tab and scroll position.",

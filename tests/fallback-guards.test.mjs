@@ -23,7 +23,7 @@ test("fallback ownership policy is independent of game type names", () => {
 test("unprofiled actor resources and auxiliary editors cannot be reached directly", async t => {
   const actor = createActor();
   for (const key of ["system", "items", "flags"]) Object.defineProperty(actor, key, { get() { throw new Error(`unexpected ${key} read`); } });
-  const game = createGame([actor], "wfrp4e");
+  const game = createGame([actor], "custom");
   installGlobals(t, { game });
   const request = { actorSourceUuid: actor.uuid };
   const biography = createFoundryBiographyGateway();

@@ -82,6 +82,7 @@ try {
     state = { ...state, snapshot }; screen.__mcUpdateCharacter({ state, commands });
   }, error => { watchError = error; }) };
   screen = renderCharacters({ state, commands, scope }); document.querySelector("main").append(screen); await tick();
+  check("portrait preserves the top of the image", getComputedStyle(screen.querySelector('.mc-native-sheet-identity img')).objectPosition === "50% 0%");
   const tab = async id => { screen.querySelector(`[data-profile-tab="${id}"]`).click(); await tick(); };
   const field = id => { const counter = screen.querySelector(`[data-profile-field="${id}"] .mc-profile-counter`); if (counter) return screen.querySelector(`[data-profile-field="${id}"] dt`).textContent + counter.querySelector("[data-profile-edit]").textContent; const copy = screen.querySelector(`[data-profile-field="${id}"]`)?.cloneNode(true); copy?.querySelectorAll("[data-profile-resource]").forEach(node => node.remove()); return copy?.textContent; };
   const begin = async id => { screen.querySelector(`[data-profile-action="${id}"]`).click(); await tick(); };

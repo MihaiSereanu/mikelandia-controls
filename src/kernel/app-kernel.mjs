@@ -322,16 +322,16 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     sendChat: (content) => guardConnection(() => session.sendChat(content, store.state.selectedActorSourceUuid)),
     readCharacterBiography: async (actorSourceUuid) => {
       const sourceUuid = String(actorSourceUuid ?? "");
-      if (store.state.route !== "characters" || store.state.characterTab !== "biography"
+      if (store.state.route !== "characters" || !["biography", "notes"].includes(store.state.characterTab)
         || store.state.selectedActorSourceUuid !== sourceUuid) throw new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.TheSelectedBiographyIsNoLongerActive", "The selected biography is no longer active."));
       const result = await guardConnection((expected) => biographyGateway.read({ actorSourceUuid: sourceUuid }, expected));
-      if (store.state.route !== "characters" || store.state.characterTab !== "biography"
+      if (store.state.route !== "characters" || !["biography", "notes"].includes(store.state.characterTab)
         || store.state.selectedActorSourceUuid !== sourceUuid) throw new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.TheSelectedBiographyIsNoLongerActive", "The selected biography is no longer active."));
       return result;
     },
     rollCharacterBiographyInline: (payload) => {
       const sourceUuid = String(payload?.actorSourceUuid ?? "");
-      if (store.state.route !== "characters" || store.state.characterTab !== "biography"
+      if (store.state.route !== "characters" || !["biography", "notes"].includes(store.state.characterTab)
         || store.state.selectedActorSourceUuid !== sourceUuid) return Promise.reject(new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.TheSelectedBiographyIsNoLongerActive", "The selected biography is no longer active.")));
       return guardConnection((expected) => biographyGateway.roll(payload, expected));
     },
@@ -345,7 +345,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
         || name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION || name === ACTOR_COMMANDS.SET_EXHAUSTION_LEVEL || [ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name)) {
         const sourceUuid = String(payload?.actorSourceUuid ?? "");
         if (store.state.route !== "characters" || store.state.selectedActorSourceUuid !== sourceUuid
-          || (name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION && store.state.characterTab !== "biography")) {
+          || (name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION && !["biography", "notes"].includes(store.state.characterTab))) {
           return Promise.reject(new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.TheSelectedCharacterSourceChangedBeforeThisActionCould", "The selected character source changed before this action could run.")));
         }
       }

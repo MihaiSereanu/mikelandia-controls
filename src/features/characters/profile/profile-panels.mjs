@@ -5,8 +5,8 @@ import { renderProfileInventory } from "./profile-inventory.mjs";
 import { renderProfileResourceEditor } from "./profile-resource-editor.mjs";
 
 /** Profiles provide game labels. This renderer has no system IDs or rule paths. */
-export function renderProfilePanels(actor, state, commands, scope) {
-  const tabs = actor.panels ?? [];
+export function renderProfilePanels(actor, state, commands, scope, renderNotes = null) {
+  const tabs = [...(actor.panels ?? []), ...(actor.notesAvailable && renderNotes ? [{ id: "notes", label: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Notes", "Notes"), sections: [] }] : [])];
   if (!tabs.length) return [];
   const active = tabs.find(tab => tab.id === state.characterTab) ?? tabs[0];
   const inventory = actor.profileInventory && active.id === "inventory" ? renderProfileInventory(actor, commands, scope) : null;
@@ -52,25 +52,42 @@ export function renderProfilePanels(actor, state, commands, scope) {
         }
       } }
     }, scope) : node("span", { text: row.label });
+    const secondary = row.secondaryAction ? node("button", {
+      className: "mc-profile-secondary-action", attrs: { type: "button", "data-profile-action": row.secondaryAction.id,
+        "aria-label": row.secondaryAction.label, title: row.secondaryAction.label }, children: [icon(row.secondaryAction.icon)],
+      on: { click: async event => {
+        const button = event.currentTarget;
+        if (button.disabled || scope.disposed) return;
+        button.disabled = true;
+        try { await commands.execute(ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, { actorSourceUuid: actor.sourceUuid,
+          actionId: row.secondaryAction.id, actionRevision: row.secondaryAction.revision }); }
+        catch (error) { if (!scope.disposed) commands.reportCharacterMutationError?.(error); }
+        finally { if (!scope.disposed) button.disabled = false; }
+      } }
+    }, scope) : null;
+    const resource = row.edit ? renderProfileResourceEditor(row, actor, commands, scope) : null;
+    const heading = node("dt", { className: "mc-profile-item-name", children: [label, secondary] });
+    const lock = secondary && resource?.querySelector('[data-profile-counter-lock]');
+    if (lock) heading.append(lock);
     return node("div", { className: "mc-profile-row", dataset: { profileField: row.id }, children: [
-      node("dt", { className: "mc-profile-item-name", children: [label] }), row.value === undefined || (row.edit && row.editControl === "counter") || row.edit?.id.startsWith("quantity:") || row.edit?.id.startsWith("coin-") ? null : node("dd", { children: [
+      heading, row.value === undefined || (row.edit && row.editControl === "counter") || row.edit?.id.startsWith("quantity:") || row.edit?.id.startsWith("coin-") ? null : node("dd", { children: [
         row.valueLabel ? node("span", { className: "mc-profile-value-label", text: `${row.valueLabel} ` }) : null,
         node("span", { text: `${row.valuePrefix ?? ""}${valueText(row)}` })
-      ] }), description, row.edit ? renderProfileResourceEditor(row, actor, commands, scope) : null
+      ] }), description, resource
     ] });
   };
   // Keep related small sections together, with the last card using spare width.
   // Larger collections retain the full sheet width for their own responsive rows.
-  const sections = [];
+  const sections = active.id === "notes" ? [renderNotes()] : [];
   let summary;
   for (const section of active.sections) {
-    const compact = ["values", "counters"].includes(section.kind) && section.rows.length === 1;
+    const compact = section.layout !== "table" && ["values", "counters"].includes(section.kind) && section.rows.length === 1;
     const inventorySection = inventory && section.id === "gear";
     const heading = [node("h3", { text: section.label }), ...(section.summary ?? []).map(row => node("span", {
       className: "mc-profile-section-metric", dataset: { profileMetric: row.id }, text: `${row.label} ${valueText(row)}`
     }))];
     const element = node("section", {
-      className: `mc-profile-section mc-profile-${section.kind}${section.layout === "inline" ? " mc-profile-section-inline" : ""}`, dataset: { profileSection: section.id },
+      className: `mc-profile-section mc-profile-${section.kind}${section.layout === "inline" ? " mc-profile-section-inline" : section.layout === "table" ? " mc-profile-section-table" : ""}`, dataset: { profileSection: section.id },
       children: [compact && section.label === section.rows[0].label && !section.summary?.length ? null : node("header", { className: "mc-profile-section-heading", children: [
         ...(inventorySection ? [node("div", { className: "mc-profile-section-title", children: heading }), inventory.button] : heading)
       ] }), inventorySection ? inventory.body : null, section.kind === "text" ? node("p", { text: section.text }) : node("dl", {
@@ -78,7 +95,7 @@ export function renderProfilePanels(actor, state, commands, scope) {
       })]
     });
     if (compact) {
-      if (!summary) { summary = node("div", { className: `mc-profile-summary${["paired", "triple"].includes(active.summaryLayout) ? ` mc-profile-summary-${active.summaryLayout}` : ""}` }); sections.push(summary); }
+      if (!summary) { summary = node("div", { className: `mc-profile-summary${active.summaryLayout === "counter-pairs" ? " mc-profile-summary-triple mc-profile-summary-counter-pairs" : ["paired", "triple"].includes(active.summaryLayout) ? ` mc-profile-summary-${active.summaryLayout}` : ""}` }); sections.push(summary); }
       summary.append(element);
     } else { summary = null; sections.push(element); }
   }

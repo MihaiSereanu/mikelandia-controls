@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Native character control contrast</title>
+<link rel="stylesheet" href="/native-fixture/foundry2.css">
+<style>
+@import url("/assets/mikelandia-controls.css") layer(modules);
+@import url("/assets/mc-style-authority.css") layer(modules);
+@font-face { font-family: "Font Awesome 7 Pro"; src: url("/native-fixture/fa-solid-900.woff2") format("woff2"); font-weight: 900; }
+@font-face { font-family: "Font Awesome 7 Duotone"; src: url("/native-fixture/fa-duotone-900.woff2") format("woff2"); font-weight: 900; }
+</style>
+<style>body { margin: 0; } #results { display: none; } .mc-character-screen { padding: 16px; } *, *::before, *::after { transition: none !important; }</style>
+<body class="game theme-dark mc-mobile-running">
+<main class="mc-mobile-app" data-form-factor="phone" data-theme="dark"></main>
+<pre id="results">Running</pre>
+<script type="module" src="/tests/browser/control-contrast.mjs"></script>
+</body>
+</html>

@@ -61,6 +61,16 @@
 }
 
 @layer mc-mobile-style-authority {
+  .mc-mobile-app[data-mc-style-authority][data-theme="light"] .mc-native-sheet-open {
+    background: var(--mc-text) !important;
+    color: var(--mc-surface) !important;
+    border-color: var(--mc-text) !important;
+  }
+  .mc-mobile-app[data-mc-style-authority] .mc-profile-boolean-target input[type="checkbox"] {
+    --checkbox-background-color: var(--mc-subtle) !important;
+    --checkbox-checked-color: var(--mc-text) !important;
+    --checkbox-checkmark-color: var(--mc-surface) !important;
+  }
   .mc-mobile-app[data-mc-style-authority] .mc-collective-card { padding: 14px !important; }
   .mc-mobile-app[data-mc-style-authority] .mc-collective-native-editor,
   .mc-mobile-app[data-mc-style-authority] .mc-collective-member-open { color: var(--mc-text) !important; background: var(--mc-surface-up) !important; border: 1px solid var(--mc-border) !important; border-radius: 10px !important; padding: 8px 12px !important; }
@@ -131,6 +141,9 @@
 
   .mc-mobile-app[data-mc-style-authority][data-form-factor="phone"] .mc-viewport > .mc-character-screen {
     padding-top: 0 !important;
+  }
+  .mc-mobile-app[data-mc-style-authority][data-form-factor="phone"] .mc-viewport > .mc-native-character-screen {
+    padding-top: 4px !important;
   }
 
   .mc-mobile-app[data-mc-style-authority][data-route="chat"] .mc-viewport > .mc-native-chat-screen {
@@ -441,6 +454,10 @@
   .mc-mobile-app[data-mc-style-authority] .mc-combat-list > li.is-current {
     border-color: var(--mc-gold) !important;
     background: color-mix(in srgb, var(--mc-gold) 8%, var(--mc-surface)) !important;
+  }
+
+  .mc-mobile-app[data-mc-style-authority] .mc-combat-list > li.is-enemy {
+    border-color: color-mix(in srgb, #c64f4f 55%, var(--mc-border)) !important;
   }
 
   .mc-mobile-app[data-mc-style-authority] .mc-item-modal {

@@ -1,3 +1,5 @@
+import { shadowdarkNotes } from "../actor-notes.mjs";
+import { readCombatHealth } from "../combat-health.mjs";
 import { fallbackIntegration } from "../fallback/integration.mjs";
 import { createProfilePanels } from "../profile-view.mjs";
 import { isShadowdarkPlayer, shadowdarkContext } from "./context.mjs";
@@ -7,7 +9,10 @@ import { createShadowdarkCommands } from "./commands.mjs";
 export const shadowdarkIntegration = Object.freeze({
   ...fallbackIntegration,
   id: "shadowdark",
-  features: Object.freeze({ ...fallbackIntegration.features, profilePanels: true }),
+  readCombatHealth: actor => readCombatHealth(actor, "system.attributes.hp", "SHADOWDARK.sheet.actor.hp", "HP"),
+  combatHealthPaths: Object.freeze(["system.attributes.hp.value", "system.attributes.hp.max"]),
+  features: Object.freeze({ ...fallbackIntegration.features, profilePanels: true, biography: true }),
+  notes: shadowdarkNotes,
   createCommands: createShadowdarkCommands,
   isNativeDialog(application) {
     const RollDialog = globalThis.shadowdark?.apps?.RollDialogSD;
@@ -25,6 +30,6 @@ export const shadowdarkIntegration = Object.freeze({
     if (!context) return identity;
     const capabilities = capabilitiesForActor(actor, user);
     const panels = createProfilePanels(actor, shadowdarkPlayerProfile(context), { actions: capabilities?.profileActions, edits: capabilities?.profileEdits });
-    return panels.length ? Object.freeze({ ...identity, presentation: "profile", profileId: "shadowdark-player", profileInventory: capabilities.profileInventory === true, panels }) : identity;
+    return panels.length ? Object.freeze({ ...identity, presentation: "profile", profileId: "shadowdark-player", profileInventory: capabilities.profileInventory === true, notesAvailable: shadowdarkNotes.available(actor), notesRevision: shadowdarkNotes.available(actor) ? shadowdarkNotes.read(actor) : "", capabilities: { editBiography: true }, panels }) : identity;
   }
 });

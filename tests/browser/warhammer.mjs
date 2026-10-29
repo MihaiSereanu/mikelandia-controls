@@ -13,11 +13,25 @@ const scope = createTaskScope("browser-warhammer");
 try {
   const params = new URLSearchParams(location.search);
   const initial5e = params.get("edition") === "5e";
+  if (params.has("native-assets")) {
+    const font = new FontFace("Native fixture icons", 'url("/native-fixture/fa-solid-900.woff2")', { weight: "900" });
+    document.fonts.add(await font.load());
+    const style = document.createElement("style");
+    style.textContent = '.mc-profile-secondary-action i { font-family: "Native fixture icons"; font-weight: 900; font-style: normal; } .mc-profile-secondary-action .fa-bed::before { content: "\\f236"; }';
+    document.head.append(style);
+  }
   let use5e = initial5e;
   document.querySelector("main").dataset.formFactor = params.get("layout") ?? "phone";
+  if (params.has("large")) document.querySelector("main").style.setProperty("font-size", "24px", "important");
   globalThis.Hooks = createHooks();
   const portrait = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="#38434f"/><circle cx="40" cy="27" r="15" fill="#b3bdc4"/><path d="M12 80V66a28 28 0 0 1 56 0v14" fill="#b3bdc4"/></svg>');
   const actor = createWarhammerActor({ img: portrait });
+  actor.system.details = { status: { value: "Brass 3" } };
+  actor.system.details.move = { value: 4, walk: "8", run: "16" };
+  actor.system.details.experience = { current: 100, spent: 200, total: 300 };
+  actor.system.autoCalc = { walk: true, run: true };
+  actor.characteristics = { t: { bonus: 3 } };
+  actor.itemTags = { skill: [] };
   actor.system.status.advantage.max = 10;
   actor.advantageGroup = "players";
   const nativeWrites = [], nativeResourceEffects = [];
@@ -60,8 +74,8 @@ try {
   let nativeAmmo = 4;
   class WarhammerRollDialogV2 extends EventTarget {}
   globalThis.warhammer = { apps: { WarhammerRollDialogV2 } };
-  const setupTest = (kind, target, options = {}) => new Promise(resolve => {
-    nativeSetups.push({ kind, target, use5e });
+  const setupTest = (kind, target, options = {}, context = {}) => new Promise(resolve => {
+    nativeSetups.push({ kind, target, use5e, context, options });
     let settled = false;
     const dialog = Object.assign(new WarhammerRollDialogV2(), { actor, fixtureNativeRoll: true, options: Object.freeze({ modal: true, ...options }), element: document.createElement("section"), close() {
       this.element.remove(); Hooks.emit("closeApplicationV2", this);
@@ -88,8 +102,8 @@ try {
     Hooks.emit("renderApplicationV2", dialog, dialog.element);
     nativeDialog = dialog;
   });
-  actor.setupCharacteristic = (key, context, options) => setupTest("characteristic", key, options);
-  actor.setupSkill = (skill, context, options) => setupTest("skill", skill, options);
+  actor.setupCharacteristic = (key, context, options) => setupTest("characteristic", key, options, context);
+  actor.setupSkill = (skill, context, options) => setupTest("skill", skill, options, context);
   actor.setupWeapon = (weapon, context, options) => setupTest("weapon", weapon, options);
   actor.setupCast = (spell, context, options) => setupTest("cast", spell, options);
   actor.setupChannell = (spell, context, options) => setupTest("channel-spell", spell, options);
@@ -137,11 +151,28 @@ try {
     screen.__mcUpdateCharacter({ state, commands });
   }, error => { watchError = error; }) };
   screen = renderCharacters({ state, commands, scope });
-  document.querySelector("main").append(screen);
+  const viewport = document.createElement("div");
+  viewport.className = "mc-viewport";
+  viewport.append(screen);
+  document.querySelector("main").append(viewport);
   await tick();
+  if (document.querySelector("main").dataset.formFactor === "phone") {
+    const origin = viewport.getBoundingClientRect().top;
+    check("protected phone header reserves exactly four pixels", getComputedStyle(screen).paddingTop === "4px"
+      && Math.abs(screen.querySelector('.mc-native-sheet-identity').getBoundingClientRect().top - origin - 4) < 1);
+    check("portrait and name both clear the content top", ['.mc-native-sheet-identity img', '.mc-native-sheet-identity h2']
+      .every(selector => screen.querySelector(selector).getBoundingClientRect().top >= origin + 4));
+  }
   const clickTab = async id => { screen.querySelector(`[data-profile-tab="${id}"]`).click(); await tick(); };
+  check("portrait preserves the top of the image", getComputedStyle(screen.querySelector('.mc-native-sheet-identity img')).objectPosition === "50% 0%");
   const field = id => {
     const copy = screen.querySelector(`[data-profile-field="${id}"]`)?.cloneNode(true);
+    const counter = copy?.querySelector('.mc-profile-counter');
+    if (counter) {
+      const value = counter.querySelector('[data-profile-edit]').textContent;
+      counter.remove();
+      copy.append(value);
+    }
     copy?.querySelectorAll("[data-profile-resource]").forEach(editor => editor.remove());
     return copy;
   };
@@ -159,11 +190,57 @@ try {
   check("native Wounds label and current/max are retained", field("wounds")?.textContent === "Wounds9 / 13");
   check("prepared characteristic totals are used", field("ws")?.textContent === "Weapon Skill41");
   check("zero Fortune remains visible", field("fortune")?.textContent === "Fortune0");
+  const cardRect = id => screen.querySelector(`[data-profile-section="${id}"]`).getBoundingClientRect();
+  const woundsRect = cardRect('wounds'), corruptionRect = cardRect('corruption'), fateRect = cardRect('fate'), fortuneRect = cardRect('fortune');
+  check("Wounds and Corruption share the first resource row", Math.abs(woundsRect.top - corruptionRect.top) < 1 && woundsRect.right <= corruptionRect.left);
+  check("Fate and Fortune share the second resource row", Math.abs(fateRect.top - fortuneRect.top) < 1 && fateRect.right <= fortuneRect.left
+    && fateRect.top >= Math.max(woundsRect.bottom, corruptionRect.bottom));
+  check("paired card controls fit without overlap", ['wounds', 'corruption', 'fate', 'fortune'].every(id => {
+    const card = cardRect(id);
+    const controls = [...screen.querySelector(`[data-profile-section="${id}"]`).querySelectorAll('[data-profile-counter-delta], [data-profile-edit]')]
+      .map(button => button.getBoundingClientRect());
+    const overlap = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1
+      && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
+    const lock = screen.querySelector(`[data-profile-section="${id}"] [data-profile-counter-lock]`).getBoundingClientRect();
+    const label = screen.querySelector(`[data-profile-section="${id}"] dt span`).getBoundingClientRect();
+    const bed = screen.querySelector(`[data-profile-section="${id}"] .mc-profile-secondary-action`)?.getBoundingClientRect();
+    return !overlap(lock, label) && (!bed || (!overlap(bed, label) && !overlap(bed, lock) && bed.width >= 44 && bed.height >= 44))
+      && controls.every((rect, index) => rect.left >= card.left && rect.right <= card.right && rect.width >= 44 && rect.height >= 44
+      && controls.slice(index + 1).every(other => !overlap(rect, other)));
+  }));
+  check("four resource cards begin individually locked", ["wounds", "fortune", "fate", "corruption"].every(id => {
+    const row = screen.querySelector(`[data-profile-field="${id}"]`);
+    return row.querySelector('[data-profile-counter-lock]').getAttribute('aria-pressed') === 'true'
+      && [...row.querySelectorAll('[data-profile-counter-delta], [data-profile-edit]')].every(button => button.disabled);
+  }));
+  screen.querySelector('[data-profile-counter-lock="fate"]').click();
+  check("unlocking one card preserves other locks", !screen.querySelector('[data-profile-edit="fate"]').disabled
+    && screen.querySelector('[data-profile-edit="wounds"]').disabled);
+  screen.querySelector('[data-profile-counter-lock="fate"]').click();
+  check("XP shows Current Spent Total as a read-only table", ['xp-current', 'xp-spent', 'xp-total'].map(id => field(id)?.textContent).join(',') === 'Current100,Spent200,Total300'
+    && !screen.querySelector('[data-profile-section="experience"] [data-profile-resource]'));
+  const woundsLabel = screen.querySelector('[data-profile-field="wounds"] dt > span');
+  const labelRange = document.createRange(); labelRange.selectNodeContents(woundsLabel);
+  check("Wounds heading stays readable as a whole word", [...labelRange.getClientRects()].filter(rect => rect.width > 0).length === 1);
+  const headingRects = [woundsLabel, screen.querySelector('[data-profile-action="rest"]'), screen.querySelector('[data-profile-counter-lock="wounds"]')]
+    .map(element => element.getBoundingClientRect());
+  check("Wounds label bed and lock occupy one header row", headingRects.every(rect => Math.abs(rect.top + rect.height / 2 - headingRects[0].top - headingRects[0].height / 2) < 1)
+    && headingRects.every((rect, index) => index === 0 || headingRects[index - 1].right <= rect.left + 1));
+  const centeredValues = section => [...screen.querySelectorAll(`[data-profile-section="${section}"] dd`)].every(element => {
+    const range = document.createRange(); range.selectNodeContents(element);
+    const text = range.getBoundingClientRect(), cell = element.getBoundingClientRect();
+    return getComputedStyle(element).textAlign === 'center' && Math.abs(text.left + text.width / 2 - cell.left - cell.width / 2) < 1;
+  });
+  check("XP values are centered within their cells", centeredValues('experience'));
+  const xpCells = [...screen.querySelectorAll('[data-profile-section="experience"] .mc-profile-row')].map(element => element.getBoundingClientRect());
+  check("XP remains a separate three-cell row below resource pairs", xpCells.every(rect => Math.abs(rect.top - xpCells[0].top) < 1)
+    && xpCells[0].top >= Math.max(fateRect.bottom, fortuneRect.bottom));
   check("edition-specific Resolve visibility matches native sheet", !!field("resolve") === !use5e);
   check("resource inputs open only on deliberate Edit", !screen.querySelector('.mc-profile-content input, .mc-profile-content textarea, .mc-profile-content [contenteditable]'));
   check("D&D terminology is absent", !/Hit Points|Death Saves|Spell Slots|Attunement|Long Rest/.test(screen.textContent));
   check("Main fits the emulated viewport", screen.getBoundingClientRect().right <= innerWidth + 1);
   check("embedded chooser does not scroll the profile on mount", window.scrollY === 0);
+  if (!params.has("layout-only")) {
   const characteristicButton = screen.querySelector('[data-profile-action="characteristic:ws"]');
   characteristicButton.click();
   await tick();
@@ -196,6 +273,9 @@ try {
     && field("encumbrance")?.textContent === "Encumbrance4.5 / 8");
   check("Encumbrance is read-only", !screen.querySelector('[data-profile-field="encumbrance"] [data-profile-resource]'));
   check("Combat Encumbrance label and value fit on one line", encumbranceFits());
+  check("Combat movement table preserves native auto-calculated units", ['move', 'walk', 'run'].map(id => field(id)?.textContent).join(',') === 'Move4,Walk8 yds,Run16 yds'
+    && !screen.querySelector('[data-profile-section="movement"] [data-profile-resource]'));
+  check("movement values are centered within their cells", centeredValues('movement'));
   if (use5e && innerWidth < 500) check("phone Momentum stacks below Encumbrance", screen.querySelector('[data-profile-section="momentum"]').getBoundingClientRect().top
     >= screen.querySelector('[data-profile-section="encumbrance"]').getBoundingClientRect().bottom);
   actor.system.status.encumbrance.current = "9.75"; actor.system.status.encumbrance.max = 10;
@@ -206,6 +286,14 @@ try {
     && field("encumbrance")?.textContent === "Encumbrance9.75 / 10");
   check("Encumbrance fits the viewport", document.documentElement.scrollWidth <= innerWidth + 1);
   check("Trappings Encumbrance label and value fit on one line", encumbranceFits());
+  check("Trappings shows read-only native Social Status", field("social-status")?.textContent === "Social StatusBrass 3"
+    && !screen.querySelector('[data-profile-field="social-status"] [data-profile-resource]'));
+  actor.system.details.status.value = "Silver 2";
+  Hooks.emit("updateActor", actor, { "system.details.status.value": "Silver 2" }); await tick();
+  check("Social Status refreshes after native updates", field("social-status")?.textContent === "Social StatusSilver 2");
+  actor.system.details.status.value = "";
+  Hooks.emit("updateActor", actor, { "system.details.status.value": "" }); await tick();
+  check("missing Social Status is omitted", !field("social-status"));
   await clickTab("combat");
   use5e = !use5e;
   Hooks.emit("updateSetting", { key: "wfrp4e.editionSettings" }, {}, {}, "player");
@@ -316,7 +404,12 @@ try {
   Hooks.emit("updateItem", loreSpell, {});
   await tick();
   await clickTab("main");
-  const edit = async id => { screen.querySelector(`[data-profile-edit="${id}"]`).click(); await tick(); return screen.querySelector(`[data-profile-resource-input="${id}"]`); };
+  const edit = async id => {
+    const lock = screen.querySelector(`[data-profile-counter-lock="${id}"]`);
+    if (lock?.getAttribute('aria-pressed') === 'true') lock.click();
+    screen.querySelector(`[data-profile-edit="${id}"]`).click(); await tick();
+    return screen.querySelector(`[data-profile-resource-input="${id}"]`);
+  };
   const saveResource = async input => { input.dispatchEvent(new Event("input", { bubbles: true })); input.closest("form").querySelector("[data-profile-resource-save]").click(); await tick(); };
   check("native rolls did not cause Mikelandia Controls resource writes", nativeWrites.length === 0);
   let resourceInput = await edit("wounds");
@@ -427,12 +520,23 @@ try {
   Hooks.emit("updateActor", actor, { "system.status.wounds.value": 0 });
   await tick();
   check("native actor updates refresh zero-valued counters", field("wounds")?.textContent === "Wounds0 / 13");
+  for (const id of ["wounds", "fortune", "fate", "corruption"]) {
+    const lock = screen.querySelector(`[data-profile-counter-lock="${id}"]`);
+    if (lock.getAttribute('aria-pressed') === 'true') lock.click();
+    const value = actor.system.status[id].value;
+    screen.querySelector(`[data-profile-field="${id}"] [data-profile-counter-delta="1"]`).click(); await tick();
+    check(`${id} plus saves immediately through native updates`, actor.system.status[id].value === value + 1);
+    screen.querySelector(`[data-profile-field="${id}"] [data-profile-counter-delta="-1"]`).click(); await tick();
+    check(`${id} minus saves immediately through native updates`, actor.system.status[id].value === value);
+  }
   [...screen.querySelectorAll("button")].find(button => button.textContent === "Open Character Sheet").click();
   await tick();
   check("native-sheet fallback uses the exact actor source", openedSource === actor.uuid);
+  screen.querySelector(".mc-character-select-trigger").click();
   screen.querySelector('[data-actor-source="Actor.npc"]').click();
   await tick();
   check("unmapped NPCs retain safe native access", !screen.querySelector(".mc-profile-content") && screen.querySelector("h2").textContent === "Guard Captain");
+  screen.querySelector(".mc-character-select-trigger").click();
   screen.querySelector('[data-actor-source="Actor.hero"]').click();
   await tick();
   use5e = initial5e;
@@ -452,9 +556,47 @@ try {
   await clickTab("talents");
   check("Talents has its own nonempty mobile tab", screen.querySelector('[data-profile-field="talent"]').textContent.includes("A native talent"));
   check("new tabs fit the phone and tablet widths", document.documentElement.scrollWidth <= innerWidth + 1);
-  await clickTab(use5e ? "combat" : "main");
-  if (use5e) screen.querySelector('[data-profile-resource-input="momentum"]').focus();
-  else await edit("wounds");
+  await clickTab("main");
+  const restButton = () => screen.querySelector('[data-profile-action="rest"]');
+  const execute = commands.execute;
+  let finishSave;
+  commands.execute = () => new Promise(resolve => { finishSave = resolve; });
+  const pendingInput = await edit('wounds');
+  pendingInput.closest('form').requestSubmit(); await tick();
+  check("numeric save disables the relocated Wounds lock", screen.querySelector('[data-profile-counter-lock="wounds"]').disabled && pendingInput.disabled);
+  check("recovery remains independent during a counter save", !restButton().disabled);
+  finishSave({ cancelled: true }); await tick();
+  check("numeric completion restores the relocated Wounds lock", !screen.querySelector('[data-profile-counter-lock="wounds"]').disabled);
+  screen.querySelector('[data-profile-field="wounds"] [data-profile-counter-delta="1"]').click(); await tick();
+  check("instant adjustment disables the relocated Wounds lock", screen.querySelector('[data-profile-counter-lock="wounds"]').disabled);
+  finishSave({ cancelled: true }); await tick();
+  check("instant completion restores the relocated Wounds lock", !screen.querySelector('[data-profile-counter-lock="wounds"]').disabled);
+  commands.execute = execute;
+  const beforeRecovery = { rolls: nativeRolls.length, writes: nativeWrites.length, messages: game.messages.length };
+  restButton().click(); await tick();
+  check("recovery opens native Toughness fallback with native context", nativeSetups.at(-1).kind === 'characteristic' && nativeSetups.at(-1).target === 't'
+    && JSON.stringify(nativeSetups.at(-1).context) === JSON.stringify({ rest: true, tb: 3, skipTargets: true }) && nativeSetups.at(-1).options.resolveClose);
+  check("recovery prevents duplicate taps", restButton().disabled);
+  nativeDialog.element.querySelector('[data-native-cancel]').click(); await tick();
+  check("recovery cancellation releases its control without healing", !restButton().disabled && nativeRolls.length === beforeRecovery.rolls && nativeWrites.length === beforeRecovery.writes);
+  const endurance = { id: 'endurance', name: 'Endurance', type: 'skill', parent: actor, system: {} };
+  actor.items.push(endurance); actor.itemTags.skill = [endurance];
+  Hooks.emit('updateActor', actor, {}); await tick();
+  restButton().click(); await tick();
+  check("recovery prefers exact native Endurance item", nativeSetups.at(-1).kind === 'skill' && nativeSetups.at(-1).target === endurance);
+  nativeDialog.element.querySelector('[data-native-roll]').click(); await tick();
+  check("recovery rolls once into Chat without direct Wounds writes", nativeRolls.length === beforeRecovery.rolls + 1 && game.messages.length === beforeRecovery.messages + 1 && nativeWrites.length === beforeRecovery.writes);
+  }
+  if (params.has("layout-only")) {
+    await clickTab("combat");
+    const movementCells = [...screen.querySelectorAll('[data-profile-section="movement"] .mc-profile-row')].map(element => element.getBoundingClientRect());
+    check("movement retains three readable cells at narrow enlarged text", movementCells.length === 3
+      && movementCells.every(rect => Math.abs(rect.top - movementCells[0].top) < 1 && rect.left >= 0 && rect.right <= innerWidth));
+    check("movement values retain native units at narrow enlarged text", ['move', 'walk', 'run'].map(id => field(id)?.textContent).join(',') === 'Move4,Walk8 yds,Run16 yds');
+    check("movement values are centered at narrow enlarged text", centeredValues('movement'));
+    await clickTab("main");
+    screen.querySelector('.mc-profile-summary-counter-pairs').scrollIntoView({ block: "center" });
+  }
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
 } catch (error) {
   scope.dispose();

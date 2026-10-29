@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ["control-contrast-native", 390, 844, "control-contrast", "native-forms=true"],
   ...["shadowdark", "4e", "5e"].flatMap(system => ["dark", "light"].flatMap(theme => [
     [`roll-dialogs-${system}-${theme}-phone`, 390, 844, "roll-dialogs", `system=${system}&theme=${theme}&layout=phone`],
     [`roll-dialogs-${system}-${theme}-tablet`, 1024, 768, "roll-dialogs", `system=${system}&theme=${theme}&layout=tablet`],
@@ -15,6 +16,8 @@ const cases = [
   ])),
   ["targeting-phone", 390, 844, "targeting", "layout=phone"],
   ["targeting-tablet", 1024, 768, "targeting", "layout=tablet"],
+  ["targeting-narrow", 320, 844, "targeting", "layout=phone"],
+  ["targeting-large-text", 390, 844, "targeting", "layout=phone&large=true"],
   ["bootstrap-light-phone", 393, 851, "bootstrap", "theme=light"],
   ["bootstrap-dark-phone", 393, 851, "bootstrap", "theme=dark"],
   ["mobile-login-narrow", 320, 844, "mobile-login", ""],
@@ -46,6 +49,9 @@ const cases = [
   ["warhammer-5e-phone", 390, 844, "warhammer", "layout=phone&edition=5e"],
   ["warhammer-4e-tablet", 1024, 768, "warhammer", "layout=tablet&edition=4e"],
   ["warhammer-5e-tablet", 1024, 768, "warhammer", "layout=tablet&edition=5e"],
+  ["warhammer-5e-narrow", 320, 844, "warhammer", "layout=phone&edition=5e"],
+  ["warhammer-5e-large-text", 390, 844, "warhammer", "layout=phone&edition=5e&large=true"],
+  ["warhammer-5e-narrow-large-text", 320, 844, "warhammer", "layout=phone&edition=5e&large=true&layout-only=true"],
   ["shadowdark-narrow", 320, 844, "shadowdark", "layout=phone&pulp=false"],
   ["shadowdark-small-tablet", 768, 1024, "shadowdark", "layout=tablet&pulp=false"],
   ["shadowdark-large-text", 390, 844, "shadowdark", "layout=phone&pulp=false&large=true"],
@@ -55,6 +61,8 @@ const cases = [
   ["shadowdark-pulp-tablet", 1024, 768, "shadowdark", "layout=tablet&pulp=true"],
   ["presentation-phone", 390, 844, "presentation", "layout=phone"],
   ["presentation-tablet", 1024, 768, "presentation", "layout=tablet"],
+  ["actor-notes-phone", 390, 844, "actor-notes", ""],
+  ["actor-notes-tablet", 1024, 768, "actor-notes", ""],
   ["profile-layout-narrow", 320, 844, "profile-layout", "layout=phone"],
   ["profile-layout-phone", 390, 844, "profile-layout", "layout=phone"],
   ["profile-layout-small-tablet", 768, 1024, "profile-layout", "layout=tablet"],
@@ -81,7 +89,8 @@ for (let index = 0; index < args.length; index++) {
     process.exit(0);
   } else throw new Error(`Unknown argument: ${arg}`);
 }
-const selectedCases = cases.filter(([name]) => !filter || filter.test(name));
+const selectedCases = cases.filter(([name, , , fixture]) => (!filter || filter.test(name))
+  && (list || nativeAssets || fixture !== "control-contrast"));
 if (!selectedCases.length) throw new Error("No browser cases match --filter. Use --list to see available cases.");
 if (list) {
   console.log(selectedCases.map(([name]) => name).join("\n"));
@@ -98,10 +107,16 @@ const contentTypes = { ".html": "text/html", ".mjs": "text/javascript", ".css": 
 let simulateStandalone = false;
 const server = createServer(async (request, response) => {
   try {
-    if (nativeAssets && new URL(request.url, "http://localhost").pathname === "/native-fixture/fa-solid-900.woff2") {
+    const nativeFiles = {
+      "/native-fixture/fa-solid-900.woff2": ["public/fonts/fontawesome/webfonts/fa-solid-900.woff2", "font/woff2"],
+      "/native-fixture/fa-duotone-900.woff2": ["public/fonts/fontawesome/webfonts/fa-duotone-900.woff2", "font/woff2"],
+      "/native-fixture/foundry2.css": ["public/css/foundry2.css", "text/css"]
+    };
+    const nativeFile = nativeFiles[new URL(request.url, "http://localhost").pathname];
+    if (nativeAssets && nativeFile) {
       const app = process.env.FOUNDRY_APP_PATH ?? "C:/Program Files/Foundry Virtual Tabletop/resources/app";
-      const font = await readFile(join(app, "public/fonts/fontawesome/webfonts/fa-solid-900.woff2"));
-      response.writeHead(200, { "Content-Type": "font/woff2" }).end(font);
+      const content = await readFile(join(app, nativeFile[0]));
+      response.writeHead(200, { "Content-Type": nativeFile[1] }).end(content);
       return;
     }
     const path = resolve(root, `.${decodeURIComponent(new URL(request.url, "http://localhost").pathname)}`);

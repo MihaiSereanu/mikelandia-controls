@@ -2,6 +2,7 @@ import { isJournalVisible, isJournalPageVisible } from "../journals/journal-visi
 import { localizeFoundry } from "../settings/localization.mjs";
 import { ownMobileApplication } from "../presentation/mobile-ui-isolation.mjs";
 import { resolveSystemIntegration } from "../../systems/registry.mjs";
+import { combatHealthChanged } from "../../systems/combat-health.mjs";
 import { actorSourceRecord, actorSourceUuid, resolveActorSource, validSourceUuid } from "../actors/character-source.mjs";
 
 const TOKEN_GEOMETRY_FIELDS = new Set(["x", "y", "elevation", "rotation", "sort"]);
@@ -415,7 +416,8 @@ export function sessionInvalidationForHook(hook, document, changes = {}, integra
   if (hook === "updateActor") {
     const fields = changedPaths(changes);
     const directoryChanged = !document?.isToken && (fields.length === 0 || fields.some((field) => /^(?:name|img|type|folder|ownership|system\.details\.(?:level|cr|type)|system\.traits\.size)(?:\.|$)/u.test(field)));
-    const combatChanged = fields.length === 0 || fields.some(field => /^(?:name|img|ownership)(?:\.|$)/u.test(field));
+    const combatChanged = fields.length === 0 || fields.some(field => /^(?:name|img|ownership)(?:\.|$)/u.test(field))
+      || combatHealthChanged(integration, fields);
     const sourceUuid = actorSourceUuid(document);
     const directoryActorId = directoryChanged ? String(document?.id ?? "") : "";
     return Object.freeze({

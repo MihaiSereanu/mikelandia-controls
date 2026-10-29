@@ -1,6 +1,7 @@
 import { localizedText, localizedCount, localizedNumber } from "../../ui/primitives/localized-text.mjs";
 import { icon, node } from "../../ui/primitives/dom.mjs";
 import { renderTargets } from "./targets.mjs";
+import { combatHealthText } from "./health.mjs";
 
 export function renderCombat({ state, commands, scope }) {
   const combat = state.snapshot?.combat;
@@ -45,6 +46,23 @@ export function renderCombat({ state, commands, scope }) {
     targets,
     combat.combatants.length ? list : emptyCombat(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.NoVisibleCombatants", "No visible combatants"), localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.TheEncounterHasNoCombatantsYouCanView", "The encounter has no combatants you can view."))
   ].filter(Boolean) });
+  const combatStructure = value => value ? JSON.stringify({ ...value,
+    combatants: value.combatants.map(({ health, ...row }) => row) }) : "";
+  const initialStructure = combatStructure(combat);
+  const healthNodes = new Map(Array.from(list.querySelectorAll("[data-combatant-id]"), row =>
+    [row.dataset.combatantId, row.querySelector(".mc-combat-health")]));
+  screen.__mcUpdateCombatState = (nextCombat, nextTargets) => {
+    if (!nextCombat || combatStructure(nextCombat) !== initialStructure) return false;
+    if (targets ? !targets.__mcUpdateTargetDistances(nextTargets) : nextTargets !== null && nextTargets !== undefined) return false;
+    for (const combatant of nextCombat.combatants) {
+      const element = healthNodes.get(combatant.id);
+      if (!element) continue;
+      const text = combatHealthText(combatant.health, commands);
+      if (element.textContent !== text) element.textContent = text;
+      element.hidden = !combatant.health;
+    }
+    return true;
+  };
   screen.__mcUpdateCombatTargets = next => targets?.__mcUpdateTargetDistances(next) ?? false;
   return screen;
 }
@@ -146,11 +164,15 @@ function combatantRow(combat, combatant, commands, status, scope) {
   }, scope));
 
   return node("li", {
-    className: `${combatant.current ? "is-current" : ""}${combatant.defeated ? " is-defeated" : ""}`,
+    className: `${combatant.current ? "is-current" : ""}${combatant.defeated ? " is-defeated" : ""}${combatant.enemy ? " is-enemy" : ""}`,
+    dataset: { combatantId: combatant.id },
     attrs: { "aria-current": combatant.current ? "step" : undefined },
     children: [
       node("span", { className: "mc-combat-portrait", children: [combatant.img ? node("img", { attrs: { src: combatant.img, alt: "" } }) : icon("fa-user")] }),
-      node("div", { className: "mc-combat-name", children: [node("strong", { text: combatant.name }), combatant.defeated ? node("small", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.Defeated", "Defeated") }) : null].filter(Boolean) }),
+      node("div", { className: "mc-combat-name", children: [node("span", { className: "mc-combat-name-line", children: [
+        node("strong", { text: combatant.name }),
+        node("small", { className: "mc-combat-health", text: combatHealthText(combatant.health, commands), attrs: { hidden: !combatant.health } })
+      ].filter(Boolean) }), combatant.defeated ? node("small", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.Defeated", "Defeated") }) : null].filter(Boolean) }),
       combatant.initiative === null ? node("span", { className: "mc-combat-initiative is-empty", text: "—" }) : node("span", { className: "mc-combat-initiative", text: formatInitiative(combatant.initiative, combat.initiativeDecimals, commands.readLocale?.() ?? "en") }),
       controls.length ? node("div", { className: "mc-combat-row-controls", children: controls }) : null
     ].filter(Boolean)

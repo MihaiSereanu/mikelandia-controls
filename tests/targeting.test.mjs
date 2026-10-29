@@ -175,3 +175,55 @@ test("animation refresh is relevant-token filtered, frame coalesced and disposed
   assert.equal(frames.size, 1); scope.dispose(); assert.equal(frames.size, 0);
   assert.equal(f.hooks.count("refreshToken"), 0);
 });
+
+
+test("combat health uses explicit native mappings and token Actors without sheet permission", () => {
+  for (const systemId of ["dnd5e", "shadowdark", "wfrp4e"]) {
+    const f = targetingFixture(); f.game.system.id = systemId;
+    const health = { value: 17, max: 25 };
+    f.pc.actor = { testUserPermission: () => false, system: systemId === "wfrp4e"
+      ? { status: { wounds: health } } : { attributes: { hp: health } } };
+    const shown = f.gateway.snapshot().entries[0].health;
+    assert.equal(shown.value, 17); assert.equal(shown.max, 25);
+    assert.equal(shown.label, systemId === "wfrp4e" ? "Wounds" : "HP");
+    // The selected world Actor has different HP; the token Actor is authoritative.
+    assert.notEqual(shown.value, f.actor.system.attributes.hp.value);
+  }
+});
+
+test("enemy thresholds include exact boundaries and zero without exposing numbers", () => {
+  const f = targetingFixture();
+  const hp = { value: 100, max: 100, temp: 100 };
+  f.enemy.actor = { system: { attributes: { hp } } };
+  for (const [value, status] of [[100, "Healthy"], [51, "Healthy"], [50, "Bloodied"], [11, "Bloodied"], [10, "Critical"], [0, "Critical"]]) {
+    hp.value = value;
+    assert.deepEqual(f.gateway.snapshot().entries.find(e => e.id === "enemy").health, { status });
+  }
+  f.game.combat.turns[1].isDefeated = true;
+  const entry = f.gateway.snapshot().entries.find(e => e.id === "enemy");
+  assert.equal(entry.defeated, true); assert.equal(entry.health.status, "Critical");
+});
+
+test("invalid or unmapped health is omitted instead of guessing status", () => {
+  const f = targetingFixture();
+  f.pc.actor = { system: { attributes: { hp: { value: 5, max: 10 } } } };
+  for (const hp of [{value: 0, max: 0}, {value: -1, max: 10}, {value: NaN, max: 10}, {value: 1, max: Infinity}, {value: "5", max: 10}, {}]) {
+    f.pc.actor.system.attributes.hp = hp;
+    assert.equal(f.gateway.snapshot().entries[0].health, null);
+  }
+  f.pc.actor.system.attributes.hp = {value: 5, max: 10};
+  f.game.system.id = "unsupported";
+  assert.equal(f.gateway.snapshot().entries[0].health, null);
+});
+
+test("Actor health updates publish through the existing targeting lifecycle", async t => {
+  const f = targetingFixture(); installGlobals(t, { Hooks: f.hooks });
+  const scope = createTaskScope(); t.after(() => scope.dispose());
+  f.pc.actor = f.actor;
+  const published = [];
+  f.gateway.watch(scope, () => f.actor.uuid, state => published.push(state));
+  f.actor.system.attributes.hp.value = 4;
+  f.hooks.emit("updateActor", f.actor, { "system.attributes.hp.value": 4 });
+  await new Promise(resolve => queueMicrotask(resolve));
+  assert.equal(published.at(-1).entries[0].health.value, 4);
+});

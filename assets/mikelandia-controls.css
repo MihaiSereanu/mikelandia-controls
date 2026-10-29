@@ -586,12 +586,17 @@ body.mc-mobile-booting {
 .mc-combat-list { margin: 0; padding: 0; display: grid; gap: 7px; list-style: none; }
 .mc-combat-list > li { min-height: 64px; padding: 6px 8px; display: grid; grid-template-columns: 50px minmax(0, 1fr) 38px auto; align-items: center; gap: 9px; border: 1px solid var(--mc-border); border-radius: 12px; background: var(--mc-surface); }
 .mc-combat-list > li.is-current { border-color: var(--mc-gold); background: color-mix(in srgb, var(--mc-gold) 8%, var(--mc-surface)); box-shadow: inset 4px 0 var(--mc-gold); }
+.mc-combat-list > li.is-enemy { border-color: color-mix(in srgb, #c64f4f 55%, var(--mc-border)); }
 .mc-combat-list > li.is-defeated { opacity: 0.55; filter: grayscale(0.75); }
 .mc-combat-portrait { width: 50px; height: 50px; display: grid; place-items: center; overflow: hidden; border-radius: 9px; background: var(--mc-surface-up); }
 .mc-combat-portrait img { width: 100%; height: 100%; object-fit: cover; }
 .mc-combat-name { min-width: 0; display: grid; }
-.mc-combat-name strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mc-combat-name strong { min-width: 0; overflow-wrap: anywhere; }
 .mc-combat-name small { color: var(--mc-bad); font-size: 0.68rem; }
+.mc-combat-name-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; min-width: 0; }
+.mc-combat-name .mc-combat-health { color: var(--mc-subtle, var(--mc-muted)); font-size: .85em; }
+.mc-combat-health, .mc-target-health { max-width: 100%; overflow-wrap: anywhere; }
+.mc-combat-health[hidden] { display: none; }
 .mc-combat-initiative { color: var(--mc-gold); font: 700 1.05rem/1 Georgia, serif; text-align: center; }
 .mc-combat-row-controls { display: flex; gap: 4px; }
 .mc-combat-row-controls button { width: 36px; height: 36px; margin: 0; padding: 0; border: 1px solid var(--mc-border); border-radius: 50%; color: var(--mc-text); background: var(--mc-surface-up); }
@@ -3233,12 +3238,30 @@ body.mc-mobile-running #pause {
 }
 
 .mc-native-sheet-identity img {
+  display: block;
   width: 72px;
   height: 72px;
   flex: 0 0 auto;
   object-fit: cover;
+  object-position: center top;
   border-radius: 12px;
 }
+
+.mc-native-sheet-identity > .mc-native-portrait-button {
+  flex: 0 0 72px;
+  width: 72px;
+  height: 72px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.mc-native-sheet-identity > div { min-width: 0; flex: 1; }
+.mc-native-sheet-identity > .mc-character-select-trigger { flex-shrink: 0; }
 
 .mc-native-sheet-identity h2 {
   margin: 0;
@@ -3259,6 +3282,11 @@ body.mc-mobile-running #pause {
   color: var(--mc-text);
   font: inherit;
   font-weight: 600;
+}
+.mc-mobile-app[data-theme="light"] .mc-native-sheet-open {
+  background: var(--mc-text);
+  color: var(--mc-surface);
+  border-color: var(--mc-text);
 }
 
 .mc-profile-tabs {
@@ -3444,7 +3472,12 @@ body.mc-mobile-running #pause {
 .mc-profile-resource-open > i { font-size: 0.72em; }
 .mc-profile-resource-open[hidden] { display: none; }
 .mc-profile-boolean-target { display: grid; place-items: center; width: 44px; min-height: 44px; cursor: pointer; }
-.mc-profile-boolean-target input[type="checkbox"] { width: 20px; height: 20px; min-height: 20px; margin: 0; }
+.mc-profile-boolean-target input[type="checkbox"] {
+  --checkbox-background-color: var(--mc-subtle);
+  --checkbox-checked-color: var(--mc-text);
+  --checkbox-checkmark-color: var(--mc-surface);
+  width: 20px; height: 20px; min-height: 20px; margin: 0;
+}
 .mc-profile-summary-paired { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .mc-profile-summary-paired > .mc-profile-section { padding: 6px; }
 .mc-profile-summary-paired .mc-profile-row { gap: 4px; }
@@ -3549,6 +3582,9 @@ body.mc-mobile-running #pause {
 .mc-profile-summary-triple:has(.mc-profile-counter) {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5em), 1fr));
 }
+.mc-profile-summary-counter-pairs:has(.mc-profile-counter) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 .mc-profile-summary-triple .mc-profile-row:has(> .mc-profile-counter) {
   grid-template-columns: minmax(0, 1fr);
   padding: 4px;
@@ -3562,6 +3598,36 @@ body.mc-mobile-running #pause {
   text-align: center;
   font-weight: 700;
 }
+.mc-profile-summary-counter-pairs:has(.mc-profile-counter) .mc-profile-row dt {
+  padding-inline-end: 44px;
+}
+.mc-profile-summary-counter-pairs .mc-profile-row dt > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.mc-profile-summary-counter-pairs:has(.mc-profile-counter) .mc-profile-row dt:has(.mc-profile-secondary-action) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px 44px;
+  padding-inline-end: 0;
+}
+.mc-profile-summary-counter-pairs .mc-profile-row dt:has(.mc-profile-secondary-action) > span { max-width: 100%; font-size: 16px; overflow-wrap: normal; white-space: nowrap; }
+.mc-profile-secondary-action { flex: 0 0 44px; width: 44px; min-width: 44px; height: 44px; padding: 0; border: 0; background: transparent; color: var(--mc-text); }
+.mc-mobile-app[data-form-factor] .mc-profile-row dt > .mc-profile-counter-lock[aria-pressed] {
+  position: static;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--mc-text);
+}
+.mc-mobile-app[data-form-factor] .mc-profile-row dt > .mc-profile-counter-lock[aria-pressed="false"] { color: #969696; }
+.mc-profile-section-table dl { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mc-profile-section-table .mc-profile-row { display: grid; grid-template-columns: minmax(0, 1fr); text-align: center; }
+.mc-profile-section-table .mc-profile-row :is(dt, dd) { min-width: 0; margin: 0; text-align: center; overflow-wrap: anywhere; }
 .mc-profile-summary-triple:has(.mc-profile-counter) .mc-profile-row dd { text-align: center; }
 .mc-profile-summary-triple .mc-profile-row:has(> .mc-profile-counter) > .mc-profile-counter,
 .mc-profile-summary-triple .mc-profile-row:has(> .mc-profile-counter) > .mc-profile-counter.is-editing {
@@ -3602,6 +3668,22 @@ body.mc-mobile-running #pause {
   text-align: center;
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+@container (max-width: 350px) {
+  .mc-profile-summary-counter-pairs:has(.mc-profile-counter) {
+    grid-template-columns: minmax(172px, 1fr) minmax(108px, 1fr);
+  }
+  .mc-profile-summary-counter-pairs .mc-profile-row:has(> .mc-profile-counter) > .mc-profile-counter {
+    grid-template-columns: repeat(2, minmax(44px, 1fr));
+  }
+  .mc-profile-summary-counter-pairs .mc-profile-counter .mc-profile-resource-open:not([hidden]) {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .mc-profile-summary-counter-pairs .mc-profile-counter > [data-profile-counter-delta] {
+    grid-row: 2;
+    justify-self: center;
+  }
 }
 .mc-mobile-app[data-form-factor] .mc-profile-counter button:disabled { opacity: 0.35; cursor: default; }
 .mc-mobile-app[data-form-factor] .mc-profile-counter .mc-profile-resource-open:disabled { opacity: 1; color: var(--mc-text); }
@@ -4382,12 +4464,18 @@ body.mc-mobile-running #pause {
   white-space: pre-wrap;
 }
 
-.mc-character-biography-prose {
+.mc-character-biography-prose,
+.mc-character-notes-fields [data-notes-field] > p {
   padding: 12px 14px;
   color: var(--mc-text);
   font-size: 0.8rem;
   line-height: 1.58;
   overflow-wrap: anywhere;
+}
+
+.mc-character-notes-fields [data-notes-field] > p {
+  margin: 0;
+  white-space: pre-wrap;
 }
 
 .mc-character-biography-prose > :first-child { margin-top: 0; }
@@ -10772,6 +10860,9 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 .mc-mobile-app[data-form-factor="phone"] .mc-viewport > .mc-character-screen {
   padding-top: 0;
 }
+.mc-mobile-app[data-form-factor="phone"] .mc-viewport > .mc-native-character-screen {
+  padding-top: 4px;
+}
 .mc-mobile-app[data-form-factor] .mc-sheet-identity-copy .mc-character-compact-summary { display: none; }
 .mc-character-heading:is([data-measure], [data-collapse]) {
   display: grid;
@@ -11227,6 +11318,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 .mc-target-row img { width: 36px; height: 36px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
 .mc-target-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .mc-target-name strong, .mc-target-name small { display: block; }
+.mc-target-health[hidden] { display: none; }
 .mc-target-distance { max-width: 40%; font-size: .9em; overflow-wrap: anywhere; }
 .mc-target-check { flex: 0 0 20px; }
 .mc-target-row.is-selected { outline: 2px solid currentColor; outline-offset: -2px; }

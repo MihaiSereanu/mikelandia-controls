@@ -51,7 +51,7 @@ try {
     check(`${system}: unrelated saved preferences survive`, values.get("mikelandia-controls.headerArtwork") === "race" && values.get("mikelandia-controls.quickbarSource") === "character");
     guide.show(field("colorScheme")); await tick();
     const text = guide.element.textContent;
-    check(`${system}: help matches actual character interactions`, legacy ? text.includes("Tap the portrait") && text.includes("Hold a row") : text.includes("Open Character Sheet opens") && !text.includes("Tap the portrait") && !text.includes("Hold a row"));
+    check(`${system}: help matches actual character interactions`, text.includes("Tap the portrait") && (legacy ? text.includes("Hold a row") : text.includes("Open Character Sheet opens") && text.includes("arrow beside the portrait") && !text.includes("Hold a row")));
     check(`${system}: native action/resource instructions follow mapped panels`, text.includes("Choose Edit on an available resource") === ["wfrp4e", "shadowdark"].includes(system));
     check(`${system}: help contains no Scene or token-control instructions`, !/joystick|target a token|Character Quickbar slot|Foundry Hotbar slot/i.test(text));
     check(`${system}: guide fits the emulated viewport`, guide.element.querySelector(".mc-controls-guide-card").getBoundingClientRect().right <= innerWidth + 1 && document.documentElement.scrollWidth <= innerWidth + 1);

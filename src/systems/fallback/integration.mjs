@@ -11,6 +11,8 @@ const commands = Object.freeze({
 /** Unprofiled systems expose identity and native access, never inferred rules. */
 export const fallbackIntegration = Object.freeze({
   id: "fallback",
+  readCombatHealth: () => null,
+  combatHealthPaths: Object.freeze([]),
   features: Object.freeze({ biography: false, armorClassEditor: false, actionSummaries: false, legacyCharacterSheet: false }),
   isActorEligible: canAccessActor,
   canOpenNativeActor: canAccessActor,

@@ -71,7 +71,7 @@ export function renderProfileResourceEditor(row, actor, commands, scope) {
         validate();
         if (!form.reportValidity()) return;
         save.disabled = cancel.disabled = input.disabled = true;
-        const lock = open.closest(".mc-profile-counter")?.querySelector("[data-profile-counter-lock]");
+        const lock = open.closest(".mc-profile-row")?.querySelector("[data-profile-counter-lock]");
         if (lock) lock.disabled = true;
         form.setAttribute("aria-busy", "true");
         try {
@@ -94,7 +94,9 @@ export function renderProfileResourceEditor(row, actor, commands, scope) {
     disabled: (counter && !unlocked) || (delta < 0 ? value <= min : value >= max),
     [counter ? "data-profile-counter-delta" : "data-profile-quantity-delta"]: delta
   }, on: { click: async event => {
-    const button = event.currentTarget, controls = button.closest(".mc-profile-resource-editor").querySelectorAll("button");
+    const button = event.currentTarget, editor = button.closest(".mc-profile-resource-editor");
+    const lock = button.closest(".mc-profile-row")?.querySelector("[data-profile-counter-lock]");
+    const controls = [...new Set([...editor.querySelectorAll("button"), ...(lock ? [lock] : [])])];
     if (button.disabled || scope.disposed) return;
     const previous = new Map([...controls].map(control => [control, control.disabled]));
     for (const control of controls) control.disabled = true;

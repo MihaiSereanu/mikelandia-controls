@@ -1,6 +1,8 @@
 import { resolveActorSource } from "../actors/character-source.mjs";
 import { targetDistance } from "./target-distance.mjs";
 import { localizeFoundry } from "../settings/localization.mjs";
+import { resolveSystemIntegration } from "../../systems/registry.mjs";
+import { projectCombatHealth } from "../../systems/combat-health.mjs";
 
 const values = collection => Array.from(collection?.values?.() ?? collection ?? []);
 const text = (key, fallback) => localizeFoundry(`MIKELANDIA_CONTROLS.Targets.${key}`, fallback);
@@ -67,8 +69,10 @@ export function createFoundryTargetingGateway({ getGame = () => globalThis.game,
     const ready = Boolean(canvas.ready && source);
     const entries = [...documents.values()].map(({ token, combatant }) => {
       const placeable = canvas.tokens?.get?.(token.id);
+      const friendly = token.disposition === 1;
+      const shownHealth = projectCombatHealth(resolveSystemIntegration(game.system?.id), token);
       return { id: token.id, name: String(token.name ?? combatant.name ?? ""), img: String(token.texture?.src ?? ""),
-        friendly: token.disposition === 1, defeated: Boolean(combatant.isDefeated ?? combatant.defeated),
+        friendly, health: shownHealth, defeated: Boolean(combatant.isDefeated ?? combatant.defeated),
         self: token.id === source?.id, selected: Boolean(targeted(token)),
         distance: source ? measure(scene, source, token, game.release?.generation) : null,
         enabled: Boolean(ready && typeof placeable?.setTarget === "function") };

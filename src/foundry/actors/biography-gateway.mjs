@@ -27,8 +27,10 @@ export function createFoundryBiographyGateway({
       const sourceUuid = exactSourceUuid(actorSourceUuid);
       const actor = requireReadableActor(sourceUuid, game);
       const owner = canOwn(actor, game.user);
-      const editField = selectBiographyField(actor, { owner, isGM: Boolean(game.user?.isGM) });
-      const source = biographySource(actor, editField);
+      const notes = getSystemIntegration().notes;
+      if (notes && !notes.available(actor)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Notes.Unavailable", "Notes are unavailable for this actor."));
+      const editField = notes ? "notes" : selectBiographyField(actor, { owner, isGM: Boolean(game.user?.isGM) });
+      const source = notes ? notes.read(actor) : biographySource(actor, editField);
       const editor = getTextEditor();
       if (typeof editor?.enrichHTML !== "function") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.BiographyGateway.FoundryRichTextEnrichmentIsUnavailable", "Foundry rich-text enrichment is unavailable."));
       const normalized = normalizeLegacyBiography(source, {
@@ -51,14 +53,14 @@ export function createFoundryBiographyGateway({
       const current = resolveActorSource(sourceUuid, { game });
       if (!current || current !== actor || !canRead(current, game.user)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.BiographyGateway.TheSelectedActorIsNoLongerAvailable", "The selected actor is no longer available."));
       const currentOwner = canOwn(current, game.user);
-      const currentField = selectBiographyField(current, { owner: currentOwner, isGM: Boolean(game.user?.isGM) });
-      const currentSource = biographySource(current, currentField);
+      const currentField = notes ? "notes" : selectBiographyField(current, { owner: currentOwner, isGM: Boolean(game.user?.isGM) });
+      const currentSource = notes ? notes.read(current) : biographySource(current, currentField);
       if (currentSource !== source || currentField !== editField || currentOwner !== owner) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.BiographyGateway.TheBiographyChangedWhileItWasLoading", "The biography changed while it was loading."));
       return Object.freeze({
         actorSourceUuid: sourceUuid,
         html,
         owner,
-        editable: ["character", "npc"].includes(current.type) && owner && typeof current.update === "function",
+        editable: (notes ? notes.available(current) : ["character", "npc"].includes(current.type)) && owner && typeof current.update === "function",
         editField: owner ? editField : "",
         editorText: owner ? normalized.content : "",
         originalSource: owner ? source : "",
@@ -74,6 +76,8 @@ export function createFoundryBiographyGateway({
       const sourceUuid = exactSourceUuid(actorSourceUuid);
       const actor = resolveActorSource(sourceUuid, { game });
       if (!actor) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.BiographyGateway.TheSelectedActorIsNoLongerAvailable", "The selected actor is no longer available."));
+      const notes = getSystemIntegration().notes;
+      if (notes && !notes.available(actor)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Notes.Unavailable", "Notes are unavailable for this actor."));
       if (actor.type === "group") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.BiographyGateway.GroupRollsRequireTheNativeGroupWorkflow", "Group rolls require the native Group workflow."));
       if (!canOwn(actor, game.user)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Character.BiographyGateway.YouNoLongerHavePermissionToRollForThis", "You no longer have permission to roll for this actor."));
       const expression = String(formula ?? "").trim();

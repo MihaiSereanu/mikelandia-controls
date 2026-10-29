@@ -53,6 +53,9 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
         ...(entry.editControl === "checkbox" && entry.format === "boolean" ? { editControl: "checkbox" } : {}),
         ...(entry.editControl === "counter" ? { editControl: "counter" } : {}),
         ...actionFor(entry.actionId),
+        ...(actions.has(entry.secondaryActionId) ? { secondaryAction: Object.freeze({ ...actionFor(entry.secondaryActionId).action,
+          label: actions.get(entry.secondaryActionId).label,
+          icon: ["fa-bed"].includes(actions.get(entry.secondaryActionId).icon) ? actions.get(entry.secondaryActionId).icon : "fa-dice" }) } : {}),
         ...editFor(entry.editId, value),
         ...(typeof value === "number" && typeof max === "number" && Number.isFinite(max) ? { max } : {}) })];
     }));
@@ -62,7 +65,7 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
     if (["values", "counters"].includes(entry.kind)) {
       const projected = rows(entry.fields);
       return projected.length ? Object.freeze({ id: entry.id, label: label(entry), kind: entry.kind, rows: projected, summary: rows(entry.summary),
-        ...(entry.layout === "inline" ? { layout: "inline" } : {}) }) : null;
+        ...(["inline", "table"].includes(entry.layout) ? { layout: entry.layout } : {}) }) : null;
     }
     if (entry.kind === "text") {
       const value = readProfilePath(actor, entry.path);
@@ -110,7 +113,7 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
     if (!sections.length) continue;
     seenTabs.add(tab.id);
     tabs.push(Object.freeze({ id: tab.id, label: label(tab), sections: Object.freeze(sections),
-      ...(["paired", "triple"].includes(tab.summaryLayout) ? { summaryLayout: tab.summaryLayout } : {}) }));
+      ...(["paired", "triple", "counter-pairs"].includes(tab.summaryLayout) ? { summaryLayout: tab.summaryLayout } : {}) }));
   }
   return Object.freeze(tabs);
 }
