@@ -55,9 +55,19 @@ import { createFoundryMobileBackGateway } from "./foundry/presentation/mobile-ba
 import { createActorEditorGateway } from "./foundry/actors/actor-editor-gateway.mjs";
 import { createMobileModuleCompatibilityGateway } from "./foundry/compatibility/mobile-module-compatibility.mjs";
 import { createWfrpThemePolicy } from "./foundry/compatibility/wfrp-theme-policy.mjs";
+import { installWfrpOpposedMomentum } from "./foundry/compatibility/wfrp-opposed-momentum.mjs";
 
 import { createLegacyClientRestoration } from "./foundry/compatibility/legacy-client-restoration.mjs";
 const isGamePage = /\/game\/?$/.test(window.location.pathname);
+
+if (isGamePage) {
+  Hooks.once("i18nInit", () => {
+    if (game.system.id !== "wfrp4e") return;
+    // Both editions use these keys; keep the labels in every presentation mode.
+    game.i18n.translations["Primary Arm"] = "Right Arm";
+    game.i18n.translations["Secondary Arm"] = "Left Arm";
+  });
+}
 
 const migrateBrowserState = () => {
   try { migrateBrowserBranding(); return true; }
@@ -458,6 +468,7 @@ if (isGamePage && migrateBrowserState()) {
     const mobilePresentationSelected = () => ["phone", "tablet"].includes(readRequestedPolicy().runtimeMode);
     mobileModuleCompatibility.suppress(compatibilityScope, mobilePresentationSelected());
     Hooks.once("setup", () => {
+      installWfrpOpposedMomentum(compatibilityScope);
       createWfrpThemePolicy({ readMobile: mobilePresentationSelected }).start(compatibilityScope);
       void mobileModuleCompatibility.reconcileCarolingianUi(mobilePresentationSelected()).catch(error => {
         console.error("Mikelandia Controls | Could not apply Carolingian UI mobile compatibility", error);

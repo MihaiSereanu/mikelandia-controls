@@ -8,6 +8,9 @@ import { checkTooltipTouches } from "./browser/tooltip-touches.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ...[["shadowdark", ""], ["dnd5e", "&system=dnd5e"], ["wfrp4e", "&system=wfrp4e&edition=4e"], ["wfrp5e", "&system=wfrp4e&edition=5e"]].flatMap(([system, query]) =>
+    [["phone", 390, 844], ["tablet", 1024, 768]].map(([layout, width, height]) =>
+      [`damage-${system}-${layout}`, width, height, "in-person", `layout=${layout}&damage=true${query}`])),
   ["wfrp-theme-policy-phone", 390, 844, "wfrp-theme-policy", "layout=phone"],
   ["wfrp-theme-policy-tablet", 1024, 768, "wfrp-theme-policy", "layout=tablet"],
   ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844]].map(([layout, width, height]) =>
@@ -199,7 +202,7 @@ try {
     }
     await send("Page.navigate", { url: `http://127.0.0.1:${server.address().port}/tests/browser/${fixture}.html?${fixtureQuery}` }, sessionId);
     let report;
-    for (let attempt = 0; attempt < 100; attempt++) {
+    for (let attempt = 0; attempt < (name.startsWith("damage-") ? 180 : 100); attempt++) {
       const { result } = await send("Runtime.evaluate", { expression: 'document.querySelector("#results")?.textContent', returnByValue: true }, sessionId);
       try { report = JSON.parse(result.value); } catch {}
       if (report?.status) break;

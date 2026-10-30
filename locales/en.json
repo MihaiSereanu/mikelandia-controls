@@ -1,5 +1,11 @@
 {
   "MIKELANDIA_CONTROLS": {
+    "Damage": {
+      "Down": "You’re down!",
+      "Damage": "You took {amount} damage",
+      "Wounds": "You took {amount} wounds",
+      "Dismiss": "Dismiss damage notification"
+    },
     "Notes": {
       "Unavailable": "Notes are unavailable for this actor.",
       "Invalid": "Invalid notes request.",
@@ -987,6 +993,10 @@
       }
     },
     "Interface": {
+      "OpposedMomentum": {
+        "Failed": "The opposed roll completed, but Momentum could not be updated: {reason}",
+        "NoGM": "An active GM is required."
+      },
       "Presenter": {
         "GameChat": "Game chat",
         "ChatIsUnavailable": "Chat is unavailable",

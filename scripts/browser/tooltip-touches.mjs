@@ -82,4 +82,23 @@ export async function checkTooltipTouches(send, checks) {
   await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
   await settle();
   await check("Escape dismisses tooltip after touch", '!document.querySelector(".mc-profile-note-tooltip:popover-open")');
+  const picker = ".mc-profile-condition-picker";
+  const menu = 'document.querySelector(".mc-profile-condition-menu")';
+  await tap(picker);
+  await check("condition picker: touch opens themed menu", `${menu}.matches(":popover-open")`);
+  await evaluate(`(() => {
+    const outside = document.createElement("button"); outside.id = "picker-outside-touch";
+    outside.textContent = "Outside"; outside.style.cssText = "position:fixed;left:16px;top:8px;width:60px;height:32px;z-index:2147483647";
+    outside.onclick = () => outside.dataset.tapped = "true"; document.querySelector("main").append(outside);
+  })()`);
+  await tap("#picker-outside-touch");
+  await check("condition picker: outside touch dismisses and activates control", `!${menu}.matches(":popover-open") && document.querySelector("#picker-outside-touch").dataset.tapped === "true"`);
+  await evaluate('document.querySelector("#picker-outside-touch").remove()');
+  await tap(picker);
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await settle();
+  await check("condition picker: Escape dismisses", `!${menu}.matches(":popover-open")`);
+  await tap(picker); await tap(picker);
+  await check("condition picker: second touch closes without reopening", `!${menu}.matches(":popover-open")`);
 }

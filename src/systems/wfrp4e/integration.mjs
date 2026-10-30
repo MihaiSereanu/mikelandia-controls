@@ -1,6 +1,7 @@
 import { warhammerNotes } from "../actor-notes.mjs";
 import { localizeFoundry } from "../../foundry/settings/localization.mjs";
 import { readCombatHealth } from "../combat-health.mjs";
+import { readDamageHealth } from "../damage-health.mjs";
 import { fallbackIntegration } from "../fallback/integration.mjs";
 import { createProfilePanels } from "../profile-view.mjs";
 import { createWarhammerCharacterProfile } from "./profile.mjs";
@@ -11,6 +12,7 @@ import { conditionSection, warhammerEffectSections } from "./effects.mjs";
 export const warhammerIntegration = Object.freeze({
   ...fallbackIntegration,
   id: "wfrp4e",
+  readDamageHealth: actor => readDamageHealth(actor, "character", "system.status.wounds.value", "wounds"),
   readCombatHealth: actor => readCombatHealth(actor, "system.status.wounds", "Wounds", "Wounds"),
   combatHealthPaths: Object.freeze(["system.status.wounds.value", "system.status.wounds.max"]),
   features: Object.freeze({ ...fallbackIntegration.features, profilePanels: true, biography: true }),

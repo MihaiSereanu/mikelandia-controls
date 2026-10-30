@@ -33,10 +33,24 @@ const render = targeting => {
   root.replaceChildren(renderCombat({ state: { targeting, snapshot: { combat } }, commands, scope: view }));
 };
 try {
+  if (params.has("native-assets")) {
+    const response = await fetch("/native-fixture/foundry2.css");
+    check("native Foundry button stylesheet is available", response.ok);
+    const rule = (await response.text()).match(/a\.button,\s*button\s*\{[^}]+\}/u)?.[0];
+    check("native Foundry button defaults found", Boolean(rule));
+    const style = document.createElement("style");
+    style.textContent = `@layer modules { :root { --button-size: 32px; } ${rule} }`;
+    document.head.prepend(style);
+  }
+  const summaryHasBottomSpace = () => {
+    const heading = root.querySelector(".mc-targets-heading"), summary = heading.querySelector(".mc-targets-summary");
+    return heading.getBoundingClientRect().bottom - summary.getBoundingClientRect().bottom >= 18;
+  };
   f.gateway.watch(scope, () => f.actor.uuid, render);
   f.game.combat.scene = null; f.hooks.emit("updateCombat", f.game.combat, { scene: null }); await tick();
   check("native unlinked encounter keeps selector in combatant scene", !!root.querySelector(".mc-targets"));
   check("target section starts collapsed", root.querySelector(".mc-targets-heading").getAttribute("aria-expanded") === "false" && !root.querySelector(".mc-target-row"));
+  check("empty target summary clears bottom border", summaryHasBottomSpace());
   root.querySelector(".mc-targets-heading").click(); await tick();
   check("friendly and enemy groups", root.querySelectorAll(".mc-target-group").length === 2);
   check("hidden and outside tokens excluded", root.querySelectorAll(".mc-target-row").length === 3);
@@ -72,6 +86,7 @@ try {
   check("pressed selection accessible", root.querySelector('[data-target-id="enemy"]').getAttribute("aria-pressed") === "true");
   root.querySelector(".mc-targets-heading").click(); await tick();
   check("collapsed section has selected summary", !root.querySelector(".mc-target-row") && /enemy.*neutral/.test(root.querySelector(".mc-targets-heading").textContent));
+  check("selected target summary clears bottom border", summaryHasBottomSpace());
   f.enemy.hidden = true; f.hooks.emit("updateToken", f.enemy, { hidden: true }); await tick();
   check("hidden target removed while collapsed", !f.game.user.targets.has(f.canvas.tokens.get("enemy")));
   root.querySelector(".mc-targets-heading").click(); await tick();

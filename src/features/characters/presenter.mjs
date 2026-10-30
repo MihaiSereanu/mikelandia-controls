@@ -14,6 +14,7 @@ import { resolveHeaderBanner } from "./appearance/header-banner.mjs";
 import { actorSheetTabs, actorOriginBack, collectiveHeaderContent, renderCollectivePanel } from "./sheets/collective-sheet.mjs";
 import { renderNativeCharacter } from "./sheets/native-sheet.mjs";
 import { renderTargets } from "../combat/targets.mjs";
+import { characterHasTargets } from "../combat/targeting-surface.mjs";
 import { renderDescription } from "../../ui/primitives/description.mjs";
 
 const SHEET_TABS = Object.freeze([
@@ -132,7 +133,7 @@ export function renderCharacters({ state, commands, scope, overlayHost = null, r
       traits: () => traitsPanel(actor, commands.localize),
       effects: owner => effectsPanel(actor, commands, status, state.characterOpenSections, owner, settings)
     }) : renderSheetPanel(activePage, actor, commands, status, openItem, state.expandedCharacterItemId, state.characterOpenSections, scope, settings, shell.spellcastingSelection)] });
-  if (!collectiveTabs && activePage === "overview") {
+  if (!collectiveTabs && characterHasTargets(actor, activePage)) {
     const targets = renderTargets({ targeting: state.targeting, commands, scope });
     if (targets) panel.prepend(targets);
   }

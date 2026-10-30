@@ -1,5 +1,5 @@
 import { createShadowdarkFixture } from "/tests/helpers/shadowdark.mjs";
-import { createWarhammerActor, createWarhammerGame } from "/tests/helpers/warhammer.mjs";
+import { createWarhammerActor, createWarhammerGame, addWarhammerMagic } from "/tests/helpers/warhammer.mjs";
 import { createActor, createGame, createHooks, collection } from "/tests/helpers/foundry.mjs";
 import { createAppKernel } from "/src/kernel/app-kernel.mjs";
 import { createSignalStore } from "/src/kernel/state/signal-store.mjs";
@@ -11,6 +11,7 @@ import { createFoundryTargetingGateway } from "/src/foundry/combat/targeting-gat
 import { targetingFixture } from "/tests/helpers/targeting.mjs";
 import { createFoundryPreferencesGateway, registerPreferences } from "/src/foundry/settings/preferences.mjs";
 import { createConnectionGeneration } from "/src/kernel/connection/connection-generation.mjs";
+import { checkDamageFeedback } from "/tests/browser/damage-feedback.mjs";
 
 const checks = [];
 const check = (name, condition) => { if (!condition) throw new Error(name); checks.push(name); };
@@ -21,7 +22,8 @@ try {
   const legacy = params.get("system") === "dnd5e";
   const warhammer = params.get("system") === "wfrp4e";
   const actor = warhammer ? createWarhammerActor() : legacy ? createActor() : null;
-  const f = legacy || warhammer ? { actor, game: warhammer ? createWarhammerGame([actor], { use5e: true }) : createGame([actor]), hooks: createHooks() } : createShadowdarkFixture();
+  if (warhammer) addWarhammerMagic(actor, true);
+  const f = legacy || warhammer ? { actor, game: warhammer ? createWarhammerGame([actor], { use5e: params.get("edition") !== "4e" }) : createGame([actor]), hooks: createHooks() } : createShadowdarkFixture();
   f.game.user.character = f.actor;
   globalThis.game = f.game; globalThis.Hooks = f.hooks;
   const dictionary = await fetch("/locales/en.json").then(r => r.json());
@@ -153,6 +155,10 @@ try {
   root.querySelector('[data-route="characters"]').click(); await tick();
   root.querySelector(warhammer ? '[data-profile-tab="combat"]' : legacy ? '[data-character-tab="overview"]' : '[data-profile-tab="abilities"]').click(); await tick();
   check("character tab reuses native Target Selector", root.querySelector('[data-target-id="enemy"]')?.getAttribute("aria-pressed") === "true");
+  const spellTab = warhammer ? '[data-profile-tab="magic"]' : legacy ? '[data-character-tab="spells"]' : '[data-profile-tab="spells"]';
+  root.querySelector(spellTab).click(); await tick();
+  check("spell tab shares selected combat targets", root.querySelector('[data-target-id="enemy"]')?.getAttribute("aria-pressed") === "true");
+  check("spell tab places Targets before its content", root.querySelector(legacy ? ".mc-sheet-panel" : ".mc-profile-content").firstElementChild?.classList.contains("mc-targets"));
   const characterEnemy = root.querySelector('[data-target-id="enemy"]');
   characterEnemy.focus(); targeting.enemy.x = 600;
   Hooks.emit("refreshToken", canvas.tokens.get("enemy"), { refreshPosition: true }); await tick();
@@ -162,6 +168,9 @@ try {
   check("character target toggle updates native selection", root.querySelector('[data-target-id="enemy"]').getAttribute("aria-pressed") === "false" && !game.user.targets.has(canvas.tokens.get("enemy")));
   root.querySelector(".mc-targets-heading").click(); await tick();
   check("character selector collapses on state update", !root.querySelector(".mc-target-row"));
+  root.querySelector(warhammer ? '[data-profile-tab="combat"]' : legacy ? '[data-character-tab="overview"]' : '[data-profile-tab="abilities"]').click(); await tick();
+  check("combat and spell tabs share collapsed state", !!root.querySelector(".mc-targets") && !root.querySelector(".mc-target-row"));
+  root.querySelector(spellTab).click(); await tick();
   root.querySelector(".mc-targets-heading").click(); await tick();
   game.combat.started = false; Hooks.emit("updateCombat", game.combat, {}); await tick();
   check("character selector disappears after combat ends", !root.querySelector(".mc-targets"));
@@ -175,6 +184,7 @@ try {
   check("Settings no longer exposes Scene, movement, memory or overlays", !/Scene & Controls|Joystick|Mobile Asset Optimizer|Memory Protection|Module Overlays/.test(root.querySelector(".mc-settings")?.textContent ?? ""));
   const settings = root.querySelector(".mc-settings");
   check("Settings renders successfully", !!settings);
+  if (params.get("damage") === "true") await checkDamageFeedback({ root, actor: f.actor, warhammer, hooks: f.hooks, check, tick });
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
 } catch (error) {
   kernel?.stop();

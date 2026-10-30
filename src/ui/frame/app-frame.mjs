@@ -13,6 +13,7 @@ import { createLoadingCheckpoints } from "../bootstrap/loading-checkpoints.mjs";
 import { bindCharacterHeaderScroll } from "../../features/characters/appearance/character-header-scroll.mjs";
 import { createControlsGuide } from "../help/controls-guide.mjs";
 import { createControlsInvitation } from "../help/controls-invitation.mjs";
+import { createDamageFeedback } from "../media/damage-feedback.mjs";
 
 const SCREENS = Object.freeze({
   characters: renderCharacters,
@@ -26,6 +27,7 @@ export const RECONNECT_BLOCKER_DELAY_MS = 120;
 export function createAppFrame({ store, commands, policy, scope, mobileBackGateway = null, performanceObserver = null, nativeApplications = null }) {
   const root = node("div", { className: "mc-mobile-app", attrs: { role: "application", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.MCMobile", "Mikelandia Controls") } });
   const viewport = node("main", { className: "mc-viewport" });
+  const damageFeedback = createDamageFeedback({ root, scope, localize: commands.localize, locale: () => commands.readLocale?.() ?? "en" });
   const panelOverlays = node("div", { className: "mc-panel-overlays", attrs: { "aria-live": "polite" } });
   const nav = node("nav", { className: "mc-bottom-nav", attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.Primary", "Primary") } });
   const navSideIcon = icon("fa-arrow-left");
@@ -382,6 +384,8 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
   const resizeObserver = typeof ResizeObserver === "function" ? new ResizeObserver(syncCombatControlGeometry) : null;
   resizeObserver?.observe(combatControlsHost); scope.own(() => resizeObserver?.disconnect());
   return Object.freeze({
+    showDamage: damageFeedback.show,
+    clearDamage: damageFeedback.clear,
     mount() { if (!mounted || scope.disposed) return; for (const existing of document.querySelectorAll?.(".mc-mobile-app") ?? []) if (existing !== root) existing.remove(); document.body.append(root); document.body.classList.add("mc-mobile-running"); controlsInvitation.reconcile(); },
     unmount() {
       if (!mounted) return; mounted = false; characterScrollRestoreGeneration++; characterScrollMemory.clear(); characterScrollRestoreScope?.dispose(); screenScope?.dispose(); combatControlsScope?.dispose();

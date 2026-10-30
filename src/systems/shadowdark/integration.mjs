@@ -1,5 +1,6 @@
 import { shadowdarkNotes } from "../actor-notes.mjs";
 import { readCombatHealth } from "../combat-health.mjs";
+import { readDamageHealth } from "../damage-health.mjs";
 import { fallbackIntegration } from "../fallback/integration.mjs";
 import { createProfilePanels } from "../profile-view.mjs";
 import { isShadowdarkPlayer, shadowdarkContext } from "./context.mjs";
@@ -9,6 +10,7 @@ import { createShadowdarkCommands } from "./commands.mjs";
 export const shadowdarkIntegration = Object.freeze({
   ...fallbackIntegration,
   id: "shadowdark",
+  readDamageHealth: actor => readDamageHealth(actor, "Player", "system.attributes.hp.value"),
   readCombatHealth: actor => readCombatHealth(actor, "system.attributes.hp", "SHADOWDARK.sheet.actor.hp", "HP"),
   combatHealthPaths: Object.freeze(["system.attributes.hp.value", "system.attributes.hp.max"]),
   features: Object.freeze({ ...fallbackIntegration.features, profilePanels: true, biography: true }),

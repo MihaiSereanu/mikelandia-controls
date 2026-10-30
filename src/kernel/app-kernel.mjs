@@ -4,6 +4,7 @@ import { createTaskScope } from "./lifecycle/task-scope.mjs";
 import { createAppFrame } from "../ui/frame/app-frame.mjs";
 import { targetsVisible } from "../features/combat/targeting-surface.mjs";
 import { createAuthoritativeResynchronizer } from "./connection/authoritative-resync.mjs";
+import { createFoundryDamageGateway } from "../foundry/actors/damage-gateway.mjs";
 
 import { ACTOR_COMMANDS } from "./state/command-names.mjs";
 
@@ -500,6 +501,13 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       } });
       assertCurrent();
       if (initialSnapshot) store.dispatch({ type: "session-loaded", snapshot: initialSnapshot });
+      const damageWatcher = createFoundryDamageGateway().watch(runtimeScope, {
+        getSource: () => store.state.selectedActorSourceUuid,
+        isActive: () => readPolicy().active && !store.state.reconnect && !store.state.modeTransition,
+        onDamage: damage => frame?.showDamage?.(damage),
+        onReset: () => frame?.clearDamage?.()
+      });
+      runtimeScope.own(store.subscribe(() => damageWatcher.refresh(), { immediate: false }));
       if (targetingGateway) {
         targetingGateway.watch(runtimeScope, () => store.state.selectedActorSourceUuid,
           targeting => store.dispatch({ type: "targeting-updated", targeting }),

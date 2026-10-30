@@ -14,10 +14,17 @@ Recorded deployment facts; installed files and the remote host were not rechecke
 
 Changes since the local installation remain unpackaged and uninstalled:
 
+- WFRP 4e/5e arm translations automatically use Right Arm / Left Arm on every client in Desktop, Phone and Tablet modes. Native handedness calculations remain unchanged. Startup-hook fixture verification passed; native-world verification remains pending.
+
+- WFRP 5e opposed Momentum compatibility routes unowned participant gain/clearing through a validated active-GM query on mobile and desktop. Node permission/transport fixtures cover linked/unlinked NPCs, ownership, result validation, missing GM and cleanup. Native-world verification remains pending.
+
+- Selected-PC damage feedback across Phone/Tablet routes for D&D 5e, Shadowdark and WFRP 4e/5e: ordinary hits clear within two seconds. Crossing zero adds “You’re down!”; only the mist remains after the notification expires, until remaining HP/Wounds changes. Close/Escape does not dismiss zero-health mist. Node and browser fixture evidence; native-world and physical-device verification remain pending.
+
 - Phone/Tablet mode saves all WFRP Theme sections off in the browser and enforces that preference while mobile mode runs. Desktop does not restore the old WFRP theme. Native-world verification remains pending.
 
 - WFRP signed SL controls, a separate Effects tab with native condition actions and 5e references, and revised effect/item rows. Engaged is excluded from mobile condition tracking; Injuries moved from Combat to Effects. Native encumbrance penalties remain in WFRP Combat.
-- The main Combat route is labelled Initiative. Targets also appears in WFRP Character > Combat, Shadowdark Abilities, and D&D Overview.
+- The main Combat route is labelled Initiative. Targets also appears in WFRP Character > Combat and Magic, Shadowdark Abilities and Spells, and D&D Overview and Spells.
+- WFRP conditions use an app-themed picker capped at half the viewport, with scrollable choices, Close, outside-tap and Escape dismissal.
 - Collapsible WFRP/Shadowdark descriptions and expanded Effects Notes preserve source formatting; D&D effect disclosures retain complete descriptions. Secret content and executable markup remain excluded.
 - Condition references and Notes tooltips now associate their triggers with native popovers, preventing a second touch from closing and immediately reopening them. Outside taps dismiss and preserve the tapped control's action.
 
@@ -38,6 +45,9 @@ These records cover specific revisions and scopes, not all current changes. They
 
 | Scope | Result | Evidence |
 |---|---|---|
+| Damage feedback | Full Node suite; eight phone/tablet damage fixtures / 512 checks cover all supported integrations, two-second notice expiry, zero-health wording and mist persistence through Close/Escape and max-only updates, health-change clearing, repeated hits and route persistence | `tests/damage-feedback.test.mjs`, `tests/browser/damage-feedback.mjs`, `dist/damage-*-{phone,tablet}.png` |
+| Combat and spell targeting | Node suite; six phone/tablet browser fixtures exercise all three systems, shared selection/collapse, spell-tab placement, live distance/focus and combat-end removal; four native-style targeting fixtures / 216 checks cover summary bottom spacing | `tests/browser/in-person.mjs`, `tests/browser/targeting.mjs` |
+| Magic Targets and condition picker | Node suite passed; browser fixtures cover shared Magic targeting, live distance/focus, light/dark picker sizing, native button defaults, Close, outside touch and Escape; remaining browser cases passed in a separate run | `tests/browser/in-person.mjs`, `tests/browser/warhammer.mjs`, `scripts/browser/tooltip-touches.mjs` |
 | WFRP Theme policy | Full Node suite; 88 browser scenarios / 5,645 checks, including 18 phone/tablet policy checks for persistence, native surfaces, enforcement, Desktop behavior and cleanup | `tests/wfrp-theme-policy.test.mjs`, `tests/browser/wfrp-theme-policy.mjs` |
 | Controls guide | Full Node suite; 86 browser scenarios / 5,627 checks, including phone/tablet help content and formatting | `dist/controls-guide-evidence.json` |
 | Tooltip dismissal | Full Node suite; 87 browser scenarios / 6,529 checks, including trusted touch input at phone, tablet and narrow widths | `dist/tooltip-dismissal-evidence.json` |

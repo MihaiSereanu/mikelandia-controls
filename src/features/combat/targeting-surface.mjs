@@ -1,7 +1,7 @@
 export function characterHasTargets(actor, tab) {
-  if (actor?.profileId === "wfrp4e-character") return tab === "combat";
-  if (actor?.profileId === "shadowdark-player") return tab === "abilities";
-  return Boolean(actor && !["native", "profile"].includes(actor.presentation) && tab === "overview");
+  if (actor?.profileId === "wfrp4e-character") return tab === "combat" || tab === "magic";
+  if (actor?.profileId === "shadowdark-player") return tab === "abilities" || tab === "spells";
+  return Boolean(actor && !["native", "profile"].includes(actor.presentation) && ["overview", "spells"].includes(tab));
 }
 
 export function targetsVisible(state) {

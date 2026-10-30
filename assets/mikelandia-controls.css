@@ -3289,6 +3289,22 @@ body.mc-mobile-running #pause {
   border-radius: 8px; background: var(--mc-surface); color: var(--mc-text); font: inherit;
 }
 .mc-mobile-app .mc-profile-condition-picker { width: 100%; min-width: 0; padding: 6px; }
+.mc-mobile-app .mc-profile-condition-picker::after { content: " ▾"; }
+.mc-mobile-app .mc-profile-condition-menu {
+  position: fixed; inset: auto; margin: 0; padding: 8px; box-sizing: border-box;
+  width: min(360px, calc(100vw - 32px)); max-height: 50dvh; overflow: hidden;
+  border: 1px solid var(--mc-border); border-radius: 12px;
+  background: var(--mc-surface); color: var(--mc-text); font: inherit; box-shadow: var(--mc-shadow);
+}
+.mc-profile-condition-menu:popover-open { display: flex; flex-direction: column; gap: 8px; }
+.mc-profile-condition-menu > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: 0 0 auto; }
+.mc-profile-condition-choices { min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 4px; }
+.mc-mobile-app .mc-profile-condition-menu button {
+  min-height: 44px; margin: 0; padding: 8px 12px; border: 1px solid var(--mc-border); border-radius: 8px;
+  background: var(--mc-surface-up); color: var(--mc-text); font: inherit; white-space: normal; text-align: start;
+}
+.mc-mobile-app .mc-profile-condition-menu > header button { min-width: 44px; text-align: center; }
+.mc-mobile-app .mc-profile-condition-menu button:focus-visible { outline: 2px solid var(--mc-gold); outline-offset: -3px; }
 .mc-mobile-app .mc-profile-condition-controls button:disabled { opacity: 0.4; }
 .mc-mobile-app button.mc-profile-condition-name {
   min-width: max-content; min-height: 44px; padding: 0; border: 0; border-radius: 0;
@@ -11302,7 +11318,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 .mc-targets button:disabled { opacity: .55; }
 .mc-targets button:focus-visible, .mc-target-source select:focus-visible { outline: 2px solid var(--mc-gold); outline-offset: 2px; }
 .mc-targets-summary, .mc-target-name small, .mc-target-you { color: var(--mc-subtle, var(--mc-muted)); }
-.mc-targets-heading { display: flex; flex-direction: column; align-items: flex-start; width: 100%; padding: 16px 18px; text-align: start; }
+.mc-targets-heading { display: flex; flex-direction: column; align-items: flex-start; width: 100%; height: auto; padding: 16px 18px 18px; text-align: start; }
 .mc-targets-summary { font-size: .85em; overflow-wrap: anywhere; }
 .mc-targets-title { display: flex; align-items: center; gap: 10px; }
 .mc-targets-caret { width: 24px; height: 24px; flex-shrink: 0; }
@@ -11320,3 +11336,44 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 .mc-target-distance { max-width: 40%; font-size: .9em; overflow-wrap: anywhere; }
 .mc-target-check { flex: 0 0 20px; }
 .mc-target-row.is-selected { outline: 2px solid currentColor; outline-offset: -2px; }
+
+/* Selected-PC damage feedback is independent of the current route. */
+.mc-damage-layer { position: absolute; inset: 0; z-index: 1000; pointer-events: none; }
+.mc-damage-mist {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 0% 30%, rgba(201,23,35,.09), transparent 30%),
+    radial-gradient(ellipse at 100% 75%, rgba(201,23,35,.09), transparent 30%),
+    linear-gradient(to right, rgba(160,8,19,.38), rgba(165,13,23,.2) 7%, transparent 24%, transparent 76%, rgba(165,13,23,.2) 93%, rgba(160,8,19,.38)),
+    linear-gradient(to bottom, rgba(160,8,19,.38), transparent 14%, transparent 86%, rgba(160,8,19,.38));
+  animation: mc-damage-fade 2s linear both;
+}
+.mc-mobile-app .mc-damage-notice {
+  position: absolute; top: calc(env(safe-area-inset-top, 0px) + 18px); left: 50%;
+  transform: translateX(-50%); width: min(360px, calc(100% - 24px)); box-sizing: border-box;
+  display: flex; align-items: center; gap: 8px; padding: 9px 8px 9px 16px;
+  background: #3b171bf5; color: #fff1ed; border: 1px solid #d46869; border-radius: 11px;
+  box-shadow: 0 4px 16px #0009; font-size: 18px; font-weight: 650; line-height: 1.3;
+  pointer-events: auto; animation: mc-damage-notice-fade 2s linear both;
+}
+.mc-damage-notice > span { flex: 1; overflow-wrap: anywhere; }
+.mc-damage-down { display: block; margin-top: 4px; }
+.mc-damage-layer.is-down .mc-damage-mist { animation: none; opacity: 1; }
+.mc-mobile-app .mc-damage-dismiss {
+  flex: 0 0 44px; width: 44px; min-width: 44px; height: 44px; min-height: 44px;
+  margin: 0; padding: 0; border: 0; border-radius: 7px; background: transparent;
+  color: #ffd5cf; box-shadow: none; font: 26px/1 system-ui; cursor: pointer;
+}
+.mc-mobile-app .mc-damage-dismiss:focus-visible { outline: 2px solid #fff1ed; outline-offset: -3px; }
+.mc-damage-shaking > .mc-viewport, .mc-damage-shaking > .mc-bottom-nav { animation: mc-damage-shake .4s ease-out; }
+@keyframes mc-damage-fade { 0% { opacity: 0; } 4% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes mc-damage-notice-fade { 0% { opacity: 0; } 4%, 65% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes mc-damage-shake {
+  0%, 100% { transform: translate(0, 0); }
+  12% { transform: translate(-7px, 3px); } 25% { transform: translate(6px, -3px); }
+  38% { transform: translate(-5px, -2px); } 50% { transform: translate(4px, 2px); }
+  65% { transform: translate(-3px, 1px); } 80% { transform: translate(2px, -1px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mc-damage-shaking > .mc-viewport, .mc-damage-shaking > .mc-bottom-nav { animation: none; }
+}
