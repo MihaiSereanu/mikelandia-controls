@@ -463,9 +463,8 @@ export function installMobileClient({ getUpgradeCleanup, whenSharedReady }) {
     try {
       await whenSharedReady();
       const upgrade = await getUpgradeCleanup().whenIdle();
-      if (!upgrade.ok || upgrade.reloadPending) {
+      if (upgrade.reloadPending) {
         startupBlocked = true;
-        if (!upgrade.ok) showBootstrapRecovery("startup-error");
         return;
       }
       reportBootstrapProgress();

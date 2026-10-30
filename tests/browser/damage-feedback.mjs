@@ -15,6 +15,7 @@ export async function checkDamageFeedback({ root, actor, warhammer, hooks, check
   check("close button has a touch-sized target", bounds.width >= 44 && bounds.height >= 44 && bounds.left >= 0 && bounds.right <= innerWidth);
   hit(1);
   check("rapid hit replaces the previous notification", root.querySelectorAll(".mc-damage-layer").length === 1 && root.querySelector(".mc-damage-notice").textContent.includes("You took 1"));
+  check("one-point hit uses singular wound or damage", root.querySelector('.mc-damage-notice [role="status"] > span').textContent === `You took 1 ${warhammer ? "wound" : "damage"}`);
   root.querySelector(".mc-damage-dismiss").click();
   check("close immediately clears every effect", !root.querySelector(".mc-damage-layer") && !root.classList.contains("mc-damage-shaking"));
   health.value += 2; hooks.emit("updateActor", actor, {});

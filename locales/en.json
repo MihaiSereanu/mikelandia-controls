@@ -3,6 +3,7 @@
     "Damage": {
       "Down": "You’re down!",
       "Damage": "You took {amount} damage",
+      "Wound": "You took {amount} wound",
       "Wounds": "You took {amount} wounds",
       "Dismiss": "Dismiss damage notification"
     },

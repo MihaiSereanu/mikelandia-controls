@@ -10,6 +10,7 @@ const record = value => value && typeof value === "object" && !Array.isArray(val
 /** Retire existing overrides once; ordinary clients have no startup interception. */
 export function installClientUpgradeCleanup(scope, { getGame = () => globalThis.game,
   getStorage = () => globalThis.localStorage,
+  registrationTimeoutMs = 5000,
   notify = error => globalThis.ui?.notifications?.warn?.(`Mikelandia Controls could not restore saved client preferences. Saved values are retained for the next reload. ${error.message}`),
   requestReload = () => {
     const reload = globalThis.foundry?.utils?.debouncedReload;
@@ -28,6 +29,8 @@ export function installClientUpgradeCleanup(scope, { getGame = () => globalThis.
   const pending = failure || receipt !== null || Object.values(initial ?? {}).some(value => Object.keys(value).length);
   if (!pending) return Object.freeze({ whenIdle: () => Promise.resolve(Object.freeze({ ok: true, changed: false, reloadPending: false })) });
 
+  let releaseCanvas;
+  const nativeRestored = new Promise(resolve => { releaseCanvas = resolve; });
   const cleanup = Promise.resolve().then(async () => {
     if (failure) throw failure;
     const graphics = createLegacyClientRestoration({ getGame });
@@ -45,9 +48,18 @@ export function installClientUpgradeCleanup(scope, { getGame = () => globalThis.
       await restoreLocalSetting(game, "core.uiConfig", theme.original, { notify: false });
       changed = true;
     }
+    // Native graphics restoration must finish before canvas starts. Carolingian
+    // registers settings in an asynchronous init import; canvas need not wait.
+    releaseCanvas();
     let reloadPending = false;
     if (carolingian && game.modules?.get?.("crlngn-ui")?.active) {
-      const key = "crlngn-ui.disable-ui", config = game.settings.settings?.get?.(key);
+      const key = "crlngn-ui.disable-ui";
+      const deadline = Date.now() + registrationTimeoutMs;
+      while (!game.settings.settings?.has?.(key) && !scope.disposed && Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, Math.min(25, Math.max(1, deadline - Date.now()))));
+      }
+      if (scope.disposed) throw new Error("Client preference restoration was interrupted.");
+      const config = game.settings.settings?.get?.(key);
       const client = game.settings.storage?.get?.("client");
       if (config?.scope !== "client" || !client?.getItem || !client?.setItem) throw new Error("Carolingian UI's client-only preferences are unavailable.");
       const raw = client.getItem(key);
@@ -64,6 +76,7 @@ export function installClientUpgradeCleanup(scope, { getGame = () => globalThis.
     if (reloadPending && !scope.disposed) requestReload();
     return Object.freeze({ ok: true, changed, reloadPending });
   }).catch(error => {
+    releaseCanvas();
     const report = () => { if (!scope.disposed) notify(error); };
     if (game.ready) report();
     else scope.hook("ready", report);
@@ -73,7 +86,7 @@ export function installClientUpgradeCleanup(scope, { getGame = () => globalThis.
   const original = game.initializeCanvas;
   if (typeof original === "function") {
     const guarded = async function (...args) {
-      await cleanup;
+      await nativeRestored;
       if (game.initializeCanvas === guarded) game.initializeCanvas = original;
       return original.apply(this, args);
     };

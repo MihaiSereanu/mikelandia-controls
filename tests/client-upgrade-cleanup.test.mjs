@@ -20,9 +20,9 @@ function fixture({ snapshots = {}, native = {}, receipt = null, carolingian = fa
     initializeCanvas() { return JSON.parse(local.get("core.noCanvas") ?? "false"); } };
   const cleanups = [], scope = { disposed: false, own(fn) { cleanups.push(fn); }, hook(name, fn) { events.set(name, fn); }, dispose() { this.disposed = true; for (const fn of cleanups.reverse()) fn(); } };
   return { game, values, local, writes, browser, events, notifications, scope, get reloads() { return reloads; },
-    install() { return installClientUpgradeCleanup(scope, { getGame: () => game,
+    install(options = {}) { return installClientUpgradeCleanup(scope, { getGame: () => game,
       getStorage: () => ({ getItem: key => browser.get(key) ?? null, removeItem: key => browser.delete(key) }),
-      notify: error => notifications.push(error.message), requestReload: () => { reloads++; } }); } };
+      notify: error => notifications.push(error.message), requestReload: () => { reloads++; }, ...options }); } };
 }
 
 test("ordinary clients perform no restoration writes or canvas interception", async () => {
@@ -78,6 +78,34 @@ test("inactive Carolingian keeps its receipt for a future upgrade without blocki
   const f = fixture({ receipt: JSON.stringify({ version: 1, previousValue: false }) });
   assert.equal((await f.install().whenIdle()).ok, true);
   assert.equal(f.browser.has(RECEIPT), true); assert.equal(f.reloads, 0);
+});
+
+test("Carolingian async init registration restores the old receipt without holding canvas startup", async () => {
+  const f = fixture({ receipt: JSON.stringify({ version: 1, previousValue: false }), carolingian: true,
+    native: { "crlngn-ui.disable-ui": true, "core.noCanvas": true },
+    snapshots: { graphicsSettingsSnapshot: { schemaVersion: 4, original: {}, applied: {}, noCanvasOriginal: false } } });
+  const definition = f.game.settings.settings.get("crlngn-ui.disable-ui");
+  f.game.settings.settings.delete("crlngn-ui.disable-ui");
+  const cleanup = f.install();
+  assert.equal(await f.game.initializeCanvas(), false, "graphics restore finishes before canvas, without waiting for Carolingian");
+  assert.equal(f.browser.has(RECEIPT), true, "receipt remains while registration is pending");
+  f.game.settings.settings.set("crlngn-ui.disable-ui", definition);
+  assert.deepEqual(await cleanup.whenIdle(), { ok: true, changed: true, reloadPending: true });
+  assert.equal(JSON.parse(f.local.get("crlngn-ui.disable-ui")), false);
+  assert.equal(f.browser.has(RECEIPT), false);
+  assert.equal(f.reloads, 1);
+  assert.equal(f.notifications.length, 0);
+});
+
+test("missing Carolingian registration has a bounded wait and retains recovery values", async () => {
+  const f = fixture({ receipt: JSON.stringify({ version: 1, previousValue: false }), carolingian: true });
+  const cleanup = f.install({ registrationTimeoutMs: 10 });
+  assert.equal(await f.game.initializeCanvas(), false);
+  assert.equal((await cleanup.whenIdle()).ok, false);
+  assert.equal(f.browser.has(RECEIPT), true);
+  assert.equal(f.reloads, 0);
+  f.events.get("ready")();
+  assert.match(f.notifications[0], /client-only preferences are unavailable/);
 });
 
 test("malformed theme/Carolingian snapshots do not silently discard saved preferences", async () => {

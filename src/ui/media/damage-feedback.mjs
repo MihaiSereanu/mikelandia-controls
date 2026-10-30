@@ -29,8 +29,9 @@ export function createDamageFeedback({ root, scope, localize, locale = () => "en
         notice?.remove();
         root.classList.remove("mc-damage-shaking");
       };
-      const message = localizedText(localize, `MIKELANDIA_CONTROLS.Damage.${noun === "wounds" ? "Wounds" : "Damage"}`,
-        noun === "wounds" ? "You took {amount} wounds" : "You took {amount} damage", { amount: localizedNumber(amount, locale()) });
+      const wound = amount === 1;
+      const message = localizedText(localize, `MIKELANDIA_CONTROLS.Damage.${noun === "wounds" ? (wound ? "Wound" : "Wounds") : "Damage"}`,
+        noun === "wounds" ? (wound ? "You took {amount} wound" : "You took {amount} wounds") : "You took {amount} damage", { amount: localizedNumber(amount, locale()) });
       notice = node("div", { className: "mc-damage-notice", children: [
           node("span", { attrs: { role: "status", "aria-live": "polite", "aria-atomic": "true" }, children: [
             node("span", { text: message }),

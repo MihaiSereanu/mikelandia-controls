@@ -18,7 +18,8 @@ try {
   for (const [key, value] of Object.entries({ userAgent: mobile ? device === "phone" ? "iPhone Mobile" : "iPad" : "Windows NT 10.0", platform: mobile ? "iPhone" : "Win32", maxTouchPoints: mobile ? 5 : 0 })) Object.defineProperty(navigator, key, { configurable: true, value });
   const game = createGame([], "shadowdark"), hooks = createHooks(), registered = new Map();
   hooks.once = (name, callback) => { const fn = (...args) => { hooks.off(name, fn); return callback(...args); }; hooks.on(name, fn); };
-  const pending = [], errors = [];
+  const pending = [], errors = [], warnings = [];
+  const upgradeCase = params.get("upgrade");
   if (full) {
     const on = hooks.on.bind(hooks), off = hooks.off.bind(hooks), wrapped = new Map();
     hooks.on = (name, callback) => {
@@ -33,6 +34,8 @@ try {
   const stored = new Map([["mikelandia-controls.mode", storedMode]]);
   game.i18n = { localize: key => key, translations: {}, lang: "en" };
   game.settings = { settings: registered, get(ns, key) { const id = `${ns}.${key}`; if (ns === "mikelandia-controls" && !registered.has(id)) throw Error("unregistered setting"); return stored.has(id) ? stored.get(id) : registered.get(id)?.default; }, register(ns, key, definition) { registered.set(`${ns}.${key}`, definition); }, async set(ns, key, value) { stored.set(`${ns}.${key}`, value); return value; } };
+  game.settings.storage = new Map([["client", localStorage]]);
+  if (upgradeCase) game.modules.set("crlngn-ui", { active: true });
   game.modules.set("mikelandia-controls", { version: "fixture" });
   delete globalThis.game; globalThis.Hooks = hooks;
   game.configureUI = () => {
@@ -40,7 +43,7 @@ try {
   };
   game.initializeCanvas = async () => {};
   game.socket = { connected: true, on() {}, off() {} };
-  globalThis.ui = { notifications: { warn() {}, error() {} } };
+  globalThis.ui = { notifications: { warn(message) { warnings.push(message); }, error() {} } };
   globalThis.CONFIG = { queries: {} };
   let initializeHooks = 0, nativeInitializeCalls = 0, initializeSetterCalls = 0;
   class Game {
@@ -49,7 +52,9 @@ try {
     nativeInitializeCalls++;
     initializeHooks = hooks.count("init");
     if (full) {
+      if (upgradeCase === "late") setTimeout(() => game.settings.register("crlngn-ui", "disable-ui", { scope: "client", default: false }), 100);
       hooks.emit("init"); hooks.emit("i18nInit"); hooks.emit("setup");
+      await game.initializeCanvas();
       game.ready = true; hooks.emit("ready");
       while (pending.length) await Promise.all(pending.splice(0));
     }
@@ -65,6 +70,10 @@ try {
   globalThis.foundry = { Game };
   const nativeCreate = Game.create;
   localStorage.clear();
+  if (upgradeCase) {
+    localStorage.setItem("mikelandia-controls:module-compatibility:v1:crlngn-ui", upgradeCase === "invalid" ? "invalid json" : JSON.stringify({ version: 1, previousValue: true }));
+    localStorage.setItem("crlngn-ui.disable-ui", "true");
+  }
   localStorage.setItem("mikelandia-controls:bootstrap-preferences:v1", JSON.stringify({ mode: params.get("cached") ?? (mobile ? "auto" : "phone"), theme: "dark", keepScreenAwake: false }));
   // The fixture uses the actual /game entry guard, preserving the harness query.
   history.replaceState(null, "", `/game${location.search}`);
@@ -105,6 +114,15 @@ try {
     } else if (active) {
       check("full startup mounts the actual companion", Boolean(document.querySelector(".mc-mobile-app")));
       check("full startup exposes active companion API", game.modules.get("mikelandia-controls").api?.active === true);
+      if (upgradeCase) {
+        const deadline = performance.now() + 2000;
+        while (document.querySelector(".mc-mobile-bootstrap") && performance.now() < deadline) await tick();
+        check("upgrade startup dismisses the loading overlay", !document.querySelector(".mc-mobile-bootstrap"));
+        check("optional upgrade does not leave startup in recovery", !document.querySelector(".mc-mobile-bootstrap.is-failed"));
+        const receipt = localStorage.getItem("mikelandia-controls:module-compatibility:v1:crlngn-ui");
+        check("successful cleanup retires receipt; failed cleanup retains it", upgradeCase === "late" ? receipt === null : receipt !== null);
+        check("cleanup warns only on actual restoration failure", upgradeCase === "late" ? warnings.length === 0 : warnings.some(message => message.includes("could not restore saved client preferences")));
+      }
       if (params.has("common-display")) {
         const api = game.modules.get("mikelandia-controls").api;
         check("Common Display preserves completed companion visibility", getComputedStyle(document.querySelector(".mc-mobile-app")).display === "grid");

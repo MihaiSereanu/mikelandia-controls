@@ -776,8 +776,33 @@ try {
       },
     };
     actor.items.push(psychology);
+    const alignmentItems = [
+      { id: "alignment-mutation", type: "mutation", name: "Big Eyes", parent: actor,
+        system: { description: { value: "like whale" } } },
+      { id: "alignment-disease", type: "disease", name: "Disease", parent: actor,
+        system: { show: true, description: { value: "Ghoul fever" } } },
+      { id: "alignment-no-notes", type: "psychology", name: "Fear", parent: actor, system: {} },
+    ];
+    actor.items.push(...alignmentItems);
     Hooks.emit("updateItem", psychology, {});
     await tick();
+    await document.fonts.ready;
+    const textBounds = element => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      return range.getBoundingClientRect();
+    };
+    const alignmentRows = ["injury", "hatred", ...alignmentItems.map(item => item.id)]
+      .map(id => screen.querySelector(`[data-profile-field="${id}"]`));
+    for (const row of alignmentRows) {
+      const name = textBounds(row.querySelector("dt > span"));
+      const texts = [row.querySelector(".mc-profile-note-trigger"), row.querySelector("dd > span")]
+        .filter(element => element?.textContent).map(textBounds);
+      check(`${row.dataset.profileField} text shares the item-name baseline`,
+        texts.every(bounds => Math.abs(bounds.bottom - name.bottom) < 1));
+    }
+    check("Effects item rows have equal heights with and without Notes",
+      alignmentRows.every(row => Math.abs(row.getBoundingClientRect().height - alignmentRows[0].getBoundingClientRect().height) < 1));
     const hatred = screen.querySelector('[data-profile-field="hatred"]');
     const hatredName = hatred.querySelector("dt"),
       hatredNotes = hatred.querySelector(".mc-profile-note-trigger");
@@ -816,6 +841,7 @@ try {
         document.documentElement.scrollWidth <= innerWidth + 1,
     );
     actor.items.splice(actor.items.indexOf(psychology), 1);
+    for (const item of alignmentItems) actor.items.splice(actor.items.indexOf(item), 1);
     Hooks.emit("updateActor", actor, {});
     await tick();
     const conditionPicker = screen.querySelector(

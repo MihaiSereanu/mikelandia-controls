@@ -3337,10 +3337,13 @@ body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .mc-roll
 }
 .mc-profile-section-rows .mc-profile-row {
   display: grid;
+  box-sizing: border-box;
   grid-template-columns: max-content minmax(0, 1fr) max-content;
   gap: 8px;
+  min-height: 52px;
   padding: 4px 8px;
   font-size: 14px;
+  line-height: 1.4;
   overflow-x: auto;
 }
 .mc-profile-section-rows .mc-profile-row dt { grid-column: 1; grid-row: 1; }
@@ -3348,7 +3351,9 @@ body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .mc-roll
   grid-template-columns: max-content minmax(44px, 1fr) max-content;
 }
 .mc-profile-section-rows .mc-profile-row dd { grid-column: 3; grid-row: 1; margin: 0; }
-.mc-profile-section-rows .mc-profile-row :is(dt, dd) { white-space: nowrap; overflow: visible; }
+.mc-profile-section-rows .mc-profile-row :is(dt, dd) {
+  font-size: inherit; line-height: inherit; white-space: nowrap; overflow: visible;
+}
 .mc-profile-note-trigger {
   overflow: hidden;
   text-overflow: ellipsis;
