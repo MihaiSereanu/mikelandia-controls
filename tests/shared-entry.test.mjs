@@ -7,6 +7,7 @@ for (const mode of ["auto", "phone", "tablet", "native"]) {
   test(`native desktop loads shared fixes without companion UI for saved ${mode}`, async t => {
     const f = fixture(t, mode);
     await import(`../src/entry.mjs?native=${mode}`);
+    assert.equal(f.Game.create, f.nativeCreate, "desktop creation has no mobile boundary");
     f.hooks.emit("init"); f.hooks.emit("i18nInit"); f.hooks.emit("setup"); f.hooks.emit("ready");
     await new Promise(resolve => setTimeout(resolve, 0));
     assert.equal(f.game.i18n.translations["Primary Arm"], "Right Arm");
@@ -26,7 +27,7 @@ for (const mode of ["auto", "phone", "tablet", "native"]) {
 test("opted-out phone uses native Foundry with only a mode selector and shared fixes", async t => {
   const f = fixture(t, "native", { userAgent: "iPhone Mobile", platform: "iPhone" });
   await import("../src/entry.mjs?native-phone");
-  await f.game.initialize();
+  await f.start();
   assert.deepEqual([...f.registered].filter(([, s]) => s.config).map(([key]) => key), ["mikelandia-controls.mode"]);
   assert.equal(typeof f.config.queries[MOMENTUM_QUERY], "function");
   assert.equal(f.game.modules.get("mikelandia-controls").api, undefined);
@@ -40,9 +41,8 @@ for (const cachedMode of ["native", "off", "desktop"]) for (const storedMode of 
     delete globalThis.game;
     await import(`../src/entry.mjs?authoritative=${storedMode}&stale=${cachedMode}`);
     assert.equal(f.mobileStyles.length, 0, "unregistered cached mode must not load styles before Game exists");
-    globalThis.game = f.game;
     const errors = t.mock.method(console, "error", () => {});
-    await f.game.initialize();
+    await f.start();
     assert.equal(f.mobileStyles.length, 1, "authoritative active mobile mode must attempt the companion stylesheet");
     assert.ok(f.mobileStyles[0].href.endsWith("/assets/mobile.css"));
     assert.equal(f.game.i18n.translations["Primary Arm"], "Right Arm");
@@ -60,8 +60,7 @@ for (const storedMode of ["native", "off", "desktop"]) {
     f.values.set("mikelandia-controls:bootstrap-preferences:v1", JSON.stringify({ mode: "auto", theme: "dark", keepScreenAwake: false }));
     delete globalThis.game;
     await import(`../src/entry.mjs?authoritative-native=${storedMode}`);
-    globalThis.game = f.game;
-    await f.game.initialize();
+    await f.start();
     assert.equal(f.mobileStyles.length, 0);
     assert.equal(f.game.modules.get("mikelandia-controls").api, undefined);
     assert.deepEqual([...f.registered].filter(([, s]) => s.config).map(([key]) => key), ["mikelandia-controls.mode"]);
@@ -98,13 +97,38 @@ function fixture(t, mode, navigator = { userAgent: "Windows NT 10.0", platform: 
       throw Error(mobileBoundary ? "Intentional Node UI boundary: full mobile lifecycle requires a browser DOM" : "native startup must not build companion UI or styles");
     }
   };
-  class Game { async initialize() {
+  let nativeInitializeCalls = 0, initializeSetterCalls = 0;
+  class Game {
+    static async create() { return game; }
+    async initialize() {
+    nativeInitializeCalls++;
     hooks.emit("init"); hooks.emit("i18nInit"); hooks.emit("setup");
     this.ready = true; hooks.emit("ready");
     await new Promise(resolve => setTimeout(resolve, 0));
   } }
+  // libWrapper returns one stable proxy whose underlying target changes on
+  // assignment. Saving the proxy then assigning the prototype can recurse.
+  let wrappedInitialize = Game.prototype.initialize;
+  const managedInitialize = function (...args) { return wrappedInitialize.apply(this, args); };
+  Object.defineProperty(Game.prototype, "initialize", {
+    configurable: true,
+    get() { return managedInitialize; },
+    set(value) { initializeSetterCalls++; wrappedInitialize = value; }
+  });
+  const nativeCreate = Game.create;
   Object.setPrototypeOf(game, Game.prototype);
   installGlobals(t, { window, navigator, document, Hooks: hooks, game, foundry: { Game }, CONFIG: config, localStorage, sessionStorage: undefined,
     ui: { notifications: { warn: assert.fail, error: mobileBoundary ? value => notifications.push(value) : assert.fail } } });
-  return { game, hooks, registered, menus, config, window, Actor, originalUpdate: Actor.prototype.update, initializeCanvas, values, mobileStyles, notifications };
+  const start = async () => {
+    const created = await Game.create("game");
+    assert.equal(created, game);
+    globalThis.game = created;
+    await created.initialize();
+    assert.equal(nativeInitializeCalls, 1, "native initialization executes once");
+    assert.equal(initializeSetterCalls, 0, "mobile startup never invokes libWrapper's prototype setter");
+    assert.equal(Game.prototype.initialize, managedInitialize, "libWrapper's managed proxy is retained");
+    assert.equal(Object.hasOwn(created, "initialize"), false, "one-use instance boundary is removed before native startup");
+    assert.equal(Game.create, nativeCreate, "one-use creation boundary restores native create");
+  };
+  return { game, hooks, registered, menus, config, window, Actor, originalUpdate: Actor.prototype.update, initializeCanvas, values, mobileStyles, notifications, Game, nativeCreate, start };
 }

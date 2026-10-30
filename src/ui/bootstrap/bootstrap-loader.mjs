@@ -191,6 +191,10 @@ export function createMobileBootstrap({
       return wakePromptChoice;
     },
     mount(policy = {}) {
+      if (mounted) {
+        updatePolicy(policy);
+        return;
+      }
       if (!root.isConnected) (document.body ?? document.documentElement).append(root);
       document.body?.classList.add("mc-mobile-booting");
       root.setAttribute("role", "status");

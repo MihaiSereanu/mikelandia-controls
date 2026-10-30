@@ -35,6 +35,7 @@ try {
   };
   const loader = createMobileBootstrap();
   const normalScreen = () => {
+    loader.unmount();
     loader.mount({ theme });
     loader.setWakeState("off", { checked: false });
   };
@@ -79,15 +80,26 @@ try {
   loader.setWakeState("active", { checked: true });
   check(wake.getAttribute("aria-checked") === "true" && !wake.disabled, "wake checkbox retains its checked state");
   const prompt = loader.promptForWakeChoice();
+  const completion = loader.complete({ beforeDismiss: () => prompt });
   check(wake.hidden && !loader.wakePromptYesControl.closest("[hidden]"), "gesture confirmation appears only when requested");
   check(document.activeElement === loader.wakePromptYesControl, "confirmation receives keyboard focus");
   check(hitControl(loader.wakePromptYesControl), "wake confirmation remains reachable through pointer hit testing");
+  for (let attempt = 0; attempt < 3; attempt++) loader.mount({ theme });
+  check(wake.hidden && !loader.wakePromptYesControl.closest("[hidden]") && hitControl(loader.wakePromptYesControl)
+    && document.activeElement === loader.wakePromptYesControl, "repeated mount preserves the pending Continue prompt and its focus");
+  check(label.textContent === "Loading Complete" && !heading.classList.contains("is-loading"), "repeated mount does not restart the loading phase while awaiting Continue");
   loader.resolveWakePrompt(false);
   check(await prompt === false, "wake confirmation resolves the selected choice");
+  check(await completion && surface.classList.contains("is-complete"), "completion resolves after repeated mount and the pending Continue choice");
+  loader.mount({ theme });
+  check(surface.classList.contains("is-complete") && !heading.classList.contains("is-loading"), "repeated mount preserves a completed loading phase");
   normalScreen();
   loader.showRecovery({ title: "Loading interrupted", message: "Please refresh", actionLabel: "Refresh game" });
   check(surface.getAttribute("role") === "alertdialog" && loader.recoveryControl.textContent === "Refresh game" && loader.recoveryControl.getBoundingClientRect().height >= 44, "startup recovery retains an accessible refresh action");
   check(surface.classList.contains("is-failed") && displayed(surface) && hitControl(loader.recoveryControl), "failed startup recovery remains visible with a reachable refresh control");
+  loader.mount({ theme });
+  check(surface.classList.contains("is-failed") && surface.getAttribute("role") === "alertdialog"
+    && label.textContent === "Loading interrupted" && hitControl(loader.recoveryControl), "repeated mount does not clear failed startup recovery");
   let recoveryClicks = 0;
   loader.recoveryControl.addEventListener("click", () => { recoveryClicks++; });
   loader.recoveryControl.click();

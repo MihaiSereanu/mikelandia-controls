@@ -40,36 +40,56 @@ if (/\/game\/?$/.test(window.location.pathname)) {
     onPresentationChange: () => { if (game.ready) window.location.reload(); }
   }));
   if (migrated && mobileDevice) {
-    // Foundry creates game after DOMContentLoaded and does not await package
-    // top-level await. Gate its prototype before importing the mobile graph,
-    // then install hooks with the real Game instance available, before init.
-    const target = (globalThis.foundry?.Game ?? globalThis.Game)?.prototype;
-    const original = target?.initialize;
-    if (typeof original !== "function") throw new Error("Foundry's game initialization boundary is unavailable.");
-    const guarded = async function (...args) {
-      try {
-        // Cached bootstrap preferences are only presentation hints. Read the
-        // registered Foundry client mode once the real Game exists.
-        registerModePreference({ mobileDevice });
-        if (createActivationPolicyResolver().resolve(readPreferences()).active) {
-          const styles = document.createElement("link");
-          styles.rel = "stylesheet";
-          styles.href = new URL("../assets/mobile.css", import.meta.url).href;
-          document.head.append(styles);
-          const { installMobileClient } = await import("./mobile-entry.mjs");
-          installMobileClient({ getUpgradeCleanup: () => upgradeCleanup, whenSharedReady: () => sharedReady });
-        } else registerNativeClient();
-      } catch (error) {
-        console.error("Mikelandia Controls | Mobile interface could not load", error);
-        registerNativeClient();
-        Hooks.once("ready", () => ui.notifications?.error?.("Mikelandia Controls could not load. Reload to retry."));
-      }
-      installUpgradeHook();
-      if (target.initialize === guarded) target.initialize = original;
-      return original.apply(this, args);
+    // libWrapper manages prototype initialize through accessors. Never assign
+    // that property or capture its proxy and replace its underlying target.
+    // Await native creation, then shadow initialize on this one instance.
+    const GameClass = globalThis.foundry?.Game ?? globalThis.Game;
+    const createDescriptor = Object.getOwnPropertyDescriptor(GameClass, "create");
+    const originalCreate = GameClass.create;
+    if (typeof originalCreate !== "function") throw new Error("Foundry's game creation boundary is unavailable.");
+    const restoreCreate = () => {
+      if (GameClass.create !== create) return;
+      if (createDescriptor) Object.defineProperty(GameClass, "create", createDescriptor);
+      else delete GameClass.create;
     };
-    target.initialize = guarded;
-    scope.own(() => { if (target.initialize === guarded) target.initialize = original; });
+    const create = async function (...args) {
+      restoreCreate();
+      const instance = await originalCreate.apply(this, args);
+      const initializeDescriptor = Object.getOwnPropertyDescriptor(instance, "initialize");
+      const originalInitialize = instance.initialize;
+      const restoreInitialize = () => {
+        if (instance.initialize !== initialize) return;
+        if (initializeDescriptor) Object.defineProperty(instance, "initialize", initializeDescriptor);
+        else delete instance.initialize;
+      };
+      const initialize = async function (...initializeArgs) {
+        try {
+          // Native assigns global game after create resolves. Its registered
+          // client mode is authoritative; the bootstrap cache is only a hint.
+          registerModePreference({ mobileDevice });
+          if (createActivationPolicyResolver().resolve(readPreferences()).active) {
+            const styles = document.createElement("link");
+            styles.rel = "stylesheet";
+            styles.href = new URL("../assets/mobile.css", import.meta.url).href;
+            document.head.append(styles);
+            const { installMobileClient } = await import("./mobile-entry.mjs");
+            installMobileClient({ getUpgradeCleanup: () => upgradeCleanup, whenSharedReady: () => sharedReady });
+          } else registerNativeClient();
+        } catch (error) {
+          console.error("Mikelandia Controls | Mobile interface could not load", error);
+          registerNativeClient();
+          Hooks.once("ready", () => ui.notifications?.error?.("Mikelandia Controls could not load. Reload to retry."));
+        }
+        installUpgradeHook();
+        restoreInitialize();
+        return originalInitialize.apply(this, initializeArgs);
+      };
+      Object.defineProperty(instance, "initialize", { configurable: true, writable: true, value: initialize });
+      scope.own(restoreInitialize);
+      return instance;
+    };
+    Object.defineProperty(GameClass, "create", { configurable: true, writable: true, value: create });
+    scope.own(restoreCreate);
   } else {
     registerNativeClient();
     installUpgradeHook();

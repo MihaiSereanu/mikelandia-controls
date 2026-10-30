@@ -35,13 +35,18 @@ try {
   game.settings = { settings: registered, get(ns, key) { const id = `${ns}.${key}`; if (ns === "mikelandia-controls" && !registered.has(id)) throw Error("unregistered setting"); return stored.has(id) ? stored.get(id) : registered.get(id)?.default; }, register(ns, key, definition) { registered.set(`${ns}.${key}`, definition); }, async set(ns, key, value) { stored.set(`${ns}.${key}`, value); return value; } };
   game.modules.set("mikelandia-controls", { version: "fixture" });
   delete globalThis.game; globalThis.Hooks = hooks;
-  game.configureUI = () => {};
+  game.configureUI = () => {
+    if (params.has("ready-failure")) throw new Error("Injected native configureUI failure");
+  };
   game.initializeCanvas = async () => {};
   game.socket = { connected: true, on() {}, off() {} };
   globalThis.ui = { notifications: { warn() {}, error() {} } };
   globalThis.CONFIG = { queries: {} };
-  let initializeHooks = 0;
-  class Game { async initialize() {
+  let initializeHooks = 0, nativeInitializeCalls = 0, initializeSetterCalls = 0;
+  class Game {
+    static async create() { return game; }
+    async initialize() {
+    nativeInitializeCalls++;
     initializeHooks = hooks.count("init");
     if (full) {
       hooks.emit("init"); hooks.emit("i18nInit"); hooks.emit("setup");
@@ -49,20 +54,34 @@ try {
       while (pending.length) await Promise.all(pending.splice(0));
     }
   } }
+  let wrappedInitialize = Game.prototype.initialize;
+  const managedInitialize = function (...args) { return wrappedInitialize.apply(this, args); };
+  Object.defineProperty(Game.prototype, "initialize", {
+    configurable: true,
+    get() { return managedInitialize; },
+    set(value) { initializeSetterCalls++; wrappedInitialize = value; }
+  });
+  Object.setPrototypeOf(game, Game.prototype);
   globalThis.foundry = { Game };
-  const nativeInitialize = Game.prototype.initialize;
+  const nativeCreate = Game.create;
   localStorage.clear();
   localStorage.setItem("mikelandia-controls:bootstrap-preferences:v1", JSON.stringify({ mode: params.get("cached") ?? (mobile ? "auto" : "phone"), theme: "dark", keepScreenAwake: false }));
   // The fixture uses the actual /game entry guard, preserving the harness query.
   history.replaceState(null, "", `/game${location.search}`);
   await import("/src/entry.mjs");
-  globalThis.game = game;
-  check("native desktop initialization is untouched", mobile || Game.prototype.initialize === nativeInitialize);
+  check("desktop creation is untouched", mobile || Game.create === nativeCreate);
+  check("managed initialize accessor is untouched before instance construction", initializeSetterCalls === 0 && Game.prototype.initialize === managedInitialize);
+  const created = await Game.create("game");
+  globalThis.game = created;
   if (mobile) {
-    const initialization = new Game().initialize();
+    const initialization = created.initialize();
     await initialization;
     check("native initialization waits until client hooks are installed", initializeHooks === 2);
-    check("mobile loading boundary removes itself", Game.prototype.initialize === nativeInitialize);
+    check("native initializer executes exactly once", nativeInitializeCalls === 1);
+    check("libWrapper's prototype setter is never called", initializeSetterCalls === 0);
+    check("libWrapper's managed initializer proxy stays intact", Game.prototype.initialize === managedInitialize);
+    check("mobile instance boundary removes itself", !Object.hasOwn(created, "initialize"));
+    check("mobile creation boundary removes itself", Game.create === nativeCreate);
   }
   await tick();
   const resources = performance.getEntriesByType("resource").map(entry => new URL(entry.name).pathname);
@@ -78,7 +97,12 @@ try {
   }
   if (full) {
     check(`startup completes without hook failures: ${errors.join("; ")}`, errors.length === 0);
-    if (active) {
+    if (active && params.has("ready-failure")) {
+      const recovery = document.querySelector(".mc-mobile-bootstrap");
+      check("native ready-stage failure produces immediate visible recovery", recovery?.classList.contains("is-failed")
+        && !recovery.querySelector(".mc-mobile-bootstrap__recovery").hidden);
+      check("failed native startup does not expose a partial companion API", !game.modules.get("mikelandia-controls").api);
+    } else if (active) {
       check("full startup mounts the actual companion", Boolean(document.querySelector(".mc-mobile-app")));
       check("full startup exposes active companion API", game.modules.get("mikelandia-controls").api?.active === true);
       if (params.has("common-display")) {

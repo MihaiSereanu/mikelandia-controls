@@ -460,53 +460,52 @@ export function installMobileClient({ getUpgradeCleanup, whenSharedReady }) {
   });
   Hooks.once("setup", () => { authoritativeGateway.bindInitialDocuments(); reportBootstrapProgress(); });
   Hooks.once("ready", async () => {
-    await whenSharedReady();
-    const upgrade = await getUpgradeCleanup().whenIdle();
-    if (!upgrade.ok || upgrade.reloadPending) {
-      startupBlocked = true;
-      if (!upgrade.ok) showBootstrapRecovery("startup-error");
-      return;
-    }
-    reportBootstrapProgress();
-    if (mobilePerformanceAuthority.active()) {
-      themeScope = createTaskScope("theme-sync", performanceObserver);
-      themeScope.listen(window, "pagehide", () => themeScope.dispose(), { once: true, passive: true });
-      themeGateway.start(themeScope, {
-        readTheme: () => preferencesGateway.snapshot().theme,
-        setTheme: (theme) => preferencesGateway.set({ key: KEYS.THEME, value: theme })
-      });
-      await themeGateway.whenIdle();
-    }
-    reportBootstrapProgress();
-    const module = game.modules.get(MODULE_ID);
-    if (module) {
-      module.api = Object.freeze({
-        version: module.version,
-        get active() {
-          return kernel.active;
-        },
-        open: (screen) => kernel.open(screen),
-        snapshot: () => kernel.snapshot(),
-        backDiagnosticSnapshot: () => mobileBackGateway.snapshot(),
-        performanceSnapshot: () => performanceObserver.snapshot(),
-        setRollTimingEnabled: enabled => rollTiming.setEnabled(enabled),
-        rollTimingSnapshot: () => rollTiming.snapshot(),
-        resetRollTiming: () => rollTiming.reset(),
-        resetPerformance: () => performanceObserver.reset()
-      });
-    }
-    reportBootstrapProgress();
     try {
+      await whenSharedReady();
+      const upgrade = await getUpgradeCleanup().whenIdle();
+      if (!upgrade.ok || upgrade.reloadPending) {
+        startupBlocked = true;
+        if (!upgrade.ok) showBootstrapRecovery("startup-error");
+        return;
+      }
+      reportBootstrapProgress();
+      if (mobilePerformanceAuthority.active()) {
+        themeScope = createTaskScope("theme-sync", performanceObserver);
+        themeScope.listen(window, "pagehide", () => themeScope.dispose(), { once: true, passive: true });
+        themeGateway.start(themeScope, {
+          readTheme: () => preferencesGateway.snapshot().theme,
+          setTheme: (theme) => preferencesGateway.set({ key: KEYS.THEME, value: theme })
+        });
+        await themeGateway.whenIdle();
+      }
+      reportBootstrapProgress();
+      const module = game.modules.get(MODULE_ID);
+      if (module) {
+        module.api = Object.freeze({
+          version: module.version,
+          get active() {
+            return kernel.active;
+          },
+          open: (screen) => kernel.open(screen),
+          snapshot: () => kernel.snapshot(),
+          backDiagnosticSnapshot: () => mobileBackGateway.snapshot(),
+          performanceSnapshot: () => performanceObserver.snapshot(),
+          setRollTimingEnabled: enabled => rollTiming.setEnabled(enabled),
+          rollTimingSnapshot: () => rollTiming.snapshot(),
+          resetRollTiming: () => rollTiming.reset(),
+          resetPerformance: () => performanceObserver.reset()
+        });
+      }
+      reportBootstrapProgress();
       kernel.reconcile();
       reportBootstrapProgress();
       finishBootstrap();
+      diagnostics.record("info", `Mikelandia Controls v${module?.version ?? "0.1.0"} ready`);
+      console.info(`Mikelandia Controls | v${module?.version ?? "0.1.0"} ready`);
     } catch (error) {
       diagnostics.record("error", "Mikelandia Controls startup failed", error);
       showBootstrapRecovery("startup-error");
       console.error("Mikelandia Controls | Startup failed", error);
-      return;
     }
-    diagnostics.record("info", `Mikelandia Controls v${module?.version ?? "0.1.0"} ready`);
-    console.info(`Mikelandia Controls | v${module?.version ?? "0.1.0"} ready`);
   });
 }

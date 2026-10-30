@@ -13,6 +13,7 @@ const cases = [
   ["shared-entry-tablet", 1024, 768, "shared-entry", "device=tablet"],
   ["shared-entry-stale-native-phone", 390, 844, "shared-entry", "device=phone&cached=native&full=true"],
   ["shared-entry-stale-native-common-display", 390, 844, "shared-entry", "device=phone&cached=native&full=true&common-display=true"],
+  ["shared-entry-ready-failure", 390, 844, "shared-entry", "device=phone&full=true&ready-failure=true"],
   ["shared-entry-stale-phone-native", 390, 844, "shared-entry", "device=phone&cached=phone&stored=native&full=true"],
   ["bootstrap-common-display-phone", 390, 844, "bootstrap", "theme=dark&common-display=true"],
   ["bootstrap-common-display-standalone-phone", 390, 844, "bootstrap", "theme=dark&common-display=true&standalone=true"],
