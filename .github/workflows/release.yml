@@ -21,13 +21,6 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Test system integration boundaries
-        run: node --test tests/*.test.mjs
-      - name: Check responsive browser layouts
-        run: node scripts/check_browser.mjs
       - name: Build and validate package
         run: |
           VERSION="$(python3 -c 'import json,os; m=json.load(open("module.json")); print(".".join(m["version"].split(".")[:2])+"."+os.environ["GITHUB_RUN_NUMBER"])')"

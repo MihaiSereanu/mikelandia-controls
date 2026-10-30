@@ -215,7 +215,11 @@ try {
     }
     await send("Page.navigate", { url: `http://127.0.0.1:${server.address().port}/tests/browser/${fixture}.html?${fixtureQuery}` }, sessionId);
     let report;
-    for (let attempt = 0; attempt < (name.startsWith("damage-") ? 180 : 100); attempt++) {
+    // Missing registration consumes the production five-second cleanup timeout
+    // before startup and fixture assertions can finish.
+    const reportTimeoutMs = name === "shared-entry-upgrade-missing-phone" ? 15000 : name.startsWith("damage-") ? 9000 : 5000;
+    const reportDeadline = performance.now() + reportTimeoutMs;
+    while (performance.now() < reportDeadline) {
       const { result } = await send("Runtime.evaluate", { expression: 'document.querySelector("#results")?.textContent', returnByValue: true }, sessionId);
       try { report = JSON.parse(result.value); } catch {}
       if (report?.status) break;
