@@ -134,6 +134,44 @@ test("YouTube APIs added at onReady are blocked by the widget's pre-play volume 
   scope.dispose(); assert.equal(starts, 0);
 });
 
+test("YouTube bootstrap is blocked before script insertion and restored without starting the widget", async () => {
+  let insertions = 0, callbacks = 0, loads = 0;
+  class Node { insertBefore(node) { insertions++; return node; } }
+  const originalInsert = Node.prototype.insertBefore, parent = new Node();
+  const host = {}, ui = {};
+  const { scope } = install({ host, NodeType: Node, getUi: () => ui });
+  const callback = () => { callbacks++; };
+  host.onYouTubeIframeAPIReady = callback;
+  const script = { tagName: "SCRIPT", src: "https://www.youtube.com/iframe_api" };
+  assert.equal(parent.insertBefore(script, null), script);
+  host.onYouTubeIframeAPIReady();
+  assert.equal(insertions, 0); assert.equal(callbacks, 0);
+  parent.insertBefore({ tagName: "SCRIPT", src: "https://example.com/script.js" }, null);
+  parent.insertBefore({ tagName: "DIV" }, null);
+  assert.equal(insertions, 2, "unrelated DOM insertions retain native behavior");
+  await ui.sidebarVideoPlayer.loadVideo();
+  ui.sidebarVideoPlayer.renderPlaylists(); ui.sidebarVideoPlayer.syncTime();
+  const app = { async loadVideo() { loads++; } };
+  ui.sidebarVideoPlayer = app;
+  await app.loadVideo("https://www.youtube.com/watch?v=test");
+  assert.equal(loads, 0, "fallback prevents iframe construction on an existing widget");
+  scope.dispose();
+  assert.equal(Node.prototype.insertBefore, originalInsert);
+  assert.equal(host.onYouTubeIframeAPIReady, callback);
+  assert.equal(callbacks, 0, "teardown does not initialize the widget");
+  assert.equal(ui.sidebarVideoPlayer, app);
+  await app.loadVideo(); assert.equal(loads, 1);
+});
+
+test("dormant YouTube callback interface is removed on teardown", () => {
+  const ui = {}, host = {};
+  const { scope } = install({ getUi: () => ui, host });
+  assert.equal(typeof ui.sidebarVideoPlayer.loadVideo, "function");
+  scope.dispose();
+  assert.equal(Object.hasOwn(ui, "sidebarVideoPlayer"), false);
+  assert.equal(Object.hasOwn(host, "onYouTubeIframeAPIReady"), false);
+});
+
 test("cleanup preserves a newer method replacement and handles unavailable playback APIs", () => {
   class Media { async play() {} pause() { throw Error("detached media"); } }
   const { scope } = install({ MediaType: Media });

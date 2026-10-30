@@ -134,7 +134,7 @@
       },
       "ProtectMcStyling": {
         "Name": "Protect Mikelandia Controls styling",
-        "Hint": "Keep Mikelandia Controls's layout and appearance when another module's styles conflict. Other modules still work, and their own windows keep their styles. Turn this off to let other modules style Mikelandia Controls screens."
+        "Hint": "Keep Mikelandia Controls's layout and appearance when another module's styles conflict."
       },
       "HeaderArtworkOpacity": {
         "Name": "Header artwork opacity",

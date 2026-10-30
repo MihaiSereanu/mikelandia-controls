@@ -1,7 +1,8 @@
 /** Stop local audio work while the mobile companion owns this client. */
 export function enableMobileAudio(scope, { getGame = () => globalThis.game, document = globalThis.document,
   getUi = () => globalThis.ui, MutationObserverType = globalThis.MutationObserver,
-  MediaType = globalThis.HTMLMediaElement, SoundType = globalThis.foundry?.audio?.Sound } = {}) {
+  MediaType = globalThis.HTMLMediaElement, SoundType = globalThis.foundry?.audio?.Sound,
+  NodeType = globalThis.Node, host = globalThis } = {}) {
   const active = scope.child("disabled-audio");
   const guarded = new WeakMap(), stoppedPlayers = new WeakSet(), suspended = new WeakSet();
   const settle = action => {
@@ -30,6 +31,37 @@ export function enableMobileAudio(scope, { getGame = () => globalThis.game, docu
   const blockMethod = (object, key, replacement) => {
     if (typeof object?.[key] === "function") guard(object, key, () => ({ writable: true, value: replacement }));
   };
+  // The widget inserts its API script at ready. Stop it before insertion:
+  // hiding its UI or stopping a constructed player still loads the iframe.
+  const insertBefore = NodeType?.prototype?.insertBefore;
+  if (typeof insertBefore === "function") guard(NodeType.prototype, "insertBefore", () => ({
+    writable: true,
+    value: function (node, reference) {
+      if (node?.tagName === "SCRIPT") {
+        try {
+          const url = new URL(node.src);
+          if (["www.youtube.com", "youtube.com"].includes(url.hostname) && url.pathname === "/iframe_api") return node;
+        } catch { /* Unrelated or relative script URL. */ }
+      }
+      return insertBefore.call(this, node, reference);
+    }
+  }));
+  // Also cover an API already present on this page. Keep later callback
+  // assignments inert until teardown, without touching other clients.
+  const callbackKey = "onYouTubeIframeAPIReady";
+  const callbackDescriptor = Object.getOwnPropertyDescriptor(host, callbackKey);
+  if (callbackDescriptor?.configurable !== false) {
+    let callback = host[callbackKey];
+    const blockedCallback = () => {};
+    const get = () => blockedCallback;
+    Object.defineProperty(host, callbackKey, { configurable: true, get, set: next => { callback = next; } });
+    active.own(() => {
+      if (Object.getOwnPropertyDescriptor(host, callbackKey)?.get !== get) return;
+      if (callbackDescriptor) Object.defineProperty(host, callbackKey,
+        "value" in callbackDescriptor ? { ...callbackDescriptor, value: callback } : callbackDescriptor);
+      else { delete host[callbackKey]; if (callback !== undefined) host[callbackKey] = callback; }
+    });
+  }
   const stopSound = sound => {
     if (typeof sound?.stop === "function") settle(() => sound.stop({ fade: 0, delay: 0 }));
   };
@@ -94,6 +126,7 @@ export function enableMobileAudio(scope, { getGame = () => globalThis.game, docu
   };
   const watchVideoApplication = app => {
     if (!app) return;
+    blockMethod(app, "loadVideo", async function () {});
     // Local stop events must not update the widget's shared playback setting.
     for (const key of ["setSyncSetting", "setSyncSettingDebounced"]) blockMethod(app, key, function () {});
     blockMethod(app, "setVolume", function () { watchPlayer(this.YTPlayer); });
@@ -103,10 +136,23 @@ export function enableMobileAudio(scope, { getGame = () => globalThis.game, docu
     });
   };
   const ui = getUi();
-  if (ui) guard(ui, "sidebarVideoPlayer", initial => {
-    let app = initial; watchVideoApplication(app);
-    return { get: () => app, set: next => { app = next; watchVideoApplication(next); } };
-  });
+  if (ui) {
+    const key = "sidebarVideoPlayer", original = Object.getOwnPropertyDescriptor(ui, key);
+    if (original?.configurable !== false) {
+      // Shared widget settings still arrive over the socket. Its native
+      // onChange callbacks expect this interface even without a widget.
+      const dormant = { loadVideo: async () => {}, renderPlaylists() {}, syncTime() {} };
+      let app = ui[key]; watchVideoApplication(app);
+      const get = () => app ?? dormant;
+      Object.defineProperty(ui, key, { configurable: true, get,
+        set: next => { app = next; watchVideoApplication(next); } });
+      active.own(() => {
+        if (Object.getOwnPropertyDescriptor(ui, key)?.get !== get) return;
+        if (original) Object.defineProperty(ui, key, "value" in original ? { ...original, value: app } : original);
+        else { delete ui[key]; if (app !== undefined) ui[key] = app; }
+      });
+    }
+  }
   // Remove guards only; never replay missed sounds or resume stopped media.
   return Object.freeze({ dispose: () => active.dispose() });
 }
