@@ -11,6 +11,11 @@ const cases = [
   ["shared-entry-desktop", 1280, 900, "shared-entry", "device=desktop"],
   ["shared-entry-phone", 390, 844, "shared-entry", "device=phone"],
   ["shared-entry-tablet", 1024, 768, "shared-entry", "device=tablet"],
+  ["shared-entry-stale-native-phone", 390, 844, "shared-entry", "device=phone&cached=native&full=true"],
+  ["shared-entry-stale-native-common-display", 390, 844, "shared-entry", "device=phone&cached=native&full=true&common-display=true"],
+  ["shared-entry-stale-phone-native", 390, 844, "shared-entry", "device=phone&cached=phone&stored=native&full=true"],
+  ["bootstrap-common-display-phone", 390, 844, "bootstrap", "theme=dark&common-display=true"],
+  ["bootstrap-common-display-standalone-phone", 390, 844, "bootstrap", "theme=dark&common-display=true&standalone=true"],
   ...[["shadowdark", ""], ["dnd5e", "&system=dnd5e"], ["wfrp4e", "&system=wfrp4e&edition=4e"], ["wfrp5e", "&system=wfrp4e&edition=5e"]].flatMap(([system, query]) =>
     [["phone", 390, 844], ["tablet", 1024, 768]].map(([layout, width, height]) =>
       [`damage-${system}-${layout}`, width, height, "in-person", `layout=${layout}&damage=true${query}`])),

@@ -3,7 +3,7 @@ import { installWfrpOpposedMomentum } from "./foundry/compatibility/wfrp-opposed
 import { installClientUpgradeCleanup } from "./foundry/compatibility/client-upgrade-cleanup.mjs";
 import { createTaskScope } from "./kernel/lifecycle/task-scope.mjs";
 import { classifyRuntimeMode, createActivationPolicyResolver } from "./foundry/session/activation-policy.mjs";
-import { readPreferences, registerPreferences } from "./foundry/settings/preferences.mjs";
+import { readPreferences, registerModePreference, registerPreferences } from "./foundry/settings/preferences.mjs";
 
 if (/\/game\/?$/.test(window.location.pathname)) {
   const scope = createTaskScope("shared-compatibility");
@@ -30,7 +30,6 @@ if (/\/game\/?$/.test(window.location.pathname)) {
     Hooks.once("ready", () => ui.notifications?.error?.("Mikelandia Controls could not copy saved browser settings. Enable browser storage and reload; original settings are retained."));
   }
   const mobileDevice = classifyRuntimeMode() !== "native";
-  const mobile = migrated && mobileDevice && createActivationPolicyResolver().resolve(readPreferences()).active;
   let upgradeCleanup;
   const installUpgradeHook = () => Hooks.once("init", () => {
     registerBrandingMigration();
@@ -40,24 +39,26 @@ if (/\/game\/?$/.test(window.location.pathname)) {
     mobileDevice, isMobilePresentation: () => false,
     onPresentationChange: () => { if (game.ready) window.location.reload(); }
   }));
-  if (mobile) {
-    // Load the companion and its styles only on an active phone/tablet client.
-    const styles = document.createElement("link");
-    styles.rel = "stylesheet";
-    styles.href = new URL("../assets/mobile.css", import.meta.url).href;
-    document.head.append(styles);
+  if (migrated && mobileDevice) {
     // Foundry creates game after DOMContentLoaded and does not await package
     // top-level await. Gate its prototype before importing the mobile graph,
     // then install hooks with the real Game instance available, before init.
     const target = (globalThis.foundry?.Game ?? globalThis.Game)?.prototype;
     const original = target?.initialize;
     if (typeof original !== "function") throw new Error("Foundry's game initialization boundary is unavailable.");
-    const loading = import("./mobile-entry.mjs").then(module => ({ module }), error => ({ error }));
     const guarded = async function (...args) {
       try {
-        const result = await loading;
-        if (result.error) throw result.error;
-        result.module.installMobileClient({ getUpgradeCleanup: () => upgradeCleanup, whenSharedReady: () => sharedReady });
+        // Cached bootstrap preferences are only presentation hints. Read the
+        // registered Foundry client mode once the real Game exists.
+        registerModePreference({ mobileDevice });
+        if (createActivationPolicyResolver().resolve(readPreferences()).active) {
+          const styles = document.createElement("link");
+          styles.rel = "stylesheet";
+          styles.href = new URL("../assets/mobile.css", import.meta.url).href;
+          document.head.append(styles);
+          const { installMobileClient } = await import("./mobile-entry.mjs");
+          installMobileClient({ getUpgradeCleanup: () => upgradeCleanup, whenSharedReady: () => sharedReady });
+        } else registerNativeClient();
       } catch (error) {
         console.error("Mikelandia Controls | Mobile interface could not load", error);
         registerNativeClient();

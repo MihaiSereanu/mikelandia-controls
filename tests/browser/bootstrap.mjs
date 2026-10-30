@@ -6,7 +6,33 @@ function check(value, description) {
   checks.push(description);
 }
 try {
-  const theme = new URLSearchParams(location.search).get("theme");
+  const params = new URLSearchParams(location.search);
+  const theme = params.get("theme");
+  const commonDisplay = params.has("common-display");
+  let commonDisplayUnrelated;
+  if (commonDisplay) {
+    const style = document.createElement("link");
+    style.rel = "stylesheet";
+    style.href = "/tests/browser/fixtures/monks-common-display-14.01-root-hide.css";
+    const loaded = new Promise((resolve, reject) => {
+      style.addEventListener("load", resolve, { once: true });
+      style.addEventListener("error", reject, { once: true });
+    });
+    document.head.append(style);
+    await loaded;
+    document.body.classList.add("hide-ui");
+    commonDisplayUnrelated = document.createElement("aside");
+    commonDisplayUnrelated.textContent = "Unrelated native UI remains hidden";
+    document.body.append(commonDisplayUnrelated);
+  }
+  const displayed = element => getComputedStyle(element).display !== "none"
+    && getComputedStyle(element).visibility === "visible"
+    && element.getBoundingClientRect().height > 0;
+  const hitControl = element => {
+    const bounds = element.getBoundingClientRect();
+    const hit = document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+    return hit === element || element.contains(hit);
+  };
   const loader = createMobileBootstrap();
   const normalScreen = () => {
     loader.mount({ theme });
@@ -14,6 +40,11 @@ try {
   };
   normalScreen();
   const surface = loader.surface;
+  check(displayed(surface), "loading surface is visible before the mobile runtime starts");
+  if (commonDisplay) {
+    check(document.body.classList.contains("hide-ui") && !displayed(commonDisplayUnrelated), "Common Display keeps its Hide UI state and conceals unrelated native UI");
+    check(!document.body.classList.contains("mc-mobile-running"), "bootstrap protection does not depend on a running mobile shell");
+  }
   const heading = surface.querySelector("h1");
   const icon = surface.querySelector("img");
   await icon.decode();
@@ -38,6 +69,11 @@ try {
   check(document.documentElement.scrollWidth <= innerWidth, "loading screen does not overflow horizontally");
   const wake = loader.wakeControl;
   const bounds = wake.getBoundingClientRect();
+  let wakeClicks = 0;
+  wake.addEventListener("click", () => { wakeClicks++; });
+  check(hitControl(wake), "wake checkbox is reachable through pointer hit testing");
+  wake.click();
+  check(wakeClicks === 1, "visible wake checkbox accepts an action");
   check(bounds.height >= 44 && bounds.bottom <= innerHeight && bounds.bottom > innerHeight * 0.8, "wake checkbox stays at the bottom within the viewport");
   check(heading.getBoundingClientRect().bottom < bounds.top, "loading heading sits above the checkbox");
   loader.setWakeState("active", { checked: true });
@@ -45,11 +81,18 @@ try {
   const prompt = loader.promptForWakeChoice();
   check(wake.hidden && !loader.wakePromptYesControl.closest("[hidden]"), "gesture confirmation appears only when requested");
   check(document.activeElement === loader.wakePromptYesControl, "confirmation receives keyboard focus");
+  check(hitControl(loader.wakePromptYesControl), "wake confirmation remains reachable through pointer hit testing");
   loader.resolveWakePrompt(false);
   check(await prompt === false, "wake confirmation resolves the selected choice");
   normalScreen();
   loader.showRecovery({ title: "Loading interrupted", message: "Please refresh", actionLabel: "Refresh game" });
   check(surface.getAttribute("role") === "alertdialog" && loader.recoveryControl.textContent === "Refresh game" && loader.recoveryControl.getBoundingClientRect().height >= 44, "startup recovery retains an accessible refresh action");
+  check(surface.classList.contains("is-failed") && displayed(surface) && hitControl(loader.recoveryControl), "failed startup recovery remains visible with a reachable refresh control");
+  let recoveryClicks = 0;
+  loader.recoveryControl.addEventListener("click", () => { recoveryClicks++; });
+  loader.recoveryControl.click();
+  check(recoveryClicks === 1, "visible recovery control accepts an action");
+  if (commonDisplay) check(document.body.classList.contains("hide-ui") && !displayed(commonDisplayUnrelated), "recovery preserves Common Display Hide UI and the hidden native UI");
   check(label.getAnimations().length === 0, "loading animation stops on recovery");
   normalScreen();
   check(await loader.complete() && surface.classList.contains("is-complete"), "successful loading completes normally");

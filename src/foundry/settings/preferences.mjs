@@ -75,6 +75,23 @@ const BOOTSTRAP_DEFAULTS = Object.freeze({
   keepScreenAwake: false
 });
 
+/** Register the client mode before Game.initialize so stored values are readable. */
+export function registerModePreference({ mobileDevice = classifyRuntimeMode() !== "native", onPresentationChange } = {}) {
+  game.settings.register(MODULE_ID, KEYS.MODE, {
+    name: "MIKELANDIA_CONTROLS.Settings.Mode.Name",
+    hint: "MIKELANDIA_CONTROLS.Settings.Mode.Hint",
+    scope: "client", config: mobileDevice, type: String,
+    choices: {
+      auto: "MIKELANDIA_CONTROLS.Settings.Mode.Auto",
+      phone: "MIKELANDIA_CONTROLS.Settings.Mode.Phone",
+      tablet: "MIKELANDIA_CONTROLS.Settings.Mode.Tablet",
+      native: "MIKELANDIA_CONTROLS.Settings.Mode.Native"
+    },
+    default: "auto",
+    onChange: value => { syncBootstrapPreferences(); onPresentationChange?.(Object.freeze({ key: KEYS.MODE, value })); }
+  });
+}
+
 export function registerPreferences({
   onApplicationChange,
   onPresentationChange,
@@ -91,21 +108,7 @@ export function registerPreferences({
     syncBootstrapPreferences();
     notify?.(Object.freeze({ key, value }));
   };
-  game.settings.register(MODULE_ID, KEYS.MODE, {
-    name: "MIKELANDIA_CONTROLS.Settings.Mode.Name",
-    hint: "MIKELANDIA_CONTROLS.Settings.Mode.Hint",
-    scope: "client",
-    config: mobileDevice,
-    type: String,
-    choices: {
-      auto: "MIKELANDIA_CONTROLS.Settings.Mode.Auto",
-      phone: "MIKELANDIA_CONTROLS.Settings.Mode.Phone",
-      tablet: "MIKELANDIA_CONTROLS.Settings.Mode.Tablet",
-      native: "MIKELANDIA_CONTROLS.Settings.Mode.Native"
-    },
-    default: "auto",
-    onChange: changed(KEYS.MODE, onPresentationChange)
-  });
+  registerModePreference({ mobileDevice, onPresentationChange });
   const storedMode = readSetting(KEYS.MODE, "auto");
   if (storedMode === "desktop" || storedMode === "off") {
     // Native Settings reads the stored value directly when selecting a choice.

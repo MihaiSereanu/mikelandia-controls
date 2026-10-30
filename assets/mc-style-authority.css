@@ -1,3 +1,13 @@
+/* The loader owns this root before the mobile shell starts. Common Display's
+ * body-level Hide UI selector must not conceal loading or recovery controls. */
+@layer mc-mobile-bootstrap-visibility {
+  body.mc-mobile-booting > .mc-mobile-bootstrap {
+    display: grid !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+}
+
 @layer mc-mobile-ui-isolation {
   body.mc-mobile-running [data-mc-mobile-ui-state="blocked"] {
     display: none !important;
