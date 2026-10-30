@@ -101,7 +101,7 @@ function restorationFixture(t, snapshot) {
 test("upgrades restore saved client graphics preferences without applying a new profile", async t => {
   const f = restorationFixture(t, { schemaVersion: 4, original: { "core.maxFPS": 60 }, applied: { "core.maxFPS": 20 }, noCanvasOriginal: false });
   assert.deepEqual(f.restore.pendingRestoration(), ["core.maxFPS", "core.noCanvas"]);
-  await f.restore.beginMobileSession();
+  await f.restore.restore();
   assert.equal(f.values.get("core.maxFPS"), 60);
   assert.equal(f.values.get("core.noCanvas"), false);
   assert.deepEqual(f.values.get("mikelandia-controls.graphicsSettingsSnapshot"), {});
@@ -111,7 +111,7 @@ test("upgrades restore saved client graphics preferences without applying a new 
 test("invalid restoration snapshots remain intact and cannot write unrelated settings", async t => {
   const snapshot = { schemaVersion: 4, original: { "core.permissions": {} }, applied: { "core.permissions": {} } };
   const f = restorationFixture(t, snapshot);
-  await assert.rejects(f.restore.restoreForDesktop(), /invalid/);
+  await assert.rejects(f.restore.restore(), /invalid/);
   assert.equal(f.values.get("mikelandia-controls.graphicsSettingsSnapshot"), snapshot);
   assert.equal(f.values.has("core.permissions"), false);
 });

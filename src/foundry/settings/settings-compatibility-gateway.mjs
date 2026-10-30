@@ -17,7 +17,7 @@ const DICE_ACTIVITY_POLL_MS = 50;
 const DICE_START_GRACE_MS = 1500;
 
 /**
- * Admit Foundry-owned settings applications through Mikelandia Controls's desktop UI
+ * Admit Foundry-owned settings applications through the mobile interface
  * boundary without copying or taking ownership of their form content.
  */
 export function createFoundrySettingsCompatibilityGateway({
@@ -351,7 +351,7 @@ export function createFoundrySettingsCompatibilityGateway({
         title: localized(game, "MIKELANDIA_CONTROLS.Settings.Native.Title", "Foundry Settings"),
         openFoundryLabel: localized(game, "MIKELANDIA_CONTROLS.Settings.Native.OpenFoundry", "Open Foundry Settings"),
         openFoundryHint: localized(game, "MIKELANDIA_CONTROLS.Settings.Native.OpenFoundryHint", "Use Foundry's native settings interface for core, system, and module configuration."),
-        compatibilityHint: localized(game, "MIKELANDIA_CONTROLS.Settings.Native.CompatibilityHint", "Some Foundry and module settings are designed for desktop and may not display correctly on smaller screens. If needed, switch to Desktop mode to access them.")
+        compatibilityHint: localized(game, "MIKELANDIA_CONTROLS.Settings.Native.CompatibilityHint", "Some Foundry and module settings may not fit smaller screens. If needed, choose Use native Foundry to access them.")
       });
     },
 

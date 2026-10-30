@@ -695,7 +695,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       store.dispatch({ type: "navigate", route });
     },
     async openJournalTarget(journalId, target = {}) {
-      if (!activationCommitted || readPolicy().runtimeMode === "desktop") throw new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.TheMobileJournalReaderIsInactive", "The mobile Journal reader is inactive."));
+      if (!activationCommitted || !readPolicy().active) throw new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.TheMobileJournalReaderIsInactive", "The mobile Journal reader is inactive."));
       const journal = await commands.openJournal(journalId, target);
       if (!activationCommitted || !journal || store.state.journal?.id !== journal.id) return journal;
       store.dispatch({ type: "navigate", route: "journals" });

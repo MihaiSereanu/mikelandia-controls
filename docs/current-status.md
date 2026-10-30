@@ -12,15 +12,19 @@ Recorded deployment facts; installed files and the remote host were not rechecke
 
 ## Checkout-only work
 
-Changes since the local installation remain unpackaged and uninstalled:
+Changes since the local installation remain uninstalled and unpublished:
 
-- WFRP 4e/5e arm translations automatically use Right Arm / Left Arm on every client in Desktop, Phone and Tablet modes. Native handedness calculations remain unchanged. Startup-hook fixture verification passed; native-world verification remains pending.
+- The Desktop companion client is removed. Physical desktops always use native Foundry, including with saved Phone/Tablet overrides; shared arm labels and Momentum support still install. Active mobile clients alone load the companion runtime/styles. Phones/tablets retain Use native Foundry. Historical graphics/theme/Carolingian overrides have upgrade-only cleanup with native error notifications. Future general theme/Carolingian changes are runtime-only; permanent WFRP theme-off remains. Native-world upgrade and phone verification remain pending.
+
+- Phone/Tablet audio now blocks loading and playback rather than muting. Existing local sounds/media stop; native audio contexts suspend; the optional mute control is removed. No playback state is preserved or resumed. Hidden-board main-stage screen draws are skipped while native token updates and the ticker remain active. Node and browser fixture verification is recorded below; native-world and physical-device verification remain pending.
+
+- WFRP 4e/5e arm translations automatically use Right Arm / Left Arm on native, Phone and Tablet clients. Native handedness calculations remain unchanged. Startup-hook fixture verification passed; native-world verification remains pending.
 
 - WFRP 5e opposed Momentum compatibility routes unowned participant gain/clearing through a validated active-GM query on mobile and desktop. Node permission/transport fixtures cover linked/unlinked NPCs, ownership, result validation, missing GM and cleanup. Native-world verification remains pending.
 
 - Selected-PC damage feedback across Phone/Tablet routes for D&D 5e, Shadowdark and WFRP 4e/5e: ordinary hits clear within two seconds. Crossing zero adds “You’re down!”; only the mist remains after the notification expires, until remaining HP/Wounds changes. Close/Escape does not dismiss zero-health mist. Node and browser fixture evidence; native-world and physical-device verification remain pending.
 
-- Phone/Tablet mode saves all WFRP Theme sections off in the browser and enforces that preference while mobile mode runs. Desktop does not restore the old WFRP theme. Native-world verification remains pending.
+- Phone/Tablet mode saves all WFRP Theme sections off in the browser and enforces that preference while mobile mode runs. Choosing native Foundry does not restore the old WFRP theme. Native-world verification remains pending.
 
 - WFRP signed SL controls, a separate Effects tab with native condition actions and 5e references, and revised effect/item rows. Engaged is excluded from mobile condition tracking; Injuries moved from Combat to Effects. Native encumbrance penalties remain in WFRP Combat.
 - The main Combat route is labelled Initiative. Targets also appears in WFRP Character > Combat and Magic, Shadowdark Abilities and Spells, and D&D Overview and Spells.
@@ -36,7 +40,7 @@ Behavioral contracts are in [architecture](architecture.md). Publication require
 
 - Native worlds: Effects/condition actions, signed SL controls, character-tab Targets and health, Notes/ambition saves, WFRP resources/recovery/movement/XP/Social Status, character selection, roll dialogs, Shadowdark counters, Logout/loading, and renamed-module activation. Current coverage is primarily source and browser fixtures.
 - Targeting: native v13 runtime, actual system roll/chat, and persisted two-player deletion checks.
-- Physical devices: character/Initiative UI, roll dialogs, isolation/Settings with Hide UI, installed PWA/login-to-game display, keyboard behavior, and audible mute.
+- Physical devices: character/Initiative UI, roll dialogs, isolation/Settings with Hide UI, installed PWA/login-to-game display, keyboard behavior, and audio blocking/battery impact. Native-world verification of token selection and animated distances with hidden-board drawing skipped remains pending.
 - WFRP cancellation: native 4e-world review remains pending; the reported 5e lock was not reproduced in a fresh session. WFRP 10.1.2 / Warhammer Library 3.5.1 missing-ammo cancellation remains a [native bug](architecture.md#warhammer-resources) controlled by **Details > Consumes Ammo**.
 
 ## Latest recorded evidence
@@ -45,6 +49,8 @@ These records cover specific revisions and scopes, not all current changes. They
 
 | Scope | Result | Evidence |
 |---|---|---|
+| Native desktop boundary and mobile-only runtime | Full Node suite; 99 browser scenarios / 6,312 checks; local archive/import validation (198 files). Shared-entry fixtures cover desktop saved overrides, shared arm/Momentum fixes, mobile native opt-out, absence of desktop UI/API/styles, and mobile import completion before native init. Upgrade/theme/Carolingian fixtures cover local cleanup and runtime-only overrides. Live-world/physical-device verification remains pending. | `tests/shared-entry.test.mjs`, `tests/browser/shared-entry.mjs`, `tests/activation-policy.test.mjs`, `tests/client-upgrade-cleanup.test.mjs`, `tests/theme-gateway.test.mjs`, `tests/mobile-module-compatibility.test.mjs` |
+| Audio blocking and hidden-board rendering | Full Node suite; 96 browser scenarios / 6,286 checks. Four targeting fixtures / 216 checks exercise selection and moving-token distances with board screen draws skipped. Audio fixtures cover native loads/playback, first-gesture contexts, queued sounds, HTML media and YouTube. Native-world/audio listening and battery measurements remain pending. | `tests/mobile-audio.test.mjs`, `tests/hidden-canvas-rendering.test.mjs`, `tests/presentation-isolation.test.mjs`, `tests/browser/targeting.mjs` |
 | Damage feedback | Full Node suite; eight phone/tablet damage fixtures / 512 checks cover all supported integrations, two-second notice expiry, zero-health wording and mist persistence through Close/Escape and max-only updates, health-change clearing, repeated hits and route persistence | `tests/damage-feedback.test.mjs`, `tests/browser/damage-feedback.mjs`, `dist/damage-*-{phone,tablet}.png` |
 | Combat and spell targeting | Node suite; six phone/tablet browser fixtures exercise all three systems, shared selection/collapse, spell-tab placement, live distance/focus and combat-end removal; four native-style targeting fixtures / 216 checks cover summary bottom spacing | `tests/browser/in-person.mjs`, `tests/browser/targeting.mjs` |
 | Magic Targets and condition picker | Node suite passed; browser fixtures cover shared Magic targeting, live distance/focus, light/dark picker sizing, native button defaults, Close, outside touch and Escape; remaining browser cases passed in a separate run | `tests/browser/in-person.mjs`, `tests/browser/warhammer.mjs`, `scripts/browser/tooltip-touches.mjs` |

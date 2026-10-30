@@ -7,10 +7,21 @@ export async function checkTooltipTouches(send, checks) {
   };
   const settle = () => evaluate("new Promise(resolve => setTimeout(resolve, 60))");
   const check = async (label, expression) => {
-    if (!await evaluate(expression)) throw new Error(label);
+    // Native toggle events can arrive after the input dispatch has completed.
+    const passed = await evaluate(`(async () => {
+      const deadline = performance.now() + 2000;
+      do {
+        if (${expression}) return true;
+        await new Promise(resolve => setTimeout(resolve, 25));
+      } while (performance.now() < deadline);
+      return false;
+    })()`);
+    if (!passed) throw new Error(label);
     checks.push(label);
   };
   const tapPoint = async (x, y) => {
+    // Give newly inserted targets and repositioned popovers a painted frame.
+    await evaluate("new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
     await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x, y }] });
     await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     await settle();
@@ -44,6 +55,19 @@ export async function checkTooltipTouches(send, checks) {
       await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
       await settle();
       await check(`${label}: scrolling inside keeps tooltip open`, `${tip}.matches(":popover-open") && ${tip}.scrollTop > 0`);
+      // A tap during inertial scrolling can stop the scroll instead of dismissing.
+      await evaluate(`(async () => {
+        const element = ${tip};
+        const deadline = performance.now() + 3000;
+        let previous = element.scrollTop, stable = 0;
+        while (stable < 3 && performance.now() < deadline) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+          const current = element.scrollTop;
+          stable = current === previous ? stable + 1 : 0;
+          previous = current;
+        }
+        if (stable < 3) throw new Error("Tooltip scrolling did not settle");
+      })()`);
     }
     const outside = await evaluate(`(() => {
       const r = ${tip}.getBoundingClientRect();

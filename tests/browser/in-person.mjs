@@ -36,7 +36,7 @@ try {
     get(namespace, key) { return namespace === "mikelandia-controls" ? values.get(key) ?? definitions.get(`${namespace}.${key}`)?.default : originalGet(namespace, key); },
     async set(namespace, key, value) { values.set(key, value); return value; }
   };
-  registerPreferences();
+  registerPreferences({ mobileDevice: true, isMobilePresentation: () => true });
   game.user.isGM = true;
   const nativeCalls = [];
   const combatant = { id: "fighter", actor: f.actor, actorId: f.actor.id, name: "Fighter", visible: true, isOwner: true, initiative: null };

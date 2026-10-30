@@ -1,7 +1,7 @@
 import { icon, node } from "../primitives/dom.mjs";
 import { controlsGuideSections } from "../../features/help/controls-guide-model.mjs";
 
-/** Shared Desktop/mobile guide. It is appended above, never remounts its route. */
+/** Mobile guide. It is appended above, never remounts its route. */
 export function createControlsGuide({ scope, readContext, localize, onVisibility = () => {} }) {
   const text = key => localize(`MIKELANDIA_CONTROLS.Controls.${key}`);
   let opener = null;

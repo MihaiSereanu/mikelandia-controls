@@ -1,5 +1,5 @@
 /** Static, audited copy keys. Context is a narrow presentation record, never diagnostics. */
-export function controlsGuideSections({ presentation = "desktop", systemId = "dnd5e", actorType = "character",
+export function controlsGuideSections({ presentation = "phone", systemId = "dnd5e", actorType = "character",
   characterPresentation = "legacy", profileTabs, notesAvailable = true, edition } = {}) {
   const dnd = systemId === "dnd5e" && characterPresentation === "legacy";
   const profile = characterPresentation === "profile";
@@ -29,7 +29,7 @@ export function controlsGuideSections({ presentation = "desktop", systemId = "dn
       ...(warhammer || shadowdark ? ["Counters", "Descriptions", "NativeSheet"] : []),
       ...(warhammer ? ["ItemNotes"] : []),
       ...(warhammer && edition === "5e" ? ["ConditionReferences"] : []),
-      "Back", ...(presentation === "desktop" ? ["DesktopReview"] : [presentation === "phone" ? "Phone" : "Tablet"])] }
+      "Back", presentation === "tablet" ? "Tablet" : "Phone"] }
   ];
   return Object.freeze(sections.map(section => Object.freeze({ ...section, entries: Object.freeze(section.entries) })));
 }

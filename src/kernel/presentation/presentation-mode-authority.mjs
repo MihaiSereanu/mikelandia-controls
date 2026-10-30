@@ -1,4 +1,4 @@
-/** The resolved Mikelandia Controls presentation, including a page-local Desktop override, owns mobile policy. */
+/** Only an active Phone/Tablet presentation owns mobile policy. */
 export function isMobilePerformanceAuthorityActive(policyOrReader) {
   const policy = typeof policyOrReader === "function" ? policyOrReader() : policyOrReader;
   return policy?.active === true && (policy.runtimeMode === "phone" || policy.runtimeMode === "tablet");

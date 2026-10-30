@@ -9,7 +9,7 @@ export function createArmorClassGateway({
   getSystemIntegration = () => resolveSystemIntegration(getGame()?.system?.id),
   getConfigClass = () => globalThis.dnd5e?.applications?.actor?.ArmorClassConfig,
   getConnectionGeneration = () => 0,
-  getMode = () => "desktop",
+  getMode = () => "native",
   resolve = (uuid, game) => resolveActorSource(uuid, { game })
 } = {}) {
   const openApps = new Map();

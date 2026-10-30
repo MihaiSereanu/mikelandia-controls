@@ -24,7 +24,7 @@ try {
       async set(namespace, key, value) { writes.push([namespace, key, value]); values.set(`${namespace}.${key}`, value); return value; }
     };
     globalThis.game = game;
-    registerPreferences();
+    registerPreferences({ mobileDevice: true, isMobilePresentation: () => true });
     const preferences = createFoundryPreferencesGateway({ getGame: () => game, getNavigator: () => ({}) });
     const guide = createControlsGuide({ scope: currentScope, localize, readContext: () => ({
       presentation: layout,

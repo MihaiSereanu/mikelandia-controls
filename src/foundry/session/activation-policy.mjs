@@ -13,18 +13,15 @@ export function createActivationPolicyResolver({
       const window = getWindow();
       const navigator = getNavigator();
       const preference = normalizedPreference(preferences.mode);
-      if (preference === "auto" && !resolvedAutoMode) {
+      if (!resolvedAutoMode) {
         resolvedAutoMode = classifyRuntimeMode({ window, navigator });
       }
-      const runtimeMode = preference === "auto"
-        ? resolvedAutoMode
-        : preference === "off" || preference === "desktop"
-          ? "desktop"
-          : preference;
+      const runtimeMode = resolvedAutoMode === "native" || preference === "native"
+        ? "native" : preference === "auto" ? resolvedAutoMode : preference;
       const width = Math.max(1, window.visualViewport?.width ?? window.innerWidth);
       const height = Math.max(1, window.visualViewport?.height ?? window.innerHeight);
       return Object.freeze({
-        active: runtimeMode !== "desktop",
+        active: runtimeMode === "phone" || runtimeMode === "tablet",
         preference,
         runtimeMode,
         formFactor: runtimeMode,
@@ -40,8 +37,7 @@ export function createActivationPolicyResolver({
 
 /** Physical keyboards and software keyboards may change the visual viewport's
  * aspect ratio without rotating the device. Prefer the device orientation API
- * only for touch/mobile runtimes; desktop forced-mode testing still follows
- * the resized browser viewport. */
+ * only for touch/mobile runtimes. */
 export function resolveOrientation({ window = globalThis.window, navigator = globalThis.navigator, width, height } = {}) {
   const viewportWidth = Math.max(1, Number(width) || window?.visualViewport?.width || window?.innerWidth || 1);
   const viewportHeight = Math.max(1, Number(height) || window?.visualViewport?.height || window?.innerHeight || 1);
@@ -60,36 +56,24 @@ export function resolveOrientation({ window = globalThis.window, navigator = glo
 }
 
 export function classifyRuntimeMode({ window = globalThis.window, navigator = globalThis.navigator } = {}) {
-  const userAgent = String(navigator.userAgent ?? "");
-  const platform = String(navigator.userAgentData?.platform ?? navigator.platform ?? "");
-  const reportsMobile = navigator.userAgentData?.mobile;
+  const userAgent = String(navigator?.userAgent ?? "");
+  const platform = String(navigator?.userAgentData?.platform ?? navigator?.platform ?? "");
+  const reportsMobile = navigator?.userAgentData?.mobile;
 
   if (reportsMobile === true || /iPhone|iPod|Mobile.+Android|Android.+Mobile/iu.test(userAgent)) return "phone";
   if (/iPad|Tablet|Silk|Kindle|PlayBook/iu.test(userAgent)) return "tablet";
   if (/Android/iu.test(userAgent) || /^Android$/iu.test(platform)) return /Mobile/iu.test(userAgent) ? "phone" : "tablet";
   // iPadOS desktop-site mode identifies itself as Macintosh with touch.
-  if (/^MacIntel$/iu.test(navigator.platform ?? "") && /Macintosh/iu.test(userAgent)
-    && !navigator.userAgentData?.platform && (navigator.maxTouchPoints ?? 0) > 1) return "tablet";
+  if (/^MacIntel$/iu.test(navigator?.platform ?? "") && /Macintosh/iu.test(userAgent)
+    && !navigator?.userAgentData?.platform && (navigator?.maxTouchPoints ?? 0) > 1) return "tablet";
   // Touch, coarse pointers, small windows and display zoom are not evidence of
   // a mobile device. Unknown devices and laptops stay in Foundry's desktop UI.
-  return "desktop";
-}
-
-/** A page-lifetime override used by "Return to desktop interface". */
-export function createSessionActivationOverride() {
-  let suspended = false;
-  return Object.freeze({
-    apply(policy) {
-      return suspended ? Object.freeze({ ...policy, active: false }) : policy;
-    },
-    suspend() {
-      suspended = true;
-    }
-  });
+  return "native";
 }
 
 function normalizedPreference(value) {
-  return ["auto", "phone", "tablet", "desktop", "off"].includes(value) ? value : "auto";
+  if (value === "desktop" || value === "off") return "native";
+  return ["auto", "phone", "tablet", "native"].includes(value) ? value : "auto";
 }
 
 function resolveTheme(preference, window = globalThis.window) {

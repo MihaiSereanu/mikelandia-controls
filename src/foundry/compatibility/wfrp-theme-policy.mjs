@@ -1,7 +1,7 @@
 const THEME_KEY = "wfrp4e.theme";
 const SECTIONS = Object.freeze(["actor", "item", "journal", "sidebar", "apps"]);
 
-/** A permanent browser preference; Desktop mode does not restore this setting. */
+/** A permanent browser preference; leaving mobile does not restore this setting. */
 export function createWfrpThemePolicy({
   getGame = () => globalThis.game,
   getDocument = () => globalThis.document,

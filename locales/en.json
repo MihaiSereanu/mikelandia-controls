@@ -107,22 +107,17 @@
       "MoveRight": "Move navigation to right side"
     },
     "Settings": {
-      "MuteMobileAudio": {
-        "Name": "Mute audio in mobile view",
-        "Hint": "Silence audio in this browser while the mobile view is active. Turn off to hear Foundry audio."
-      },
-      "DesktopMobileNotice": "Phone and Tablet controls are available in those modes. Your preferences are saved, and changing Mobile Mode reloads Foundry.",
       "Mode": {
         "Name": "Mobile Mode",
         "Hint": "Choose when Mikelandia Controls takes over Foundry in this browser. Changing this setting reloads Foundry.",
         "Auto": "Auto-detect",
         "Phone": "Phone",
         "Tablet": "Tablet",
-        "Desktop": "Desktop"
+        "Native": "Use native Foundry"
       },
       "Theme": {
         "Name": "Theme",
-        "Hint": "Choose Mikelandia Controls's color mode. This also changes Foundry's Interface and Application themes. Changing Foundry's Interface Theme updates this setting.",
+        "Hint": "Choose the mobile interface's color mode. Foundry's saved theme preferences stay unchanged.",
         "System": "Use device setting",
         "Light": "Light",
         "Dark": "Dark"
@@ -191,7 +186,7 @@
         "Title": "Foundry Settings",
         "OpenFoundry": "Open Foundry Settings",
         "OpenFoundryHint": "Open core Foundry, game system, and module settings in Foundry's native settings interface.",
-        "CompatibilityHint": "Some Foundry and module settings are designed for desktop and may not display correctly on smaller screens. If needed, switch to Desktop mode to access them."
+        "CompatibilityHint": "Some Foundry and module settings may not display correctly on smaller screens. If needed, choose Use native Foundry to access them."
       },
       "Copy": {
         "SettingsSubtitle": "Settings for this Foundry session and device.",
@@ -200,10 +195,10 @@
         "DeviceResolving": "Detecting…",
         "PhoneModeEnabled": "Phone mode enabled",
         "TabletModeEnabled": "Tablet mode enabled",
-        "DesktopModeEnabled": "Desktop mode enabled",
+        "NativeModeEnabled": "Native Foundry interface enabled",
         "PhoneModeSelected": "Phone mode selected",
         "TabletModeSelected": "Tablet mode selected",
-        "DesktopModeSelected": "Desktop mode selected",
+        "NativeModeSelected": "Native Foundry interface selected",
         "Left": "Left",
         "Right": "Right",
         "ModuleOverlayExplanation": "Choose which supported module overlays appear in the mobile interface.",
@@ -244,7 +239,7 @@
         "OpenFoundryLabel": "Open Foundry Settings",
         "OpenFoundryHint": "Use Foundry's native settings interface for core, system, and module configuration.",
         "OpenFoundryDescription": "Open core Foundry and module settings here.",
-        "NativeSettingsCompatibility": "Some Foundry and module settings are designed for desktop and may not display correctly on smaller screens. If needed, switch to Desktop mode to access them.",
+        "NativeSettingsCompatibility": "Some Foundry and module settings may not display correctly on smaller screens. If needed, choose Use native Foundry to access them.",
         "Opening": "Opening…",
         "OpenNativeFailed": "That native settings window could not be opened.",
         "Cancel": "Cancel",
@@ -262,7 +257,7 @@
         "SaveSettingFailed": "That setting could not be saved.",
         "RestoreDefaults": "Restore Defaults",
         "RestoreDefaultsTitle": "Restore default settings?",
-        "RestoreDefaultsMessage": "Reset every setting listed on this tab to its default for this browser? A reload may be needed. Auto-detect may return this device to the desktop interface.",
+        "RestoreDefaultsMessage": "Reset every setting listed on this tab to its default for this browser? A reload may be needed.",
         "RestoringDefaults": "Restoring defaults…",
         "RestoreDefaultsFailed": "Some settings could not be restored. Please try again.",
         "Default": "Default: {value}.",
@@ -846,15 +841,6 @@
       "UntitledPage": "Untitled page",
       "Edit": "Edit"
     },
-    "RestorationRecovery": {
-      "title": "Desktop settings recovery required",
-      "detail": "Mikelandia Controls is paused to protect your captured Desktop settings. Retry safely; your saved original values remain available until restoration is verified.",
-      "pending": "Pending settings",
-      "saved": "Saved Desktop baseline",
-      "retry": "Retry Desktop restoration",
-      "working": "Restoring and verifying…",
-      "failed": "Restoration is still pending. The original values have been kept; retry when settings storage is available."
-    },
     "Collective": {
       "Group": "Group",
       "NativeEditor": "Native configuration & edit",
@@ -941,7 +927,7 @@
         "ChatTab": "Chat: Read rolls and messages, send a message, or type a dice roll.",
         "JournalsTab": "Journals: Browse the journals shared with you and open their pages.",
         "InitiativeTab": "Initiative: See turn order and whose turn it is. Use **End Turn** when your turn is finished. Expand **Targets** to select or deselect combatants.",
-        "SettingsTab": "Settings: Change the layout, colors, sound, and other preferences for this browser. You can reopen this guide here.",
+        "SettingsTab": "Settings: Change the layout, colors, and other preferences for this browser. You can reopen this guide here.",
         "WarhammerMain": "Main: Roll characteristics, track Wounds and other resources, and check your XP. The bed beside Wounds starts a recovery test; apply healing from the result in Chat.",
         "WarhammerCombat": "Combat: Select Targets, roll weapon attacks, and check movement and encumbrance.",
         "WarhammerCombat4e": "Combat: Select Targets, roll weapon attacks, and track Advantage. Movement and encumbrance are also shown here.",
@@ -981,7 +967,6 @@
         "ItemNotes": "Tap **Notes** on an item to read the full note. Tap outside the text to close it.",
         "ConditionReferences": "Tap a condition name to read its rules. Tap it again or tap outside to close the text.",
         "Back": "**Back** or **Escape** closes the open menu, dialog, or detail view.",
-        "DesktopReview": "To use the mobile layout in this browser, choose Phone or Tablet under **Mobile Mode** in Foundry settings.",
         "Phone": "Use the bottom navigation to switch main tabs.",
         "Tablet": "Use the side navigation to switch main tabs. Its arrow button moves it to the other side."
       },
@@ -1101,10 +1086,6 @@
         "RetainedApplicationLifecycle": "retained application lifecycle",
         "NewNativeApplicationLifecycle": "new native application lifecycle"
       },
-      "MobileStartupGateway": {
-        "AutomaticDesktopRestorationRetriesAreExhausted": "Automatic Desktop restoration retries are exhausted.",
-        "FoundrySPreCanvasStartupBoundaryIsUnavailable": "Foundry's pre-Canvas startup boundary is unavailable."
-      },
       "NativeChatGateway": {
         "FoundryChatIsNotAvailable": "Foundry chat is not available.",
         "FoundryChatCouldNotBeMounted": "Foundry chat could not be mounted.",
@@ -1209,7 +1190,6 @@
     },
     "Recovery": {
       "Progress": "{current} of {total}",
-      "DesktopPending": "Desktop restoration remains pending.",
       "Refreshingworlddata": "Refreshing world data…",
       "Synchronisingscenedata": "Synchronizing session data…",
       "Restoringgamemessages": "Restoring game messages…",
@@ -1221,14 +1201,7 @@
         "Combat": "Could not refresh combat encounters.",
         "JournalEntry": "Could not refresh journals.",
         "ChatMessage": "Could not refresh chat messages."
-      },
-      "Title": "Graphics settings need recovery",
-      "Detail": "Some graphics settings could not be restored automatically. Retry recovery to return to your saved settings.",
-      "Pending": "Settings awaiting restoration",
-      "Saved": "No setting keys are listed.",
-      "Retry": "Retry recovery",
-      "Working": "Restoring settings…",
-      "Failed": "Recovery could not finish. Try again."
+      }
     },
     "Presentation": {
       "Applying": "Applying {mode} presentation",

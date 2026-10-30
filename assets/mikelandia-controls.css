@@ -10838,22 +10838,6 @@ FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 
 */
-#settings-config [data-application-part="main"] section[data-category="mikelandia-controls"] .mc-mobile-desktop-hidden-setting {
-  display: none !important;
-}
-
-#settings-config [data-application-part="main"] section[data-category="mikelandia-controls"] .mc-mobile-desktop-settings-notice {
-  box-sizing: border-box;
-  width: 100%;
-  margin: 0.25rem 0 0.85rem;
-  padding: 0.65rem 0.8rem;
-  border-inline-start: 3px solid var(--color-border-highlight, #c9a66b);
-  border-radius: 0.25rem;
-  background: color-mix(in srgb, var(--color-warm-1, #c9a66b) 12%, transparent);
-  color: var(--color-text-primary, inherit);
-  font-size: 0.9rem;
-}
-
 .mc-mobile-app[data-form-factor] .mc-character-screen.mc-character-unselected .mc-character-menu.mc-character-menu-inline {
   position: static !important;
   inset: auto !important;

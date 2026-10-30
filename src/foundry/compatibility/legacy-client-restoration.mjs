@@ -20,12 +20,11 @@ export function createLegacyClientRestoration({ getGame = () => globalThis.game 
   };
   return Object.freeze({
     pendingRestoration: () => entries().map(([key]) => key),
-    async restoreForDesktop({ notify = false } = {}) {
+    async restore({ notify = false, retire = true } = {}) {
       const pending = entries();
       for (const [key, value] of pending) await restoreLocalSetting(getGame(), key, value, { notify });
-      if (Object.keys(saved()).length) await getGame().settings.set(MODULE_ID, KEYS.GRAPHICS_SETTINGS_SNAPSHOT, {});
+      if (retire && Object.keys(saved()).length) await getGame().settings.set(MODULE_ID, KEYS.GRAPHICS_SETTINGS_SNAPSHOT, {});
       return Object.freeze({ restored: pending.map(([key]) => key), requiresReload: pending.length > 0 });
-    },
-    async beginMobileSession() { return this.restoreForDesktop(); }
+    }
   });
 }

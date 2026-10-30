@@ -277,7 +277,7 @@ function foundrySettingsBlock(native, commands, status, scope) {
               uiText(
                 commands,
                 "NativeSettingsCompatibility",
-                "Some Foundry and module settings are designed for desktop and may not display correctly on smaller screens. If needed, switch to Desktop mode to access them.",
+                "Some Foundry and module settings may not fit smaller screens. If needed, choose Use native Foundry to access them.",
               ),
           }),
         ],
@@ -363,7 +363,7 @@ export function groupSettings(fields) {
     {
       id: "device",
       title: "Device & Power",
-      keys: ["mode", "keepScreenAwake", "muteMobileAudio"],
+      keys: ["mode", "keepScreenAwake"],
     },
     {
       id: "actions",
@@ -774,7 +774,7 @@ function createDefaultsPrompt(commands, scope, refresh) {
             text: uiText(
               commands,
               "RestoreDefaultsMessage",
-              "Reset every setting listed on this tab to its default for this browser? A reload may be needed. Auto-detect may return this device to the desktop interface.",
+              "Reset every setting listed on this tab to its default for this browser? A reload may be needed.",
             ),
           }),
           feedback,

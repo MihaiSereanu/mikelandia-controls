@@ -21,7 +21,7 @@
     }
   ],
   "esmodules": ["src/entry.mjs"],
-  "styles": ["assets/mikelandia-controls.css", "assets/mc-style-authority.css"],
+  "styles": [],
   "languages": [
     {
       "lang": "en",

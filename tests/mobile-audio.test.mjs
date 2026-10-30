@@ -3,161 +3,140 @@ import assert from "node:assert/strict";
 import { enableMobileAudio } from "../src/foundry/media/mobile-audio.mjs";
 import { createTaskScope } from "../src/kernel/lifecycle/task-scope.mjs";
 
-test("later native unmute and media volume changes cannot escape mobile mute", () => {
-  const audio = { globalMute: false };
-  const media = new EventTarget(); media.muted = false;
-  const document = new EventTarget(); document.body = {}; document.querySelectorAll = () => [media];
-  const scope = createTaskScope("audio-regression");
-  enableMobileAudio(scope, { getGame: () => ({ audio }), document, MutationObserverType: null });
-  try {
-    audio.globalMute = false;
-    assert.equal(audio.globalMute, true, "native volume UI must not unmute mobile audio");
-    media.muted = false;
-    document.dispatchEvent(new Event("volumechange"));
-    assert.equal(media.muted, true, "later media changes must remain muted");
-  } finally { scope.dispose(); }
-});
-
-test("mobile audio mutes this client, newly added media, and restores on exit", async () => {
-  let unlock, observe, disconnected = false;
-  const audio = { globalMute: false, unlock: new Promise(resolve => { unlock = resolve; }) };
-  const video = { muted: false }, alreadyMuted = { muted: true }, elements = [video, alreadyMuted];
-  const game = { audio }, document = { body: {}, querySelectorAll: () => elements };
-  class Observer { constructor(callback) { observe = callback; } observe() {} disconnect() { disconnected = true; } }
+const install = (options = {}) => {
   const scope = createTaskScope("audio");
-  enableMobileAudio(scope, { getGame: () => game, document, MutationObserverType: Observer });
-  assert.equal(audio.globalMute, true); assert.equal(video.muted, true);
-  audio.globalMute = false; unlock(); await audio.unlock; await Promise.resolve();
-  assert.equal(audio.globalMute, true, "mute contexts created by the first gesture");
-  const added = { muted: false }; elements.push(added); observe(); assert.equal(added.muted, true);
+  const controller = enableMobileAudio(scope, { getGame: () => ({}), getUi: () => ({}), document: null, ...options });
+  return { scope, controller };
+};
+
+test("native audio stops local instances, blocks loading and playback, and settles native return contracts", async () => {
+  let loads = 0, plays = 0, stops = 0;
+  class Sound {
+    async load() { loads++; return this; }
+    async play() { plays++; return this; }
+    async playAtPosition() { plays++; return this; }
+    async _load() { loads++; }
+    _play() { plays++; }
+    async stop(options) { assert.deepEqual(options, { fade: 0, delay: 0 }); stops++; return this; }
+  }
+  const originalLoad = Sound.prototype.load, sound = new Sound(), cached = new Sound(), playlistSound = new Sound();
+  const playlist = { sounds: [{ sound: playlistSound }], update() { throw Error("must not write world documents"); } };
+  const game = { audio: { playing: new Map([[1, sound]]), sounds: new Map([["cached", new WeakRef(cached)]]) }, playlists: [playlist] };
+  const { scope } = install({ getGame: () => game, SoundType: Sound });
+  assert.equal(stops, 3);
+  const next = new Sound();
+  assert.equal(await next.load(), next);
+  assert.equal(await next.play(), next);
+  assert.equal(await next.playAtPosition(), next);
+  await next._load(); next._play();
+  assert.equal(loads, 0); assert.equal(plays, 0);
   scope.dispose();
-  assert.equal(audio.globalMute, false); assert.equal(video.muted, false); assert.equal(added.muted, false);
-  assert.equal(alreadyMuted.muted, true); assert.equal(disconnected, true);
+  assert.equal(Sound.prototype.load, originalLoad);
+  assert.equal(plays, 0, "exit never resumes old audio");
+  await next.load(); await next.play();
+  assert.equal(loads, 1); assert.equal(plays, 1, "new desktop calls work again");
 });
 
-test("late audio unlock cannot mute after mobile exit or replace a user's prior mute", async () => {
-  let unlock;
-  const audio = { globalMute: true, unlock: new Promise(resolve => { unlock = resolve; }) };
-  const scope = createTaskScope("audio");
-  enableMobileAudio(scope, { getGame: () => ({ audio }), document: null }); scope.dispose();
-  assert.equal(audio.globalMute, true);
-  audio.globalMute = false; unlock(); await audio.unlock; await Promise.resolve();
-  assert.equal(audio.globalMute, false);
-});
-
-test("first-gesture contexts and native volume writes are silent synchronously; opt-out restores", () => {
-  const contexts = [];
-  class NativeAudio {
-    #muted = false;
-    get globalMute() { return this.#muted; }
-    set globalMute(value) { this.#muted = value; for (const context of contexts) context.gainNode.gain.setValueAtTime(value ? 0 : 0.7, 0); }
+test("a native load already awaiting unlock cannot fetch, decode or autoplay after the gesture", async () => {
+  let unlock, decoded = 0, played = 0;
+  const unlocked = new Promise(resolve => { unlock = resolve; });
+  class Sound {
+    async load() { await unlocked; await this._load(); await this.play(); return this; }
+    async _load() { decoded++; }
+    async play() { this._play(); return this; }
+    _play() { played++; }
   }
-  const audio = new NativeAudio(), scope = createTaskScope("startup");
-  const controller = enableMobileAudio(scope, { getGame: () => ({ audio }), document: null });
-  for (const key of ["music", "environment", "interface"]) {
-    const gain = { value: 0.7, setValueAtTime(value) { this.value = value; } };
-    const context = { gainNode: { gain }, currentTime: 0 }; contexts.push(context);
-    audio[key] = context;
-    assert.equal(gain.value, 0, "assignment mutes before pending playback");
-    gain.setValueAtTime(0.9, 0); assert.equal(gain.value, 0);
-    gain.value = 0.8; assert.equal(gain.value, 0, "direct AudioParam writes stay muted");
-  }
-  controller.setEnabled(false);
-  assert.equal(audio.globalMute, false);
-  assert.ok(contexts.every(context => context.gainNode.gain.value === 0.7));
-  controller.setEnabled(true); assert.equal(audio.globalMute, true);
-  scope.dispose(); assert.equal(audio.globalMute, false);
+  const sound = new Sound(), pending = sound.load();
+  const { scope } = install({ SoundType: Sound });
+  unlock(); assert.equal(await pending, sound);
+  assert.equal(decoded, 0); assert.equal(played, 0);
+  scope.dispose(); assert.equal(played, 0);
 });
 
-test("detached media and late YouTube players mute before playback and restore owned methods", () => {
-  class Media { muted = false; play() { assert.equal(this.muted, true); } }
-  const originalPlay = Media.prototype.play, ui = {}, scope = createTaskScope("media");
-  enableMobileAudio(scope, { getGame: () => ({}), getUi: () => ui, document: null, MediaType: Media });
-  const media = new Media(); media.play();
-  ui.sidebarVideoPlayer = {};
-  const player = { muted: false, volume: 80, isMuted() { return this.muted; }, getVolume() { return this.volume; },
-    mute() { this.muted = true; }, unMute() { this.muted = false; }, setVolume(value) { this.volume = value; },
-    playVideo() { assert.equal(this.muted, true); } };
-  ui.sidebarVideoPlayer.YTPlayer = player;
-  player.setVolume(90); player.unMute(); player.playVideo();
-  assert.equal(player.volume, 0); assert.equal(player.muted, true);
-  scope.dispose(); assert.equal(media.muted, false); assert.equal(player.muted, false);
-  assert.equal(player.volume, 80); assert.equal(Media.prototype.play, originalPlay);
+test("an already queued native playback cannot start after its delay", async () => {
+  let release, starts = 0;
+  const delay = new Promise(resolve => { release = resolve; });
+  class Sound { async play() { await delay; this._play(); return this; } _play() { starts++; } }
+  const sound = new Sound(), pending = sound.play();
+  const { scope } = install({ SoundType: Sound });
+  release(); await pending;
+  assert.equal(starts, 0);
+  scope.dispose();
 });
 
-test("YouTube methods installed at onReady are guarded before native playback", () => {
-  const ui = {}, scope = createTaskScope("late-player-api");
-  enableMobileAudio(scope, { getGame: () => ({}), getUi: () => ui, document: null });
+test("native first-gesture contexts suspend immediately and cannot resume until guards are removed", async () => {
+  let suspends = 0, resumes = 0;
+  const context = () => ({ state: "running", async suspend() { suspends++; this.state = "suspended"; }, async resume() { resumes++; this.state = "running"; } });
+  const initial = context(), audio = { music: initial }, game = {};
+  Object.defineProperty(game, "audio", { value: audio, writable: false });
+  const { scope } = install({ getGame: () => game });
+  const late = context(); audio.environment = late; audio.interface = late;
+  await initial.resume(); await late.resume();
+  assert.equal(suspends, 2); assert.equal(resumes, 0);
+  assert.equal(late.state, "suspended");
+  scope.dispose();
+  assert.equal(audio.environment, late, "retain contexts constructed during ownership");
+  assert.equal(resumes, 0);
+  await late.resume(); assert.equal(resumes, 1);
+});
+
+test("deferred audio construction is guarded without startup races", async () => {
+  const game = {}; let suspends = 0;
+  const { scope } = install({ getGame: () => game });
+  game.audio = { music: { suspend() { suspends++; }, async resume() { throw Error("blocked"); } } };
+  assert.equal(suspends, 1);
+  await game.audio.music.resume();
+  scope.dispose(); assert.ok(game.audio.music);
+});
+
+test("existing and detached HTML media stop, play settles without starting, and exit never resumes", async () => {
+  let starts = 0, pauses = 0, scans = 0, observe, disconnected = false;
+  class Media { paused = false; async play() { starts++; this.paused = false; } pause() { pauses++; this.paused = true; } }
+  const originalPlay = Media.prototype.play, existing = new Media(), added = new Media();
+  const document = new EventTarget(); document.body = {};
+  document.querySelectorAll = () => { scans++; return [existing]; };
+  class Observer { constructor(callback) { observe = callback; } observe() {} disconnect() { disconnected = true; } }
+  const { scope } = install({ document, MediaType: Media, MutationObserverType: Observer });
+  assert.equal(existing.paused, true);
+  const detached = new Media(); assert.equal(await detached.play(), undefined);
+  assert.equal(detached.paused, true); assert.equal(starts, 0);
+  observe([{ addedNodes: [{ matches: () => false, querySelectorAll: () => [added] }] }]);
+  assert.equal(added.paused, true); assert.equal(scans, 1, "mutations inspect added branches only");
+  const pausedBeforeExit = pauses; scope.dispose();
+  assert.equal(pauses, pausedBeforeExit); assert.equal(starts, 0); assert.equal(disconnected, true);
+  assert.equal(Media.prototype.play, originalPlay);
+  await detached.play(); assert.equal(starts, 1);
+});
+
+test("YouTube stop is local, idempotent, and blocks restart and playlist-volume feedback", () => {
+  let starts = 0, stops = 0, writes = 0, volumeCommands = 0;
+  const player = { playVideo() { starts++; }, loadVideoById() { starts++; }, loadVideoByUrl() { starts++; },
+    stopVideo() { stops++; app.setSyncSetting(); }, setVolume() { volumeCommands++; app.setSyncSetting(); }, unMute() { volumeCommands++; } };
+  const originalPlay = player.playVideo;
+  const app = { YTPlayer: player, setVolume() { player.setVolume(80); }, setSyncSetting() { writes++; }, setSyncSettingDebounced() { writes++; } };
+  const { scope } = install({ getUi: () => ({ sidebarVideoPlayer: app }) });
+  for (let index = 0; index < 20; index++) { app.setVolume(); player.playVideo(); player.unMute(); player.loadVideoById("x"); player.loadVideoByUrl("x"); }
+  app.setSyncSetting(); app.setSyncSettingDebounced();
+  assert.equal(starts, 0); assert.equal(volumeCommands, 0); assert.equal(writes, 0); assert.equal(stops, 1);
+  scope.dispose();
+  assert.equal(player.playVideo, originalPlay); assert.equal(starts, 0, "no automatic restoration of playback");
+  player.playVideo(); assert.equal(starts, 1);
+});
+
+test("YouTube APIs added at onReady are blocked by the widget's pre-play volume boundary", () => {
+  let starts = 0, stops = 0;
+  const ui = {}, { scope } = install({ getUi: () => ui });
   ui.sidebarVideoPlayer = { setVolume() { this.YTPlayer.setVolume(90); } };
-  const player = {};
-  ui.sidebarVideoPlayer.YTPlayer = player;
-  Object.assign(player, { muted: false, volume: 80, isMuted() { return this.muted; }, getVolume() { return this.volume; },
-    mute() { this.muted = true; }, unMute() { this.muted = false; }, setVolume(value) { this.volume = value; },
-    playVideo() { assert.equal(this.muted, true); } });
-  ui.sidebarVideoPlayer.setVolume(); player.playVideo(); player.unMute();
-  assert.equal(player.muted, true); assert.equal(player.volume, 0);
-  scope.dispose(); assert.equal(player.muted, false); assert.equal(player.volume, 80);
+  const player = {}; ui.sidebarVideoPlayer.YTPlayer = player;
+  Object.assign(player, { playVideo() { starts++; }, stopVideo() { stops++; }, setVolume() { throw Error("must not command volume"); } });
+  ui.sidebarVideoPlayer.setVolume(); player.playVideo();
+  assert.equal(starts, 0); assert.equal(stops, 1);
+  scope.dispose(); assert.equal(starts, 0);
 });
 
-test("YouTube mute and playlist-volume callbacks settle instead of feeding repeated playlist renders", () => {
-  const events = [], scope = createTaskScope("youtube-volume-feedback");
-  let muteCommands = 0, settingsWrites = 0, playlistRenders = 0;
-  const player = {
-    muted: false, volume: 80,
-    isMuted() { return this.muted; }, getVolume() { return this.volume; },
-    // The iframe posts a separate asynchronous volume event for each API
-    // command, including repeated commands whose numeric volume is unchanged.
-    mute() { muteCommands++; events.push(() => { this.muted = true; onVolumeChange(); }); },
-    unMute() { events.push(() => { this.muted = false; onVolumeChange(); }); },
-    setVolume(volume) { events.push(() => { this.volume = volume; onVolumeChange(); }); },
-    playVideo() {}
-  };
-  const app = { YTPlayer: player,
-    setVolume() { this._volumeSetProgrammatically = true; this.YTPlayer.setVolume(80); } };
-  // Mirror YouTube Player Widget's single-event suppression and Foundry's
-  // volume setting -> playlist render + globalPlaylistVolumeChanged hook.
-  const game = { settings: { set() { settingsWrites++; playlistRenders++; app.setVolume(); } } };
-  function onVolumeChange() {
-    if (app._volumeSetProgrammatically) { app._volumeSetProgrammatically = false; return; }
-    game.settings.set("core", "globalPlaylistVolume", player.getVolume() / 100);
-  }
-  const flush = () => {
-    let delivered = 0;
-    while (events.length && delivered++ < 30) events.shift()();
-    assert.equal(events.length, 0, "volume feedback must reach idle within a bounded number of events");
-    return delivered;
-  };
-  class NativeAudio {
-    #muted = false;
-    get globalMute() { return this.#muted; }
-    set globalMute(value) { this.#muted = value; app.setVolume(); }
-  }
-  game.audio = new NativeAudio();
-  try {
-    enableMobileAudio(scope, { getGame: () => game, getUi: () => ({ sidebarVideoPlayer: app }), document: null });
-    // Repeated calls before the iframe acknowledges mute must remain bounded.
-    app.setVolume(); player.playVideo(); player.unMute();
-    assert.ok(flush() <= 8);
-    assert.equal(muteCommands, 1);
-    assert.equal(player.muted, true); assert.equal(player.volume, 0);
-    assert.ok(settingsWrites <= 2); assert.equal(playlistRenders, settingsWrites);
-    const previousWrites = settingsWrites;
-    game.audio.globalMute = true;
-    assert.equal(flush(), 1, "later native mute hooks issue only their one expected volume event");
-    assert.equal(settingsWrites, previousWrites);
-    assert.equal(muteCommands, 1);
-  } finally { scope.dispose(); }
-});
-
-test("an already-muted YouTube player needs no extra mute commands", () => {
-  let muteCommands = 0;
-  const player = { isMuted: () => true, getVolume: () => 0, mute() { muteCommands++; },
-    setVolume() {}, unMute() {}, playVideo() {} };
-  const app = { YTPlayer: player, setVolume() { player.setVolume(80); } };
-  const scope = createTaskScope("youtube-already-muted");
-  try {
-    enableMobileAudio(scope, { getGame: () => ({}), getUi: () => ({ sidebarVideoPlayer: app }), document: null });
-    app.setVolume(); player.unMute(); player.playVideo();
-    assert.equal(muteCommands, 0);
-  } finally { scope.dispose(); }
+test("cleanup preserves a newer method replacement and handles unavailable playback APIs", () => {
+  class Media { async play() {} pause() { throw Error("detached media"); } }
+  const { scope } = install({ MediaType: Media });
+  const next = async function () {}; Media.prototype.play = next;
+  scope.dispose(); assert.equal(Media.prototype.play, next);
 });

@@ -80,16 +80,6 @@ function createDocument() {
   return { head, body };
 }
 
-function createStorage() {
-  const values = new Map();
-  return {
-    getItem: key => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, value),
-    removeItem: key => values.delete(key),
-    values
-  };
-}
-
 test("mobile mode suppresses Carolingian styles and Narrator Tools hooks locally", () => {
   TestMutationObserver.instances = [];
   const documentRef = createDocument();
@@ -144,7 +134,7 @@ test("mobile mode suppresses Carolingian styles and Narrator Tools hooks locally
   assert.equal(TestMutationObserver.instances[0].disconnected, true);
 });
 
-test("desktop mode leaves enabled modules and hooks untouched", () => {
+test("native mode leaves enabled modules and hooks untouched", () => {
   const documentRef = createDocument();
   const styles = createNode({ href: "modules/crlngn-ui/styles/crlngn-ui-v14.css" });
   documentRef.head.append(styles);
@@ -162,80 +152,56 @@ test("desktop mode leaves enabled modules and hooks untouched", () => {
   assert.equal(documentRef.body.classList.contains("crlngn-ui"), true);
 });
 
-test("Carolingian UI is disabled and restored with its client-scoped preference", async () => {
-  const storage = createStorage();
-  const modules = new Map([["crlngn-ui", { active: true }]]);
-  const clientSetting = { scope: "client" };
-  let disableUi = false, reloads = 0;
-  const game = {
-    modules,
-    world: { id: "world-a" },
-    user: { id: "user-a" },
-    settings: {
-      settings: new Map([["crlngn-ui.disable-ui", clientSetting]]),
-      get: () => disableUi,
-      async set(namespace, setting, value) {
-        assert.equal(namespace, "crlngn-ui");
-        assert.equal(setting, "disable-ui");
-        disableUi = value;
-      }
-    }
+test("Carolingian suppression overrides only its local read before init without writes or reloads", () => {
+  let storedDisabled = false, reads = 0;
+  const settings = {
+    settings: new Map([["crlngn-ui.disable-ui", { scope: "client" }]]),
+    get(namespace, key) { assert.equal(this, settings); reads++; return namespace === "crlngn-ui" && key === "disable-ui" ? storedDisabled : `${namespace}.${key}`; },
+    set() { throw Error("must not persist suppression"); }
   };
-  const gateway = createMobileModuleCompatibilityGateway({
-    getGame: () => game,
-    getStorage: () => storage,
-    requestReload: () => { reloads += 1; }
-  });
-
-  assert.deepEqual(await gateway.reconcileCarolingianUi(true), { changed: true, reloadPending: true });
-  assert.equal(disableUi, true);
-  assert.equal(reloads, 1);
-  assert.deepEqual(await gateway.reconcileCarolingianUi(true), { changed: false, reason: "already-disabled" });
-  assert.equal(reloads, 1);
-
-  assert.deepEqual(await gateway.reconcileCarolingianUi(false), { changed: true, reloadPending: true });
-  assert.equal(disableUi, false);
-  assert.equal(reloads, 2);
-  assert.equal(storage.values.size, 0);
+  const original = settings.get, cleanups = [];
+  const result = createMobileModuleCompatibilityGateway({
+    getGame: () => ({ settings, modules: new Map([["crlngn-ui", { active: true }]]) }),
+    readDocument: () => null, getHooks: () => null, MutationObserverClass: null
+  }).suppress({ own: cleanup => cleanups.push(cleanup) }, true);
+  assert.deepEqual(result.modules, ["crlngn-ui"]);
+  assert.equal(settings.get("crlngn-ui", "disable-ui"), true, "Carolingian init and ready see disabled UI");
+  assert.equal(reads, 0);
+  assert.equal(storedDisabled, false);
+  assert.equal(settings.get("core", "uiConfig"), "core.uiConfig");
+  assert.equal(settings.get("crlngn-ui", "other"), "crlngn-ui.other");
+  storedDisabled = true;
+  for (const cleanup of cleanups.reverse()) cleanup();
+  assert.equal(settings.get, original);
+  assert.equal(settings.get("crlngn-ui", "disable-ui"), true, "user changes are never restored over");
 });
 
-test("Carolingian UI's pre-existing client disable preference is preserved", async () => {
-  const storage = createStorage();
-  let disableUi = true;
-  const gateway = createMobileModuleCompatibilityGateway({
-    getGame: () => ({
-      modules: new Map([["crlngn-ui", { active: true }]]),
-      world: { id: "world-a" },
-      user: { id: "user-a" },
-      settings: {
-        settings: new Map([["crlngn-ui.disable-ui", { scope: "client" }]]),
-        get: () => disableUi,
-        async set(_namespace, _setting, value) { disableUi = value; }
-      }
-    }),
-    getStorage: () => storage,
-    requestReload() { throw new Error("A user-disabled module should not cause a reload"); }
-  });
-
-  assert.deepEqual(await gateway.reconcileCarolingianUi(true), { changed: false, reason: "user-disabled" });
-  assert.deepEqual(await gateway.reconcileCarolingianUi(false), { changed: false, reason: "no-mobile-override" });
-  assert.equal(disableUi, true);
+test("Carolingian registers its disable setting after the early guard is installed", () => {
+  const settings = { settings: new Map(), get: () => false };
+  let cleanup;
+  createMobileModuleCompatibilityGateway({
+    getGame: () => ({ settings, modules: new Map([["crlngn-ui", { active: true }]]) }),
+    readDocument: () => null, getHooks: () => null, MutationObserverClass: null
+  }).suppress({ own: callback => { cleanup = callback; } }, true);
+  settings.settings.set("crlngn-ui.disable-ui", { scope: "client" });
+  assert.equal(settings.get("crlngn-ui", "disable-ui"), true);
+  cleanup();
+  assert.equal(settings.get("crlngn-ui", "disable-ui"), false);
 });
 
-test("Carolingian UI setting is never changed unless its setting is client-scoped", async () => {
-  let setCalled = false;
-  const gateway = createMobileModuleCompatibilityGateway({
-    getGame: () => ({
-      modules: new Map([["crlngn-ui", { active: true }]]),
-      settings: {
-        settings: new Map([["crlngn-ui.disable-ui", { scope: "world" }]]),
-        get: () => false,
-        async set() { setCalled = true; }
-      }
-    }),
-    getStorage: createStorage
-  });
-
-  await assert.rejects(gateway.reconcileCarolingianUi(true), /client-only disable setting is unavailable/u);
-  assert.equal(setCalled, false);
+test("Carolingian guard leaves unsupported schemas and newer method wrappers intact", () => {
+  const settings = { settings: new Map([["crlngn-ui.disable-ui", { scope: "world" }]]), get: () => false };
+  let cleanup;
+  createMobileModuleCompatibilityGateway({
+    getGame: () => ({ settings, modules: new Map([["crlngn-ui", { active: true }]]) }),
+    readDocument: () => null, getHooks: () => null, MutationObserverClass: null
+  }).suppress({ own: callback => { cleanup = callback; } }, true);
+  assert.equal(settings.get("crlngn-ui", "disable-ui"), false);
+  const inner = settings.get;
+  const newer = (...args) => inner(...args);
+  settings.get = newer;
+  cleanup();
+  assert.equal(settings.get, newer);
+  settings.settings.set("crlngn-ui.disable-ui", { scope: "client" });
+  assert.equal(settings.get("crlngn-ui", "disable-ui"), false, "retained outer wrappers cannot keep suppression active");
 });

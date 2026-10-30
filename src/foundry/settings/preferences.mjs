@@ -2,6 +2,7 @@ import { resolveSystemIntegration } from "../../systems/registry.mjs";
 import { supportsPreference, effectiveColorScheme, characterPresentation } from "../../systems/presentation-policy.mjs";
 import { COLOR_SCHEME_CHOICES } from "../../features/characters/appearance/character-theme.mjs";
 import { localizeFoundry } from "./localization.mjs";
+import { classifyRuntimeMode } from "../session/activation-policy.mjs";
 
 import { MODULE_ID } from "../compatibility/branding-migration.mjs";
 export { MODULE_ID };
@@ -10,7 +11,6 @@ export const LOAD_TIMING_KEYS = Object.freeze({ FULL: "lastSuccessfulFullLoadMs"
 
 const KEYS = Object.freeze({
   MODE: "mode",
-  MUTE_MOBILE_AUDIO: "muteMobileAudio",
   THEME: "theme",
   COLOR_SCHEME: "colorScheme",
   HEADER_ARTWORK: "headerArtwork",
@@ -42,7 +42,7 @@ const KEYS = Object.freeze({
 });
 
 const CHOICES = Object.freeze({
-  [KEYS.MODE]: Object.freeze(["auto", "phone", "tablet", "desktop"]),
+  [KEYS.MODE]: Object.freeze(["auto", "phone", "tablet", "native"]),
   [KEYS.THEME]: Object.freeze(["system", "light", "dark"]),
   [KEYS.COLOR_SCHEME]: COLOR_SCHEME_CHOICES,
   [KEYS.HEADER_ARTWORK]: Object.freeze(["automatic", "race", "heroic1", "heroic2", "heroic3", "heroic4", "off"]),
@@ -58,7 +58,7 @@ const CHOICES = Object.freeze({
   [KEYS.CHARACTER_FAVOURITES_SOURCE]: Object.freeze(["core", "tidy", "both", "off"]),
 });
 
-const DEFAULTS = Object.freeze({ mode: "auto", muteMobileAudio: true, theme: "system", colorScheme: "class", headerArtwork: "automatic", headerArtworkOpacity: 1, showActionSummaries: true, compactActionSummaries: false, diceRendering: "auto", keepScreenAwake: false, protectMcStyling: true, characterInventorySort: "manual", characterSpellSort: "manual", characterSpellFilter: "all", characterFeatureSort: "manual", characterFavouritesSort: "manual", characterEffectsSort: "manual", characterFavouritesSource: "core" });
+const DEFAULTS = Object.freeze({ mode: "auto", theme: "system", colorScheme: "class", headerArtwork: "automatic", headerArtworkOpacity: 1, showActionSummaries: true, compactActionSummaries: false, diceRendering: "auto", keepScreenAwake: false, protectMcStyling: true, characterInventorySort: "manual", characterSpellSort: "manual", characterSpellFilter: "all", characterFeatureSort: "manual", characterFavouritesSort: "manual", characterEffectsSort: "manual", characterFavouritesSource: "core" });
 
 const CHARACTER_COLLECTION_SETTING_KEYS = Object.freeze({
   inventorySort: KEYS.CHARACTER_INVENTORY_SORT,
@@ -81,10 +81,12 @@ export function registerPreferences({
   onWakeChange,
   onVisualIsolationChange,
   isMobilePresentation = () => true,
+  mobileDevice = classifyRuntimeMode() !== "native",
   openControlsGuide,
   getSystemIntegration = () => resolveSystemIntegration(globalThis.game?.system?.id)
 } = {}) {
   const features = getSystemIntegration().features;
+  const mobileControls = mobileDevice && isMobilePresentation();
   const changed = (key, notify) => (value) => {
     syncBootstrapPreferences();
     notify?.(Object.freeze({ key, value }));
@@ -93,29 +95,31 @@ export function registerPreferences({
     name: "MIKELANDIA_CONTROLS.Settings.Mode.Name",
     hint: "MIKELANDIA_CONTROLS.Settings.Mode.Hint",
     scope: "client",
-    config: true,
+    config: mobileDevice,
     type: String,
     choices: {
       auto: "MIKELANDIA_CONTROLS.Settings.Mode.Auto",
       phone: "MIKELANDIA_CONTROLS.Settings.Mode.Phone",
       tablet: "MIKELANDIA_CONTROLS.Settings.Mode.Tablet",
-      desktop: "MIKELANDIA_CONTROLS.Settings.Mode.Desktop"
+      native: "MIKELANDIA_CONTROLS.Settings.Mode.Native"
     },
     default: "auto",
     onChange: changed(KEYS.MODE, onPresentationChange)
   });
-
-  game.settings.register(MODULE_ID, KEYS.MUTE_MOBILE_AUDIO, {
-    name: "MIKELANDIA_CONTROLS.Settings.MuteMobileAudio.Name", hint: "MIKELANDIA_CONTROLS.Settings.MuteMobileAudio.Hint",
-    scope: "client", config: true, type: Boolean, default: true,
-    onChange: changed(KEYS.MUTE_MOBILE_AUDIO, onApplicationChange)
-  });
+  const storedMode = readSetting(KEYS.MODE, "auto");
+  if (storedMode === "desktop" || storedMode === "off") {
+    // Native Settings reads the stored value directly when selecting a choice.
+    // Retire aliases so an opted-out phone still shows its selected mode.
+    void Promise.resolve(game.settings.set(MODULE_ID, KEYS.MODE, "native")).catch(error => {
+      console.warn("Mikelandia Controls | Could not normalize the native-interface preference", error);
+    });
+  }
 
   game.settings.register(MODULE_ID, KEYS.THEME, {
     name: "MIKELANDIA_CONTROLS.Settings.Theme.Name",
     hint: "MIKELANDIA_CONTROLS.Settings.Theme.Hint",
     scope: "client",
-    config: true,
+    config: mobileControls,
     type: String,
     choices: {
       system: "MIKELANDIA_CONTROLS.Settings.Theme.System",
@@ -130,7 +134,7 @@ export function registerPreferences({
     name: "MIKELANDIA_CONTROLS.Settings.ColourScheme.Name",
     hint: features.legacyCharacterSheet ? "MIKELANDIA_CONTROLS.Settings.ColourScheme.Hint" : "MIKELANDIA_CONTROLS.Settings.ColourScheme.PlainHint",
     scope: "client",
-    config: features.legacyCharacterSheet === true,
+    config: mobileControls && features.legacyCharacterSheet === true,
     type: String,
     choices: {
       class: "MIKELANDIA_CONTROLS.Settings.ColourScheme.Class",
@@ -146,7 +150,7 @@ export function registerPreferences({
     name: "MIKELANDIA_CONTROLS.Settings.HeaderArtwork.Name",
     hint: "MIKELANDIA_CONTROLS.Settings.HeaderArtwork.Hint",
     scope: "client",
-    config: supportsPreference(KEYS.HEADER_ARTWORK, features),
+    config: mobileControls && supportsPreference(KEYS.HEADER_ARTWORK, features),
     type: String,
     choices: Object.fromEntries(CHOICES[KEYS.HEADER_ARTWORK].map(value => [value, "MIKELANDIA_CONTROLS.Settings.HeaderArtwork." + value[0].toUpperCase() + value.slice(1)])),
     default: DEFAULTS.headerArtwork,
@@ -157,7 +161,7 @@ export function registerPreferences({
     name: "MIKELANDIA_CONTROLS.Settings.HeaderArtworkOpacity.Name",
     hint: "MIKELANDIA_CONTROLS.Settings.HeaderArtworkOpacity.Hint",
     scope: "client",
-    config: supportsPreference(KEYS.HEADER_ARTWORK_OPACITY, features),
+    config: mobileControls && supportsPreference(KEYS.HEADER_ARTWORK_OPACITY, features),
     type: Number,
     range: { min: 0, max: 1, step: 0.05 },
     default: 1,
@@ -168,7 +172,7 @@ export function registerPreferences({
     name: "MIKELANDIA_CONTROLS.Settings.ShowActionSummaries.Name",
     hint: "MIKELANDIA_CONTROLS.Settings.ShowActionSummaries.Hint",
     scope: "client",
-    config: supportsPreference(KEYS.SHOW_ACTION_SUMMARIES, features),
+    config: mobileControls && supportsPreference(KEYS.SHOW_ACTION_SUMMARIES, features),
     type: Boolean,
     default: DEFAULTS.showActionSummaries,
     onChange: changed(KEYS.SHOW_ACTION_SUMMARIES, onApplicationChange)
@@ -178,7 +182,7 @@ export function registerPreferences({
     name: "MIKELANDIA_CONTROLS.Settings.CompactActionSummaries.Name",
     hint: "MIKELANDIA_CONTROLS.Settings.CompactActionSummaries.Hint",
     scope: "client",
-    config: supportsPreference(KEYS.COMPACT_ACTION_SUMMARIES, features),
+    config: mobileControls && supportsPreference(KEYS.COMPACT_ACTION_SUMMARIES, features),
     type: Boolean,
     default: DEFAULTS.compactActionSummaries,
     onChange: changed(KEYS.COMPACT_ACTION_SUMMARIES, onApplicationChange)
@@ -188,7 +192,7 @@ export function registerPreferences({
     name: "MIKELANDIA_CONTROLS.Settings.DiceRendering.Name",
     hint: "MIKELANDIA_CONTROLS.Settings.DiceRendering.Hint",
     scope: "client",
-    config: true,
+    config: mobileControls,
     type: String,
     choices: {
       auto: "MIKELANDIA_CONTROLS.Settings.DiceRendering.Auto",
@@ -217,7 +221,7 @@ export function registerPreferences({
   });
 
   game.settings.register(MODULE_ID, KEYS.PENDING_DESKTOP_RESTORE, {
-    name: "Mikelandia Controls pending Desktop settings restoration",
+    name: "Mikelandia Controls legacy settings cleanup",
     scope: "client",
     config: false,
     type: Object,
@@ -252,7 +256,7 @@ export function registerPreferences({
     name: "MIKELANDIA_CONTROLS.Settings.KeepScreenAwake.Name",
     hint: "MIKELANDIA_CONTROLS.Settings.KeepScreenAwake.Hint",
     scope: "client",
-    config: true,
+    config: mobileControls,
     type: Boolean,
     default: false,
     onChange: changed(KEYS.KEEP_SCREEN_AWAKE, onWakeChange)
@@ -262,7 +266,7 @@ export function registerPreferences({
     name: "MIKELANDIA_CONTROLS.Settings.ProtectMcStyling.Name",
     hint: "MIKELANDIA_CONTROLS.Settings.ProtectMcStyling.Hint",
     scope: "client",
-    config: true,
+    config: mobileControls,
     type: Boolean,
     default: true,
     onChange: changed(KEYS.PROTECT_MC_STYLING, onVisualIsolationChange)
@@ -284,7 +288,7 @@ export function registerPreferences({
     name: "MIKELANDIA_CONTROLS.Settings.CharacterFavouritesSource.Name",
     hint: "MIKELANDIA_CONTROLS.Settings.CharacterFavouritesSource.Hint",
     scope: "client",
-    config: supportsPreference(KEYS.CHARACTER_FAVOURITES_SOURCE, features),
+    config: mobileControls && supportsPreference(KEYS.CHARACTER_FAVOURITES_SOURCE, features),
     type: String,
     choices: {
       core: "MIKELANDIA_CONTROLS.Settings.CharacterFavouritesSource.Core",
@@ -308,7 +312,7 @@ export function registerPreferences({
     });
   }
 
-  if (typeof game.settings.registerMenu === "function" && typeof openControlsGuide === "function") {
+  if (mobileControls && typeof game.settings.registerMenu === "function" && typeof openControlsGuide === "function") {
     game.settings.registerMenu(MODULE_ID, "controlsGuide", {
       name: "MIKELANDIA_CONTROLS.Controls.Title", label: "MIKELANDIA_CONTROLS.Controls.View", hint: "MIKELANDIA_CONTROLS.Controls.MenuHint",
       icon: "fa-solid fa-hand-pointer", type: controlsGuideMenuType(openControlsGuide), restricted: false
@@ -403,7 +407,6 @@ export function createFoundryPreferencesGateway({
   const setting = (key) => getGame()?.settings?.get?.(MODULE_ID, key);
 
   const readers = {
-    muteMobileAudio: () => setting(KEYS.MUTE_MOBILE_AUDIO) !== false,
     mode: () => normalizedModePreference(setting(KEYS.MODE)),
 
     colorScheme: () => effectiveColorScheme(normalizedColorScheme(setting(KEYS.COLOR_SCHEME)), getSystemIntegration().features),
@@ -548,7 +551,6 @@ export function createFoundryPreferencesGateway({
 
 function preferenceFields(setting, localize, getNavigator, getGame, features) {
   return Object.freeze([
-    booleanField(KEYS.MUTE_MOBILE_AUDIO, "MuteMobileAudio", setting(KEYS.MUTE_MOBILE_AUDIO) !== false, localize),
     choiceField(KEYS.MODE, "Mode", normalizedModePreference(setting(KEYS.MODE)), localize),
     choiceField(KEYS.THEME, "Theme", setting(KEYS.THEME), localize),
     choiceField(KEYS.COLOR_SCHEME, "ColourScheme", setting(KEYS.COLOR_SCHEME), localize),
@@ -686,7 +688,7 @@ function serializableValue(value) {
 function settingsLabels(localize) {
   const keys = [
     "SettingsSubtitle", "MobileSettingsTitle", "DeviceLabel", "DeviceResolving", "PhoneModeEnabled", "TabletModeEnabled",
-    "DesktopModeEnabled", "PhoneModeSelected", "TabletModeSelected", "DesktopModeSelected", "Left", "Right", "JoystickCurrently",
+    "NativeModeEnabled", "PhoneModeSelected", "TabletModeSelected", "NativeModeSelected", "Left", "Right", "JoystickCurrently",
     "ModuleOverlayExplanation", "ModuleOverlayWarning", "ModuleOverlayScan", "ModuleOverlayRescan", "ModuleOverlayNotScanned",
     "ModuleOverlayNone", "ModuleOverlayDetectedOne", "ModuleOverlayDetectedMany", "ModuleOverlayShow", "ModuleOverlayUnavailable",
     "ModuleOverlayScanning", "ModuleOverlayOrderHint", "ModuleOverlayScale", "SessionTitle", "Online", "LatencyTitle", "FpsTitle", "SessionMetricsNote"
@@ -728,11 +730,11 @@ function booleanField(key, group, value, localize) {
 }
 
 function normalizeSetting(key, value) {
-  if ([KEYS.MUTE_MOBILE_AUDIO, KEYS.KEEP_SCREEN_AWAKE, KEYS.PROTECT_MC_STYLING, KEYS.SHOW_ACTION_SUMMARIES, KEYS.COMPACT_ACTION_SUMMARIES].includes(key)) {
+  if ([KEYS.KEEP_SCREEN_AWAKE, KEYS.PROTECT_MC_STYLING, KEYS.SHOW_ACTION_SUMMARIES, KEYS.COMPACT_ACTION_SUMMARIES].includes(key)) {
     if (typeof value !== "boolean") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.BooleanExpected", "That setting requires an on or off value."));
     return value;
   }
-  if (key === KEYS.MODE && value === "off") return "desktop";
+  if (key === KEYS.MODE && ["off", "desktop"].includes(value)) return "native";
   if (CHOICES[key]) {
     const choice = String(value ?? "");
     if (!CHOICES[key].includes(choice)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.ChoiceUnsupported", "That setting choice is not supported."));
@@ -757,7 +759,7 @@ export function resolveCharacterFavouritesSource(value, game = globalThis.game) 
 }
 
 function normalizedModePreference(value) {
-  const mode = value === "off" ? "desktop" : String(value ?? "");
+  const mode = ["off", "desktop"].includes(value) ? "native" : String(value ?? "");
   return CHOICES[KEYS.MODE].includes(mode) ? mode : BOOTSTRAP_DEFAULTS.mode;
 }
 

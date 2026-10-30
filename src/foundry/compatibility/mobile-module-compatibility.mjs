@@ -1,6 +1,4 @@
 const MOBILE_COMPATIBILITY_MODULES = Object.freeze(["crlngn-ui", "narrator-tools"]);
-const CAROLINGIAN_UI_SETTING = "crlngn-ui.disable-ui";
-const COMPATIBILITY_STORAGE_PREFIX = "mikelandia-controls:module-compatibility:v1";
 // Foundry's hook entries have no owning-module metadata, so target only the
 // Narrator Tools callbacks installed by its current main/compatibility scripts.
 const NARRATOR_HOOK_MATCHERS = Object.freeze({
@@ -16,62 +14,9 @@ export function createMobileModuleCompatibilityGateway({
   getGame = () => globalThis.game,
   getHooks = () => globalThis.Hooks,
   readDocument = () => globalThis.document,
-  MutationObserverClass = globalThis.MutationObserver,
-  getStorage = () => globalThis.localStorage,
-  requestReload = () => {
-    const reload = globalThis.foundry?.utils?.debouncedReload;
-    if (typeof reload === "function") reload();
-    else globalThis.window?.location?.reload?.();
-  }
+  MutationObserverClass = globalThis.MutationObserver
 } = {}) {
   return Object.freeze({
-    async reconcileCarolingianUi(mobileMode) {
-      const game = getGame();
-      if (!game?.modules?.get?.("crlngn-ui")?.active) return Object.freeze({ changed: false, reason: "module-inactive" });
-      const setting = game.settings?.settings?.get?.(CAROLINGIAN_UI_SETTING);
-      if (setting?.scope !== "client") {
-        throw new Error("Carolingian UI's client-only disable setting is unavailable; no module setting was changed.");
-      }
-      const storage = getStorage();
-      if (!storage?.getItem || !storage?.setItem || !storage?.removeItem) {
-        throw new Error("Local storage is unavailable; Carolingian UI's previous client setting cannot be preserved.");
-      }
-      const key = compatibilityStorageKey();
-      const snapshot = readCompatibilitySnapshot(storage, key);
-      const currentValue = Boolean(game.settings.get("crlngn-ui", "disable-ui"));
-
-      if (mobileMode) {
-        if (snapshot) {
-          if (currentValue) return Object.freeze({ changed: false, reason: "already-disabled" });
-        } else if (currentValue) {
-          return Object.freeze({ changed: false, reason: "user-disabled" });
-        } else {
-          storage.setItem(key, JSON.stringify({ version: 1, previousValue: false }));
-        }
-        await game.settings.set("crlngn-ui", "disable-ui", true);
-        if (!game.settings.get("crlngn-ui", "disable-ui")) {
-          throw new Error("Carolingian UI's effective client setting remained enabled; it was not reloaded.");
-        }
-        // Carolingian checks disable-ui during initialization, so restart after
-        // updating its client setting to prevent its UI hooks from starting.
-        requestReload();
-        return Object.freeze({ changed: true, reloadPending: true });
-      }
-
-      if (!snapshot) return Object.freeze({ changed: false, reason: "no-mobile-override" });
-      if (currentValue !== snapshot.previousValue) {
-        await game.settings.set("crlngn-ui", "disable-ui", snapshot.previousValue);
-        if (Boolean(game.settings.get("crlngn-ui", "disable-ui")) !== snapshot.previousValue) {
-          throw new Error("Carolingian UI's prior client setting could not be restored; the saved setting was retained.");
-        }
-        // Reinitialize Carolingian with the restored user preference.
-        requestReload();
-        storage.removeItem(key);
-        return Object.freeze({ changed: true, reloadPending: true });
-      }
-      storage.removeItem(key);
-      return Object.freeze({ changed: false, reason: "already-restored" });
-    },
     suppress(scope, enabled) {
       if (!enabled) return Object.freeze({ active: false, modules: Object.freeze([]) });
       const game = getGame();
@@ -81,6 +26,9 @@ export function createMobileModuleCompatibilityGateway({
       const documentRef = readDocument();
       const hooks = getHooks();
       const suppressed = new Set();
+      if (modules.includes("crlngn-ui") && suppressCarolingianSetting(scope, game)) {
+        suppressed.add("crlngn-ui");
+      }
       if (modules.includes("narrator-tools")) {
         suppressed.add("narrator-tools");
         removeNarratorHooks(hooks);
@@ -137,18 +85,30 @@ export function createMobileModuleCompatibilityGateway({
   });
 }
 
-function compatibilityStorageKey() {
-  return `${COMPATIBILITY_STORAGE_PREFIX}:crlngn-ui`;
-}
-
-function readCompatibilitySnapshot(storage, key) {
-  const raw = storage.getItem(key);
-  if (raw === null) return null;
-  const snapshot = JSON.parse(raw);
-  if (snapshot?.version !== 1 || typeof snapshot.previousValue !== "boolean") {
-    throw new Error("The saved Carolingian UI setting snapshot is invalid; it was not changed.");
-  }
-  return snapshot;
+/** Carolingian reads this client setting during init and ready. Suppress its
+ * UI for this page without persisting anything which would need restoration. */
+function suppressCarolingianSetting(scope, game) {
+  const settings = game?.settings;
+  if (typeof settings?.get !== "function") return false;
+  const descriptor = Object.getOwnPropertyDescriptor(settings, "get");
+  if (descriptor?.configurable === false) return false;
+  const original = settings.get;
+  let active = true;
+  const guarded = function (namespace, key, ...args) {
+    if (active && namespace === "crlngn-ui" && key === "disable-ui") {
+      const definition = settings.settings?.get?.("crlngn-ui.disable-ui");
+      if (!definition || definition.scope === "client") return true;
+    }
+    return original.call(this, namespace, key, ...args);
+  };
+  Object.defineProperty(settings, "get", { configurable: true, writable: true, value: guarded });
+  scope?.own?.(() => {
+    active = false;
+    if (settings.get !== guarded) return;
+    if (descriptor) Object.defineProperty(settings, "get", descriptor);
+    else delete settings.get;
+  });
+  return true;
 }
 
 function removeNarratorHooks(hooks) {

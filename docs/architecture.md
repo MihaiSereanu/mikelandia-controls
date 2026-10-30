@@ -2,11 +2,11 @@
 
 ## Source map
 
-The entry point wires the runtime together. Keep orchestration in `kernel`, Foundry APIs in `foundry`, route behavior in `features`, shared controls in `ui`, and game rules in `systems`.
+The shared entry point installs system fixes and upgrade cleanup. Only active phone/tablet clients import the mobile runtime and its styles. Keep orchestration in `kernel`, Foundry APIs in `foundry`, route behavior in `features`, shared controls in `ui`, and game rules in `systems`.
 
 | Area | Folders and entry points |
 |---|---|
-| Runtime coordination | `src/entry.mjs`, `src/kernel/app-kernel.mjs` |
+| Shared startup / mobile runtime | `src/entry.mjs`, `src/mobile-entry.mjs`, `src/kernel/app-kernel.mjs` |
 | Kernel responsibilities | `src/kernel/state/`, `lifecycle/`, `connection/`, `presentation/` |
 | Character UI | `src/features/characters/presenter.mjs`; `profile/`, `sheets/`, `appearance/` |
 | Other routes and help | `src/features/{chat,combat,journals,settings,help}/` |
@@ -16,6 +16,10 @@ The entry point wires the runtime together. Keep orchestration in `kernel`, Foun
 | System profiles | `src/systems/registry.mjs`, `{dnd5e,wfrp4e,shadowdark,fallback}/`, `profile-view.mjs` |
 
 Character themes, header artwork, and header scrolling live in `features/characters/appearance/`. The banner catalogue resolves artwork relative to its own module; the elapsed clock loads its worker from `ui/timing/`. Preserve these URLs when moving their modules.
+
+Physical desktop browsers always resolve to native Foundry, including with saved Phone/Tablet overrides. There is no companion UI, help menu, settings-form rewriting, module API, or mobile stylesheet loading on those clients. Shared WFRP arm translations and opposed Momentum support remain installed. Phone/Tablet clients retain Auto/Phone/Tablet/Use native Foundry; old `desktop`/`off` choices normalize to `native`. Opted-out mobile clients expose only the native mode setting. iPadOS desktop-site identification still counts as a tablet.
+
+Foundry does not await package top-level async work before init. Active mobile clients temporarily wrap `foundry.Game.prototype.initialize` (legacy `Game` fallback), await the mobile import, install mobile hooks with the real game available, and remove that wrapper before native initialization. `assets/mobile.css` loads only for those clients. Shared upgrade cleanup runs after settings registration; only browsers with historical receipts get a temporary pre-Canvas cleanup boundary. It restores owned graphics/noCanvas, native theme and Carolingian settings locally, verifies them before retiring receipts, and reports failures with native notifications while retaining recovery data. No custom native-client recovery UI remains.
 
 ## Scope and action validation
 
@@ -31,7 +35,7 @@ Native Notes content participates in selected-Actor snapshot change detection, s
 
 ## Controls guide
 
-Controls & Gestures shows main navigation, system-specific Character tabs, and useful controls. Both Desktop and mobile pass the integration ID; mobile also passes the selected character type, available profile tabs, Notes availability, and Warhammer edition. D&D groups and vehicles receive their own tab descriptions; unknown systems use full-sheet guidance.
+Controls & Gestures is mobile-only and shows main navigation, system-specific Character tabs, and useful controls. Its context includes the integration ID, selected character type, available profile tabs, Notes availability, and Warhammer edition. D&D groups and vehicles receive their own tab descriptions; unknown systems use full-sheet guidance.
 
 Tab names render as subheadings, and controls as a list. Localized copy supports only paired `**bold**` markers, rendered as text and `strong` elements without interpreting HTML. Hold instructions are limited to D&D lists.
 
@@ -53,7 +57,7 @@ Phone/Tablet damage feedback follows the exact selected owned PC source across a
 
 Each hit replaces the previous notification with a 0.4-second interface shake, soft red edge mist and “You took {amount} damage/wounds”. Ordinary damage clears within two seconds or early with Close/Escape. A damaging update that crosses from positive HP/Wounds to zero or below adds “You’re down!”; the notification and shake expire normally, leaving the same-strength mist visible. Close/Escape dismisses that notification and shake without clearing its mist. The mist remains until the next remaining HP/Wounds value change; maximum-only, temporary-HP-only and unrelated updates do not clear it. Another damaging HP/Wounds change starts the appropriate new effect. Selection changes, reconnects and runtime disposal clear presentation and rebaseline silently. The overlay passes pointer input through outside its notification, does not move focus and survives route rendering. Reduced-motion preference disables shaking.
 
-In WFRP worlds, Phone/Tablet mode permanently saves all five `wfrp4e.theme` sections as disabled in the browser, preserving font choices. The policy also removes native theming from open sheets, journals, sidebar and applications, and corrects theme previews or saved re-enabling while mobile mode is selected. Desktop mode stops enforcement without restoring the previous WFRP theme. Other systems and browsers that remain in Desktop mode are unaffected. This uses the installed WFRP 10.1.2 client schema; unsupported schemas are reported without writes.
+In WFRP worlds, Phone/Tablet mode permanently saves all five `wfrp4e.theme` sections as disabled in the browser, preserving font choices. The policy also removes native theming from open sheets, journals, sidebar and applications, and corrects theme previews or saved re-enabling while mobile mode is selected. Choosing native Foundry stops enforcement without restoring the previous WFRP theme. Other systems and browsers that remain native are unaffected. This uses the installed WFRP 10.1.2 client schema; unsupported schemas are reported without writes. General mobile light/dark colors use runtime `configureUI()` calls without changing saved `core.uiConfig` or capturing restoration snapshots. Carolingian suppression overrides only its local `disable-ui` read before init; it creates no saved override or reload.
 
 The in-game companion frame reserves the top safe-area inset plus 8px in standalone mode. Both base and protected-style CSS use border-box sizing to keep navigation within the viewport and preserve the phone character header's additional 4px inset. Login/PWA behavior and operations are in the [runbook](mobile-login.md).
 
@@ -143,9 +147,11 @@ Phone/Tablet isolation is reversible and independent of Protect/Common Display. 
 
 Admit exact owned editors, recognized roll forms, approved children, or native dialogs following deliberate mobile controls. Navigation/render hooks/generic modal flags grant no admission. Scoped requests own exact confirmations; Settings has explicit session ownership. While the companion is active, the native visibility layer covers both `.mc-mobile-admitted-app` and `.mc-mobile-settings-app`, including headers and Close controls, so Common Display Hide UI cannot hide owned workflows. Keep the saved Hide UI preference and desktop presentation intact. Revoke ownership on teardown; preserve headers, notifications, tooltips, menus, and Dice So Nice canvas. Skip observer mutations wholly inside approved branches while reconciling ownership changes.
 
-Dice rendering resolves explicit static/reduced/normal choices or automatic device-hint selection without reading the canvas or a recovery journal. Keep the separate legacy client-setting restoration path for old saved graphics changes.
+Dice rendering resolves explicit static/reduced/normal choices or automatic device-hint selection without reading the canvas or a recovery journal. Historical graphics changes are handled only by upgrade cleanup.
 
-`muteMobileAudio` defaults on locally. Guard first-gesture contexts, playback, gain writes, detached media, and embedded players; restore prior state on exit/disable. YouTube mute is idempotent per player even with stale iframe state: repeated commands trigger Player Widget playlist-volume/render loops. Guard volume/unmute without repeating mute. Audible proof requires a phone.
+Phone/Tablet audio is disabled unconditionally from init, before ready and first-gesture unlock. Block native Sound loading/playback, including pending unlock/delayed internal entry points; stop existing local Sounds and suspend existing/new native AudioContexts with resume blocked. Pause HTML audio/video and block detached/new media playback. Stop the YouTube widget locally and block playback/volume callbacks without shared setting writes. Do not change Playlist documents, save playback state, or replay/resume anything on disposal. Remove guards on teardown; mode changes reload Foundry. The old `muteMobileAudio` preference is unused and has no control. Audible proof requires a phone.
+
+`hidden-canvas-rendering.mjs` skips only the native board's main-stage screen draw while its view is blocked by mobile isolation or the page is hidden. It preserves renderer calls to textures/other stages and leaves other renderers (including Dice So Nice) alone. Never stop the application ticker: Foundry uses it for token animations, pending placeable/interface render flags, primary updates and perception. Keep canvas objects, native targeting and event-driven moving-token distances active. Reattach on canvasReady and remove the renderer guard on teardown. This saves screen drawing; it does not suspend the remaining scene processing.
 
 Optional in-memory API: `setRollTimingEnabled`, `rollTimingSnapshot`, `resetRollTiming`. Separate native/dialog/chat stages from thinking time and time outside Chat; retain at most 20 observations, disposing listeners after 30 seconds or cancellation.
 

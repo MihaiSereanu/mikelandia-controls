@@ -17,10 +17,40 @@ function setup(t, system = "wfrp4e", initial = {}) {
     register(namespace, key, definition) { registered.set(`${namespace}.${key}`, { ...definition, namespace, key }); }
   };
   installGlobals(t, { game });
-  registerPreferences({ isMobilePresentation: () => true });
+  registerPreferences({ isMobilePresentation: () => true, mobileDevice: true });
   const gateway = createFoundryPreferencesGateway({ getGame: () => game, getNavigator: () => ({}) });
   return { game, gateway, writes, stored, registered };
 }
+test("legacy audio opt-out no longer exposes a mobile or native preference", t => {
+  const f = setup(t, "shadowdark", { "mikelandia-controls.muteMobileAudio": false });
+  assert.equal(f.registered.has("mikelandia-controls.muteMobileAudio"), false);
+  assert.equal(f.gateway.snapshot().fields.some(field => field.key === "muteMobileAudio"), false);
+  assert.deepEqual(f.writes, []);
+});
+test("physical desktop registers no visible module controls or help menu", t => {
+  const f = setup(t, "dnd5e");
+  const menus = [];
+  f.game.settings.registerMenu = (...args) => menus.push(args);
+  registerPreferences({ mobileDevice: false, openControlsGuide: () => {} });
+  assert.equal([...f.registered.values()].some(field => field.config), false);
+  assert.deepEqual(menus, []);
+});
+test("mobile native opt-out keeps only the native Foundry mode selector", t => {
+  const f = setup(t, "dnd5e");
+  const menus = [];
+  f.game.settings.registerMenu = (...args) => menus.push(args);
+  registerPreferences({ mobileDevice: true, isMobilePresentation: () => false, openControlsGuide: () => {} });
+  assert.deepEqual([...f.registered.values()].filter(field => field.config).map(field => field.key), ["mode"]);
+  assert.ok(Object.hasOwn(f.registered.get("mikelandia-controls.mode").choices, "native"));
+  assert.deepEqual(menus, []);
+});
+test("legacy native-interface aliases become a selected native choice in Foundry settings", t => {
+  for (const legacy of ["desktop", "off"]) {
+    const f = setup(t, "shadowdark", { "mikelandia-controls.mode": legacy });
+    assert.equal(f.stored.get("mikelandia-controls.mode"), "native");
+    assert.equal(f.gateway.snapshot().mode, "native");
+  }
+});
 for (const system of ["wfrp4e", "shadowdark", "custom"]) {
   test(`${system} exposes effective shared preferences without changing saved D&D choices`, t => {
     const initial = { "mikelandia-controls.colorScheme": "class", "mikelandia-controls.headerArtwork": "obsolete", "mikelandia-controls.quickbarSource": "character",

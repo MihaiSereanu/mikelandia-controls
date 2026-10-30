@@ -8,6 +8,9 @@ import { checkTooltipTouches } from "./browser/tooltip-touches.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ["shared-entry-desktop", 1280, 900, "shared-entry", "device=desktop"],
+  ["shared-entry-phone", 390, 844, "shared-entry", "device=phone"],
+  ["shared-entry-tablet", 1024, 768, "shared-entry", "device=tablet"],
   ...[["shadowdark", ""], ["dnd5e", "&system=dnd5e"], ["wfrp4e", "&system=wfrp4e&edition=4e"], ["wfrp5e", "&system=wfrp4e&edition=5e"]].flatMap(([system, query]) =>
     [["phone", 390, 844], ["tablet", 1024, 768]].map(([layout, width, height]) =>
       [`damage-${system}-${layout}`, width, height, "in-person", `layout=${layout}&damage=true${query}`])),

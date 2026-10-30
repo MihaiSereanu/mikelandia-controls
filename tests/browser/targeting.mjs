@@ -2,6 +2,8 @@ import { targetingFixture } from "../helpers/targeting.mjs";
 import { createTaskScope } from "/src/kernel/lifecycle/task-scope.mjs";
 import { renderCombat } from "/src/features/combat/presenter.mjs";
 import { createFoundryCombatGateway } from "/src/foundry/combat/combat-gateway.mjs";
+import { enableHiddenCanvasRendering } from "/src/foundry/presentation/hidden-canvas-rendering.mjs";
+import { enableMobileUiIsolation } from "/src/foundry/presentation/mobile-ui-isolation.mjs";
 
 const checks = [];
 const check = (name, value) => { if (!value) throw new Error(name); checks.push(name); };
@@ -18,6 +20,13 @@ f.game.combat.turns[0].name = "Hero";
 const combatGateway = createFoundryCombatGateway({ getGame: () => f.game });
 const scope = createTaskScope(), root = document.createElement("main");
 root.className = "mc-mobile-app"; document.body.append(root);
+const board = document.createElement("canvas"); document.body.append(board);
+let boardDraws = 0;
+const stage = {}, renderer = { render: () => { boardDraws += 1; } };
+f.canvas.app = { view: board, stage, renderer };
+enableMobileUiIsolation(scope);
+enableHiddenCanvasRendering(scope, { getCanvas: () => f.canvas });
+const drawBoard = () => renderer.render(stage);
 const params = new URLSearchParams(location.search);
 if (params.has("large")) root.style.setProperty("font-size", "24px", "important");
 let view;
@@ -33,6 +42,8 @@ const render = targeting => {
   root.replaceChildren(renderCombat({ state: { targeting, snapshot: { combat } }, commands, scope: view }));
 };
 try {
+  drawBoard();
+  check("mobile isolation hides board and skips its screen draw", getComputedStyle(board).display === "none" && boardDraws === 0);
   if (params.has("native-assets")) {
     const response = await fetch("/native-fixture/foundry2.css");
     check("native Foundry button stylesheet is available", response.ok);
@@ -173,6 +184,8 @@ try {
   for (const combatant of f.game.combat.turns) combatant.sceneId = f.scene.id;
   f.hooks.emit("updateCombatant", {}); await tick();
   f.gateway.setExpanded(false);
+  drawBoard();
+  check("native target and distance interactions completed with board draws skipped", boardDraws === 0);
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
 } catch (error) { document.querySelector("#results").textContent = JSON.stringify({ status: "failed", checks, error: error.stack }); }
-finally { scope.dispose(); }
+finally { scope.dispose(); board.remove(); }
