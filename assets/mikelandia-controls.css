@@ -3244,6 +3244,19 @@ body.mc-mobile-running #pause {
 .mc-profile-section-heading h3 { margin-bottom: 0; }
 .mc-profile-section-metric { color: var(--mc-subtle); overflow-wrap: anywhere; }
 .mc-profile-description { flex: 1 0 100%; min-width: 0; }
+.mc-profile-group-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.mc-profile-group > summary { min-height: 44px; align-content: center; cursor: pointer; font-weight: 700; color: var(--mc-text); }
+.mc-profile-group > summary h3 { display: inline; margin: 0; }
+.mc-profile-group[open] > summary { margin-bottom: 10px; }
+.mc-profile-group-content .mc-profile-section-heading { flex-wrap: wrap; }
+.mc-profile-group-content .mc-profile-section-heading h3 { flex-basis: 100%; }
+.mc-profile-property { padding: 8px 0; }
+.mc-profile-row.mc-profile-spell-row { position: relative; align-items: flex-start; }
+.mc-profile-spell-row > dt { flex-basis: 100%; }
+.mc-profile-spell-description summary { padding-inline-end: 110px; color: var(--mc-text); }
+.mc-profile-spell-row > dd { position: absolute; top: 8px; right: 8px; display: flex; align-items: center; gap: 8px; }
+.mc-profile-spell-row .mc-profile-action { width: 44px; justify-content: center; }
+@media (max-width: 479px) { .mc-profile-group-content { grid-template-columns: minmax(0, 1fr); } }
 .mc-profile-description summary { min-height: 44px; align-content: center; cursor: pointer; }
 .mc-profile-description p { margin: 8px 0 0; white-space: pre-line; overflow-wrap: anywhere; }
 

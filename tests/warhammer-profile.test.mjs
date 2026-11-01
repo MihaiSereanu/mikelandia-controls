@@ -5,10 +5,66 @@ import { createFoundrySessionGateway, sessionInvalidationForHook } from "../src/
 import { createTaskScope } from "../src/kernel/lifecycle/task-scope.mjs";
 import { createHooks, installGlobals } from "./helpers/foundry.mjs";
 import { createWarhammerActor, createWarhammerGame } from "./helpers/warhammer.mjs";
+import { warhammerItemProperties } from "../src/systems/wfrp4e/item-properties.mjs";
 
 const integration = resolveSystemIntegration("wfrp4e");
 const sections = actor => actor.panels.flatMap(tab => tab.sections);
 const fields = actor => sections(actor).flatMap(section => section.rows ?? []);
+
+test("native item properties preserve ratings, unavailable qualities and custom reference text", t => {
+  const game = createWarhammerGame([]);
+  game.wfrp4e = { config: { qualityDescriptions: { shield: "<p>Stops (Rating) damage.</p>" }, flawDescriptions: { slow: "<p>Slow reference.</p>" } } };
+  installGlobals(t, { game });
+  const item = { system: {
+    qualities: { value: [{ custom: true, key: "etched", description: "<p>Custom inscription.</p>" }] },
+    properties: {
+      qualities: { shield: { key: "shield", display: "Shield 2", value: 2 }, etched: { key: "etched", display: "Etched" } },
+      unusedQualities: { fast: { key: "fast", display: "Fast" } },
+      inactiveQualities: { impact: { key: "impact", display: "Impact" } },
+      flaws: { slow: { key: "slow", display: "Slow" }, unknown: { key: "unknown", display: "Unknown flaw" } }
+    }
+  } };
+  assert.deepEqual(warhammerItemProperties(item), [
+    { kind: "quality", label: "Shield 2", description: "<p>Stops 2 damage.</p>" },
+    { kind: "quality", label: "Etched", description: "<p>Custom inscription.</p>" },
+    { kind: "quality", label: "Fast (Unused)", description: "" },
+    { kind: "quality", label: "Impact (Inactive)", description: "" },
+    { kind: "flaw", label: "Slow", description: "<p>Slow reference.</p>" },
+    { kind: "flaw", label: "Unknown flaw", description: "" }
+  ]);
+});
+
+for (const use5e of [false, true]) {
+  test(`Warhammer ${use5e ? "5e" : "4e"} Armour keeps native location totals and equipped item coverage`, t => {
+    const actor = createWarhammerActor();
+    const game = createWarhammerGame([actor], { use5e });
+    installGlobals(t, { game });
+    actor.system.characteristics.t.bonus = 4;
+    actor.system.status.armour = { shield: 2, shieldDamage: 1, ...Object.fromEntries(
+      ["head", "body", "lArm", "rArm", "lLeg", "rLeg"].map(loc => [loc, { value: loc === "head" ? 3 : 0 }])) };
+    const helmet = { id: "helmet", name: "Helmet", type: "armour", parent: actor, system: {
+      isEquipped: true, protects: { head: true }, currentAP: { head: 1 }, AP: { head: 2 }, APdamage: { head: 1 },
+      properties: { qualities: { durable: { key: "durable", display: "Durable 1", value: 1 } }, flaws: {} }
+    } };
+    actor.items.push(helmet, { ...helmet, id: "hidden-armour", name: "Hidden armour", visible: false },
+      { ...helmet, id: "unequipped", name: "Unequipped armour", system: { ...helmet.system, isEquipped: false } });
+    const combat = () => integration.createActorViewRecord(actor, game.user).panels.find(tab => tab.id === "combat");
+    const group = combat().sections.find(section => section.id === "armour");
+    assert.equal(combat().sections.at(-1).id, "armour");
+    assert.equal(group.sections.length, 6);
+    assert.equal(group.collapsible, true);
+    const head = group.sections.find(section => section.id === "armour-head");
+    assert.deepEqual(head.summary.map(row => [row.id, row.value]), [["armour-ap", 3], ["shield-ap", 2], ["toughness-bonus", 4]]);
+    assert.equal(head.rows.length, 1);
+    assert.equal(head.rows[0].label, "Helmet");
+    assert.equal(head.rows[0].value, 1);
+    assert.equal(head.rows[0].properties[0].label, "Durable 1");
+    assert.equal(head.rows[0].action, undefined);
+    assert.equal(head.rows[0].edit, undefined);
+    assert.equal(group.sections.find(section => section.id === "armour-body").rows.length, 0);
+    assert.equal(group.sections.find(section => section.id === "armour-body").summary[0].value, 0);
+  });
+}
 
 for (const use5e of [false, true]) {
   test(`Warhammer ${use5e ? "5e" : "4e"} Combat mirrors native encumbrance tiers and read-only injuries`, t => {

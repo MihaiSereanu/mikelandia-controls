@@ -44,7 +44,7 @@ try {
     document.fonts.add(await font.load());
     const style = document.createElement("style");
     style.textContent =
-      '.mc-profile-secondary-action i { font-family: "Native fixture icons"; font-weight: 900; font-style: normal; } .mc-profile-secondary-action .fa-bed::before { content: "\\f236"; }';
+      '.mc-profile-secondary-action i, .mc-profile-action i { font-family: "Native fixture icons"; font-weight: 900; font-style: normal; } .mc-profile-secondary-action .fa-bed::before { content: "\\f236"; } .mc-profile-action .fa-dice::before { content: "\\f522"; }';
     document.head.append(style);
   }
   let use5e = initial5e;
@@ -1355,6 +1355,43 @@ try {
     );
     const sword = actor.items.find((item) => item.id === "sword");
     const handgun = actor.items.find((item) => item.id === "handgun");
+    sword.system.properties = { qualities: { accurate: { key: "accurate", display: "Accurate", value: 1 } } };
+    game.wfrp4e.config.qualityDescriptions = { accurate: "<p>Native <strong>accurate</strong> rules.</p>" };
+    actor.system.characteristics.t.bonus = 3;
+    actor.system.status.armour = { shield: 2, ...Object.fromEntries(["head", "body", "lArm", "rArm", "lLeg", "rLeg"].map(loc => [loc, { value: loc === "body" ? 2 : 0 }])) };
+    actor.items.push({ id: "mail", name: "Mail Shirt", type: "armour", parent: actor, system: {
+      isEquipped: true, protects: { body: true }, currentAP: { body: 2 },
+      properties: { flaws: { partial: { key: "partial", display: "Partial" } } }
+    } });
+    game.wfrp4e.config.flawDescriptions = { partial: "<p>Partial coverage.</p>" };
+    Hooks.emit("updateActor", actor, {});
+    await tick();
+    const armourGroup = screen.querySelector('[data-profile-section="armour"]');
+    check("Armour starts collapsed", !armourGroup.open);
+    const armourHeadingStyle = getComputedStyle(armourGroup.querySelector("summary h3"));
+    const weaponHeadingStyle = getComputedStyle(screen.querySelector('[data-profile-section="melee-weapons"] h3'));
+    check("Armour uses the same card and heading size as weapons", armourGroup.classList.contains("mc-profile-section") &&
+      armourHeadingStyle.fontSize === weaponHeadingStyle.fontSize && armourHeadingStyle.fontWeight === weaponHeadingStyle.fontWeight && armourHeadingStyle.lineHeight === weaponHeadingStyle.lineHeight);
+    armourGroup.querySelector("summary").click();
+    check("Armour heading expands the complete breakdown", armourGroup.open);
+    check("Armour follows the weapon groups with six native locations", armourGroup?.querySelectorAll("[data-profile-section]").length === 6 &&
+      Boolean(screen.querySelector('[data-profile-section="ranged-weapons"]').compareDocumentPosition(armourGroup) & Node.DOCUMENT_POSITION_FOLLOWING));
+    const bodyArmour = armourGroup.querySelector('[data-profile-section="armour-body"]');
+    check("Armour shows native totals and equipped protecting pieces", bodyArmour.textContent.includes("Armour AP 2") && bodyArmour.textContent.includes("Shield AP 2") && bodyArmour.textContent.includes("Toughness Bonus 3") && bodyArmour.textContent.includes("Mail Shirt"));
+    const qualityDisclosure = field("sword").querySelector(".mc-profile-properties");
+    check("Weapon qualities start collapsed", qualityDisclosure && !qualityDisclosure.open);
+    qualityDisclosure.querySelector("summary").click();
+    check("Weapon qualities expand formatted native descriptions", qualityDisclosure.open && qualityDisclosure.querySelector("strong").textContent === "Accurate" && qualityDisclosure.querySelector(".mc-description-content strong").textContent === "accurate");
+    const armourDisclosure = bodyArmour.querySelector(".mc-profile-properties");
+    armourDisclosure.querySelector("summary").click();
+    check("Armour flaws expand beneath their item", armourDisclosure.open && armourDisclosure.textContent.includes("Partial coverage."));
+    check("Armour fits the viewport", document.documentElement.scrollWidth <= innerWidth + 1);
+    await clickTab("main");
+    await clickTab("combat");
+    const retainedArmour = screen.querySelector('[data-profile-section="armour"]');
+    check("Armour retains its open state through tab changes", retainedArmour.open);
+    retainedArmour.querySelector("summary").click();
+    check("Armour heading collapses the complete breakdown", !retainedArmour.open && !retainedArmour.querySelector(".mc-profile-group-content").checkVisibility());
     screen.querySelector('[data-profile-action="weapon:sword"]').click();
     await tick();
     check(
@@ -1428,6 +1465,9 @@ try {
       "player",
     );
     await tick();
+    actor.items.find(item => item.id === "lore").system.description = { value: "<p>A <strong>fiery</strong> bolt.</p><p>Second paragraph.</p><span class='secret'>Hidden spell text</span>" };
+    Hooks.emit("updateActor", actor, {});
+    await tick();
     await clickTab("magic");
     check(
       "Magic uses native Petty Spell and Lore Spell groups",
@@ -1436,7 +1476,7 @@ try {
     );
     check(
       "Lore spells display native CN while Petty spells show names",
-      field("lore")?.textContent === "BoltCN 4" &&
+      field("lore")?.querySelector("summary")?.textContent === "Bolt" && field("lore")?.querySelector("dd")?.textContent === "CN 4" &&
         field("petty")?.textContent === "Light",
     );
     check(
@@ -1449,6 +1489,12 @@ try {
         document.documentElement.scrollWidth <= innerWidth + 1,
     );
     const magicRolls = nativeRolls.length;
+    const spellDisclosure = field("lore").querySelector("details");
+    check("Spell descriptions start collapsed", !spellDisclosure.open);
+    spellDisclosure.querySelector("summary").click();
+    check("Spell name expands rich description without rolling", spellDisclosure.open && nativeRolls.length === magicRolls && spellDisclosure.querySelector("strong").textContent === "fiery" && !spellDisclosure.textContent.includes("Hidden spell text"));
+    spellDisclosure.querySelector("summary").click();
+    check("Spell name collapses without rolling", !spellDisclosure.open && nativeRolls.length === magicRolls);
     screen.querySelector('[data-profile-action="spell:lore"]').click();
     await tick();
     if (!use5e) {
@@ -2186,6 +2232,23 @@ try {
       trigger.click();
       await tick();
     }
+  }
+  if (params.get("preview") === "armour") {
+    await clickTab("combat");
+    const armourGroup = screen.querySelector('[data-profile-section="armour"]');
+    if (!armourGroup.open) armourGroup.querySelector("summary").click();
+    screen.querySelectorAll(".mc-profile-properties").forEach(details => { details.open = true; });
+    screen.querySelector('[data-profile-section="armour"]').scrollIntoView({ block: "center" });
+  }
+  if (params.get("preview") === "magic") {
+    const spell = actor.items.find(item => item.id === "lore");
+    spell.system.lore.value = ["fire"];
+    spell.system.cn.value = 4;
+    Hooks.emit("updateActor", actor, {});
+    await tick();
+    await clickTab("magic");
+    screen.querySelectorAll(".mc-profile-spell-description").forEach(details => { details.open = true; });
+    screen.querySelector('[data-profile-section="lore-spells"]').scrollIntoView({ block: "center" });
   }
   document.querySelector("#results").textContent = JSON.stringify({
     status: "passed",

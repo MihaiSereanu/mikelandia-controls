@@ -26,7 +26,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
   };
   const renderRow = row => {
     let description;
-    if (row.description) {
+    if (row.description && row.descriptionToggle !== "name") {
       const { content, text } = renderDescription(row.description);
       if (text && row.descriptionDisplay === "tooltip") {
         const tooltip = node("div", { className: "mc-profile-note-tooltip", children: [content],
@@ -85,6 +85,25 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
       } }
     }, scope) : null;
     const resource = row.edit ? renderProfileResourceEditor(row, actor, commands, scope) : null;
+    if (row.descriptionToggle === "name") {
+      if (row.action) {
+        label.replaceChildren(icon(row.action.icon ?? "fa-dice"));
+        label.setAttribute("aria-label", `${localizedText(commands.localize, "Roll", "Roll")} ${row.label}`);
+      }
+      const disclosure = node("details", { className: "mc-profile-description mc-profile-spell-description", children: [
+        node("summary", { text: row.label }), renderDescription(row.description ?? "").content
+      ] });
+      return node("div", { className: "mc-profile-row mc-profile-spell-row", dataset: { profileField: row.id }, children: [
+        node("dt", { children: [disclosure] }),
+        node("dd", { children: [row.value === undefined ? null : node("span", { text: `${row.valueLabel ?? ""} ${valueText(row)}`.trim() }), row.action ? label : null] })
+      ] });
+    }
+    const properties = row.properties?.length ? node("details", { className: "mc-profile-description mc-profile-properties", children: [
+      node("summary", { text: "Qualities & Flaws" }),
+      ...row.properties.map(property => node("div", { className: "mc-profile-property", children: [
+        node("strong", { text: property.label }), renderDescription(property.description).content
+      ] }))
+    ] }) : null;
     const heading = node("dt", { className: "mc-profile-item-name", children: [label, secondary] });
     const lock = secondary && resource?.querySelector('[data-profile-counter-lock]');
     if (lock) heading.append(lock);
@@ -92,7 +111,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
       heading, row.value === undefined || (row.edit && row.editControl === "counter") || row.edit?.id.startsWith("quantity:") || row.edit?.id.startsWith("coin-") ? null : node("dd", { children: [
         row.valueLabel ? node("span", { className: "mc-profile-value-label", text: `${row.valueLabel} ` }) : null,
         node("span", { text: `${row.valuePrefix ?? ""}${valueText(row)}` })
-      ] }), description, resource
+      ] }), description, properties, resource
     ] });
   };
   // Keep related small sections together, with the last card using spare width.
@@ -103,40 +122,60 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
     if (targets) sections.push(targets);
   }
   let summary;
-  for (const section of active.sections) {
-    if (section.kind === "conditions") {
-      summary = null;
-      sections.push(renderProfileConditions(section, actor, commands, scope, presentation));
-      continue;
+  const appendSections = (entries, destination, nested = false) => {
+    for (const section of entries) {
+      if (section.kind === "group") {
+        summary = null;
+        const body = node("div", { className: "mc-profile-group-content" });
+        appendSections(section.sections, body, true);
+        const heading = section.collapsible ? node("summary", { children: [node("h3", { text: section.label })] }) : node("h3", { text: section.label });
+        const group = node(section.collapsible ? "details" : "section", { className: "mc-profile-group mc-profile-section", dataset: { profileSection: section.id }, children: [heading, body] });
+        if (section.collapsible) {
+          const key = `${active.id}:${section.id}`;
+          group.open = presentation.openSections.has(key);
+          bindDetailsDisclosure(group, heading, open => {
+            if (open) presentation.openSections.add(key); else presentation.openSections.delete(key);
+          }, scope);
+        }
+        if (nested) destination.append(group); else destination.push(group);
+        continue;
+      }
+      if (section.kind === "conditions") {
+        summary = null;
+        sections.push(renderProfileConditions(section, actor, commands, scope, presentation));
+        continue;
+      }
+      const compact = section.layout !== "table" && ["values", "counters"].includes(section.kind) && section.rows.length === 1;
+      const inventorySection = inventory && section.id === "gear";
+      const heading = [node("h3", { text: section.label }), ...(section.summary ?? []).map(row => node("span", {
+        className: "mc-profile-section-metric", dataset: { profileMetric: row.id }, text: `${row.label} ${valueText(row)}`
+      }))];
+      let disclosure;
+      if (section.disclosure) {
+        const key = `${active.id}:${section.id}`;
+        const summary = node("summary", { text: section.disclosure.label });
+        disclosure = node("details", { className: "mc-profile-description", children: [summary, node("p", { text: section.disclosure.text })] });
+        disclosure.open = presentation.openSections.has(key);
+        bindDetailsDisclosure(disclosure, summary, open => {
+          if (open) presentation.openSections.add(key); else presentation.openSections.delete(key);
+        }, scope);
+      }
+      const element = node("section", {
+        className: `mc-profile-section mc-profile-${section.kind}${section.layout === "inline" ? " mc-profile-section-inline" : section.layout === "table" ? " mc-profile-section-table" : section.layout === "rows" ? " mc-profile-section-rows" : ""}`, dataset: { profileSection: section.id },
+        children: [compact && section.label === section.rows[0].label && !section.summary?.length ? null : node("header", { className: "mc-profile-section-heading", children: [
+          ...(inventorySection ? [node("div", { className: "mc-profile-section-title", children: heading }), inventory.button] : heading)
+        ] }), inventorySection ? inventory.body : null, section.kind === "text" ? node("p", { text: section.text }) : node("dl", {
+          children: section.rows.map(renderRow)
+        }), disclosure]
+      });
+      if (nested) { destination.append(element); }
+      else if (compact) {
+        if (!summary) { summary = node("div", { className: `mc-profile-summary${active.summaryLayout === "counter-pairs" ? " mc-profile-summary-triple mc-profile-summary-counter-pairs" : ["paired", "triple"].includes(active.summaryLayout) ? ` mc-profile-summary-${active.summaryLayout}` : ""}` }); sections.push(summary); }
+        summary.append(element);
+      } else { summary = null; sections.push(element); }
     }
-    const compact = section.layout !== "table" && ["values", "counters"].includes(section.kind) && section.rows.length === 1;
-    const inventorySection = inventory && section.id === "gear";
-    const heading = [node("h3", { text: section.label }), ...(section.summary ?? []).map(row => node("span", {
-      className: "mc-profile-section-metric", dataset: { profileMetric: row.id }, text: `${row.label} ${valueText(row)}`
-    }))];
-    let disclosure;
-    if (section.disclosure) {
-      const key = `${active.id}:${section.id}`;
-      const summary = node("summary", { text: section.disclosure.label });
-      disclosure = node("details", { className: "mc-profile-description", children: [summary, node("p", { text: section.disclosure.text })] });
-      disclosure.open = presentation.openSections.has(key);
-      bindDetailsDisclosure(disclosure, summary, open => {
-        if (open) presentation.openSections.add(key); else presentation.openSections.delete(key);
-      }, scope);
-    }
-    const element = node("section", {
-      className: `mc-profile-section mc-profile-${section.kind}${section.layout === "inline" ? " mc-profile-section-inline" : section.layout === "table" ? " mc-profile-section-table" : section.layout === "rows" ? " mc-profile-section-rows" : ""}`, dataset: { profileSection: section.id },
-      children: [compact && section.label === section.rows[0].label && !section.summary?.length ? null : node("header", { className: "mc-profile-section-heading", children: [
-        ...(inventorySection ? [node("div", { className: "mc-profile-section-title", children: heading }), inventory.button] : heading)
-      ] }), inventorySection ? inventory.body : null, section.kind === "text" ? node("p", { text: section.text }) : node("dl", {
-        children: section.rows.map(renderRow)
-      }), disclosure]
-    });
-    if (compact) {
-      if (!summary) { summary = node("div", { className: `mc-profile-summary${active.summaryLayout === "counter-pairs" ? " mc-profile-summary-triple mc-profile-summary-counter-pairs" : ["paired", "triple"].includes(active.summaryLayout) ? ` mc-profile-summary-${active.summaryLayout}` : ""}` }); sections.push(summary); }
-      summary.append(element);
-    } else { summary = null; sections.push(element); }
-  }
+  };
+  appendSections(active.sections, sections);
   return [
     node("nav", { className: "mc-profile-tabs", attrs: { role: "tablist" }, children: tabs.map(tab => node("button", {
       text: tab.label,

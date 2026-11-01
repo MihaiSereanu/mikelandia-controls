@@ -31,7 +31,7 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
   const label = entry => typeof entry.label === "string" && entry.label.trim()
     ? localizedText(localize, entry.labelKey ?? entry.label, entry.label) : "";
   const enabled = entry => {
-    try { return entry.when === undefined || (typeof entry.when === "function" && entry.when(context) === true); }
+    try { return entry.when === undefined || (typeof entry.when === "function" && entry.when(context, actor) === true); }
     catch { return false; }
   };
   const scalar = (value, format = "number") => format === "number"
@@ -62,6 +62,10 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
   };
   const section = entry => {
     if (!entry || !validId(entry.id) || !enabled(entry) || !label(entry)) return null;
+    if (entry.kind === "group") {
+      const children = (entry.sections ?? []).map(section).filter(Boolean);
+      return children.length ? Object.freeze({ id: entry.id, label: label(entry), kind: "group", collapsible: entry.collapsible === true, sections: Object.freeze(children) }) : null;
+    }
     if (["values", "counters"].includes(entry.kind)) {
       const projected = rows(entry.fields);
       let disclosure;
@@ -92,7 +96,12 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
           const value = typeof entry.readValue === "function" ? entry.readValue(item, context, actor) : readProfilePath(item, entry.valuePath);
           if (!id || seen.has(id) || !scalar(name, "text") || ((entry.valuePath !== undefined || typeof entry.readValue === "function") && !scalar(value, entry.format))) continue;
           seen.add(id);
+          const properties = typeof entry.readProperties === "function" ? entry.readProperties(item, context, actor) : [];
           projected.push(Object.freeze({ id, label: name, value, format: entry.format ?? "number",
+            ...(entry.descriptionToggle === "name" ? { descriptionToggle: "name" } : {}),
+            ...(Array.isArray(properties) && properties.length ? { properties: Object.freeze(properties.filter(property => scalar(property?.label, "text")).map(property => Object.freeze({
+              label: property.label, description: typeof property.description === "string" ? property.description : "", kind: property.kind === "flaw" ? "flaw" : "quality"
+            }))) } : {}),
             ...(typeof readProfilePath(item, entry.descriptionPath) === "string" ? { description: readProfilePath(item, entry.descriptionPath) } : {}),
             ...(entry.descriptionDisplay === "tooltip" ? { descriptionDisplay: "tooltip" } : {}),
             ...(typeof entry.valueLabel === "string" && entry.valueLabel.trim() ? { valueLabel: localizedText(localize, entry.valueLabelKey ?? entry.valueLabel, entry.valueLabel) } : {}),

@@ -1,10 +1,27 @@
 import { warhammerWeaponMode, ownedWarhammerItem } from "./items.mjs";
 import { spellForActor, magicWinds } from "./magic.mjs";
 import { localizeFoundry } from "../../foundry/settings/localization.mjs";
+import { warhammerItemProperties } from "./item-properties.mjs";
 
 const field = (id, labelKey, path, extra = {}) => ({ id, labelKey, label: labelKey, path, editId: id,
   ...(["wounds", "fortune", "fate", "corruption"].includes(id) ? { editControl: "counter" } : {}), ...extra });
 const characteristic = (id, key, label) => ({ id, labelKey: key, label, path: `system.characteristics.${id}.value`, actionId: `characteristic:${id}` });
+const armour = { id: "armour", kind: "group", labelKey: "Armour", label: "Armour", collapsible: true, sections:
+  [["head", "head", "Head"], ["body", "body", "Body"], ["left-arm", "lArm", "Left Arm"], ["right-arm", "rArm", "Right Arm"],
+    ["left-leg", "lLeg", "Left Leg"], ["right-leg", "rLeg", "Right Leg"]].map(([id, loc, label]) => ({
+    id: `armour-${id}`, kind: "items", labelKey: label, label,
+    when: (_context, actor) => Number.isFinite(actor?.system?.status?.armour?.[loc]?.value),
+    collectionPath: "items", itemTypes: ["armour"], keepEmpty: true, format: "display",
+    readValue: item => item.system?.currentAP?.[loc], valueLabelKey: "AP", valueLabel: "AP",
+    readProperties: warhammerItemProperties,
+    include: (item, _context, owner) => ownedWarhammerItem(owner, String(item.id), "armour") === item
+      && item.system?.isEquipped === true && Boolean(item.system?.protects?.[loc]),
+    summary: [
+      { id: "armour-ap", label: "Armour AP", path: `system.status.armour.${loc}.value` },
+      { id: "shield-ap", label: "Shield AP", path: "system.status.armour.shield" },
+      { id: "toughness-bonus", labelKey: "SHEET.TB", label: "Toughness Bonus", path: "system.characteristics.t.bonus" }
+    ]
+  })) };
 const encumbrance = { id: "encumbrance", kind: "counters", labelKey: "Encumbrance", label: "Encumbrance", fields: [
   { id: "encumbrance", labelKey: "Encumbrance", label: "Encumbrance", maxPath: "system.status.encumbrance.max", read: actor => {
     const value = actor.system?.status?.encumbrance?.current;
@@ -84,12 +101,13 @@ export const warhammerCharacterProfile = {
       ] },
       { id: "melee-weapons", kind: "items", labelKey: "SHEET.MeleeWeaponHeader", label: "Melee Weapon(s)",
         collectionPath: "items", itemTypes: ["weapon"], actionIdPrefix: "weapon", valuePath: "system.DamageString", format: "display",
-        valueLabelKey: "Damage", valueLabel: "Damage", valuePrefix: "+",
+        valueLabelKey: "Damage", valueLabel: "Damage", valuePrefix: "+", readProperties: warhammerItemProperties,
         include: (item, _context, actor) => item.parent === actor && warhammerWeaponMode(item) === "melee" },
       { id: "ranged-weapons", kind: "items", labelKey: "SHEET.RangedWeaponHeader", label: "Ranged Weapon(s)",
         collectionPath: "items", itemTypes: ["weapon"], actionIdPrefix: "weapon", valuePath: "system.DamageString", format: "display",
-        valueLabelKey: "Damage", valueLabel: "Damage", valuePrefix: "+",
-        include: (item, _context, actor) => item.parent === actor && warhammerWeaponMode(item) === "ranged" }
+        valueLabelKey: "Damage", valueLabel: "Damage", valuePrefix: "+", readProperties: warhammerItemProperties,
+        include: (item, _context, actor) => item.parent === actor && warhammerWeaponMode(item) === "ranged" },
+      armour
     ] },
     { id: "skills", labelKey: "Skills", label: "Skills", sections: [
       { id: "basic-skills", kind: "items", labelKey: "Basic Skills", label: "Basic Skills", collectionPath: "items", itemTypes: ["skill"],
@@ -108,6 +126,7 @@ export function createWarhammerCharacterProfile(actor, context) {
     id: petty ? "petty-spells" : "lore-spells", kind: "items",
     labelKey: petty ? "SHEET.PettySpell" : "SHEET.LoreSpell", label: petty ? "Petty Spell" : "Lore Spell",
     collectionPath: "items", itemTypes: ["spell"], actionIdPrefix: "spell",
+    descriptionPath: "system.description.value", descriptionToggle: "name",
     ...(!petty ? { valuePath: "system.cn.value", valueLabelKey: "CN", valueLabel: "CN" } : {}),
     include: (item, _context, owner) => spellForActor(owner, String(item.id), context) === item
       && (item.system.lore.value == "petty") === petty
