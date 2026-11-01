@@ -72,6 +72,12 @@ const cases = [
   ["warhammer-5e-phone", 390, 844, "warhammer", "layout=phone&edition=5e"],
   ["warhammer-armour-phone", 390, 844, "warhammer", "layout=phone&edition=5e&preview=armour"],
   ["warhammer-armour-tablet", 1024, 768, "warhammer", "layout=tablet&edition=5e&preview=armour"],
+  ["warhammer-equipment-phone", 390, 844, "warhammer", "layout=phone&edition=5e&preview=equipment"],
+  ["warhammer-equipment-tablet", 1024, 768, "warhammer", "layout=tablet&edition=5e&preview=equipment"],
+  ["warhammer-trappings-phone", 390, 844, "warhammer", "layout=phone&edition=5e&preview=trappings"],
+  ["warhammer-trappings-tablet", 1024, 768, "warhammer", "layout=tablet&edition=5e&preview=trappings"],
+  ["warhammer-mounts-phone", 390, 844, "warhammer", "layout=phone&edition=5e&preview=mounts"],
+  ["warhammer-mounts-tablet", 1024, 768, "warhammer", "layout=tablet&edition=5e&preview=mounts"],
   ["warhammer-magic-phone", 390, 844, "warhammer", "layout=phone&edition=5e&preview=magic"],
   ["warhammer-4e-tablet", 1024, 768, "warhammer", "layout=tablet&edition=4e"],
   ["warhammer-5e-tablet", 1024, 768, "warhammer", "layout=tablet&edition=5e"],
@@ -220,7 +226,8 @@ try {
     let report;
     // Missing registration consumes the production five-second cleanup timeout
     // before startup and fixture assertions can finish.
-    const reportTimeoutMs = name === "shared-entry-upgrade-missing-phone" ? 15000 : name.startsWith("damage-") ? 9000 : 5000;
+    // The WFRP fixture also awaits equipment, mount and dependent-actor refreshes.
+    const reportTimeoutMs = name === "shared-entry-upgrade-missing-phone" ? 15000 : name.startsWith("damage-") || fixture === "warhammer" ? 9000 : 5000;
     const reportDeadline = performance.now() + reportTimeoutMs;
     while (performance.now() < reportDeadline) {
       const { result } = await send("Runtime.evaluate", { expression: 'document.querySelector("#results")?.textContent', returnByValue: true }, sessionId);

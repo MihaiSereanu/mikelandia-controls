@@ -3,6 +3,8 @@ import { localizeFoundry } from "../../foundry/settings/localization.mjs";
 import { CommandError } from "../../foundry/commands/command-error.mjs";
 import { readWarhammerContext } from "./context.mjs";
 import { fallbackIntegration } from "../fallback/integration.mjs";
+import { ownedWarhammerItem } from "./items.mjs";
+import { warhammerMount, mountRevision } from "./mount.mjs";
 
 // Paths and operations come from the installed native sheet/model, never requests.
 const resources = Object.freeze([
@@ -51,7 +53,29 @@ export function warhammerResourceEdits(actor, game, user = game?.user) {
   return Object.freeze(resources.flatMap(resource => {
     try { const state = resourceState(actor, game, resource, context); return state ? [state] : []; }
     catch { return []; }
-  }));
+  }).concat(equipmentEdits(actor, context), mountedEdit(actor, context)));
+}
+
+function equipmentEdits(actor, context) {
+  return Array.from(actor.items?.contents ?? actor.items ?? []).flatMap(item => {
+    try {
+      const equippable = ["weapon", "armour"].includes(item.type)
+        || (item.type === "trapping" && item.system?.trappingType?.value === "clothingAccessories")
+        || (item.type === "container" && item.system?.wearable?.value === true);
+      if (!equippable || !/^[a-zA-Z0-9_-]{1,128}$/u.test(item.id)
+        || ownedWarhammerItem(actor, String(item.id), item.type) !== item || typeof item.update !== "function"
+        || typeof item.system?.equipped?.value !== "boolean") return [];
+      return [Object.freeze({ id: `equipped:${item.id}`, label: localizeFoundry("Equipped", "Equipped"), kind: "boolean",
+        value: item.system.equipped.value, revision: JSON.stringify([context.revision, item.type, item.uuid ?? item.id]) })];
+    } catch { return []; }
+  });
+}
+
+function mountedEdit(actor, context) {
+  const mount = warhammerMount(actor);
+  if (!mount || typeof actor.update !== "function" || typeof actor.system.status.mount.mounted !== "boolean") return [];
+  return [Object.freeze({ id: "mounted", label: localizeFoundry("Mounted", "Mounted"), kind: "boolean",
+    value: actor.system.status.mount.mounted, revision: JSON.stringify([context.revision, mountRevision(actor, mount)]) })];
 }
 
 export async function editWarhammerResource(payload, { actor, assertCurrent, sourceUuid }, game) {
@@ -68,6 +92,16 @@ export async function editWarhammerResource(payload, { actor, assertCurrent, sou
   if (!valid) throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Panels.InvalidResourceValue", "Enter a valid value within this resource's limits."));
   assertCurrent();
   if (payload.value === edit.value) return Object.freeze({ ok: true, actorId: String(actor.id), actorSourceUuid: sourceUuid, unchanged: true });
+  if (edit.id.startsWith("equipped:")) {
+    const id = edit.id.slice("equipped:".length);
+    const item = Array.from(actor.items?.contents ?? actor.items ?? []).find(item => String(item.id) === id);
+    const updated = await item.update({ "system.equipped.value": payload.value });
+    return Object.freeze({ ok: true, actorId: String(actor.id), actorSourceUuid: sourceUuid, ...(!updated ? { cancelled: true } : {}) });
+  }
+  if (edit.id === "mounted") {
+    const updated = await actor.update({ "system.status.mount.mounted": payload.value });
+    return Object.freeze({ ok: true, actorId: String(actor.id), actorSourceUuid: sourceUuid, ...(!updated ? { cancelled: true } : {}) });
+  }
   const resource = resources.find(resource => resource.id === edit.id);
   // Native update hooks retain group routing, corruption tests, and token effects.
   const updated = resource.method ? await actor[resource.method](payload.value) : await actor.update({ [resource.path]: payload.value });

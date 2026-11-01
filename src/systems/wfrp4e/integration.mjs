@@ -8,6 +8,7 @@ import { createWarhammerCharacterProfile } from "./profile.mjs";
 import { readWarhammerContext } from "./context.mjs";
 import { createWarhammerCommands } from "./commands.mjs";
 import { conditionSection, warhammerEffectSections } from "./effects.mjs";
+import { warhammerMount } from "./mount.mjs";
 
 export const warhammerIntegration = Object.freeze({
   ...fallbackIntegration,
@@ -18,6 +19,10 @@ export const warhammerIntegration = Object.freeze({
   features: Object.freeze({ ...fallbackIntegration.features, profilePanels: true, biography: true }),
   notes: warhammerNotes,
   createCommands: createWarhammerCommands,
+  profileDependencySources(actor) {
+    const mount = warhammerMount(actor);
+    return mount?.uuid ? [mount.uuid] : [];
+  },
   refreshSelectedActorForHook(hook) {
     return ["createCombat", "updateCombat", "deleteCombat", "createCombatant", "updateCombatant", "deleteCombatant"].includes(hook);
   },

@@ -81,7 +81,8 @@ export function createFoundrySessionGateway({
   };
 
   const projectSelectedActor = (actor, user) => {
-    selectedReferenceSources = new Set(getSystemIntegration().referenceSources(actor));
+    selectedReferenceSources = new Set([...getSystemIntegration().referenceSources(actor),
+      ...(getSystemIntegration().profileDependencySources?.(actor) ?? [])]);
     count("authoritative.actor.projected");
     count("authoritative.actor.detail.projected");
     const finish = performanceObserver?.start?.("authoritative.actor.detail.project") ?? (() => {});

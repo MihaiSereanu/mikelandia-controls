@@ -20,7 +20,7 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
   const actionFor = id => actions.has(id) ? { action: Object.freeze({ id, revision: actions.get(id).revision,
     ...(typeof actions.get(id).active === "boolean" ? { active: actions.get(id).active } : {}),
     ...(actions.get(id).icon === "fa-lightbulb" ? { icon: "fa-lightbulb" } : {}) }) } : {};
-  const edits = new Map((Array.isArray(context.edits) ? context.edits : []).filter(edit => edit && typeof edit.id === "string" && /^(?:[a-z][a-z0-9-]{0,63}|quantity:[a-zA-Z0-9_-]{1,128})$/u.test(edit.id)
+  const edits = new Map((Array.isArray(context.edits) ? context.edits : []).filter(edit => edit && typeof edit.id === "string" && /^(?:[a-z][a-z0-9-]{0,63}|(?:quantity|equipped):[a-zA-Z0-9_-]{1,128})$/u.test(edit.id)
     && typeof edit.revision === "string" && ["integer", "boolean"].includes(edit.kind)).map(edit => [edit.id, edit]));
   const editFor = (id, value) => {
     const edit = edits.get(id);
@@ -73,7 +73,7 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
         const text = entry.disclosure?.read?.(actor, context);
         if (scalar(text, "text") && label(entry.disclosure)) disclosure = Object.freeze({ label: label(entry.disclosure), text });
       } catch { /* Missing native data leaves the disclosure unavailable. */ }
-      return projected.length ? Object.freeze({ id: entry.id, label: label(entry), kind: entry.kind, rows: projected, summary: rows(entry.summary),
+      return projected.length ? Object.freeze({ id: entry.id, label: label(entry), kind: entry.kind, rows: projected, summary: rows(entry.summary), controls: rows(entry.controls),
         ...(disclosure ? { disclosure } : {}),
         ...(["inline", "table"].includes(entry.layout) ? { layout: entry.layout } : {}) }) : null;
     }
@@ -107,11 +107,16 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
             ...(typeof entry.valueLabel === "string" && entry.valueLabel.trim() ? { valueLabel: localizedText(localize, entry.valueLabelKey ?? entry.valueLabel, entry.valueLabel) } : {}),
             ...(typeof entry.valuePrefix === "string" ? { valuePrefix: entry.valuePrefix } : {}),
             ...(entry.quantityEditable ? editFor(`quantity:${id}`, value) : {}),
+            ...(entry.equipmentEditable && edits.has(`equipped:${id}`) ? { equipment: Object.freeze({
+              id: `equipped:${id}`, label: localizedText(localize, "Equipped", "Equipped"), value: edits.get(`equipped:${id}`).value,
+              format: "boolean", editControl: "checkbox", ...editFor(`equipped:${id}`, edits.get(`equipped:${id}`).value)
+            }) } : {}),
             ...actionFor(validId(entry.actionIdPrefix) ? `${entry.actionIdPrefix}:${id}` : undefined) }));
         } catch { /* A malformed item cannot expose extra fields or break a section. */ }
       }
       projected.sort((a, b) => a.label.localeCompare(b.label));
       return projected.length || entry.keepEmpty === true ? Object.freeze({ id: entry.id, label: label(entry), kind: "items", rows: Object.freeze(projected), summary: rows(entry.summary),
+        ...(entry.collapsible === true ? { collapsible: true } : {}),
         ...(entry.layout === "rows" ? { layout: "rows" } : {}) }) : null;
     }
     return null;

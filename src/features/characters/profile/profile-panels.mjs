@@ -24,7 +24,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
     const value = localizedNumber(row.value, locale);
     return row.max === undefined ? value : `${value} / ${localizedNumber(row.max, locale)}`;
   };
-  const renderRow = row => {
+  const renderRow = (row, equipmentColumn = false) => {
     let description;
     if (row.description && row.descriptionToggle !== "name") {
       const { content, text } = renderDescription(row.description);
@@ -85,6 +85,9 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
       } }
     }, scope) : null;
     const resource = row.edit ? renderProfileResourceEditor(row, actor, commands, scope) : null;
+    const equipment = row.equipment?.edit ? node("div", { className: "mc-profile-labelled-control", children: [
+      renderProfileResourceEditor({ ...row.equipment, label: `${row.equipment.label}: ${row.label}` }, actor, commands, scope)
+    ] }) : null;
     if (row.descriptionToggle === "name") {
       if (row.action) {
         label.replaceChildren(icon(row.action.icon ?? "fa-dice"));
@@ -107,11 +110,11 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
     const heading = node("dt", { className: "mc-profile-item-name", children: [label, secondary] });
     const lock = secondary && resource?.querySelector('[data-profile-counter-lock]');
     if (lock) heading.append(lock);
-    return node("div", { className: "mc-profile-row", dataset: { profileField: row.id }, children: [
+    return node("div", { className: `mc-profile-row${equipmentColumn ? " mc-profile-equipment-row" : ""}`, dataset: { profileField: row.id }, children: [
       heading, row.value === undefined || (row.edit && row.editControl === "counter") || row.edit?.id.startsWith("quantity:") || row.edit?.id.startsWith("coin-") ? null : node("dd", { children: [
         row.valueLabel ? node("span", { className: "mc-profile-value-label", text: `${row.valueLabel} ` }) : null,
         node("span", { text: `${row.valuePrefix ?? ""}${valueText(row)}` })
-      ] }), description, properties, resource
+      ] }), description, properties, resource, equipment
     ] });
   };
   // Keep related small sections together, with the last card using spare width.
@@ -147,6 +150,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
       }
       const compact = section.layout !== "table" && ["values", "counters"].includes(section.kind) && section.rows.length === 1;
       const inventorySection = inventory && section.id === "gear";
+      const equipmentLabel = section.rows.find(row => row.equipment?.edit)?.equipment.label;
       const heading = [node("h3", { text: section.label }), ...(section.summary ?? []).map(row => node("span", {
         className: "mc-profile-section-metric", dataset: { profileMetric: row.id }, text: `${row.label} ${valueText(row)}`
       }))];
@@ -160,14 +164,27 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
           if (open) presentation.openSections.add(key); else presentation.openSections.delete(key);
         }, scope);
       }
-      const element = node("section", {
-        className: `mc-profile-section mc-profile-${section.kind}${section.layout === "inline" ? " mc-profile-section-inline" : section.layout === "table" ? " mc-profile-section-table" : section.layout === "rows" ? " mc-profile-section-rows" : ""}`, dataset: { profileSection: section.id },
-        children: [compact && section.label === section.rows[0].label && !section.summary?.length ? null : node("header", { className: "mc-profile-section-heading", children: [
-          ...(inventorySection ? [node("div", { className: "mc-profile-section-title", children: heading }), inventory.button] : heading)
-        ] }), inventorySection ? inventory.body : null, section.kind === "text" ? node("p", { text: section.text }) : node("dl", {
-          children: section.rows.map(renderRow)
+      const sectionHeading = compact && section.label === section.rows[0].label && !section.summary?.length ? null
+        : node(section.collapsible ? "summary" : "header", { className: "mc-profile-section-heading", children: [
+          ...(inventorySection ? [node("div", { className: "mc-profile-section-title", children: heading }), inventory.button] : heading),
+          equipmentLabel ? node("span", { className: "mc-profile-equipment-heading", text: equipmentLabel }) : null,
+          ...(section.controls ?? []).filter(row => row.edit).map(row => node("div", { className: "mc-profile-labelled-control", children: [
+            node("span", { text: row.label }), renderProfileResourceEditor(row, actor, commands, scope)
+          ] }))
+        ] });
+      const element = node(section.collapsible ? "details" : "section", {
+        className: `mc-profile-section mc-profile-${section.kind}${section.collapsible ? " mc-profile-inventory-disclosure" : ""}${equipmentLabel ? " mc-profile-equipment-section" : ""}${section.layout === "inline" ? " mc-profile-section-inline" : section.layout === "table" ? " mc-profile-section-table" : section.layout === "rows" ? " mc-profile-section-rows" : ""}`, dataset: { profileSection: section.id },
+        children: [sectionHeading, inventorySection ? inventory.body : null, section.kind === "text" ? node("p", { text: section.text }) : node("dl", {
+          children: section.rows.map(row => renderRow(row, Boolean(equipmentLabel)))
         }), disclosure]
       });
+      if (section.collapsible && sectionHeading) {
+        const key = `${active.id}:${section.id}`;
+        element.open = presentation.openSections.has(key);
+        bindDetailsDisclosure(element, sectionHeading, open => {
+          if (open) presentation.openSections.add(key); else presentation.openSections.delete(key);
+        }, scope);
+      }
       if (nested) { destination.append(element); }
       else if (compact) {
         if (!summary) { summary = node("div", { className: `mc-profile-summary${active.summaryLayout === "counter-pairs" ? " mc-profile-summary-triple mc-profile-summary-counter-pairs" : ["paired", "triple"].includes(active.summaryLayout) ? ` mc-profile-summary-${active.summaryLayout}` : ""}` }); sections.push(summary); }

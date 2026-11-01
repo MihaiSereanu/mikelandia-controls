@@ -2,6 +2,7 @@ import { warhammerWeaponMode, ownedWarhammerItem } from "./items.mjs";
 import { spellForActor, magicWinds } from "./magic.mjs";
 import { localizeFoundry } from "../../foundry/settings/localization.mjs";
 import { warhammerItemProperties } from "./item-properties.mjs";
+import { warhammerMount } from "./mount.mjs";
 
 const field = (id, labelKey, path, extra = {}) => ({ id, labelKey, label: labelKey, path, editId: id,
   ...(["wounds", "fortune", "fate", "corruption"].includes(id) ? { editControl: "counter" } : {}), ...extra });
@@ -81,7 +82,9 @@ export const warhammerCharacterProfile = {
     ] },
     { id: "combat", labelKey: "Combat", label: "Combat", sections: [
       combatEncumbrance,
-      { id: "movement", kind: "values", layout: "table", labelKey: "Move", label: "Movement", fields: [
+      { id: "movement", kind: "values", layout: "table", labelKey: "Move", label: "Movement", controls: [
+        field("mounted", "Mounted", "system.status.mount.mounted", { format: "boolean", editControl: "checkbox", when: (_context, actor) => Boolean(warhammerMount(actor)) })
+      ], fields: [
         { id: "move", labelKey: "Move", label: "Move", path: "system.details.move.value" },
         ...["walk", "run"].map(id => ({ id, labelKey: id[0].toUpperCase() + id.slice(1), label: id[0].toUpperCase() + id.slice(1), format: "display",
           read: actor => {
@@ -107,7 +110,11 @@ export const warhammerCharacterProfile = {
         collectionPath: "items", itemTypes: ["weapon"], actionIdPrefix: "weapon", valuePath: "system.DamageString", format: "display",
         valueLabelKey: "Damage", valueLabel: "Damage", valuePrefix: "+", readProperties: warhammerItemProperties,
         include: (item, _context, actor) => item.parent === actor && warhammerWeaponMode(item) === "ranged" },
-      armour
+      armour,
+      { id: "mounts", kind: "values", label: "Mounts", when: (_context, actor) => Boolean(warhammerMount(actor)), fields: [
+        { id: "mount-name", label: "Name", format: "text", read: actor => warhammerMount(actor)?.name },
+        { id: "mount-wounds", label: "Wounds", path: "mount.system.status.wounds.value", maxPath: "mount.system.status.wounds.max" }
+      ] }
     ] },
     { id: "skills", labelKey: "Skills", label: "Skills", sections: [
       { id: "basic-skills", kind: "items", labelKey: "Basic Skills", label: "Basic Skills", collectionPath: "items", itemTypes: ["skill"],
@@ -132,6 +139,7 @@ export function createWarhammerCharacterProfile(actor, context) {
       && (item.system.lore.value == "petty") === petty
   });
   const inventory = (id, labelKey, label, types) => ({ id, kind: "items", labelKey, label, collectionPath: "items", itemTypes: types,
+    equipmentEditable: true, collapsible: true,
     valuePath: "system.quantity.value", descriptionPath: "system.description.value",
     include: (item, _context, owner) => ownedWarhammerItem(owner, String(item.id), item.type) === item });
   return { tabs: [...warhammerCharacterProfile.tabs,

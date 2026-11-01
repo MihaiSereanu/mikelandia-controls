@@ -79,7 +79,7 @@ try {
     nativeWrites.push(args);
     for (const [path, value] of Object.entries(args[0])) {
       if (
-        !/^system\.status\.(?:(?:wounds|fortune|fate|resolve|resilience|corruption|advantage)\.value|momentum)$/u.test(
+        !/^system\.status\.(?:(?:wounds|fortune|fate|resolve|resilience|corruption|advantage)\.value|momentum|mount\.mounted)$/u.test(
           path,
         )
       )
@@ -1392,6 +1392,119 @@ try {
     check("Armour retains its open state through tab changes", retainedArmour.open);
     retainedArmour.querySelector("summary").click();
     check("Armour heading collapses the complete breakdown", !retainedArmour.open && !retainedArmour.querySelector(".mc-profile-group-content").checkVisibility());
+    const mail = actor.items.find(item => item.id === "mail");
+    const coat = { id: "coat", name: "Travel Coat", type: "trapping", parent: actor, system: { trappingType: { value: "clothingAccessories" } } };
+    const backpack = { id: "backpack", name: "Backpack", type: "container", parent: actor, system: { wearable: { value: true } } };
+    actor.items.push(coat, backpack,
+      { id: "chest", name: "Chest", type: "container", parent: actor, system: { wearable: { value: false }, equipped: { value: false }, quantity: { value: 1 } } },
+      { id: "book", name: "Book", type: "trapping", parent: actor, system: { trappingType: { value: "booksDocuments" }, equipped: { value: false }, quantity: { value: 1 } } },
+      { id: "coin", name: "Gold Crown", type: "money", parent: actor, system: { quantity: { value: 1 } } },
+      { id: "shot", name: "Shot", type: "ammunition", parent: actor, system: { quantity: { value: 4 } } });
+    const equipmentWrites = [];
+    for (const item of [sword, handgun, mail, coat, backpack]) {
+      item.system.equipped = { value: true };
+      item.system.quantity = { value: 1 };
+      item.update = async changes => {
+        equipmentWrites.push([item.id, changes]);
+        item.system.equipped.value = changes["system.equipped.value"];
+        item.system.isEquipped = item.system.equipped.value;
+        Hooks.emit("updateItem", item, changes);
+        return item;
+      };
+    }
+    const mount = { id: "horse", uuid: "Actor.horse", name: "Reik", visible: false, isOwner: false, system: { status: { wounds: { value: 12, max: 18 } } } };
+    actor.mount = mount;
+    actor.system.status.mount = { id: mount.id, mounted: false, isToken: false };
+    Hooks.emit("updateActor", actor, {});
+    await tick();
+    const mounts = () => screen.querySelector('[data-profile-section="mounts"]');
+    check("Assigned mount appears below Armour while dismounted", mounts()?.textContent.includes("Reik") && mounts().textContent.includes("12 / 18") &&
+      Boolean(screen.querySelector('[data-profile-section="armour"]').compareDocumentPosition(mounts()) & Node.DOCUMENT_POSITION_FOLLOWING));
+    check("Assigned horse remains visible on its rider without separate horse permission", mount.visible === false && mount.isOwner === false && Boolean(mounts()));
+    check("Mounted checkbox sits beside Movement", Boolean(screen.querySelector('[data-profile-section="movement"] header [data-profile-resource-input="mounted"]')));
+    check("Mount wounds are read-only", !mounts().querySelector("input, button"));
+    screen.querySelector('[data-profile-resource-input="mounted"]').click();
+    await tick();
+    check("Mounted checkbox uses native rider update", actor.system.status.mount.mounted === true && nativeWrites.at(-1)[0]["system.status.mount.mounted"] === true);
+    screen.querySelector('[data-profile-resource-input="mounted"]').click();
+    await tick();
+    check("Dismount keeps mount information visible", actor.system.status.mount.mounted === false && mounts()?.textContent.includes("Reik"));
+    mount.system.status.wounds.value = 9;
+    Hooks.emit("updateActor", mount, { "system.status.wounds.value": 9 });
+    await tick();
+    check("Mount wounds refresh when the mount changes", mounts().textContent.includes("9 / 18"));
+    check("Mounted checkbox has a 44px touch target", screen.querySelector('[data-profile-resource="mounted"] label').getBoundingClientRect().height >= 44);
+    await clickTab("trappings");
+    const inventoryIds = ["money", "weapons", "armour", "ammunition", "trappings", "containers"];
+    const inventorySection = id => screen.querySelector(`[data-profile-section="${id}"]`);
+    for (const id of inventoryIds) {
+      const section = inventorySection(id);
+      check(`${id} inventory starts collapsed`, section.tagName === "DETAILS" && !section.open && !section.querySelector("dl").checkVisibility());
+      const heading = section.querySelector(":scope > summary");
+      check(`${id} disclosure heading has a touch target`, heading.getBoundingClientRect().height >= 44);
+      heading.click();
+      check(`${id} heading opens its inventory once`, section.open && section.querySelector("dl").checkVisibility() && heading.getAttribute("aria-expanded") === "true");
+    }
+    check("Encumbrance remains visible outside inventory disclosures", inventorySection("encumbrance").tagName === "SECTION" && inventorySection("encumbrance").checkVisibility());
+    Hooks.emit("updateActor", actor, {});
+    await tick();
+    check("Inventory open states survive native refresh", inventoryIds.every(id => inventorySection(id).open));
+    await clickTab("main");
+    await clickTab("trappings");
+    check("Inventory open states survive tab changes", inventoryIds.every(id => inventorySection(id).open));
+    inventorySection("money").querySelector(":scope > summary").click();
+    check("Each inventory section closes independently", !inventorySection("money").open && inventorySection("weapons").open && !inventorySection("money").querySelector("dl").checkVisibility());
+    for (const id of ["weapons", "armour", "trappings", "containers"]) {
+      const section = screen.querySelector(`[data-profile-section="${id}"]`);
+      const label = section.querySelector(".mc-profile-equipment-heading");
+      const title = section.querySelector("h3");
+      check(`${id} has one Equipped label in its heading`, label?.textContent === "Equipped" && section.querySelectorAll(".mc-profile-equipment-heading").length === 1);
+      const headingBounds = title.getBoundingClientRect(), labelBounds = label.getBoundingClientRect();
+      check(`${id} Equipped sits beside the section title`, headingBounds.top < labelBounds.bottom && headingBounds.bottom > labelBounds.top);
+      const row = section.querySelector(".mc-profile-equipment-row");
+      check(`${id} Equipped keeps its text size and uses muted color`, getComputedStyle(label).fontSize === getComputedStyle(row).fontSize && getComputedStyle(label).color !== getComputedStyle(title).color);
+      const checkboxBounds = section.querySelector('[data-profile-resource-input^="equipped:"]').getBoundingClientRect();
+      check(`${id} Equipped is centered above its checkboxes`, Math.abs((labelBounds.left + labelBounds.right - checkboxBounds.left - checkboxBounds.right) / 2) <= 1);
+      check(`${id} item rows omit repeated Equipped text`, [...section.querySelectorAll(".mc-profile-row")].every(row => !row.textContent.includes("Equipped")));
+    }
+    for (const id of ["money", "ammunition"]) check(`${id} omits the equipment heading`, !screen.querySelector(`[data-profile-section="${id}"] .mc-profile-equipment-heading`));
+    for (const id of ["book", "chest"]) check(`${id} has no equipment checkbox`, !screen.querySelector(`[data-profile-resource-input="equipped:${id}"]`));
+    for (const item of [sword, mail, coat, backpack]) {
+      const checkbox = () => screen.querySelector(`[data-profile-resource-input="equipped:${item.id}"]`);
+      check(`${item.type} equipment starts checked`, checkbox()?.checked);
+      const equipmentRow = checkbox().closest(".mc-profile-row");
+      const equipmentName = equipmentRow.querySelector("dt").getBoundingClientRect();
+      const equipmentControl = equipmentRow.querySelector(".mc-profile-labelled-control").getBoundingClientRect();
+      const equipmentQuantity = equipmentRow.querySelector("dd").getBoundingClientRect();
+      check(`${item.type} name quantity and Equipped share one row`,
+        equipmentName.top < equipmentControl.bottom && equipmentName.bottom > equipmentControl.top &&
+        equipmentQuantity.top < equipmentControl.bottom && equipmentQuantity.bottom > equipmentControl.top);
+      checkbox().click();
+      await tick();
+      check(`${item.type} unequip persists through native item update`, !checkbox().checked && equipmentWrites.at(-1)[0] === item.id && equipmentWrites.at(-1)[1]["system.equipped.value"] === false);
+      await clickTab("combat");
+      if (item === sword || item === mail) check(`${item.type} unequip refreshes Combat`, item === sword ? !screen.querySelector('[data-profile-action="weapon:sword"]')
+        : !screen.querySelector('[data-profile-section="armour-body"] [data-profile-field="mail"]'));
+      await clickTab("trappings");
+      checkbox().click();
+      await tick();
+      check(`${item.type} equip restores native state`, checkbox().checked && item.system.isEquipped);
+    }
+    check("Equipment checkboxes fit the viewport", document.documentElement.scrollWidth <= innerWidth + 1);
+    commands.selectActor(npc.uuid);
+    await tick();
+    commands.selectActor(actor.uuid);
+    await tick();
+    await clickTab("trappings");
+    check("Changing characters resets inventory disclosures closed", inventoryIds.every(id => !inventorySection(id).open));
+    await clickTab("combat");
+    check("Reequipping restores Combat weapons and armour", screen.querySelector('[data-profile-action="weapon:sword"]') && screen.querySelector('[data-profile-section="armour-body"] [data-profile-field="mail"]'));
+    delete actor.system.status.mount;
+    delete actor.mount;
+    nativeWrites.length = 0;
+    Hooks.emit("updateActor", actor, {});
+    await tick();
+    check("Removing assigned mount hides Mounted and Mounts", !mounts() && !screen.querySelector('[data-profile-resource-input="mounted"]'));
     screen.querySelector('[data-profile-action="weapon:sword"]').click();
     await tick();
     check(
@@ -1961,10 +2074,13 @@ try {
         .querySelector('[data-profile-field="rope"]')
         .textContent.includes("2"),
     );
-    screen.querySelector("details").open = true;
+    const ropeSection = screen.querySelector('[data-profile-section="trappings"]');
+    check("New inventory content respects collapsed state", !ropeSection.open);
+    ropeSection.querySelector(":scope > summary").click();
+    screen.querySelector('[data-profile-field="rope"] details').open = true;
     check(
       "Trappings descriptions are readable on mobile",
-      screen.querySelector("details").textContent.includes("A sturdy rope"),
+      screen.querySelector('[data-profile-field="rope"] details').textContent.includes("A sturdy rope"),
     );
     const ropeDescription = screen.querySelector(
       '[data-profile-field="rope"] .mc-description-content',
@@ -2232,6 +2348,32 @@ try {
       trigger.click();
       await tick();
     }
+  }
+  if (params.get("preview") === "trappings") {
+    actor.system.details.status.value = "Brass 3";
+    Hooks.emit("updateActor", actor, { "system.details.status.value": "Brass 3" });
+    await tick();
+    await clickTab("trappings");
+    for (const section of screen.querySelectorAll(".mc-profile-inventory-disclosure")) {
+      if (section.open) section.querySelector(":scope > summary").click();
+    }
+    check("Social Status stays visible beside collapsed inventory", screen.querySelector('[data-profile-section="social-status"]').tagName === "SECTION" && screen.querySelector('[data-profile-field="social-status"]').checkVisibility());
+    screen.querySelector('[data-profile-section="encumbrance"]').scrollIntoView({ block: "start" });
+  }
+  if (params.get("preview") === "equipment") {
+    await clickTab("trappings");
+    for (const section of screen.querySelectorAll(".mc-profile-inventory-disclosure")) {
+      if (!section.open) section.querySelector(":scope > summary").click();
+    }
+    screen.querySelector('[data-profile-section="weapons"]').scrollIntoView({ block: "start" });
+  }
+  if (params.get("preview") === "mounts") {
+    actor.mount = { id: "horse", uuid: "Actor.horse", name: "Reik", system: { status: { wounds: { value: 9, max: 18 } } } };
+    actor.system.status.mount = { id: "horse", mounted: false, isToken: false };
+    Hooks.emit("updateActor", actor, {});
+    await tick();
+    await clickTab("combat");
+    screen.querySelector('[data-profile-section="mounts"]').scrollIntoView({ block: "center" });
   }
   if (params.get("preview") === "armour") {
     await clickTab("combat");
