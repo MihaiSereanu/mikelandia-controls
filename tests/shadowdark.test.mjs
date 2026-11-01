@@ -96,7 +96,7 @@ for (const pulp of [false, true]) {
   test(`${pulp ? "Pulp" : "normal"} PC panels retain Shadowdark labels, prepared Stats, Luck, inventory and spells`, t => {
     const f = setup(t, { pulp });
     const view = f.view(), rows = view.panels.flatMap(t => t.sections.flatMap(s => s.rows));
-    assert.deepEqual(view.panels.map(t => t.label), ["Abilities", "Spells", "Inventory"]);
+    assert.deepEqual(view.panels.map(t => t.label), ["Main", "Spells", "Inventory"]);
     assert.equal(rows.find(r => r.id === "str").value, "14 (+2)");
     assert.equal(rows.find(r => r.id === "hp").max, 12);
     assert.equal(rows.find(r => r.id === "luck").value, pulp ? 2 : true);
@@ -127,6 +127,73 @@ test("failed native spell rolls keep native spell-loss behavior without a second
   assert.equal(f.actor.items.find(i => i.id === "spell").system.lost, true);
   assert.equal(f.rolls.length, 1);
   assert.equal(f.gateway.capabilitiesForActor(f.actor).profileActions.some(a => a.id === "spell:spell"), false);
+});
+
+test("Main shows owned Special Abilities and native remaining uses only when present", t => {
+  const f = setup(t, { specialAbilities: true });
+  const section = () => f.view().panels[0].sections.find(s => s.id === "special-abilities");
+  const row = section().rows[0];
+  assert.equal(row.id, "ability");
+  assert.match(row.value, /2 \/ 3/u);
+  assert.equal(row.descriptionToggle, "name");
+  assert.match(row.description, /ability text/u);
+  assert.equal(row.action.id, "ability:ability");
+  f.actor.items.get("ability").visible = false;
+  assert.equal(section(), undefined);
+});
+
+test("Special Ability use delegates once and preserves native consumption and loss", async t => {
+  const f = setup(t, { specialAbilities: true });
+  f.success = false;
+  const result = await f.gateway.execute(action, f.request("ability:ability"));
+  assert.equal(result.cancelled, false);
+  assert.equal(f.calls.length, 1);
+  assert.equal(f.calls[0].receiver, f.actor.system);
+  assert.equal(f.calls[0].target, f.actor.items.get("ability").uuid);
+  assert.equal(f.rolls.length, 1);
+  assert.equal(f.actor.items.get("ability").system.uses.available, 1);
+  assert.equal(f.actor.items.get("ability").system.lost, true);
+  assert.equal(f.gateway.capabilitiesForActor(f.actor).profileActions.some(a => a.id === "ability:ability"), false);
+  assert.equal(f.hooks.count("SD-Player-classAbility"), 0);
+});
+
+test("exhausted Special Abilities remain readable without an action", t => {
+  const f = setup(t, { specialAbilities: true });
+  f.actor.items.get("ability").system.uses.available = 0;
+  const row = f.view().panels[0].sections.find(s => s.id === "special-abilities").rows[0];
+  assert.match(row.value, /0 \/ 3/u);
+  assert.equal(row.action, undefined);
+});
+
+for (const change of ["uses", "lost", "dc", "permission", "identity"]) {
+  test(`Special Ability dialog rejects changed ${change} before consumption`, async t => {
+    const f = setup(t, { specialAbilities: true });
+    const ability = f.actor.items.get("ability");
+    let finish;
+    f.prompt = () => new Promise(resolve => { finish = resolve; });
+    const pending = f.gateway.execute(action, f.request("ability:ability"));
+    if (change === "uses") ability.system.uses.available = 1;
+    if (change === "lost") ability.system.lost = true;
+    if (change === "dc") ability.system.dc = 15;
+    if (change === "permission") f.actor.testUserPermission = () => false;
+    if (change === "identity") f.actor.items.splice(f.actor.items.indexOf(ability), 1, { ...ability });
+    const available = ability.system.uses.available;
+    finish(true);
+    await assert.rejects(pending);
+    assert.equal(ability.system.uses.available, available);
+    assert.equal(f.rolls.length, 0);
+    assert.equal(f.hooks.count("SD-Player-classAbility"), 0);
+  });
+}
+
+test("Special Ability cancellation releases the native roll lock without consuming uses", async t => {
+  const f = setup(t, { specialAbilities: true });
+  f.prompt = async () => false;
+  assert.equal((await f.gateway.execute(action, f.request("ability:ability"))).cancelled, true);
+  assert.equal(f.actor.items.get("ability").system.uses.available, 2);
+  assert.equal(f.hooks.count("SD-Player-classAbility"), 0);
+  f.prompt = async () => true;
+  assert.equal((await f.gateway.execute(action, f.request("ability:ability"))).ok, true);
 });
 test("native cancellation and errors clean hooks and release command locks", async t => {
   const f = setup(t); const request = f.request("stat:str");

@@ -3635,6 +3635,21 @@ body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .mc-roll
 .mc-profile-summary-triple:has(.mc-profile-counter) {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5em), 1fr));
 }
+/* Shadowdark's calculated AC fills the same card as its editable HP neighbour. */
+.mc-profile-summary-triple:has(> [data-profile-section="hp"] .mc-profile-counter) {
+  align-items: stretch;
+}
+.mc-profile-summary-triple:has(> [data-profile-section="hp"] .mc-profile-counter) > .mc-profile-section {
+  display: grid;
+}
+.mc-profile-summary-triple:has(> [data-profile-section="hp"] .mc-profile-counter) .mc-profile-row {
+  grid-template-rows: 44px minmax(44px, auto);
+}
+.mc-profile-summary-triple:has(> [data-profile-section="hp"] .mc-profile-counter) [data-profile-field="ac"] dd {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .mc-profile-summary-counter-pairs:has(.mc-profile-counter) {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -11327,6 +11342,30 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 .mc-profile-coin.is-editing > :is(button, .mc-profile-coin-controls) { display: none; }
 .mc-profile-coin .mc-profile-resource-form input { width: 100%; min-width: 0; }
 .mc-profile-coin .mc-profile-resource-form button { padding: 8px 4px; }
+/* Each native Shadowdark denomination keeps its amount beside its label. */
+[data-profile-section="coins"].mc-profile-section-inline dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15em), 1fr));
+}
+[data-profile-section="coins"].mc-profile-section-inline .mc-profile-row:has(> .mc-profile-coin) {
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+}
+[data-profile-section="coins"].mc-profile-section-inline .mc-profile-row > .mc-profile-coin {
+  grid-template-columns: minmax(44px, 1fr) 90px;
+  align-items: center;
+  gap: 4px;
+}
+[data-profile-section="coins"] .mc-profile-coin > .mc-profile-resource-open { text-align: center; }
+[data-profile-section="coins"] .mc-profile-coin-controls { grid-template-columns: repeat(2, 44px); }
+[data-profile-section="coins"] .mc-profile-coin > div:not(.mc-profile-coin-controls) { grid-column: 1 / -1; }
+/* Shadowdark tablets use matching three-column resource, stat and coin grids. */
+.mc-mobile-app[data-form-factor="tablet"] .mc-profile-content[aria-labelledby$="-tab-abilities"] .mc-profile-summary-triple:has(> [data-profile-section="hp"] .mc-profile-counter),
+.mc-mobile-app[data-form-factor="tablet"] .mc-profile-content[aria-labelledby$="-tab-abilities"] [data-profile-section="stats"] dl,
+.mc-mobile-app[data-form-factor="tablet"] .mc-profile-content[aria-labelledby$="-tab-inventory"] [data-profile-section="coins"].mc-profile-section-inline dl {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 
 /* Keep installed app content clear of the device status area. */
 @media (display-mode: standalone) {

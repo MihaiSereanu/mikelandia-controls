@@ -19,6 +19,43 @@ export function inventoryEdits(actor, game, user = game?.user) {
       revision: JSON.stringify([shadowdarkContext(game).revision, item.uuid, item.type, item.system.slots?.per_slot, item.system.slots?.slots_used, item.system.stashed]) }];
   });
 }
+function equipmentState(actor) {
+  // Equipping a shield can alter other weapons through the native handler.
+  return values(actor.items).filter(item => physicalTypes.includes(item.type)).map(item => [
+    item.uuid, item.type, item.system?.equipped, item.system?.stashed,
+    item.system?.handedness, item.system?.isWeapon, item.system?.isAShield,
+    item.system?.isVersatile, item.system?.canBeEquipped, item.system?.isIdentified
+  ]);
+}
+export function equipmentEdits(actor, game, user = game?.user) {
+  const context = shadowdarkContext(game);
+  if (!context || !isShadowdarkPlayer(actor, user) || actor.sheet?.actor !== actor
+    || typeof actor.sheet?._onToggleEquipped !== "function" || typeof actor.updateEmbeddedDocuments !== "function") return [];
+  const revision = JSON.stringify([context.revision, equipmentState(actor)]);
+  return values(actor.items).flatMap(item => carriedItem(item, actor) && item.system.canBeEquipped === true
+    && typeof item.system.equipped === "boolean"
+    ? [{ id: `equipped:${item.id}`, label: localizeFoundry("SHADOWDARK.item.equipped", "Equipped"), kind: "boolean", value: item.system.equipped, revision }]
+    : []);
+}
+export async function editEquipment(payload, context, game) {
+  const { actor, assertCurrent, sourceUuid } = context;
+  if (Object.keys(payload).some(key => !["actorSourceUuid", "actorId", "resourceId", "resourceRevision", "expectedValue", "value"].includes(key))
+    || typeof payload.value !== "boolean") throw fail("INVALID_INPUT", "Invalid equipment request.");
+  const sheet = actor.sheet, handler = sheet?._onToggleEquipped;
+  const edit = equipmentEdits(actor, game).find(edit => edit.id === payload.resourceId);
+  if (!edit) throw fail("CAPABILITY_UNAVAILABLE", "This item can no longer be equipped.");
+  if (payload.resourceRevision !== edit.revision || payload.expectedValue !== edit.value) throw fail("STALE_STATE", "The equipment changed. Try again.");
+  assertCurrent();
+  const current = equipmentEdits(actor, game).find(current => current.id === edit.id);
+  if (actor.sheet !== sheet || sheet._onToggleEquipped !== handler || !current)
+    throw fail("CAPABILITY_UNAVAILABLE", "This item can no longer be equipped.");
+  if (current.revision !== edit.revision || current.value !== edit.value) throw fail("STALE_STATE", "The equipment changed. Try again.");
+  if (payload.value === edit.value) return { ok: true, unchanged: true, actorSourceUuid: sourceUuid };
+  const row = { dataset: { itemId: edit.id.slice("equipped:".length) } };
+  const control = { dataset: row.dataset, closest: selector => selector === ".item" ? row : null };
+  await handler.call(sheet, { preventDefault() {}, currentTarget: control, target: control });
+  return { ok: true, actorSourceUuid: sourceUuid };
+}
 function readable(item, game) {
   return item && !item.parent && physicalTypes.includes(item.type) && item.visible !== false
     && (typeof item.testUserPermission !== "function" || item.testUserPermission(game.user, "OBSERVER"));

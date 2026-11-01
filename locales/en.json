@@ -35,6 +35,9 @@
       "Unavailable": "This token is no longer available for targeting."
     },
     "Panels": {
+      "Main": "Main",
+      "CarriedGear": "Carried Gear",
+      "EquippedGear": "Equipped Gear",
       "ChooseCondition": "Choose condition",
       "RemoveConditionRow": "Remove from list",
       "Decrease": "Decrease",
@@ -939,9 +942,9 @@
         "WarhammerMagic": "Magic: Tap a spell with a dice icon to cast it. Tap an available Wind to channel it.",
         "WarhammerEffects": "Effects: Track conditions and read injuries and other effects. Choose a condition to show its row, then use its toggle or minus/plus buttons to change it. Buttons beside active conditions run their listed actions.",
         "WarhammerNotes": "Notes: Read and edit your character notes and ambitions. Save your changes before leaving the editor.",
-        "ShadowdarkAbilities": "Abilities: Roll ability checks and weapon attacks, track HP and other counters, and select Targets.",
-        "ShadowdarkSpells": "Spells: Cast known spells and check which spells are lost.",
-        "ShadowdarkInventory": "Inventory: Check gear slots, carried and stashed gear, and coins. Use **Add** to choose catalog gear or create an item. Changing an item's quantity to zero removes it.",
+        "ShadowdarkAbilities": "Main: Roll ability checks and weapon attacks, track HP and other counters, and select Targets. Expand Special Ability names to read descriptions; use their action buttons to activate them.",
+        "ShadowdarkSpells": "Spells: Tap a spell name or arrow to read its description. Tap the dice to cast a known spell. Lost spells remain readable.",
+        "ShadowdarkInventory": "Inventory: Check slots, Equipped Gear, Carried Gear, Stashed Gear and coins. Use equipment checkboxes to equip or unequip weapons and armour. Use **Add** to choose catalog gear or create an item. Changing an item's quantity to zero removes it.",
         "ShadowdarkTalents": "Talents: Read your ancestry, class, and level talents. Expand **Details** to read more.",
         "Notes": "Notes: Read and edit your character notes. Save your changes before leaving the editor.",
         "DndFavourites": "Favourites (when enabled): Find the items, spells, and features you have marked as favourites.",

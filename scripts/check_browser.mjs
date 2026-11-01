@@ -94,6 +94,9 @@ const cases = [
   ["shadowdark-pulp-phone", 390, 844, "shadowdark", "layout=phone&pulp=true"],
   ["shadowdark-tablet", 1024, 768, "shadowdark", "layout=tablet&pulp=false"],
   ["shadowdark-pulp-tablet", 1024, 768, "shadowdark", "layout=tablet&pulp=true"],
+  ...["main", "spells", "inventory", "abilities"].flatMap(preview =>
+    [["phone", 390, 844], ["tablet", 1024, 768]].map(([layout, width, height]) =>
+      [`shadowdark-${preview}-${layout}`, width, height, "shadowdark", `layout=${layout}&preview=${preview}`])),
   ["presentation-phone", 390, 844, "presentation", "layout=phone"],
   ["presentation-tablet", 1024, 768, "presentation", "layout=tablet"],
   ["actor-notes-phone", 390, 844, "actor-notes", ""],

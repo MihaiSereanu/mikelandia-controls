@@ -13,9 +13,24 @@ const tick = () => new Promise(resolve => setTimeout(resolve, 30));
 const scope = createTaskScope("shadowdark-browser");
 try {
   const params = new URLSearchParams(location.search), initialPulp = params.get("pulp") === "true";
+  if (params.has("native-assets")) {
+    // Match native button sizing and icon glyphs without importing page typography.
+    const nativeResponse = await fetch("/native-fixture/foundry2.css");
+    check("native Foundry stylesheet available for Shadowdark controls", nativeResponse.ok);
+    const nativeButtonRule = (await nativeResponse.text()).match(/a\.button,\s*button\s*\{[^}]+\}/u)?.[0];
+    check("native Foundry button defaults found", Boolean(nativeButtonRule));
+    const nativeStyles = document.createElement("style");
+    nativeStyles.textContent = `@layer modules { ${nativeButtonRule} }`;
+    document.head.prepend(nativeStyles);
+    const font = new FontFace("Native fixture icons", 'url("/native-fixture/fa-solid-900.woff2")', { weight: "900" });
+    document.fonts.add(await font.load());
+    const iconStyles = document.createElement("style");
+    iconStyles.textContent = '.mc-profile-action i, [data-profile-add-item] i { font-family: "Native fixture icons"; font-weight: 900; font-style: normal; } .mc-profile-action .fa-dice::before { content: "\\f522"; } [data-profile-add-item] .fa-plus::before { content: "\\f067"; }';
+    document.head.append(iconStyles);
+  }
   document.querySelector("main").dataset.formFactor = params.get("layout") ?? "phone";
   if (params.has("large")) document.querySelector("main").style.setProperty("font-size", "24px", "important");
-  const f = createShadowdarkFixture({ pulp: initialPulp });
+  const f = createShadowdarkFixture({ pulp: initialPulp, specialAbilities: true });
   globalThis.game = f.game; globalThis.Hooks = f.hooks;
   game.i18n = { localize: key => key };
   const dsnStyle = document.createElement("style");
@@ -90,7 +105,7 @@ try {
   const cancel = async () => { dialog.element.querySelector("[data-native-cancel]").click(); await tick(); };
   const resource = async id => { const lock = screen.querySelector(`[data-profile-counter-lock="${id}"]`); if (lock?.getAttribute("aria-pressed") === "true") lock.click(); screen.querySelector(`[data-profile-edit="${id}"]`).click(); await tick(); return screen.querySelector(`[data-profile-resource-input="${id}"]`); };
   const save = async input => { input.dispatchEvent(new Event("input", { bubbles: true })); input.closest("form").querySelector("[data-profile-resource-save]").click(); await tick(); };
-  check("PC uses native Abilities/Spells/Inventory labels", [...screen.querySelectorAll('[role="tab"]')].map(node => node.textContent).join(",") === "Abilities,Spells,Inventory");
+  check("PC uses Main/Spells/Inventory labels", [...screen.querySelectorAll('[role="tab"]')].map(node => node.textContent).join(",") === "Main,Spells,Inventory");
   check("prepared stats and modifiers are displayed", field("str") === "Str14 (+2)");
   check("native HP and AC values are used", field("hp") === "HP7 / 12" && field("ac") === "AC14");
   check("Luck follows Pulp Mode", field("luck") === (initialPulp ? "Luck2" : "Luck1"));
@@ -137,12 +152,22 @@ try {
   check("resource labels appear once inside their boxes", !screen.querySelector('.mc-profile-summary-triple h3'));
   const boxes = resourceOrder.map(id => screen.querySelector(`[data-profile-section="${id}"]`).getBoundingClientRect());
   check("counter cards use available width without overflow", boxes.every(box => box.width >= 160 && box.right <= innerWidth));
+  if (params.get("layout") === "tablet") {
+    check("tablet resources form HP AC DEF above XP Grit Luck", boxes.slice(0, 3).every(box => Math.abs(box.top - boxes[0].top) < 1)
+      && boxes.slice(3).every(box => Math.abs(box.top - boxes[3].top) < 1) && boxes[3].top >= boxes[0].bottom
+      && boxes[0].left < boxes[1].left && boxes[1].left < boxes[2].left);
+    const statBoxes = ["str", "dex", "con", "int", "wis", "cha"].map(id => screen.querySelector(`[data-profile-section="stats"] [data-profile-field="${id}"]`).getBoundingClientRect());
+    check("tablet Stats form three columns and two rows", statBoxes.slice(0, 3).every(box => Math.abs(box.top - statBoxes[0].top) < 1)
+      && statBoxes.slice(3).every(box => Math.abs(box.top - statBoxes[3].top) < 1) && statBoxes[3].top >= statBoxes[0].bottom
+      && statBoxes[0].left < statBoxes[1].left && statBoxes[1].left < statBoxes[2].left);
+  }
   const counter = id => screen.querySelector(`[data-profile-resource="${id}"]`);
   const delta = (id, n) => counter(id).querySelector(`[data-profile-counter-delta="${n}"]`);
   const lock = id => screen.querySelector(`[data-profile-counter-lock="${id}"]`);
   check("all five counters start locked", ["hp", "def", "xp", "grit", "luck"].every(id => lock(id).getAttribute("aria-pressed") === "true"
     && [...counter(id).querySelectorAll("[data-profile-counter-delta], [data-profile-edit]")].every(b => b.disabled)));
   check("AC remains read-only", !screen.querySelector('[data-profile-resource="ac"]'));
+  check("HP and read-only AC cards have equal height", Math.abs(boxes[0].height - boxes[1].height) < 1);
   check("locked padlocks have no background", ["hp", "def", "xp", "grit", "luck"].every(id => getComputedStyle(lock(id)).backgroundColor === "rgba(0, 0, 0, 0)"));
   check("resource labels stay on one line", resourceOrder.every(id => {
     const range = document.createRange(); range.selectNodeContents(screen.querySelector(`[data-profile-field="${id}"] dt span`));
@@ -218,10 +243,52 @@ try {
   check("Luck save refreshes the correct native field", field("luck") === (initialPulp ? "Luck4" : "Luck0"));
   await tab("spells");
   check("known and lost spells use separate sections", screen.textContent.includes("Spells Known") && screen.textContent.includes("Lost Spells") && !screen.querySelector('[data-profile-action="spell:lost"]'));
+  const spellDescription = screen.querySelector('[data-profile-field="spell"] details');
+  const lostDescription = screen.querySelector('[data-profile-field="lost"] details');
+  check("known and lost spell descriptions start collapsed", spellDescription && lostDescription && !spellDescription.open && !lostDescription.open);
+  const rollsBeforeDescription = f.rolls.length, callsBeforeDescription = f.calls.length;
+  spellDescription.querySelector('summary').click(); await tick();
+  check("spell name expands formatted player description without rolling", spellDescription.open && spellDescription.querySelector('p strong')?.textContent === 'missile text'
+    && spellDescription.querySelector('ul li') && !spellDescription.querySelector('script') && !spellDescription.textContent.includes('GM spell secret')
+    && f.rolls.length === rollsBeforeDescription && f.calls.length === callsBeforeDescription);
+  spellDescription.querySelector('summary').click(); await tick();
+  lostDescription.querySelector('summary').click(); await tick();
+  check("spell names toggle closed and lost spell remains readable", !spellDescription.open && lostDescription.open && lostDescription.textContent.includes('Native sleep text'));
   f.success = false; await begin("spell:spell"); await confirm();
   check("failed casting retains native spell loss", f.rolls.length === 3 && f.actor.items.get("spell").system.lost && !screen.querySelector('[data-profile-action="spell:spell"]'));
   check("spell hook is removed after failure", Hooks.count("SD-Player-Spell") === 0);
+  await tab("abilities");
+  const ability = f.actor.items.get("ability");
+  const abilitySection = () => screen.querySelector('[data-profile-section="special-abilities"]');
+  const abilityDescription = abilitySection().querySelector('details');
+  check("Main includes owned Special Abilities and native remaining uses", abilitySection().textContent.includes('Special Abilities') && abilitySection().textContent.includes('2 / 3') && !abilityDescription.open);
+  const abilityCalls = f.calls.length;
+  abilityDescription.querySelector('summary').click(); await tick();
+  check("ability name expands description independently of Use", abilityDescription.open && abilityDescription.querySelector('strong')?.textContent === 'ability text'
+    && !abilityDescription.textContent.includes('GM ability secret') && f.calls.length === abilityCalls);
+  f.success = true; await begin("ability:ability"); await cancel();
+  check("cancelling Special Ability keeps native uses", ability.system.uses.available === 2 && Hooks.count("SD-Player-classAbility") === 0);
+  await begin("ability:ability"); await confirm();
+  check("Special Ability invokes native Use once and refreshes remaining uses", f.calls.at(-1).kind === 'ability' && f.calls.at(-1).target === ability.uuid
+    && ability.system.uses.available === 1 && abilitySection().textContent.includes('1 / 3') && Hooks.count("SD-Player-classAbility") === 0);
+  await begin("ability:ability"); await confirm();
+  check("exhausted Special Ability stays readable without Use", ability.system.uses.available === 0 && !!abilitySection().querySelector('details') && !screen.querySelector('[data-profile-action="ability:ability"]'));
+  f.actor.items.splice(f.actor.items.indexOf(ability), 1); Hooks.emit('deleteItem', ability, {}); await tick();
+  check("Special Abilities section disappears when the PC has none", !abilitySection());
+  f.actor.items.push(ability); Hooks.emit('createItem', ability, {}); await tick();
   await tab("inventory");
+  const equipment = () => screen.querySelector('[data-profile-resource-input="equipped:sword"]');
+  check("equipped and carried gear occupy separate sections", screen.querySelector('[data-profile-section="equipped-gear"]').textContent.includes('Sword')
+    && !screen.querySelector('[data-profile-section="gear"]').textContent.includes('Sword') && screen.querySelector('[data-profile-section="gear"]').textContent.includes('Torch'));
+  check("equipped gear exposes native checkbox and quantity controls", equipment().checked && !!screen.querySelector('[data-profile-resource="quantity:sword"]'));
+  equipment().click(); await tick();
+  check("PC can unequip into Carried Gear", !sword.system.equipped && !equipment().checked && screen.querySelector('[data-profile-section="gear"]').textContent.includes('Sword')
+    && !screen.querySelector('[data-profile-section="equipped-gear"]').textContent.includes('Sword'));
+  equipment().click(); await tick();
+  check("PC can equip into Equipped Gear", sword.system.equipped && equipment().checked && screen.querySelector('[data-profile-section="equipped-gear"]').textContent.includes('Sword'));
+  await tab('abilities');
+  check("equipping refreshes native Main attacks", !!screen.querySelector('[data-profile-action="attack-melee:sword"]'));
+  await tab('inventory');
   const quantity = () => screen.querySelector('[data-profile-resource="quantity:torch"]');
   check("carried gear has three touch-friendly quantity controls", quantity().querySelectorAll("button").length === 3 && [...quantity().querySelectorAll("button")].every(b => b.getBoundingClientRect().height >= 44));
   quantity().querySelector('[data-profile-quantity-delta="1"]').click(); await tick();
@@ -328,16 +395,21 @@ try {
   check("Gear displays native used and maximum Slots", screen.querySelector('[data-profile-metric="slots"]').textContent.includes("8 / 12"));
   check("Coins displays native denominations and slot use", screen.querySelector('[data-profile-section="coins"]').textContent.includes("25") && screen.querySelector('[data-profile-metric="coin-slots"]').textContent.includes("1"));
   const coinBoxes = [...screen.querySelectorAll('[data-profile-section="coins"] [data-profile-field]')].map(e => e.getBoundingClientRect());
-  check("all three compact coin boxes share one row", coinBoxes.length === 3 && coinBoxes.every(r => Math.abs(r.top - coinBoxes[0].top) < 1));
+  check("all three compact coin rows fit their card", coinBoxes.length === 3 && coinBoxes.every(r => r.left >= 0 && r.right <= innerWidth));
+  if (params.get("layout") === "tablet") check("tablet coins use three columns", coinBoxes.every(box => Math.abs(box.top - coinBoxes[0].top) < 1)
+    && coinBoxes[0].left < coinBoxes[1].left && coinBoxes[1].left < coinBoxes[2].left);
   const gearHeader = screen.querySelector('[data-profile-section="gear"] header'), addButton = gearHeader.querySelector('[data-profile-add-item]');
   const gearTitle = gearHeader.querySelector("h3").getBoundingClientRect(), slotsMetric = gearHeader.querySelector('[data-profile-metric="slots"]').getBoundingClientRect();
-  check("Gear groups Slots beside its title and the add icon at the right", !!addButton.querySelector(".fa-plus") && !addButton.textContent.trim()
-    && slotsMetric.left >= gearTitle.right && slotsMetric.left - gearTitle.right <= 13
+  check("Carried Gear keeps Slots in its heading and the add icon at the right", !!addButton.querySelector(".fa-plus") && !addButton.textContent.trim()
+    && slotsMetric.left >= gearHeader.getBoundingClientRect().left && slotsMetric.right <= gearHeader.getBoundingClientRect().right
+    && slotsMetric.top >= gearTitle.top && slotsMetric.bottom <= gearHeader.getBoundingClientRect().bottom
     && Math.abs(addButton.getBoundingClientRect().right - gearHeader.getBoundingClientRect().right) < 2);
   for (const denomination of ["gp", "sp", "cp"]) {
     const coin = () => screen.querySelector(`[data-profile-resource="coin-${denomination}"]`);
     const original = f.actor.system.coins[denomination];
-    check(denomination + " has controls below its editable amount", coin().querySelector('.mc-profile-coin-controls').getBoundingClientRect().top >= coin().querySelector('[data-profile-edit]').getBoundingClientRect().bottom);
+    const coinRow = coin().closest('[data-profile-field]');
+    const sameLine = [...coinRow.querySelectorAll('dt, [data-profile-edit], [data-profile-quantity-delta]')].map(element => element.getBoundingClientRect());
+    check(denomination + " label, amount and controls share one line", sameLine.every(rect => Math.abs(rect.top + rect.height / 2 - (sameLine[0].top + sameLine[0].height / 2)) < 2));
     coin().querySelector('[data-profile-quantity-delta="1"]').click(); await tick();
     check(denomination + " increment updates the native coin value", f.actor.system.coins[denomination] === original + 1);
     coin().querySelector('[data-profile-quantity-delta="-1"]').click(); await tick();
@@ -375,6 +447,29 @@ try {
   screen.querySelector('[data-profile-resource-cancel]').click(); await tick();
   check("HP unlock choice survives actor navigation", lock("hp").getAttribute("aria-pressed") === "false");
   for (const id of ["hp", "def", "xp", "grit", "luck"]) if (lock(id).getAttribute("aria-pressed") === "false") lock(id).click();
+  const preview = params.get("preview");
+  if (preview === "spells") {
+    const spell = f.actor.items.get("spell");
+    spell.system.lost = false; Hooks.emit("updateItem", spell, { "system.lost": false }); await tick();
+    await tab("spells");
+    for (const disclosure of screen.querySelectorAll('.mc-profile-spell-description')) disclosure.open = true;
+  } else if (preview === "inventory") {
+    f.actor.system.coins = { gp: 25, sp: 3, cp: 0 };
+    Hooks.emit("updateActor", f.actor, { "system.coins": f.actor.system.coins }); await tick();
+    await tab("inventory");
+  }
+  else if (preview === "main") {
+    await tab("abilities");
+    screen.querySelector('[data-profile-section="hp"]').scrollIntoView({ block: 'start' });
+  } else if (preview === "abilities") {
+    const ability = f.actor.items.get("ability");
+    ability.system.lost = false; ability.system.uses.available = 2;
+    Hooks.emit("updateItem", ability, { "system.lost": false, "system.uses.available": 2 }); await tick();
+    await tab("abilities");
+    const section = screen.querySelector('[data-profile-section="special-abilities"]');
+    section.querySelector('details').open = true;
+    section.scrollIntoView({ block: 'center' });
+  }
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
 } catch (error) {
   scope.dispose(); document.querySelector("#results").textContent = JSON.stringify({ status: "failed", checks, error: error.stack });

@@ -7,15 +7,15 @@ import { shadowdarkPlayerProfile } from "./profile.mjs";
 import { abilities, isShadowdarkPlayer, shadowdarkContext, ownedItem } from "./context.mjs";
 import { shadowdarkResourceEdits, editShadowdarkResource } from "./resources.mjs";
 
-import { inventoryEdits, inventoryAvailable, executeInventory } from "./inventory.mjs";
+import { inventoryEdits, inventoryAvailable, executeInventory, equipmentEdits, editEquipment } from "./inventory.mjs";
 
 const unavailable = () => new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Panels.ActionUnavailable", "This game action is no longer available."));
 function actionsFor(actor, game, hooks, user = game?.user) {
   const context = shadowdarkContext(game);
   if (!context || !isShadowdarkPlayer(actor, user)) return [];
   const guarded = typeof hooks?.on === "function" && typeof hooks?.off === "function" && typeof hooks?.call === "function";
-  const methods = { stats: "rollStatCheck", "melee-attacks": "rollAttack", "ranged-attacks": "rollAttack", "known-spells": "castSpell" };
-  const prefixes = { stats: "stat", "melee-attacks": "attack-melee", "ranged-attacks": "attack-ranged", "known-spells": "spell" };
+  const methods = { stats: "rollStatCheck", "melee-attacks": "rollAttack", "ranged-attacks": "rollAttack", "known-spells": "castSpell", "special-abilities": "useAbility" };
+  const prefixes = { stats: "stat", "melee-attacks": "attack-melee", "ranged-attacks": "attack-ranged", "known-spells": "spell", "special-abilities": "ability" };
   const actions = [];
   for (const tab of createProfilePanels(actor, shadowdarkPlayerProfile(context))) for (const section of tab.sections) {
     if (!guarded || typeof actor.system?.[methods[section.id]] !== "function") continue;
@@ -24,7 +24,9 @@ function actionsFor(actor, game, hooks, user = game?.user) {
       const kind = prefixes[section.id];
       if (!kind || (kind === "stat" && !abilities.includes(row.id))) continue;
       if (kind === "spell" && ownedItem(actor, row.id, "Spell")?.system.lost !== false) continue;
-      actions.push(Object.freeze({ id: `${kind}:${row.id}`, revision: context.revision, label: row.label }));
+      const ability = kind === "ability" ? ownedItem(actor, row.id, "Class Ability") : null;
+      if (kind === "ability" && (ability?.system.lost !== false || (ability.system.limitedUses === true && !(ability.system.uses?.available > 0)))) continue;
+      actions.push(Object.freeze({ id: `${kind}:${row.id}`, revision: kind === "ability" ? JSON.stringify([context.revision, binding(actor, ability)]) : context.revision, label: row.label }));
     }
   }
   return Object.freeze(actions);
@@ -32,7 +34,8 @@ function actionsFor(actor, game, hooks, user = game?.user) {
 function binding(actor, item) {
   return JSON.stringify([actor.type, actor.system.class, actor.system.spellcasting?.classes,
     item?.system.type, item?.system.equipped, item?.system.stashed, item?.system.handedness,
-    item?.system.isThrown, item?.system.lost, item?.system.class, item?.system.tier, item?.system.duration?.type, item?.system.duration?.value]);
+    item?.system.isThrown, item?.system.lost, item?.system.class, item?.system.tier, item?.system.duration?.type, item?.system.duration?.value,
+    item?.system.limitedUses, item?.system.uses?.available, item?.system.uses?.max, item?.system.ability, item?.system.dc, item?.system.loseOnFailure]);
 }
 export function createShadowdarkCommands({ getGame = () => globalThis.game, getHooks = () => globalThis.Hooks } = {}) {
   return Object.freeze({
@@ -41,11 +44,12 @@ export function createShadowdarkCommands({ getGame = () => globalThis.game, getH
     commandKey: name => name === ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION ? JSON.stringify([name, "shadowdark-native-roll"]) : undefined,
     supportsCommand: name => [ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION, ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name),
     capabilitiesForActor(actor, user) {
-      const profileActions = actionsFor(actor, getGame(), getHooks(), user), profileEdits = [...shadowdarkResourceEdits(actor, getGame(), user), ...inventoryEdits(actor, getGame(), user)];
+      const profileActions = actionsFor(actor, getGame(), getHooks(), user), profileEdits = [...shadowdarkResourceEdits(actor, getGame(), user), ...inventoryEdits(actor, getGame(), user), ...equipmentEdits(actor, getGame(), user)];
       return Object.freeze({ ...(inventoryAvailable(actor, getGame(), user) ? { profileInventory: true } : {}), ...(profileActions.length ? { profileActions } : {}), ...(profileEdits.length ? { profileEdits } : {}) });
     },
     async execute(name, payload, _expected, _observer, context) {
       if (name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION) return shadowdarkNotes.save(context.actor, payload, context.assertCurrent);
+      if (name === ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE && payload.resourceId?.startsWith("equipped:")) return editEquipment(payload, context, getGame());
       if ([ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name)
         || (name === ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE && payload.resourceId?.startsWith("quantity:"))) return executeInventory(name, payload, context, getGame());
       if (name === ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE) return editShadowdarkResource(payload, context, getGame());
@@ -69,7 +73,7 @@ export function createShadowdarkCommands({ getGame = () => globalThis.game, getH
       };
       checkpoint();
 
-      const hook = kind === "stat" ? "SD-Stat-Check" : kind === "spell" ? "SD-Player-Spell" : "SD-Player-Attack";
+      const hook = kind === "stat" ? "SD-Stat-Check" : kind === "spell" ? "SD-Player-Spell" : kind === "ability" ? "SD-Player-classAbility" : "SD-Player-Attack";
       const config = kind.startsWith("attack-") ? { attack: { type: kind.slice(7) } } : {};
       let seen = false, failure;
       const guard = current => {
@@ -88,6 +92,7 @@ export function createShadowdarkCommands({ getGame = () => globalThis.game, getH
         context.rollTiming?.mark("native-invoked");
         if (kind === "stat") await model.rollStatCheck(id, config);
         else if (kind === "spell") await model.castSpell(item.uuid, config);
+        else if (kind === "ability") await model.useAbility(item.uuid, config);
         else await model.rollAttack(item.uuid, config);
         if (failure) throw failure;
         return { ok: true, actorSourceUuid: sourceUuid, cancelled: !seen, nativeHandled: true };
