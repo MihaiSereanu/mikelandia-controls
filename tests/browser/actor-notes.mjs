@@ -3,13 +3,20 @@ import { createTaskScope } from "/src/kernel/lifecycle/task-scope.mjs";
 import { createFoundryBiographyGateway } from "/src/foundry/actors/biography-gateway.mjs";
 import { createFoundryCommandGateway } from "/src/foundry/commands/command-gateway.mjs";
 import { createFoundrySessionGateway } from "/src/foundry/session/session-gateway.mjs";
-import { createActor, createHooks } from "/tests/helpers/foundry.mjs";
+import { createActor, createGame, createHooks } from "/tests/helpers/foundry.mjs";
 import { createWarhammerActor, createWarhammerGame } from "/tests/helpers/warhammer.mjs";
 import { createShadowdarkFixture } from "/tests/helpers/shadowdark.mjs";
+import { notesHTMLToMarkdown, notesMarkdownToHTML } from "/src/ui/primitives/notes-markdown.mjs";
 
 const checks = [], check = (name, value) => { if (!value) throw new Error(name); checks.push(name); };
 const tick = () => new Promise(resolve => setTimeout(resolve, 30));
 try {
+  const legacy = "<p><span>74g</span><br><span>-50g registration fee</span><br><br><span>+10g gambling</span></p>";
+  check("screenshot HTML becomes readable text with blank lines", notesHTMLToMarkdown(legacy) === "74g\n-50g registration fee\n\n+10g gambling");
+  for (const text of ["First\nSecond\n\nFourth\n", "\n", "\n# Heading\n\n- One\n\n", "# Heading\n**Bold** and *italic*\n- One\n- Two\n\n1. First\n2. Second", "Literal <p> and \\*stars\\* & coins"]) {
+    check(`Markdown round trip: ${text}`, notesHTMLToMarkdown(notesMarkdownToHTML(text)) === text);
+  }
+  check("legacy formatting becomes basic Markdown", notesHTMLToMarkdown("<h2>Title</h2><p><strong>Bold</strong> and <em>italic</em></p><ul><li>One</li><li>Two</li></ul>") === "## Title\n**Bold** and *italic*\n- One\n- Two");
   for (const systemId of ["wfrp4e", "shadowdark"]) {
     const scope = createTaskScope(`notes-${systemId}`);
     const fixture = systemId === "shadowdark" ? createShadowdarkFixture() : null;
@@ -77,23 +84,24 @@ try {
     check(`${systemId} Notes tab uses native text and excludes GM notes`, !!main.querySelector('[data-profile-tab="notes"][aria-selected="true"]') && main.textContent.includes("Existing notes") && !main.textContent.includes("GM secret"));
     main.querySelector(".mc-biography-edit").click(); await tick();
     check(`${systemId} shared editor opens and focuses text`, document.activeElement === main.querySelector("textarea"));
+    check(`${systemId} editor hides stored HTML and explains Markdown`, main.querySelector("textarea").value === "Existing notes" && main.querySelector(".mc-biography-editor-composer").textContent.includes("**bold**"));
     main.querySelector("textarea").value = "Cancelled";
     main.querySelector(".mc-modal-button.is-secondary").click();
     check(`${systemId} Cancel preserves native notes`, writes === 0 && get().includes("Existing") && !main.querySelector("textarea"));
     main.querySelector(".mc-biography-edit").click();
-    main.querySelector("textarea").value = "<p>Saved notes</p>";
+    main.querySelector("textarea").value = "Saved notes";
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
     check(`${systemId} Save updates exact native notes`, writes === 1 && get() === "<p>Saved notes</p>" && !main.querySelector("textarea"));
     check(`${systemId} Save refreshes displayed text through session hooks`, main.querySelector(".mc-character-biography-prose").textContent === "Saved notes");
     main.querySelector(".mc-biography-edit").click();
-    check(`${systemId} reopening editor reads latest saved native text`, main.querySelector("textarea").value === "<p>Saved notes</p>");
-    main.querySelector("textarea").value = "<p>Second save</p>";
+    check(`${systemId} reopening editor reads latest saved native text`, main.querySelector("textarea").value === "Saved notes");
+    main.querySelector("textarea").value = "Second save";
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
     check(`${systemId} second save works without refresh`, writes === 2 && !main.querySelector("textarea") && main.querySelector(".mc-character-biography-prose").textContent === "Second save");
     writeMode = "deferred";
     main.querySelector(".mc-biography-edit").click();
     const pendingInput = main.querySelector("textarea");
-    pendingInput.value = "<p>Delayed save</p>";
+    pendingInput.value = "Delayed save";
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
     actor.name += " Updated";
     Hooks.emit("updateActor", actor, { name: actor.name }); await tick();
@@ -102,9 +110,9 @@ try {
     check(`${systemId} delayed write settles once and unlocks editor`, writes === 3 && !main.querySelector("textarea") && main.querySelector(".mc-character-biography-prose").textContent === "Delayed save");
     writeMode = "rejected";
     main.querySelector(".mc-biography-edit").click();
-    main.querySelector("textarea").value = "<p>Retried save</p>";
+    main.querySelector("textarea").value = "Retried save";
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
-    check(`${systemId} rejected write retains draft and restores controls`, writes === 3 && main.querySelector("textarea").value === "<p>Retried save</p>" && !main.querySelector("textarea").disabled && main.querySelector(".mc-biography-editor-status").textContent === "Native write rejected");
+    check(`${systemId} rejected write retains draft and restores controls`, writes === 3 && main.querySelector("textarea").value === "Retried save" && !main.querySelector("textarea").disabled && main.querySelector(".mc-biography-editor-status").textContent === "Native write rejected");
     writeMode = "immediate";
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
     check(`${systemId} retry after rejected write succeeds and clears busy guard`, writes === 4 && !main.querySelector("textarea") && main.querySelector(".mc-character-biography-prose").textContent === "Retried save");
@@ -125,15 +133,19 @@ try {
     main.querySelector("textarea").value = multiline;
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
     const prose = main.querySelector(".mc-character-biography-prose");
-    const lineTops = Array.from({ length: 4 }, (_, index) => {
-      const offset = [0, 11, 23, 24][index];
+    const lineTops = [0, 2, 5].map(index => {
       const range = document.createRange();
-      range.setStart(prose.firstChild, offset); range.setEnd(prose.firstChild, offset + 1);
+      range.selectNodeContents(prose.firstChild.childNodes[index]);
       return range.getBoundingClientRect().top;
     });
-    check(`${systemId} saved Notes preserves newlines and blank lines visually`, get() === multiline
-      && prose.textContent === multiline && getComputedStyle(prose).whiteSpace === "pre-wrap"
-      && lineTops[1] > lineTops[0] && lineTops[3] - lineTops[1] > 1.5 * (lineTops[1] - lineTops[0]));
+    check(`${systemId} saved Notes preserves newlines and blank lines visually`, notesHTMLToMarkdown(get()) === multiline
+      && prose.querySelectorAll("br").length === 3
+      && lineTops[1] > lineTops[0] && lineTops[2] - lineTops[1] > 1.5 * (lineTops[1] - lineTops[0]));
+    main.querySelector(".mc-biography-edit").click();
+    check(`${systemId} multiline reopen preserves exact draft text`, main.querySelector("textarea").value === multiline);
+    main.querySelector("textarea").value = "# Ledger\n**Gold** and *silver*\n- Rations\n- Torches\n\n<img src=x onerror=alert(1)>";
+    main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
+    check(`${systemId} Markdown renders safely`, !!main.querySelector(".mc-character-biography-prose h1") && !!main.querySelector(".mc-character-biography-prose strong") && !!main.querySelector(".mc-character-biography-prose em") && main.querySelectorAll(".mc-character-biography-prose li").length === 2 && !main.querySelector(".mc-character-biography-prose img"));
     if (!fixture) {
       const field = id => main.querySelector(`[data-notes-field="${id}"]`);
       const paddedAmbitions = () => [...main.querySelectorAll("[data-notes-field] > p")].every(paragraph => {
@@ -194,6 +206,43 @@ try {
     check(`${systemId} dropdown switches actor and removes notes editor`, snapshot.selectedActor.sourceUuid === secondActor.uuid && main.querySelector("h2").textContent === secondActor.name && !main.querySelector("textarea"));
     scope.dispose(); main.replaceChildren();
     check(`${systemId} actor teardown removes editor`, !document.querySelector(".mc-biography-editor-layer"));
+  }
+  // D&D uses the same editor through Biography, with a separate native command path.
+  {
+    const scope = createTaskScope("dnd-notes");
+    const actor = createActor();
+    actor.system.details = { biography: { value: legacy } };
+    let writes = 0;
+    actor.update = async changes => {
+      writes++;
+      for (const [path, value] of Object.entries(changes)) {
+        const keys = path.split(".");
+        keys.slice(0, -1).reduce((parent, key) => parent[key], actor)[keys.at(-1)] = value;
+      }
+    };
+    globalThis.game = createGame([actor]); game.user.character = actor;
+    globalThis.Hooks = createHooks();
+    const gateway = createFoundryCommandGateway();
+    const session = createFoundrySessionGateway({ capabilitiesForActor: gateway.capabilitiesForActor });
+    const reader = createFoundryBiographyGateway({ getTextEditor: () => ({ enrichHTML: async value => value }) });
+    const main = document.querySelector("main");
+    const commands = { localize: (_key, fallback) => fallback, readCharacterPreferences: () => ({}), readCharacterBiography: source => reader.read({ actorSourceUuid: source }), execute: (name, payload) => gateway.execute(name, payload) };
+    const render = () => main.replaceChildren(renderCharacters({ state: { snapshot: session.read(), characterTab: "biography" }, commands, scope }));
+    render(); await tick();
+    const edit = () => main.querySelector(".mc-character-biography-story .mc-biography-edit").click();
+    edit();
+    check("D&D Biography editor converts existing HTML", main.querySelector("textarea").value === "74g\n-50g registration fee\n\n+10g gambling");
+    main.querySelector(".mc-modal-button.is-secondary").click();
+    check("D&D Cancel leaves native source unchanged", writes === 0 && actor.system.details.biography.value === legacy);
+    edit(); main.querySelector("textarea").value = "**Ledger**\n\nSecond line";
+    main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
+    check("D&D saves Markdown into native biography HTML", writes === 1 && actor.system.details.biography.value === "<p><strong>Ledger</strong><br><br>Second line</p>");
+    render(); await tick(); edit();
+    check("D&D reopens readable Markdown and preserves blank lines", main.querySelector("textarea").value === "**Ledger**\n\nSecond line");
+    await new Promise(resolve => setTimeout(resolve, 250));
+    const dialog = main.querySelector(".mc-biography-editor").getBoundingClientRect();
+    check("Notes editor fits viewport", dialog.left >= 0 && dialog.right <= innerWidth && dialog.top >= 0 && dialog.bottom <= innerHeight);
+    // Leave the open editor visible for passing screenshots.
   }
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
 } catch (error) {

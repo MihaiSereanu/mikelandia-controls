@@ -435,6 +435,7 @@
         "Edit": "Edit {label}",
         "CloseEditor": "Close {label} editor",
         "TextAndFoundryRichHTML": "Text and Foundry-rich HTML",
+        "NotesMarkdown": "Supports Text and Markdown",
         "No": "No {label}.",
         "Conditions": "Conditions",
         "Active": "Active: {activeCount}",
