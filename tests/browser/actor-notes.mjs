@@ -120,6 +120,20 @@ try {
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
     check(`${systemId} concurrent updates preserve draft and report conflict`, writes === 4 && main.querySelector("textarea").value === "My draft" && main.querySelector(".mc-biography-editor-status").textContent.includes("changed"));
     main.querySelector(".mc-modal-button.is-secondary").click();
+    main.querySelector(".mc-biography-edit").click();
+    const multiline = "First line\nSecond line\n\nFourth line";
+    main.querySelector("textarea").value = multiline;
+    main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
+    const prose = main.querySelector(".mc-character-biography-prose");
+    const lineTops = Array.from({ length: 4 }, (_, index) => {
+      const offset = [0, 11, 23, 24][index];
+      const range = document.createRange();
+      range.setStart(prose.firstChild, offset); range.setEnd(prose.firstChild, offset + 1);
+      return range.getBoundingClientRect().top;
+    });
+    check(`${systemId} saved Notes preserves newlines and blank lines visually`, get() === multiline
+      && prose.textContent === multiline && getComputedStyle(prose).whiteSpace === "pre-wrap"
+      && lineTops[1] > lineTops[0] && lineTops[3] - lineTops[1] > 1.5 * (lineTops[1] - lineTops[0]));
     if (!fixture) {
       const field = id => main.querySelector(`[data-notes-field="${id}"]`);
       const paddedAmbitions = () => [...main.querySelectorAll("[data-notes-field] > p")].every(paragraph => {

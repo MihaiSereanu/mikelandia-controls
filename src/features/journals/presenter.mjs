@@ -1,3 +1,5 @@
+import { preserveTextLineBreaks } from "../../ui/primitives/text-line-breaks.mjs";
+import { openTextEditor } from "../../ui/primitives/text-editor.mjs";
 import { localizedText, localizedCount } from "../../ui/primitives/localized-text.mjs";
 import { icon, node } from "../../ui/primitives/dom.mjs";
 import { renderImageViewer } from "../../ui/media/image-viewer.mjs";
@@ -44,19 +46,36 @@ function journalReader(state, commands, scope) {
   const selectedIndex = Math.max(0, pages.findIndex((page) => page.id === state.journalPageId));
   const page = pages[selectedIndex] ?? null;
   const editStatus = node("p", { className: "mc-journal-status is-error", attrs: { role: "status", "aria-live": "polite", hidden: true } });
-  const editCurrentPage = async () => {
+  let openingEditor = false;
+  const editCurrentPage = async (anchor) => {
+    if (openingEditor) return;
+    openingEditor = true;
     editStatus.hidden = true;
-    try { await commands.openNativeJournalEditor(journal.id, page?.id ?? ""); }
+    try {
+      if (page?.type !== "text") await commands.openNativeJournalEditor(journal.id, page?.id ?? "");
+      else {
+        const source = await commands.readJournalText(journal.id, page.id);
+        if (scope.disposed || !anchor.isConnected) return;
+        openTextEditor(anchor, {
+          section: "journal", subjectName: journal.name, label: page.name, iconName: "fa-book",
+          richText: true, value: source.value,
+          sourceLabel: source.format === 2 ? "Markdown" : undefined,
+          save: value => commands.saveJournalText({ journalId: journal.id, pageId: page.id, value,
+            originalValue: source.originalValue, format: source.format }),
+          onClose: () => { if (!scope.disposed) void commands.openJournal(journal.id, { pageId: page.id }).catch(() => {}); }
+        }, commands, editStatus, scope);
+      }
+    }
     catch (error) {
       editStatus.textContent = error?.message ?? localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.TheNativeJournalEditorCouldNotBeOpened", "The native Journal editor could not be opened.");
       editStatus.hidden = false;
-    }
+    } finally { openingEditor = false; }
   };
   return node("section", { className: "mc-journal-reader", children: [
     node("header", { children: [
       node("button", { attrs: { type: "button", "aria-label": localize("MIKELANDIA_CONTROLS.Journals.Back", "Back to journals") }, on: { click: commands.closeJournal }, children: [icon("fa-arrow-left")] }, scope),
       node("div", { children: [node("small", { text: localize("MIKELANDIA_CONTROLS.Journals.Journal", "Journal").toLocaleUpperCase() }), node("h2", { text: journal.name })] }),
-      journal.canEdit && (!page || page.canEdit) ? node("button", { className: "mc-journal-native-edit", attrs: { type: "button" }, on: { click: () => void editCurrentPage() }, text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Journals.Edit", "Edit") }, scope) : null
+      journal.canEdit && (!page || page.canEdit) ? node("button", { className: "mc-journal-native-edit", attrs: { type: "button" }, on: { click: event => void editCurrentPage(event.currentTarget) }, text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Journals.Edit", "Edit") }, scope) : null
     ].filter(Boolean) }),
     editStatus,
     pages.length ? node("nav", { className: "mc-journal-page-nav", attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Journals.PagesAndHeadings", "Journal pages and headings") }, children: [
@@ -75,6 +94,7 @@ function journalPage(page, selectedHeading, commands, scope) {
   if (page.type === "text") {
     const content = node("article", { className: "mc-journal-rich-text" });
     content.innerHTML = String(page.html ?? "");
+    preserveTextLineBreaks(content);
     if (selectedHeading) queueMicrotask(() => {
       if (scope.disposed || !content.isConnected) return;
       const headings = [...content.querySelectorAll("h1, h2, h3, h4, h5, h6")].filter((heading) => !heading.hasAttribute("data-no-toc"));

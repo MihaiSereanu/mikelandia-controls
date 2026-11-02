@@ -11446,3 +11446,6 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 @media (prefers-reduced-motion: reduce) {
   .mc-damage-shaking > .mc-viewport, .mc-damage-shaking > .mc-bottom-nav { animation: none; }
 }
+
+.mc-journal-reader { --mc-character-accent: var(--mc-gold); }
+.mc-preserve-lines { white-space: pre-wrap; }

@@ -222,6 +222,8 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     selectJournalHeading: (pageId, heading) => store.dispatch({ type: "select-journal-heading", pageId, heading }),
     toggleJournalMenu: () => store.dispatch({ type: "toggle-journal-menu" }),
     closeJournalMenu: () => store.dispatch({ type: "close-journal-menu" }),
+    readJournalText: (journalId, pageId) => guardConnection(expected => session.readJournalText(journalId, pageId, expected)),
+    saveJournalText: payload => guardConnection(expected => session.saveJournalText(payload, expected)),
     openNativeJournalEditor: (journalId, pageId) => session.openNativeJournalEditor(journalId, pageId, expectedSession()),
     openJournalImage: (image) => store.dispatch({ type: "open-journal-image", image }),
     closeJournalImage: () => store.dispatch({ type: "close-journal-image" }),

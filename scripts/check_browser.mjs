@@ -101,6 +101,8 @@ const cases = [
       [`shadowdark-${preview}-${layout}`, width, height, "shadowdark", `layout=${layout}&preview=${preview}`])),
   ["presentation-phone", 390, 844, "presentation", "layout=phone"],
   ["presentation-tablet", 1024, 768, "presentation", "layout=tablet"],
+  ["journal-editor-phone", 390, 844, "in-person", "layout=phone&preview=journal-editor"],
+  ["journal-editor-tablet", 1024, 768, "in-person", "layout=tablet&preview=journal-editor"],
   ["actor-notes-phone", 390, 844, "actor-notes", ""],
   ["actor-notes-tablet", 1024, 768, "actor-notes", ""],
   ["profile-layout-narrow", 320, 844, "profile-layout", "layout=phone"],

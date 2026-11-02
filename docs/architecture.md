@@ -32,7 +32,7 @@ Paths below are relative to `src/`; Node names are relative to `tests/` and end 
 | [Warhammer panels / actions](#warhammer-resources) | `systems/wfrp4e/`, `features/characters/profile/` | `warhammer-{profile,resources,equipment,effects,magic,weapons,rest,ambitions,actions}` | `^warhammer-` |
 | [Theme / Momentum](#warhammer-resources) | `foundry/compatibility/wfrp-theme-policy.mjs`, `wfrp-opposed-momentum.mjs` in the same folder | `wfrp-theme-policy`, `wfrp-opposed-momentum` | `^(wfrp-theme-policy|shared-entry)-` |
 | [Shadowdark gear / counters](#shadowdark-resources-and-gear) | `systems/shadowdark/` | `shadowdark`, `shadowdark-inventory`, `shadowdark-equipment` | `^shadowdark-` |
-| [Notes](#scope-and-action-validation) / [journals](#journal-access) | `systems/actor-notes.mjs`, `foundry/actors/biography-gateway.mjs`, `foundry/journals/` | `actor-notes`, `warhammer-ambitions`, `journal-visibility` | `^(actor-notes|in-person)-` |
+| [Notes](#scope-and-action-validation) / [journals](#journal-access) | `systems/actor-notes.mjs`, `foundry/actors/biography-gateway.mjs`, `foundry/session/session-gateway.mjs`, `foundry/journals/`, `features/journals/presenter.mjs`, `ui/primitives/{text-editor,text-line-breaks}.mjs` | `actor-notes`, `warhammer-ambitions`, `journal-visibility`, `journal-editing` | `^(actor-notes|in-person|journal-editor)-` |
 | [Controls guide](#controls-guide) / descriptions | `features/help/`, `ui/help/`, `ui/primitives/{description,enriched-description,localized-text}.mjs`, `foundry/actors/description-gateway.mjs` | `in-person`, `profile-view`, `description-gateway` | `^(descriptions|in-person|tooltip-touch|warhammer)-` |
 | [Login / PWA](mobile-login.md) | `../mobile-login/`, `foundry/presentation/mobile-back-gateway.mjs` | `mobile-login`, `mobile-logout` | `^mobile-login-` |
 
@@ -50,7 +50,7 @@ Five routes: Character, Chat, Journals, Initiative, Settings (internal route key
 
 Resolve fresh Actor/Item state by UUID. Validate ownership, session/config revisions, and duplicate submissions; clean up pending actions on cancellation. Never accept arbitrary client paths or native method names. Refresh after native updates; system models own derived values. Share implementation while retaining each game's terminology/grouping. Unsupported systems get identity and native sheets; isolate D&D handlers.
 
-Notes adapters use native fields: WFRP player biography `system.details.biography.value`, Shadowdark `system.notes`. The shared editor provides enrichment and Save/Cancel; writes require ownership and compare the original source to reject stale edits. GM notes are excluded.
+Notes adapters use native fields: WFRP player biography `system.details.biography.value`, Shadowdark `system.notes`. The shared editor provides enrichment and Save/Cancel; writes require ownership and compare the original source to reject stale edits. GM notes are excluded. Saved Notes preserve plain-text line breaks and blank lines across integrations while retaining native HTML formatting. Notes and journal text share `ui/primitives/text-editor.mjs` for the multiline source editor and Save/Cancel controls.
 
 All item-description surfaces, profile properties and expanded Effects Notes use `ui/primitives/enriched-description.mjs` over the safe formatting renderer. Exact Item/Effect UUIDs provide native `TextEditor.enrichHTML` context and roll data. The gateway reads current player-facing descriptions, including unidentified D&D descriptions; property fragments share the source Item context. It removes secrets before enrichment and checks document identity, access and source changes after async work. The renderer preserves paragraphs, emphasis, headings, lists, tables, line breaks and images, excluding executable markup, native controls, source classes/styles and unsafe URLs. Only enriched native roll/link metadata and icons survive. Plain-text line breaks and internally scrolling wide content remain supported; D&D effects retain their full description.
 
@@ -107,6 +107,8 @@ Shadowdark `rollStatCheck`, `rollAttack`, and `castSpell` roll internally: do no
 ## Journal access
 
 List/read policy requires effective native OBSERVER permission and sheet page visibility. Exclude active Sequencer `sequencerDatabase` and Calendaria `isCalendarNote`/`isCalendarJournal` entries or descendants of `isCalendarNotesFolder`/`isCalendarFolder`, honoring native GM `devMode`. Recheck after async enrichment; refresh on document/folder/user/developer-setting changes. Never alter storage or ownership; ordinary names/default access remain valid.
+
+Editing existing text pages requires effective native OWNER permission for both entry and visible page, including inherited permissions. Read fresh source on opening the shared multiline editor; save only `text.content` for HTML or `text.markdown` for Markdown, preserving `text.format` and sibling fields. Markdown reading uses Foundry's configured native text-sheet converter before enrichment. Validate the current session, exact documents, ownership, source and format; reject stale or duplicate saves. Same-page refreshes preserve the active draft, focus and selection; errors allow retry. Save/Cancel refresh the reader, with saved text preserving line breaks. Nontext pages retain their native editor; no new pages or permission changes.
 
 ## Warhammer resources
 

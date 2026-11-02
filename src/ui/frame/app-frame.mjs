@@ -187,6 +187,15 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
       return;
     }
 
+    // Preserve the text draft and selection while journal hooks refresh its source.
+    if (sameScreen && state.status === "ready" && state.route === "journals"
+      && renderedState?.journal?.id === state.journal?.id
+      && renderedState?.journalPageId === state.journalPageId
+      && viewport.querySelector(".mc-biography-editor-layer")) {
+      renderedState = screenState(state, layoutKey);
+      return;
+    }
+
     // Keep an open item detail surface and its momentum scroll intact while
     // background Foundry hooks or mobile browser chrome resize the viewport.
     // Closing it renders the latest snapshot and responsive layout immediately.

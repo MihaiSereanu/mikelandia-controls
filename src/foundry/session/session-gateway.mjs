@@ -68,6 +68,7 @@ export function createFoundrySessionGateway({
   let pendingSelectedActorRead = false;
   let selectedActorSourceUuid = "";
   let selectedReferenceSources = new Set();
+  const pendingJournalWrites = new Set();
 
   const count = (name, amount) => performanceObserver?.increment?.(name, amount);
   const readDomain = (domain, reader) => {
@@ -351,7 +352,9 @@ export function createFoundrySessionGateway({
       const journal = game.journal?.get?.(id) ?? Array.from(game.journal ?? []).find((entry) => String(entry.id ?? "") === id);
       if (!isJournalVisible(journal, game.user)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SessionGateway.ThisJournalIsNoLongerAvailable", "This journal is no longer available."));
       const pages = [];
+      const pageDocuments = new Map();
       for (const page of Array.from(journal.pages ?? []).filter((entry) => isJournalPageVisible(entry, journal, game.user))) {
+        pageDocuments.set(String(page.id ?? ""), page);
         const type = String(page.type ?? "text");
         const record = {
           id: String(page.id ?? ""),
@@ -374,11 +377,42 @@ export function createFoundrySessionGateway({
       if (game.journal?.get?.(id) !== journal || !isJournalVisible(journal, game.user)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SessionGateway.ThisJournalIsNoLongerAvailable", "This journal is no longer available."));
       const currentPages = pages.filter((record) => {
         const current = journal.pages?.get?.(record.id) ?? Array.from(journal.pages ?? []).find((entry) => entry.id === record.id);
-        return current && isJournalPageVisible(current, journal, game.user);
+        return current === pageDocuments.get(record.id) && isJournalPageVisible(current, journal, game.user);
       });
       currentPages.sort((left, right) => left.sort - right.sort || left.name.localeCompare(right.name));
       return Object.freeze({ id, name: String(journal.name ?? "Journal"), img: String(journal.img ?? ""),
         canEdit: canOwn(journal, game.user), pages: Object.freeze(currentPages) });
+    },
+    async readJournalText(journalId, pageId, expectedSession = {}) {
+      assertSession(expectedSession);
+      const { page } = requireEditableJournalText(journalId, pageId);
+      const format = journalTextFormat(page);
+      const value = journalTextSource(page, format);
+      return Object.freeze({ value, originalValue: value, format });
+    },
+    async saveJournalText(payload, expectedSession = {}) {
+      assertSession(expectedSession);
+      if (!payload || Object.keys(payload).some(key => !["journalId", "pageId", "value", "originalValue", "format"].includes(key))
+        || typeof payload.value !== "string" || typeof payload.originalValue !== "string"
+        || payload.value.length > 100000 || payload.originalValue.length > 100000 || ![1, 2].includes(payload.format)) {
+        throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Journals.InvalidEdit", "Invalid Journal text request."));
+      }
+      const { journal, page } = requireEditableJournalText(payload.journalId, payload.pageId);
+      if (pendingJournalWrites.has(page)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Journals.SavePending", "This Journal page is already being saved."));
+      if (journalTextFormat(page) !== payload.format || journalTextSource(page, payload.format) !== payload.originalValue) {
+        throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Journals.TextChanged", "Journal text changed while being edited. Reopen the editor and try again."));
+      }
+      const changed = payload.value !== payload.originalValue;
+      pendingJournalWrites.add(page);
+      try {
+        if (changed) await page.update({ [payload.format === 2 ? "text.markdown" : "text.content"]: payload.value });
+        assertSession(expectedSession);
+        const current = requireEditableJournalText(payload.journalId, payload.pageId);
+        if (current.journal !== journal || current.page !== page) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Journals.DocumentChanged", "This Journal page is no longer available."));
+        return Object.freeze({ changed });
+      } finally {
+        pendingJournalWrites.delete(page);
+      }
     },
     async openNativeJournalEditor(journalId, pageId = "", expectedSession = {}) {
       assertSession(expectedSession);
@@ -581,10 +615,22 @@ function sortingMode(value) {
 }
 
 async function enrichJournalHtml(page, journal) {
-  const editor = globalThis.TextEditor?.implementation ?? globalThis.foundry?.applications?.ux?.TextEditor?.implementation;
-  const content = String(page.text?.content ?? "");
+  const editor = globalThis.CONFIG?.ux?.TextEditor ?? globalThis.TextEditor?.implementation ?? globalThis.foundry?.applications?.ux?.TextEditor?.implementation;
+  const format = journalTextFormat(page);
+  const source = journalTextSource(page, format);
+  let content = source;
+  if (format === 2) {
+    // Reuse the converter configured by Foundry's native text page sheet.
+    const converter = globalThis.foundry?.applications?.sheets?.journal?.JournalEntryPageTextSheet?._converter
+      ?? page.sheet?.constructor?._converter ?? globalThis.TextPageSheet?._converter;
+    if (typeof converter?.makeHtml !== "function") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Journals.MarkdownUnavailable", "Foundry Markdown rendering is unavailable."));
+    const cleanHTML = globalThis.foundry?.utils?.cleanHTML;
+    if (typeof cleanHTML !== "function") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Journals.MarkdownCleaningUnavailable", "Foundry Markdown HTML cleaning is unavailable."));
+    // Markdown is a StringField, so embedded raw HTML has not passed HTMLField cleaning.
+    content = String(cleanHTML(String(converter.makeHtml(source))));
+  }
   if (typeof editor?.enrichHTML !== "function") return `<p>${escapeHtml(content)}</p>`;
-  return String(await editor.enrichHTML(content, {
+  const html = String(await editor.enrichHTML(content, {
     async: true,
     documents: true,
     links: true,
@@ -592,6 +638,27 @@ async function enrichJournalHtml(page, journal) {
     secrets: Boolean(page.isOwner ?? journal.isOwner),
     relativeTo: page
   }));
+  if (journalTextFormat(page) !== format || journalTextSource(page, format) !== source) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Journals.TextChanged", "Journal text changed while being loaded. Reopen the Journal and try again."));
+  return html;
+}
+
+function journalTextFormat(page) {
+  const format = page.text?.format ?? 1;
+  if (![1, 2].includes(format)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Journals.UnsupportedFormat", "This Journal text format is unavailable."));
+  return format;
+}
+
+function journalTextSource(page, format) {
+  return String((format === 2 ? page.text?.markdown : page.text?.content) ?? "");
+}
+
+function requireEditableJournalText(journalId, pageId) {
+  const journal = game.journal?.get?.(identifier(journalId, "journalId"));
+  if (!isJournalVisible(journal, game.user) || !canOwn(journal, game.user)) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SessionGateway.YouCannotEditThisJournal", "You cannot edit this Journal."));
+  const page = journal.pages?.get?.(identifier(pageId, "pageId"));
+  if (!isJournalPageVisible(page, journal, game.user) || !canOwn(page, game.user)
+    || page.type !== "text" || typeof page.update !== "function") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Interface.SessionGateway.YouCannotEditThisJournalPage", "You cannot edit this Journal page."));
+  return { journal, page };
 }
 
 function escapeHtml(value) {

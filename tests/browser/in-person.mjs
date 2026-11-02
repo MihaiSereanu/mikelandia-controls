@@ -26,6 +26,7 @@ try {
   const f = legacy || warhammer ? { actor, game: warhammer ? createWarhammerGame([actor], { use5e: params.get("edition") !== "4e" }) : createGame([actor]), hooks: createHooks() } : createShadowdarkFixture();
   f.game.user.character = f.actor;
   globalThis.game = f.game; globalThis.Hooks = f.hooks;
+  globalThis.TextEditor = { implementation: { enrichHTML: async value => value } };
   const dictionary = await fetch("/locales/en.json").then(r => r.json());
   const translate = key => key.split(".").reduce((entry, part) => entry?.[part], dictionary) ?? key;
   game.i18n = { lang: "en", localize: translate };
@@ -52,6 +53,15 @@ try {
   };
   const handoutPage = (id, allowed = true) => ({ id, name: id, type: "text", text: { content: "A shared handout." }, testUserPermission: () => allowed });
   const handout = { id: "handout", documentName: "JournalEntry", name: "Shared Handout", pages: collection([handoutPage("Public page"), handoutPage("Private page", false), handoutPage("Hidden page")]), testUserPermission: () => true, sheet: { isPageVisible: page => page.id !== "Hidden page" } };
+  let journalWrites = 0, journalWriteMode = "immediate", releaseJournalWrite;
+  const publicPage = handout.pages.get("Public page");
+  publicPage.update = async changes => {
+    if (journalWriteMode === "deferred") await new Promise(resolve => { releaseJournalWrite = resolve; });
+    if (journalWriteMode === "rejected") throw new Error("Journal write rejected");
+    journalWrites++;
+    publicPage.text.content = changes["text.content"];
+    Hooks.emit("updateJournalEntryPage", { ...publicPage, parent: handout }, changes);
+  };
   const storage = (id, extra) => ({ ...handout, id, name: id, ...extra });
   game.modules.set("sequencer", { active: true }); game.modules.set("calendaria", { active: true });
   game.journal = collection([handout,
@@ -112,6 +122,50 @@ try {
   root.querySelector(".mc-journal-entry").click(); await tick();
   check("permitted journal opens in mobile reader", root.querySelector(".mc-journal-rich-text")?.textContent.includes("A shared handout."));
   check("reader excludes private and sheet-hidden pages", !/Private page|Hidden page/.test(root.querySelector(".mc-journal-reader")?.textContent));
+  publicPage.text.content = "<p>First paragraph</p>\n\n<p>Second paragraph</p>\n<ul>\n<li>One</li>\n</ul>\n<table>\n<tbody><tr><td>Cell</td></tr></tbody>\n</table>";
+  Hooks.emit("updateJournalEntryPage", { ...publicPage, parent: handout }, {}); await tick();
+  const rich = root.querySelector(".mc-journal-rich-text");
+  check("formatted journal HTML keeps normal block spacing", getComputedStyle(rich).whiteSpace === "normal"
+    && !rich.querySelector(".mc-preserve-lines") && !!rich.querySelector("table td"));
+  publicPage.text.content = "<p>First line\nSecond line</p>";
+  Hooks.emit("updateJournalEntryPage", { ...publicPage, parent: handout }, {}); await tick();
+  check("typed newline inside existing HTML is preserved", getComputedStyle(root.querySelector(".mc-journal-rich-text p span")).whiteSpace === "pre-wrap");
+  publicPage.text.content = "A shared handout.";
+  Hooks.emit("updateJournalEntryPage", { ...publicPage, parent: handout }, {}); await tick();
+  root.querySelector(".mc-journal-native-edit").click(); await tick();
+  check("owned journal opens shared multiline editor", root.querySelector("textarea")?.value === "A shared handout.");
+  root.querySelector("textarea").value = "Cancelled journal";
+  root.querySelector(".mc-modal-button.is-secondary").click(); await tick();
+  check("journal Cancel leaves native content unchanged", journalWrites === 0 && !root.querySelector("textarea"));
+  root.querySelector(".mc-journal-native-edit").click(); await tick();
+  root.querySelector("textarea").value = "First line\nSecond line\n\nFourth line";
+  journalWriteMode = "deferred";
+  root.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
+  const journalDraft = root.querySelector("textarea");
+  Hooks.emit("updateJournalEntry", handout, { name: handout.name }); await tick();
+  check("journal pending save survives refresh and blocks duplicate submit", root.querySelector("textarea") === journalDraft && journalDraft.disabled);
+  releaseJournalWrite(); await tick(); await tick();
+  check("journal Save refreshes multiline content", journalWrites === 1 && !root.querySelector("textarea")
+    && root.querySelector(".mc-journal-rich-text").textContent === publicPage.text.content
+    && getComputedStyle(root.querySelector(".mc-journal-rich-text")).whiteSpace === "pre-wrap");
+  root.querySelector(".mc-journal-native-edit").click(); await tick();
+  const activeDraft = root.querySelector("textarea"); activeDraft.value = "My journal draft";
+  activeDraft.focus(); activeDraft.setSelectionRange(2, 5);
+  publicPage.text.content = "External journal update";
+  Hooks.emit("updateJournalEntryPage", { ...publicPage, parent: handout }, {}); await tick();
+  check("journal external update preserves draft focus and selection", root.querySelector("textarea") === activeDraft
+    && document.activeElement === activeDraft && activeDraft.selectionStart === 2 && activeDraft.selectionEnd === 5);
+  root.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
+  check("journal concurrent save rejects with retained draft", journalWrites === 1 && activeDraft.value === "My journal draft"
+    && root.querySelector(".mc-biography-editor-status").textContent.includes("changed"));
+  root.querySelector(".mc-modal-button.is-secondary").click(); await tick();
+  root.querySelector(".mc-journal-native-edit").click(); await tick();
+  root.querySelector("textarea").value = "Retry journal"; journalWriteMode = "rejected";
+  root.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
+  check("journal rejected save retains draft and enables retry", root.querySelector("textarea").value === "Retry journal"
+    && !root.querySelector("textarea").disabled && root.querySelector(".mc-biography-editor-status").textContent === "Journal write rejected");
+  journalWriteMode = "immediate"; root.querySelector("form.mc-biography-editor").requestSubmit(); await tick(); await tick();
+  check("journal retry saves once", journalWrites === 2 && !root.querySelector("textarea") && publicPage.text.content === "Retry journal");
   root.querySelector('[data-route="combat"]').click(); await tick();
   check("Combat lists initiative without a canvas", root.querySelector(".mc-combat-name")?.textContent === "Fighter");
   check("Combat has no focus or targeting controls", !root.querySelector(".fa-bullseye, .fa-arrows-to-eye"));
@@ -185,6 +239,17 @@ try {
   const settings = root.querySelector(".mc-settings");
   check("Settings renders successfully", !!settings);
   if (params.get("damage") === "true") await checkDamageFeedback({ root, actor: f.actor, warhammer, hooks: f.hooks, check, tick });
+  if (params.get("preview") === "journal-editor") {
+    root.querySelector('[data-route="journals"]').click(); await tick();
+    if (!root.querySelector(".mc-journal-reader")) { root.querySelector(".mc-journal-entry").click(); await tick(); }
+    root.querySelector(".mc-journal-native-edit").click(); await tick();
+    const composer = root.querySelector("textarea");
+    composer.value = "First line\nSecond line\n\nA new paragraph";
+    const dialog = root.querySelector(".mc-biography-editor").getBoundingClientRect();
+    check("journal editor fits viewport with visible Save and Cancel", dialog.left >= 0 && dialog.right <= innerWidth
+      && dialog.top >= 0 && dialog.bottom <= innerHeight && document.activeElement === composer
+      && [...root.querySelectorAll(".mc-modal-button")].every(button => button.getBoundingClientRect().height >= 44));
+  }
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
 } catch (error) {
   kernel?.stop();
