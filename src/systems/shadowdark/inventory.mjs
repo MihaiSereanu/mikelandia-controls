@@ -1,7 +1,7 @@
 import { ACTOR_COMMANDS } from "../../kernel/state/command-names.mjs";
 import { CommandError } from "../../foundry/commands/command-error.mjs";
 import { localizeFoundry } from "../../foundry/settings/localization.mjs";
-import { isShadowdarkPlayer, shadowdarkContext, ownedItem, carriedItem, stashedItem, physicalTypes } from "./context.mjs";
+import { isShadowdarkPlayer, isShadowdarkItemTracker, shadowdarkContext, ownedItem, carriedItem, stashedItem, physicalTypes } from "./context.mjs";
 
 const fail = (code, message) => new CommandError(code, localizeFoundry(`MIKELANDIA_CONTROLS.Inventory.${code}`, message));
 const values = source => Array.from(source?.contents ?? source ?? []);
@@ -12,11 +12,11 @@ export function inventoryAvailable(actor, game, user = game?.user) {
 export function inventoryEdits(actor, game, user = game?.user) {
   if (!shadowdarkContext(game) || !isShadowdarkPlayer(actor, user) || typeof actor.updateEmbeddedDocuments !== "function") return [];
   return values(actor.items).flatMap(item => {
-    if (item.system?.equipped === true || (!carriedItem(item, actor) && !stashedItem(item, actor))) return [];
+    if ((item.system?.equipped === true && !isShadowdarkItemTracker(actor)) || (!carriedItem(item, actor) && !stashedItem(item, actor))) return [];
     const value = item.system.quantity;
     if (!Number.isSafeInteger(value) || value < 0) return [];
     return [{ id: `quantity:${item.id}`, kind: "integer", min: 0, max: Number.MAX_SAFE_INTEGER, value,
-      revision: JSON.stringify([shadowdarkContext(game).revision, item.uuid, item.type, item.system.slots?.per_slot, item.system.slots?.slots_used, item.system.stashed, item.system.equipped]) }];
+      revision: JSON.stringify([shadowdarkContext(game).revision, isShadowdarkItemTracker(actor), item.uuid, item.type, item.system.slots?.per_slot, item.system.slots?.slots_used, item.system.stashed, item.system.equipped]) }];
   });
 }
 function equipmentState(actor) {
@@ -29,7 +29,7 @@ function equipmentState(actor) {
 }
 export function equipmentEdits(actor, game, user = game?.user) {
   const context = shadowdarkContext(game);
-  if (!context || !isShadowdarkPlayer(actor, user) || actor.sheet?.actor !== actor
+  if (!context || !isShadowdarkPlayer(actor, user) || isShadowdarkItemTracker(actor) || actor.sheet?.actor !== actor
     || typeof actor.sheet?._onToggleEquipped !== "function" || typeof actor.updateEmbeddedDocuments !== "function") return [];
   const revision = JSON.stringify([context.revision, equipmentState(actor)]);
   return values(actor.items).flatMap(item => carriedItem(item, actor) && item.system.canBeEquipped === true

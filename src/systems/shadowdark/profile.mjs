@@ -1,12 +1,12 @@
-import { abilities, carriedItem, stashedItem, ownedItem, physicalTypes, knownSpell, weaponMode } from "./context.mjs";
+import { abilities, carriedItem, stashedItem, ownedItem, physicalTypes, knownSpell, weaponMode, isShadowdarkItemTracker } from "./context.mjs";
 
 import { customResources, readCustomResource } from "./resources.mjs";
 import { localizeFoundry } from "../../foundry/settings/localization.mjs";
 
 const field = (id, key, label, path, extra = {}) => ({ id, labelKey: key, label, path,
   ...(["hp", "def", "xp", "grit", "luck"].includes(id) ? { editControl: "counter" } : {}), ...extra });
-export function shadowdarkPlayerProfile(context) {
-  return { tabs: [
+export function shadowdarkPlayerProfile(context, actor) {
+  const profile = { tabs: [
     { id: "abilities", summaryLayout: "triple", labelKey: "MIKELANDIA_CONTROLS.Panels.Main", label: "Main", sections: [
       { id: "hp", kind: "counters", labelKey: "SHADOWDARK.sheet.actor.hp", label: "HP", fields: [
         field("hp", "SHADOWDARK.sheet.actor.hp", "HP", "system.attributes.hp.value", { maxPath: "system.attributes.hp.max", editId: "hp" })] },
@@ -68,4 +68,11 @@ export function shadowdarkPlayerProfile(context) {
           && (group === "level" ? ["level", "patronBoon"].includes(item.system.talentClass) : item.system.talentClass === group) }))
     ] }
   ] };
+  if (!isShadowdarkItemTracker(actor)) return profile;
+  const inventory = profile.tabs.find(tab => tab.id === "inventory");
+  return { tabs: [{ ...inventory, sections: inventory.sections.filter(section => section.id !== "equipped-gear").map(section => {
+    if (section.id === "gear") return { ...section, labelKey: "MIKELANDIA_CONTROLS.Panels.Gear", label: "Gear", equipmentEditable: false,
+      descriptionPath: "system.description", include: (item, _context, actor) => carriedItem(item, actor) };
+    return section.id === "stashed" ? { ...section, descriptionPath: "system.description" } : section;
+  }) }] };
 }

@@ -36,6 +36,7 @@
     },
     "Panels": {
       "Main": "Main",
+      "Gear": "Gear",
       "CarriedGear": "Carried Gear",
       "EquippedGear": "Equipped Gear",
       "ChooseCondition": "Choose condition",

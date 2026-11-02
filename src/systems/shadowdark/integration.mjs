@@ -31,7 +31,7 @@ export const shadowdarkIntegration = Object.freeze({
     const context = shadowdarkContext(globalThis.game);
     if (!context) return identity;
     const capabilities = capabilitiesForActor(actor, user);
-    const panels = createProfilePanels(actor, shadowdarkPlayerProfile(context), { actions: capabilities?.profileActions, edits: capabilities?.profileEdits });
+    const panels = createProfilePanels(actor, shadowdarkPlayerProfile(context, actor), { actions: capabilities?.profileActions, edits: capabilities?.profileEdits });
     return panels.length ? Object.freeze({ ...identity, presentation: "profile", profileId: "shadowdark-player", profileInventory: capabilities.profileInventory === true, notesAvailable: shadowdarkNotes.available(actor), notesRevision: shadowdarkNotes.available(actor) ? shadowdarkNotes.read(actor) : "", capabilities: { editBiography: true }, panels }) : identity;
   }
 });

@@ -17,7 +17,7 @@ function actionsFor(actor, game, hooks, user = game?.user) {
   const methods = { stats: "rollStatCheck", "melee-attacks": "rollAttack", "ranged-attacks": "rollAttack", "known-spells": "castSpell", "special-abilities": "useAbility" };
   const prefixes = { stats: "stat", "melee-attacks": "attack-melee", "ranged-attacks": "attack-ranged", "known-spells": "spell", "special-abilities": "ability" };
   const actions = [];
-  for (const tab of createProfilePanels(actor, shadowdarkPlayerProfile(context))) for (const section of tab.sections) {
+  for (const tab of createProfilePanels(actor, shadowdarkPlayerProfile(context, actor))) for (const section of tab.sections) {
     if (!guarded || typeof actor.system?.[methods[section.id]] !== "function") continue;
     for (const row of section.rows) {
       if (!/^[a-zA-Z0-9_-]{1,128}$/u.test(row.id)) continue;

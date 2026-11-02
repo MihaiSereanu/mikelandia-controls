@@ -4,6 +4,9 @@ export const abilities = Object.freeze(["str", "dex", "con", "int", "wis", "cha"
 export function isShadowdarkPlayer(actor, user) {
   return actor?.type === "Player" && fallbackIntegration.isActorEligible(actor, user);
 }
+export function isShadowdarkItemTracker(actor) {
+  return actor?.type === "Player" && typeof actor.name === "string" && actor.name.trim().toLowerCase() === "group";
+}
 export function shadowdarkContext(game) {
   try {
     const pulp = game.settings.get("shadowdark", "usePulpMode");

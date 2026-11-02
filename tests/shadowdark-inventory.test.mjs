@@ -18,6 +18,44 @@ function setup(t) {
   };
   return f;
 }
+test("Group equipped gear quantities are editable without changing equipment flags, and renames invalidate requests", async t => {
+  const f = setup(t);
+  f.actor.name = "Group";
+  const sword = f.actor.items.get("sword");
+  const request = value => {
+    const edit = f.gateway.capabilitiesForActor(f.actor).profileEdits.find(edit => edit.id === "quantity:sword");
+    return { resourceId: edit.id, resourceRevision: edit.revision, expectedValue: edit.value, value };
+  };
+  assert.equal(f.gateway.capabilitiesForActor(f.actor).profileEdits.some(edit => edit.id.startsWith("equipped:")), false);
+  await f.run(C.EDIT_PROFILE_RESOURCE, request(3));
+  assert.equal(sword.system.quantity, 3);
+  assert.equal(sword.system.equipped, true);
+  const stale = request(4), torchRequest = f.quantity(2);
+  f.actor.name = "Adventurer";
+  await assert.rejects(f.run(C.EDIT_PROFILE_RESOURCE, stale), { code: "CAPABILITY_UNAVAILABLE" });
+  await assert.rejects(f.run(C.EDIT_PROFILE_RESOURCE, torchRequest), { code: "STALE_STATE" });
+  f.actor.name = "Group";
+  f.confirmRemoval = async () => false;
+  assert.equal((await f.run(C.EDIT_PROFILE_RESOURCE, request(0))).cancelled, true);
+  assert.equal(sword.system.quantity, 3);
+  f.confirmRemoval = async config => config.yes.callback();
+  await f.run(C.EDIT_PROFILE_RESOURCE, request(0));
+  assert.equal(f.actor.items.get("sword"), undefined);
+});
+
+test("Group retains basic item creation, native slot settings and stashed quantity edits", async t => {
+  const f = setup(t);
+  f.actor.name = "Group";
+  await f.run(C.ADD_PROFILE_ITEM, { name: "Party rations", slotsUsed: 1, perQuantity: 3 });
+  const item = f.actor.items.find(item => item.name === "Party rations");
+  assert.equal(item.type, "Basic");
+  assert.equal(item.system.quantity, 1);
+  assert.deepEqual(item.system.slots, { slots_used: 1, per_slot: 3, free_carry: 0 });
+  f.actor.items.get("torch").system.stashed = true;
+  await f.run(C.EDIT_PROFILE_RESOURCE, f.quantity(4));
+  assert.equal(f.actor.items.get("torch").system.quantity, 4);
+});
+
 test("equipped quantities are unavailable and stale equipment changes reject edits", async (t) => {
   const f = setup(t);
   assert.equal(

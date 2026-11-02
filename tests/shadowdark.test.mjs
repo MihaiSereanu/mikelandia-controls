@@ -7,6 +7,38 @@ import { createShadowdarkFixture } from "./helpers/shadowdark.mjs";
 
 const action = ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, edit = ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE;
 
+test("Group PCs use an inventory-only profile with native Notes and all carried gear", t => {
+  const f = setup(t);
+  f.actor.system.notes = "Party supplies";
+  f.actor.system.getSlotUsage = () => ({ total: 4, coins: 0 });
+  for (const name of ["Group", "GROUP", " group "]) {
+    f.actor.name = name;
+    const view = f.view();
+    assert.deepEqual(view.panels.map(tab => tab.id), ["inventory"]);
+    assert.equal(view.notesAvailable, true);
+    assert.equal(view.notesRevision, "Party supplies");
+    assert.equal(view.profileInventory, true);
+    const sections = view.panels[0].sections;
+    assert.equal(sections.some(section => section.id === "equipped-gear"), false);
+    const gear = sections.find(section => section.id === "gear");
+    assert.equal(gear.label, "Gear");
+    for (const id of ["sword", "torch"]) {
+      const row = gear.rows.find(row => row.id === id);
+      assert.ok(row.edit);
+      assert.equal(row.equipment, undefined);
+    }
+    assert.ok(gear.summary.some(row => row.id === "slots"));
+    assert.ok(sections.find(section => section.id === "coins"));
+    assert.equal(f.gateway.capabilitiesForActor(f.actor).profileActions, undefined);
+    assert.equal(JSON.stringify(view).includes("Secret Relic"), false);
+  }
+  f.actor.name = "Group Scout";
+  assert.equal(f.view().panels[0].id, "abilities");
+  f.actor.name = "Group";
+  f.actor.type = "NPC";
+  assert.notEqual(f.view().presentation, "profile");
+});
+
 test("custom resources default to zero, persist per actor flag, and preserve native fields", async t => {
   const f = setup(t), native = JSON.stringify(f.actor.system);
   const sections = f.view().panels[0].sections;

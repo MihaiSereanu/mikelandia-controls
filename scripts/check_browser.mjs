@@ -89,6 +89,9 @@ const cases = [
   ["warhammer-effects-phone", 390, 844, "warhammer", "layout=phone&edition=5e&preview=effects"],
   ["warhammer-condition-reference-phone", 390, 844, "warhammer", "layout=phone&edition=5e&preview=condition-reference"],
   ["warhammer-effects-narrow-large-text", 320, 844, "warhammer", "layout=phone&edition=5e&large=true&layout-only=true&preview=effects"],
+  ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844]].map(([layout, width, height]) =>
+    [`shadowdark-group-${layout}`, width, height, "shadowdark-group", `layout=${layout === "tablet" ? "tablet" : "phone"}`]),
+  ["shadowdark-group-large-text", 390, 844, "shadowdark-group", "layout=phone&large=true"],
   ["shadowdark-narrow", 320, 844, "shadowdark", "layout=phone&pulp=false"],
   ["shadowdark-small-tablet", 768, 1024, "shadowdark", "layout=tablet&pulp=false"],
   ["shadowdark-large-text", 390, 844, "shadowdark", "layout=phone&pulp=false&large=true"],
