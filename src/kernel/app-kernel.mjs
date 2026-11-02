@@ -276,6 +276,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
         actorType: actor?.type,
         profileTabs: actor?.panels?.map(tab => tab.id),
         notesAvailable: actor?.notesAvailable,
+        notesTabLabel: actor?.notesTabLabel,
         edition: actor?.edition,
         characterPresentation: state.snapshot?.selectedActor?.presentation ?? preferencesGateway.controls?.().characterPresentation ?? "legacy",
       });

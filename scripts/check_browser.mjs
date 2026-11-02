@@ -108,6 +108,8 @@ const cases = [
   ["journal-editor-tablet", 1024, 768, "in-person", "layout=tablet&preview=journal-editor"],
   ["actor-notes-phone", 390, 844, "actor-notes", ""],
   ["actor-notes-tablet", 1024, 768, "actor-notes", ""],
+  ["shadowdark-bio-phone", 390, 844, "actor-notes", "preview=bio"],
+  ["shadowdark-bio-tablet", 1024, 768, "actor-notes", "preview=bio"],
   ["profile-layout-narrow", 320, 844, "profile-layout", "layout=phone"],
   ["profile-layout-phone", 390, 844, "profile-layout", "layout=phone"],
   ["profile-layout-small-tablet", 768, 1024, "profile-layout", "layout=tablet"],

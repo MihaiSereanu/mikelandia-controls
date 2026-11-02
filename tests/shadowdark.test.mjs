@@ -10,6 +10,61 @@ import { createFoundrySessionGateway } from "../src/foundry/session/session-gate
 
 const action = ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, edit = ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE;
 
+test("Bio resolves native names in order, hides empty fields and stays out of Group", t => {
+  const f = setup(t);
+  const links = new Map([
+    ["Item.elvish", { type: "Language", name: "Elvish" }],
+    ["Item.common", { type: "Language", name: "Common" }],
+    ["Item.deity", { type: "Deity", name: "Gede" }],
+    ["Item.background", { type: "Background", name: "Sailor" }],
+    ["Item.hidden", { type: "Language", name: "Secret", visible: false }]
+  ]);
+  installGlobals(t, { fromUuidSync: uuid => links.get(uuid) });
+  assert.equal(f.view().notesTabLabel, "Bio");
+  assert.deepEqual(f.view().notesSections, []);
+  Object.assign(f.actor.system, { languages: ["Item.elvish", "Item.hidden", "Item.common", "Item.missing"], deity: "Item.deity", background: "Item.background" });
+  const view = f.view();
+  assert.deepEqual(view.notesSections.map(({ label, text }) => [label, text]), [["Languages", "Common, Elvish"], ["Deity", "Gede"], ["Background", "Sailor"]]);
+  f.actor.system.deity = "";
+  assert.notEqual(f.view().notesRevision, view.notesRevision);
+  assert.deepEqual(f.view().notesSections.map(section => section.id), ["languages", "background"]);
+  f.actor.name = "Group";
+  assert.equal(f.view().notesTabLabel, "Notes");
+  assert.deepEqual(f.view().notesSections, []);
+});
+
+test("uncached Bio links refresh after loading, update names and ignore disposed watchers", async t => {
+  const f = setup(t);
+  let finish, reads = 0, deity = { uuid: "Compendium.test.deities.Item.gede", type: "Deity", name: "Gede" };
+  f.actor.system.deity = deity.uuid;
+  installGlobals(t, { fromUuidSync: () => null, fromUuid: async () => {
+    reads++;
+    await new Promise(resolve => { finish = resolve; });
+    return deity;
+  } });
+  const scope = createTaskScope("bio-cache");
+  t.after(() => scope.dispose());
+  const session = createFoundrySessionGateway({ capabilitiesForActor: f.gateway.capabilitiesForActor });
+  let published, error;
+  session.watch(scope, value => { published = value; }, value => { error = value; });
+  const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+  await tick();
+  f.view();
+  assert.equal(reads, 1);
+  finish(); await tick();
+  assert.equal(error, undefined);
+  assert.equal(published.selectedActor.notesSections[0].text, "Gede");
+  deity = { ...deity, name: "Gede Renamed" };
+  f.hooks.emit("updateItem", deity, { name: deity.name }); await tick();
+  assert.equal(reads, 2);
+  finish(); await tick();
+  assert.equal(published.selectedActor.notesSections[0].text, "Gede Renamed");
+  f.hooks.emit("updateItem", deity, {}); await tick();
+  const previous = published;
+  scope.dispose(); finish(); await tick();
+  assert.equal(published, previous);
+});
+
 test("Group PCs use an inventory-only profile with native Notes and all carried gear", t => {
   const f = setup(t);
   f.actor.system.notes = "Party supplies";

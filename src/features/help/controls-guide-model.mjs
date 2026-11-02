@@ -1,6 +1,6 @@
 /** Static, audited copy keys. Context is a narrow presentation record, never diagnostics. */
 export function controlsGuideSections({ presentation = "phone", systemId = "dnd5e", actorType = "character",
-  characterPresentation = "legacy", profileTabs, notesAvailable = true, edition } = {}) {
+  characterPresentation = "legacy", profileTabs, notesAvailable = true, notesTabLabel, edition } = {}) {
   const dnd = systemId === "dnd5e" && characterPresentation === "legacy";
   const profile = characterPresentation === "profile";
   const warhammer = systemId === "wfrp4e" && profile;
@@ -19,7 +19,7 @@ export function controlsGuideSections({ presentation = "phone", systemId = "dnd5
         : ["DndFavourites", "DndOverview", "DndInventory", "DndSpells", "DndFeatures", "DndBiography"]
     : mappedTabs.length ? [
       ...mappedTabs.filter(([id]) => !profileTabs || profileTabs.includes(id)).map(([, key]) => key),
-      ...(notesAvailable ? [warhammer ? "WarhammerNotes" : "Notes"] : [])
+      ...(notesAvailable ? [warhammer ? "WarhammerNotes" : shadowdark && notesTabLabel === "Bio" ? "ShadowdarkBio" : "Notes"] : [])
     ] : ["NativeSheet"];
   const sections = [
     { id: "tabs", entries: ["CharacterTab", "ChatTab", "JournalsTab", "InitiativeTab", "SettingsTab"] },

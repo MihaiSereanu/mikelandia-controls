@@ -114,7 +114,7 @@ try {
   check("Notes displays native text", main.textContent.includes("Party supplies"));
   main.querySelector(".mc-biography-edit").click();
   await tick();
-  main.querySelector("textarea").value = "<p>Shared treasure ledger</p>";
+  main.querySelector("textarea").value = "Shared treasure ledger";
   main.querySelector("form.mc-biography-editor").requestSubmit();
   await tick();
   check("Notes saves to native field and refreshes", f.actor.system.notes === "<p>Shared treasure ledger</p>" && main.textContent.includes("Shared treasure ledger"));
@@ -123,7 +123,7 @@ try {
   f.actor.name = "Mara";
   Hooks.emit("updateActor", f.actor, { name: "Mara" });
   await tick();
-  check("rename restores ordinary PC tabs", tabs() === "Main,Spells,Inventory,Notes");
+  check("rename restores ordinary PC tabs", tabs() === "Main,Spells,Inventory,Bio");
   check("ordinary PC equipment controls return", !!main.querySelector('[data-profile-resource-input="equipped:sword"]'));
   f.actor.name = "GROUP";
   Hooks.emit("updateActor", f.actor, { name: "GROUP" });

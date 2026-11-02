@@ -7,6 +7,7 @@ import { isShadowdarkPlayer, isShadowdarkItemTracker, shadowdarkContext } from "
 import { shadowdarkPlayerProfile } from "./profile.mjs";
 import { createShadowdarkCommands } from "./commands.mjs";
 import { itemSpells, watchItemSpells } from "./item-spells.mjs";
+import { shadowdarkBio, watchBio } from "./bio.mjs";
 
 export const shadowdarkIntegration = Object.freeze({
   ...fallbackIntegration,
@@ -17,7 +18,10 @@ export const shadowdarkIntegration = Object.freeze({
   features: Object.freeze({ ...fallbackIntegration.features, profilePanels: true, biography: true }),
   notes: shadowdarkNotes,
   createCommands: createShadowdarkCommands,
-  watchActorProfile: watchItemSpells,
+  watchActorProfile(scope, notify) {
+    watchItemSpells(scope, notify);
+    watchBio(scope, notify);
+  },
   profileDependencySources: actor => shadowdarkContext(globalThis.game)
     ? itemSpells(actor).map(row => row.spell.parent?.uuid ?? row.spell.uuid) : [],
   refreshSelectedActorForHook: hook => ["updateItem", "deleteItem"].includes(hook),
@@ -37,6 +41,10 @@ export const shadowdarkIntegration = Object.freeze({
     if (!context) return identity;
     const capabilities = capabilitiesForActor(actor, user);
     const panels = createProfilePanels(actor, shadowdarkPlayerProfile(context, actor), { actions: capabilities?.profileActions, edits: capabilities?.profileEdits });
-    return panels.length ? Object.freeze({ ...identity, typeLabel: isShadowdarkItemTracker(actor) ? "" : identity.typeLabel, presentation: "profile", profileId: "shadowdark-player", numericEditorLayout: "stacked", profileInventory: capabilities.profileInventory === true, notesAvailable: shadowdarkNotes.available(actor), notesRevision: shadowdarkNotes.available(actor) ? shadowdarkNotes.read(actor) : "", capabilities: { editBiography: true }, panels }) : identity;
+    const tracker = isShadowdarkItemTracker(actor), notesSections = shadowdarkBio(actor);
+    const notes = shadowdarkNotes.available(actor) ? shadowdarkNotes.read(actor) : "";
+    return panels.length ? Object.freeze({ ...identity, typeLabel: tracker ? "" : identity.typeLabel, presentation: "profile", profileId: "shadowdark-player", numericEditorLayout: "stacked", profileInventory: capabilities.profileInventory === true, notesAvailable: shadowdarkNotes.available(actor),
+      notesTabLabel: tracker ? "Notes" : "Bio", notesSections,
+      notesRevision: tracker ? notes : JSON.stringify([notes, notesSections]), capabilities: { editBiography: true }, panels }) : identity;
   }
 });

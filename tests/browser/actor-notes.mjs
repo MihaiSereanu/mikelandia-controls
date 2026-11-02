@@ -82,9 +82,29 @@ try {
     main.querySelector(".mc-image-viewer header button").click(); await tick();
     check(`${systemId} image viewer closes`, !main.querySelector(".mc-image-viewer"));
     check(`${systemId} Notes tab uses native text and excludes GM notes`, !!main.querySelector('[data-profile-tab="notes"][aria-selected="true"]') && main.textContent.includes("Existing notes") && !main.textContent.includes("GM secret"));
+    check(`${systemId} uses its own notes tab label`, main.querySelector('[data-profile-tab="notes"]').textContent === (fixture ? "Bio" : "Notes"));
+    if (fixture) {
+      const links = new Map([
+        ["Item.elvish", { type: "Language", name: "Elvish" }], ["Item.common", { type: "Language", name: "Common" }],
+        ["Item.deity", { type: "Deity", name: "Gede" }], ["Item.background", { type: "Background", name: "Sailor" }]
+      ]);
+      globalThis.fromUuidSync = uuid => links.get(uuid);
+      const bio = () => [...main.querySelectorAll('[data-profile-section]')];
+      check("unset Bio sections are hidden", bio().length === 0);
+      Object.assign(actor.system, { languages: ["Item.elvish", "Item.common"], deity: "Item.deity", background: "Item.background" });
+      Hooks.emit("updateActor", actor, {}); await tick();
+      check("Bio sections follow Notes in requested order", bio().map(section => section.dataset.profileSection).join() === "languages,deity,background"
+        && (main.querySelector('.mc-character-biography-prose').compareDocumentPosition(bio()[0]) & Node.DOCUMENT_POSITION_FOLLOWING));
+      check("Bio names are alphabetical and read only", bio().map(section => section.querySelector("p").textContent).join("|") === "Common, Elvish|Gede|Sailor"
+        && bio().every(section => !section.querySelector("button,input,textarea")));
+      check("Bio fits viewport", document.documentElement.scrollWidth <= innerWidth + 1);
+      actor.system.deity = ""; Hooks.emit("updateActor", actor, {}); await tick();
+      check("clearing a Bio field hides only that section", bio().map(section => section.dataset.profileSection).join() === "languages,background");
+      delete globalThis.fromUuidSync;
+    }
     main.querySelector(".mc-biography-edit").click(); await tick();
     check(`${systemId} shared editor opens and focuses text`, document.activeElement === main.querySelector("textarea"));
-    check(`${systemId} editor hides stored HTML and explains Markdown`, main.querySelector("textarea").value === "Existing notes" && main.querySelector(".mc-biography-editor-composer").textContent.includes("**bold**"));
+    check(`${systemId} editor hides stored HTML and explains Markdown`, main.querySelector("textarea").value === "Existing notes" && main.querySelector(".mc-biography-editor-composer").textContent.includes("Markdown"));
     main.querySelector("textarea").value = "Cancelled";
     main.querySelector(".mc-modal-button.is-secondary").click();
     check(`${systemId} Cancel preserves native notes`, writes === 0 && get().includes("Existing") && !main.querySelector("textarea"));
@@ -243,6 +263,24 @@ try {
     const dialog = main.querySelector(".mc-biography-editor").getBoundingClientRect();
     check("Notes editor fits viewport", dialog.left >= 0 && dialog.right <= innerWidth && dialog.top >= 0 && dialog.bottom <= innerHeight);
     // Leave the open editor visible for passing screenshots.
+  }
+  if (new URLSearchParams(location.search).get("preview") === "bio") {
+    const f = createShadowdarkFixture(), scope = createTaskScope("bio-preview");
+    globalThis.game = f.game; globalThis.Hooks = f.hooks;
+    const links = new Map([
+      ["Item.common", { type: "Language", name: "Common" }], ["Item.elvish", { type: "Language", name: "Elvish" }],
+      ["Item.deity", { type: "Deity", name: "Gede" }], ["Item.background", { type: "Background", name: "Sailor" }]
+    ]);
+    globalThis.fromUuidSync = uuid => links.get(uuid);
+    Object.assign(f.actor.system, { notes: "<p>A sailor far from home.</p>", languages: ["Item.elvish", "Item.common"], deity: "Item.deity", background: "Item.background" });
+    const gateway = createFoundryCommandGateway(), session = createFoundrySessionGateway({ capabilitiesForActor: gateway.capabilitiesForActor });
+    const read = createFoundryBiographyGateway({ getTextEditor: () => ({ enrichHTML: async value => value }) });
+    document.querySelector("main").replaceChildren(renderCharacters({
+      state: { snapshot: session.read(), characterTab: "notes" }, scope,
+      commands: { localize: (_key, fallback) => fallback, readCharacterBiography: source => read.read({ actorSourceUuid: source }) }
+    }));
+    await tick();
+    check("Bio preview contains all native details", document.querySelectorAll("[data-profile-section]").length === 3);
   }
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
 } catch (error) {

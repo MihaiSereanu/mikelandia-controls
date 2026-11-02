@@ -12,7 +12,8 @@ import { renderProfileTooltip } from "./profile-tooltip.mjs";
 
 /** Profiles provide game labels. This renderer has no system IDs or rule paths. */
 export function renderProfilePanels(actor, state, commands, scope, renderNotes = null, presentation = { openSections: new Set() }) {
-  const tabs = [...(actor.panels ?? []), ...(actor.notesAvailable && renderNotes ? [{ id: "notes", label: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Tabs.Notes", "Notes"), sections: [] }] : [])];
+  const notesLabel = actor.notesTabLabel ?? "Notes";
+  const tabs = [...(actor.panels ?? []), ...(actor.notesAvailable && renderNotes ? [{ id: "notes", label: localizedText(commands.localize, `MIKELANDIA_CONTROLS.Character.Tabs.${notesLabel}`, notesLabel), sections: actor.notesSections ?? [] }] : [])];
   if (!tabs.length) return [];
   const active = tabs.find(tab => tab.id === state.characterTab) ?? tabs[0];
   const inventory = actor.profileInventory && active.id === "inventory" ? renderProfileInventory(actor, commands, scope) : null;

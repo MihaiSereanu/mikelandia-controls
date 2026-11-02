@@ -322,7 +322,8 @@
         "Spells": "Spells",
         "Features": "Features",
         "Biography": "Biography",
-        "Notes": "Notes"
+        "Notes": "Notes",
+        "Bio": "Bio"
       },
       "ViewPortrait": "View {name} portrait",
       "HoldActions": "Hold for portrait actions",
@@ -954,6 +955,7 @@
         "ShadowdarkInventory": "Inventory: Check slots, Equipped Gear, Carried Gear, Stashed Gear and coins. Use equipment checkboxes to equip or unequip weapons and armour. Use **Add** to choose catalog gear or create an item. Equipped quantities are read-only. Setting Carried or Stashed Gear to zero asks for confirmation before removal.",
         "ShadowdarkTalents": "Talents: Read your ancestry, class, and level talents. Expand **Details** to read more.",
         "Notes": "Notes: Read and edit your character notes. Save your changes before leaving the editor.",
+        "ShadowdarkBio": "Bio: Read and edit your character notes. Languages, deity and background appear when set on your character.",
         "DndFavourites": "Favourites (when enabled): Find the items, spells, and features you have marked as favourites.",
         "DndOverview": "Overview: Check HP, defenses, and resources, and select Targets. Open Abilities for checks and saves, or Effects for conditions and other effects.",
         "DndInventory": "Inventory: Browse equipment and currency. Tap an item to read its details; hold it for actions.",
