@@ -8,6 +8,7 @@ import { renderProfileConditions } from "./profile-conditions.mjs";
 import { renderTargets } from "../../combat/targets.mjs";
 import { characterHasTargets } from "../../combat/targeting-surface.mjs";
 import { renderEnrichedDescription } from "../../../ui/primitives/enriched-description.mjs";
+import { renderProfileTooltip } from "./profile-tooltip.mjs";
 
 /** Profiles provide game labels. This renderer has no system IDs or rule paths. */
 export function renderProfilePanels(actor, state, commands, scope, renderNotes = null, presentation = { openSections: new Set() }) {
@@ -217,9 +218,12 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
         : node(section.collapsible ? "summary" : "header", { className: "mc-profile-section-heading", children: [
           ...(inventorySection ? [node("div", { className: "mc-profile-section-title", children: heading }), inventory.button] : heading),
           equipmentLabel ? node("span", { className: "mc-profile-equipment-heading", text: equipmentLabel }) : null,
-          ...(section.controls ?? []).filter(row => row.edit).map(row => node("div", { className: "mc-profile-labelled-control", children: [
-            node("span", { text: row.label }), renderProfileResourceEditor(row, actor, commands, scope)
-          ] }))
+          ...(section.controls ?? []).filter(row => row.edit).map(row => {
+            const reference = row.tooltip ? renderProfileTooltip(row, `${prefix}-control-${row.id}-tooltip`, scope) : null;
+            return node("div", { className: "mc-profile-labelled-control", children: [
+              reference?.trigger ?? node("span", { text: row.label }), renderProfileResourceEditor(row, actor, commands, scope), reference?.tooltip
+            ] });
+          })
         ] });
       const rows = section.groupByValue ? [...new Set(section.rows.map(row => row.value))].map(value => {
         const group = section.rows.filter(row => row.value === value);

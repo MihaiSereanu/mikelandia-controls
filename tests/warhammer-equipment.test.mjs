@@ -46,6 +46,10 @@ for (const use5e of [false, true]) test(`${use5e ? "5e" : "4e"} equipment and mo
   assert.ok(combat.sections.indexOf(mounts) > combat.sections.findIndex(section => section.id === "movement"));
   assert.deepEqual(mounts.rows.map(row => [row.value, row.max]), [[mount.name, undefined], [12, 18]]);
   assert.ok(mounts.rows.every(row => !row.edit));
+  const mountedControl = combat.sections.find(section => section.id === "movement").controls[0];
+  assert.equal(Boolean(mountedControl.tooltip), use5e, "5e rules must not appear in 4e");
+  if (use5e) assert.deepEqual(mountedControl.tooltip.map(group => group.label), ["Mount Rules", "Automated", "Not Automated"]);
+  assert.equal(mounts.tooltip, undefined);
   const inventory = tabs.find(tab => tab.id === "trappings");
   assert.equal(inventory.sections.find(section => section.id === "weapons").rows.find(row => row.id === sword.id).equipment.value, true);
   assert.equal(inventory.sections.find(section => section.id === "armour").rows[0].equipment.value, false);

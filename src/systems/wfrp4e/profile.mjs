@@ -3,6 +3,7 @@ import { spellForActor, magicWinds } from "./magic.mjs";
 import { localizeFoundry } from "../../foundry/settings/localization.mjs";
 import { warhammerItemProperties } from "./item-properties.mjs";
 import { warhammerMount } from "./mount.mjs";
+import { warhammer5eMountRules } from "./mount-rules.mjs";
 
 const field = (id, labelKey, path, extra = {}) => ({ id, labelKey, label: labelKey, path, editId: id,
   ...(["wounds", "fortune", "fate", "corruption"].includes(id) ? { editControl: "counter" } : {}), ...extra });
@@ -83,7 +84,9 @@ export const warhammerCharacterProfile = {
     { id: "combat", labelKey: "Combat", label: "Combat", sections: [
       combatEncumbrance,
       { id: "movement", kind: "values", layout: "table", labelKey: "Move", label: "Movement", controls: [
-        field("mounted", "Mounted", "system.status.mount.mounted", { format: "boolean", editControl: "checkbox", when: (_context, actor) => Boolean(warhammerMount(actor)) })
+        field("mounted", "Mounted", "system.status.mount.mounted", { format: "boolean", editControl: "checkbox",
+          readTooltip: (_actor, context) => context.use5e ? warhammer5eMountRules : undefined,
+          when: (_context, actor) => Boolean(warhammerMount(actor)) })
       ], fields: [
         { id: "move", labelKey: "Move", label: "Move", path: "system.details.move.value" },
         ...["walk", "run"].map(id => ({ id, labelKey: id[0].toUpperCase() + id.slice(1), label: id[0].toUpperCase() + id.slice(1), format: "display",

@@ -1422,7 +1422,23 @@ try {
       Boolean(screen.querySelector('[data-profile-section="armour"]').compareDocumentPosition(mounts()) & Node.DOCUMENT_POSITION_FOLLOWING));
     check("Assigned horse remains visible on its rider without separate horse permission", mount.visible === false && mount.isOwner === false && Boolean(mounts()));
     check("Mounted checkbox sits beside Movement", Boolean(screen.querySelector('[data-profile-section="movement"] header [data-profile-resource-input="mounted"]')));
-    check("Mount wounds are read-only", !mounts().querySelector("input, button"));
+    check("Mount wounds are read-only", !mounts().querySelector("dl input, dl button"));
+    const mountRulesTrigger = screen.querySelector('[data-profile-section="movement"] .mc-profile-section-tooltip-trigger');
+    check("Mount rules match the active edition", Boolean(mountRulesTrigger) === use5e);
+    if (use5e) {
+      const writesBefore = nativeWrites.length;
+      mountRulesTrigger.scrollIntoView({ block: "center" });
+      mountRulesTrigger.click();
+      const tooltip = screen.querySelector('[data-profile-section="movement"] [role="tooltip"]');
+      check("Mount rules open with h3 automation headings", tooltip.matches(":popover-open") &&
+        [...tooltip.querySelectorAll("h3")].map(heading => heading.textContent).join() === "Mount Rules,Automated,Not Automated");
+      check("Mount rules explain the native Dodge discrepancy", tooltip.textContent.includes("−2 SL") && tooltip.textContent.includes("Trick Rider"));
+      const bounds = tooltip.getBoundingClientRect();
+      check("Mount rules fit and scroll within the viewport", bounds.left >= 0 && bounds.right <= innerWidth && bounds.top >= 0 && bounds.bottom <= innerHeight &&
+        getComputedStyle(tooltip).overflowY === "auto");
+      mountRulesTrigger.click();
+      check("Retapping Mounted closes its rules without actor writes or toggling mounted state", !tooltip.matches(":popover-open") && nativeWrites.length === writesBefore && actor.system.status.mount.mounted === false);
+    }
     screen.querySelector('[data-profile-resource-input="mounted"]').click();
     await tick();
     check("Mounted checkbox uses native rider update", actor.system.status.mount.mounted === true && nativeWrites.at(-1)[0]["system.status.mount.mounted"] === true);
@@ -2374,6 +2390,8 @@ try {
     await tick();
     await clickTab("combat");
     screen.querySelector('[data-profile-section="mounts"]').scrollIntoView({ block: "center" });
+    const rules = screen.querySelector('[data-profile-section="movement"] .mc-profile-section-tooltip-trigger');
+    if (rules) { rules.scrollIntoView({ block: "center" }); rules.click(); }
   }
   if (params.get("preview") === "armour") {
     await clickTab("combat");

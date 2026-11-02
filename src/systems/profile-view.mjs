@@ -39,6 +39,15 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
     : format === "boolean" ? typeof value === "boolean"
       : format === "display" ? (typeof value === "number" && Number.isFinite(value)) || (typeof value === "string" && value.trim().length > 0)
       : format === "text" && typeof value === "string" && value.trim().length > 0;
+  const tooltipFor = entry => {
+    try {
+      const groups = entry.readTooltip?.(actor, context);
+      if (!Array.isArray(groups)) return {};
+      const tooltip = Object.freeze(groups.filter(group => scalar(group?.label, "text") && Array.isArray(group.bullets))
+        .map(group => Object.freeze({ label: label(group), bullets: Object.freeze(group.bullets.filter(text => scalar(text, "text"))) })));
+      return tooltip.length ? { tooltip } : {};
+    } catch { return {}; }
+  };
   const rows = entries => {
     const seen = new Set();
     return Object.freeze((Array.isArray(entries) ? entries : []).flatMap(entry => {
@@ -50,6 +59,7 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
       seen.add(entry.id);
       const max = entry.maxPath ? readProfilePath(actor, entry.maxPath) : undefined;
       return [Object.freeze({ id: entry.id, label: label(entry), value, format: entry.format ?? "number",
+        ...tooltipFor(entry),
         ...(entry.editControl === "checkbox" && entry.format === "boolean" ? { editControl: "checkbox" } : {}),
         ...(entry.editControl === "counter" ? { editControl: "counter" } : {}),
         ...actionFor(entry.actionId),
