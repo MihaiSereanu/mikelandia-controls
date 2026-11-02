@@ -8,6 +8,8 @@ import { renderCharacters } from "/src/features/characters/presenter.mjs";
 import { createTaskScope } from "/src/kernel/lifecycle/task-scope.mjs";
 import { createMcBackDispatcher } from "/src/ui/navigation/mc-back-dispatcher.mjs";
 
+import { runMobileApplicationWorkflow } from "/src/foundry/presentation/mobile-ui-isolation.mjs";
+
 const checks = [], check = (name, value) => { if (!value) throw new Error(name); checks.push(name); };
 const tick = () => new Promise(resolve => setTimeout(resolve, 30));
 const scope = createTaskScope("shadowdark-browser");
@@ -32,6 +34,66 @@ try {
   if (params.has("large")) document.querySelector("main").style.setProperty("font-size", "24px", "important");
   const f = createShadowdarkFixture({ pulp: initialPulp, specialAbilities: true });
   globalThis.game = f.game; globalThis.Hooks = f.hooks;
+  let removal;
+  const previousFoundry = globalThis.foundry;
+  class RemovalDialog {
+    static confirm(config) {
+      return new Promise((resolve, reject) => {
+        const application = new RemovalDialog();
+        application.options = { modal: true };
+        application.element = document.createElement("form");
+        application.element.className = "application";
+        application.element.setAttribute("role", "dialog");
+        application.element.innerHTML = `<header class="window-header"><h1 class="window-title"></h1></header><div class="application-content">${config.content}</div>`;
+        application.element.querySelector("h1").textContent =
+          config.window.title;
+        application.close = () => {
+          application.element.remove();
+          Hooks.emit("closeApplicationV2", application);
+          resolve(null);
+        };
+        for (const name of ["no", "yes"]) {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.dataset.removalAnswer = name;
+          button.textContent = config[name].label;
+          button.onclick = async () => {
+            try {
+              const result = await config[name].callback?.();
+              resolve(result);
+            } catch (error) {
+              reject(error);
+            } finally {
+              application.close();
+            }
+          };
+          application.element.append(button);
+        }
+        application.element.onkeydown = (event) => {
+          if (event.key === "Escape") application.close();
+        };
+        document.body.append(application.element);
+        Hooks.emit("renderApplicationV2", application, application.element);
+        removal = application;
+        application.element.querySelector('[data-removal-answer="no"]').focus();
+      });
+    }
+  }
+  globalThis.foundry = {
+    ...previousFoundry,
+    applications: {
+      ...previousFoundry?.applications,
+      api: { ...previousFoundry?.applications?.api, DialogV2: RemovalDialog },
+    },
+  };
+  scope.own(() => {
+    removal?.close();
+    globalThis.foundry = previousFoundry;
+  });
+  const answerRemoval = async (answer) => {
+    removal.element.querySelector(`[data-removal-answer="${answer}"]`).click();
+    await tick();
+  };
   game.i18n = { localize: key => key };
   const dsnStyle = document.createElement("style");
   dsnStyle.textContent = ".dsn-hide { display: none !important; }";
@@ -88,7 +150,7 @@ try {
   const commands = {
     reportCharacterMutationError: error => notices.push(error.message),
     localize: (key, fallback) => fallback,
-    execute: (name, payload) => gateway.execute(name, payload, { isCurrent: () => !scope.disposed && state.snapshot.selectedActorSourceUuid === payload.actorSourceUuid }),
+    execute: (name, payload) => runMobileApplicationWorkflow(() => gateway.execute(name, payload, { isCurrent: () => !scope.disposed && state.snapshot.selectedActorSourceUuid === payload.actorSourceUuid }), () => !scope.disposed),
     selectCharacterTab: tab => { state = { ...state, characterTab: tab }; screen.__mcUpdateCharacter({ state, commands }); },
     selectActor: source => { state = { ...state, snapshot: session.selectCharacterSource(source) }; screen.__mcUpdateCharacter({ state, commands }); },
     openNativeActorEditor: async () => {}
@@ -280,10 +342,11 @@ try {
   const equipment = () => screen.querySelector('[data-profile-resource-input="equipped:sword"]');
   check("equipped and carried gear occupy separate sections", screen.querySelector('[data-profile-section="equipped-gear"]').textContent.includes('Sword')
     && !screen.querySelector('[data-profile-section="gear"]').textContent.includes('Sword') && screen.querySelector('[data-profile-section="gear"]').textContent.includes('Torch'));
-  check("equipped gear exposes native checkbox and quantity controls", equipment().checked && !!screen.querySelector('[data-profile-resource="quantity:sword"]'));
+  check("equipped gear keeps native checkbox with read-only quantity", equipment().checked && !screen.querySelector('[data-profile-resource="quantity:sword"]'));
   equipment().click(); await tick();
   check("PC can unequip into Carried Gear", !sword.system.equipped && !equipment().checked && screen.querySelector('[data-profile-section="gear"]').textContent.includes('Sword')
     && !screen.querySelector('[data-profile-section="equipped-gear"]').textContent.includes('Sword'));
+  check("unequipped gear gains quantity controls", !!screen.querySelector('[data-profile-resource="quantity:sword"]'));
   equipment().click(); await tick();
   check("PC can equip into Equipped Gear", sword.system.equipped && equipment().checked && screen.querySelector('[data-profile-section="equipped-gear"]').textContent.includes('Sword'));
   await tab('abilities');
@@ -294,6 +357,24 @@ try {
   quantity().querySelector('[data-profile-quantity-delta="1"]').click(); await tick();
   check("quantity increment persists and refreshes", f.actor.items.get("torch").system.quantity === 2 && quantity().querySelector('[data-profile-edit]').textContent === "2");
   input = await resource("quantity:torch"); input.value = "0"; await save(input);
+  check(
+    "direct zero waits for a visible removal confirmation",
+    f.actor.items.get("torch").system.quantity === 2 &&
+      removal.element.isConnected &&
+      getComputedStyle(removal.element).display !== "none" &&
+      removal.element.textContent.includes("Remove Torch from inventory?") &&
+      removal.element.classList.contains("mc-mobile-admitted-app"),
+  );
+  await answerRemoval("no");
+  check(
+    "Cancel preserves quantity and restores controls",
+    f.actor.items.get("torch").system.quantity === 2 &&
+      !quantity().querySelector('[data-profile-quantity-delta="-1"]').disabled,
+  );
+  input = await resource("quantity:torch");
+  input.value = "0";
+  await save(input);
+  await answerRemoval("yes");
   check("saving zero deletes the native item and mobile row", !f.actor.items.get("torch") && !quantity());
   const restoredTorch = { id: "torch", uuid: f.actor.uuid + ".Item.torch", type: "Basic", name: "Torch", parent: f.actor,
     system: { isPhysical: true, isIdentified: true, stashed: false, quantity: 1, slots: { per_slot: 20 }, light: { isSource: true, active: false, remainingSecs: 3600 } } };
@@ -343,6 +424,23 @@ try {
   check("custom increment saves native quantity without changing weight", mobileRope.system.quantity === 2 && mobileRope.system.slots.per_slot === 1 && mobileRope.system.slots.slots_used === 2);
   ropeQuantity().querySelector('[data-profile-quantity-delta="-1"]').click(); await tick();
   screen.querySelector(`[data-profile-resource="quantity:${mobileRope.id}"] [data-profile-quantity-delta="-1"]`).click(); await tick();
+  check(
+    "minus at one preserves the item until removal is confirmed",
+    mobileRope.system.quantity === 1 &&
+      !!f.actor.items.get(mobileRope.id) &&
+      removal.element.isConnected,
+  );
+  removal.element.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+  );
+  await tick();
+  check(
+    "Escape preserves the last item",
+    mobileRope.system.quantity === 1 && !!f.actor.items.get(mobileRope.id),
+  );
+  ropeQuantity().querySelector('[data-profile-quantity-delta="-1"]').click();
+  await tick();
+  await answerRemoval("yes");
   check("decrementing from one deletes the native item and mobile row", !f.actor.items.get(mobileRope.id) && !screen.querySelector(`[data-profile-field="${mobileRope.id}"]`));
   game.items = collection(Array.from({ length: 125 }, (_, i) => ({ id: 'catalog' + i, uuid: 'Item.catalog' + i,
     name: 'Catalog Rope ' + String(i).padStart(3, '0'), type: 'Basic', system: { isPhysical: true } })));
@@ -425,9 +523,27 @@ try {
   torch.system.light.active = true;
   const lightsBeforeDeletion = f.lights.length;
   quantity().querySelector('[data-profile-quantity-delta="-1"]').click(); await tick();
+  await answerRemoval("yes");
   check("decrementing Torch deletes gear without toggling token light", !f.actor.items.get("torch") && !quantity() && torch.system.light.active && f.lights.length === lightsBeforeDeletion);
 
   check("Stashed Gear has a separate section", screen.querySelector('[data-profile-section="stashed"]').textContent.includes("stash") && !screen.querySelector('[data-profile-section="gear"]').textContent.includes("stash"));
+  input = await resource("quantity:stash");
+  input.value = "0";
+  await save(input);
+  await answerRemoval("no");
+  check(
+    "stashed zero cancellation preserves the stack",
+    f.actor.items.get("stash").system.quantity === 2,
+  );
+  input = await resource("quantity:stash");
+  input.value = "0";
+  await save(input);
+  await answerRemoval("yes");
+  check(
+    "stashed zero confirmation removes the item",
+    !f.actor.items.get("stash"),
+  );
+  addItem("stash", "Basic", { isPhysical: true, isIdentified: true, stashed: true, quantity: 2 }); await tick();
   await tab("talents");
   const details = screen.querySelector("details"); details.open = true; await tick();
   check("Talents details are readable text without secret content or scripts", details.textContent.includes("Native talent text") && !details.textContent.includes("GM secret") && !details.querySelector("script"));

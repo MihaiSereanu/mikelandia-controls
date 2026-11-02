@@ -74,6 +74,9 @@
       "ResourceFailed": "The resource could not be saved."
     },
     "Inventory": {
+      "RemoveTitle": "Remove item",
+      "RemoveConfirmation": "Remove {name} from inventory?",
+      "Remove": "Remove",
       "AddItem": "Add item",
       "Custom": "Create custom item",
       "SearchCatalog": "Search catalog",
@@ -944,7 +947,7 @@
         "WarhammerNotes": "Notes: Read and edit your character notes and ambitions. Save your changes before leaving the editor.",
         "ShadowdarkAbilities": "Main: Roll ability checks and weapon attacks, track HP and other counters, and select Targets. Expand Special Ability names to read descriptions; use their action buttons to activate them.",
         "ShadowdarkSpells": "Spells: Tap a spell name or arrow to read its description. Tap the dice to cast a known spell. Lost spells remain readable.",
-        "ShadowdarkInventory": "Inventory: Check slots, Equipped Gear, Carried Gear, Stashed Gear and coins. Use equipment checkboxes to equip or unequip weapons and armour. Use **Add** to choose catalog gear or create an item. Changing an item's quantity to zero removes it.",
+        "ShadowdarkInventory": "Inventory: Check slots, Equipped Gear, Carried Gear, Stashed Gear and coins. Use equipment checkboxes to equip or unequip weapons and armour. Use **Add** to choose catalog gear or create an item. Equipped quantities are read-only. Setting Carried or Stashed Gear to zero asks for confirmation before removal.",
         "ShadowdarkTalents": "Talents: Read your ancestry, class, and level talents. Expand **Details** to read more.",
         "Notes": "Notes: Read and edit your character notes. Save your changes before leaving the editor.",
         "DndFavourites": "Favourites (when enabled): Find the items, spells, and features you have marked as favourites.",

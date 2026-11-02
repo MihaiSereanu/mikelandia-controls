@@ -48,7 +48,7 @@ export function shadowdarkPlayerProfile(context) {
     { id: "inventory", labelKey: "SHADOWDARK.sheet.player.tab.inventory", label: "Inventory", sections: [
       { id: "equipped-gear", kind: "items", keepEmpty: true, labelKey: "MIKELANDIA_CONTROLS.Panels.EquippedGear", label: "Equipped Gear",
         collectionPath: "items", itemTypes: physicalTypes, equipmentEditable: true,
-        valuePath: "system.quantity", quantityEditable: true, include: (item, _context, actor) => carriedItem(item, actor) && item.system.equipped === true },
+        valuePath: "system.quantity", include: (item, _context, actor) => carriedItem(item, actor) && item.system.equipped === true },
       { id: "gear", kind: "items", keepEmpty: true, labelKey: "MIKELANDIA_CONTROLS.Panels.CarriedGear", label: "Carried Gear", collectionPath: "items", itemTypes: physicalTypes,
         summary: [field("slots", "SHADOWDARK.inventory.slots", "Slots", null, { read: actor => actor.system.getSlotUsage?.().total, maxPath: "system.slots" })],
         valuePath: "system.quantity", quantityEditable: true, equipmentEditable: true,

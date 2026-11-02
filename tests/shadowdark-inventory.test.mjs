@@ -4,7 +4,12 @@ import { createShadowdarkFixture } from "./helpers/shadowdark.mjs";
 import { installGlobals, collection } from "./helpers/foundry.mjs";
 import { createFoundryCommandGateway, ACTOR_COMMANDS as C } from "../src/foundry/commands/command-gateway.mjs";
 function setup(t) {
-  const f = createShadowdarkFixture(); installGlobals(t, { game: f.game, Hooks: f.hooks });
+  const f = createShadowdarkFixture();
+  f.confirmations = [];
+  f.confirmRemoval = async config => config.yes.callback();
+  installGlobals(t, { game: f.game, Hooks: f.hooks, foundry: { applications: { api: { DialogV2: {
+    confirm: config => { f.confirmations.push(config); return f.confirmRemoval(config); }
+  } } } } });
   f.gateway = createFoundryCommandGateway();
   f.run = (name, payload = {}) => f.gateway.execute(name, { actorSourceUuid: f.actor.uuid, ...payload });
   f.quantity = value => {
@@ -13,6 +18,102 @@ function setup(t) {
   };
   return f;
 }
+test("equipped quantities are unavailable and stale equipment changes reject edits", async (t) => {
+  const f = setup(t);
+  assert.equal(
+    f.gateway
+      .capabilitiesForActor(f.actor)
+      .profileEdits.some((edit) => edit.id === "quantity:sword"),
+    false,
+  );
+  const request = f.quantity(2);
+  f.actor.items.get("torch").system.equipped = true;
+  await assert.rejects(f.run(C.EDIT_PROFILE_RESOURCE, request), {
+    code: "CAPABILITY_UNAVAILABLE",
+  });
+  assert.equal(f.actor.items.get("torch").system.quantity, 1);
+});
+
+test("zero removal cancellation and dismissal preserve carried and stashed quantities", async (t) => {
+  const f = setup(t),
+    torch = f.actor.items.get("torch");
+  for (const stashed of [false, true])
+    for (const answer of [false, null]) {
+      torch.system.stashed = stashed;
+      f.confirmRemoval = async () => answer;
+      const result = await f.run(C.EDIT_PROFILE_RESOURCE, f.quantity(0));
+      assert.equal(result.cancelled, true);
+      assert.equal(f.actor.items.get("torch"), torch);
+      assert.equal(torch.system.quantity, 1);
+    }
+  const config = f.confirmations[0];
+  assert.equal(config.no.default, true);
+  assert.equal(config.yes.label, "Remove");
+  assert.match(config.content, /Remove Torch from inventory\?/u);
+});
+
+test("removal rechecks quantity, slots, equipment, item identity and ownership after confirmation", async (t) => {
+  for (const [change, code] of [
+    [
+      (f) => {
+        f.actor.items.get("torch").system.quantity = 2;
+      },
+      "STALE_STATE",
+    ],
+    [
+      (f) => {
+        f.actor.items.get("torch").system.slots.slots_used = 2;
+      },
+      "STALE_STATE",
+    ],
+    [
+      (f) => {
+        f.actor.items.get("torch").system.equipped = true;
+      },
+      "CAPABILITY_UNAVAILABLE",
+    ],
+    [
+      (f) => {
+        const item = f.actor.items.get("torch");
+        f.actor.items.splice(f.actor.items.indexOf(item), 1, { ...item });
+      },
+      "CAPABILITY_UNAVAILABLE",
+    ],
+    [
+      (f) => {
+        f.actor.testUserPermission = () => false;
+      },
+      "FORBIDDEN",
+    ],
+  ]) {
+    await t.test(code, async (t) => {
+      const f = setup(t);
+      f.confirmRemoval = async (config) => {
+        change(f);
+        return config.yes.callback();
+      };
+      await assert.rejects(f.run(C.EDIT_PROFILE_RESOURCE, f.quantity(0)), {
+        code,
+      });
+      assert.ok(f.actor.items.get("torch"));
+    });
+  }
+});
+
+test("removal escapes item names and refuses to delete without a confirmation dialog", async (t) => {
+  const f = setup(t),
+    torch = f.actor.items.get("torch");
+  torch.name = '<img src=x onerror="bad()">';
+  f.confirmRemoval = async () => false;
+  await f.run(C.EDIT_PROFILE_RESOURCE, f.quantity(0));
+  assert.ok(!f.confirmations[0].content.includes("<img"));
+  assert.match(f.confirmations[0].content, /&lt;img/u);
+  globalThis.foundry = undefined;
+  await assert.rejects(f.run(C.EDIT_PROFILE_RESOURCE, f.quantity(0)), {
+    code: "CAPABILITY_UNAVAILABLE",
+  });
+  assert.equal(f.actor.items.get("torch"), torch);
+});
 test("quantity edits include stashed gear, enforce safe integers and delete at zero", async t => {
   const f = setup(t), torch = f.actor.items.get("torch");
   torch.system.stashed = true;

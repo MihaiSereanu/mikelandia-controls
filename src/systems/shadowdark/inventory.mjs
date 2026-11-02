@@ -12,11 +12,11 @@ export function inventoryAvailable(actor, game, user = game?.user) {
 export function inventoryEdits(actor, game, user = game?.user) {
   if (!shadowdarkContext(game) || !isShadowdarkPlayer(actor, user) || typeof actor.updateEmbeddedDocuments !== "function") return [];
   return values(actor.items).flatMap(item => {
-    if (!carriedItem(item, actor) && !stashedItem(item, actor)) return [];
+    if (item.system?.equipped === true || (!carriedItem(item, actor) && !stashedItem(item, actor))) return [];
     const value = item.system.quantity;
     if (!Number.isSafeInteger(value) || value < 0) return [];
     return [{ id: `quantity:${item.id}`, kind: "integer", min: 0, max: Number.MAX_SAFE_INTEGER, value,
-      revision: JSON.stringify([shadowdarkContext(game).revision, item.uuid, item.type, item.system.slots?.per_slot, item.system.slots?.slots_used, item.system.stashed]) }];
+      revision: JSON.stringify([shadowdarkContext(game).revision, item.uuid, item.type, item.system.slots?.per_slot, item.system.slots?.slots_used, item.system.stashed, item.system.equipped]) }];
   });
 }
 function equipmentState(actor) {
@@ -94,8 +94,25 @@ export async function executeInventory(name, payload, context, game) {
     if (!item) throw fail("CAPABILITY_UNAVAILABLE", "This item can no longer be changed.");
     if (payload.value === 0) {
       if (typeof actor.deleteEmbeddedDocuments !== "function") throw fail("CAPABILITY_UNAVAILABLE", "This item cannot be removed.");
-      await actor.deleteEmbeddedDocuments("Item", [item.id]);
-      return { ok: true, actorSourceUuid: sourceUuid };
+      const DialogV2 = globalThis.foundry?.applications?.api?.DialogV2;
+      if (typeof DialogV2?.confirm !== "function") throw fail("CAPABILITY_UNAVAILABLE", "Item removal confirmation is unavailable.");
+      const message = localizeFoundry("MIKELANDIA_CONTROLS.Inventory.RemoveConfirmation", "Remove {name} from inventory?", { name: item.name });
+      const escaped = message.replace(/[&<>"']/gu, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+      let removed = false;
+      await DialogV2.confirm({
+        window: { title: localizeFoundry("MIKELANDIA_CONTROLS.Inventory.RemoveTitle", "Remove item") },
+        content: `<p>${escaped}</p>`, modal: true, rejectClose: false,
+        no: { label: localizeFoundry("MIKELANDIA_CONTROLS.Inventory.Cancel", "Cancel"), default: true },
+        yes: { label: localizeFoundry("MIKELANDIA_CONTROLS.Inventory.Remove", "Remove"), callback: async () => {
+          assertCurrent();
+          const current = inventoryEdits(actor, game).find(current => current.id === edit.id);
+          if (!current || ownedItem(actor, item.id) !== item) throw fail("CAPABILITY_UNAVAILABLE", "This item can no longer be changed.");
+          if (current.revision !== edit.revision || current.value !== edit.value) throw fail("STALE_STATE", "The item changed. Reopen the quantity editor.");
+          await actor.deleteEmbeddedDocuments("Item", [item.id]);
+          removed = true;
+        } }
+      });
+      return { ok: true, cancelled: !removed, actorSourceUuid: sourceUuid };
     }
     if (payload.value !== edit.value) await actor.updateEmbeddedDocuments("Item", [{ _id: item.id, "system.quantity": payload.value }]);
     return { ok: true, actorSourceUuid: sourceUuid };
