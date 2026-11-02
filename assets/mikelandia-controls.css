@@ -3501,6 +3501,31 @@ body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .mc-roll
   overflow-wrap: anywhere;
 }
 
+[data-profile-section="mounts"] > dl {
+  display: flex;
+  flex-wrap: wrap;
+}
+[data-profile-section="mounts"] .mc-profile-row {
+  flex-wrap: nowrap;
+}
+[data-profile-section="mounts"] [data-profile-field="mount-name"] {
+  flex: 1 1 max-content;
+  max-width: 100%;
+}
+[data-profile-section="mounts"] [data-profile-field="mount-wounds"] {
+  flex: 0 0 auto;
+}
+[data-profile-section="mounts"] .mc-profile-row dt {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+[data-profile-section="mounts"] .mc-profile-row dd {
+  white-space: nowrap;
+}
+[data-profile-section="mounts"] [data-profile-field="mount-name"] dd {
+  overflow-x: auto;
+}
+
 .mc-profile-value-label {
   font-size: 0.85em;
   font-weight: 400;

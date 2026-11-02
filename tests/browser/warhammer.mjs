@@ -1449,6 +1449,45 @@ try {
     Hooks.emit("updateActor", mount, { "system.status.wounds.value": 9 });
     await tick();
     check("Mount wounds refresh when the mount changes", mounts().textContent.includes("9 / 18"));
+    for (const name of ["Light Warhorse", "Reikland Imperial Warhorse"]) {
+      mount.name = name;
+      Hooks.emit("updateActor", mount, { name });
+      await tick();
+      const nameRow = mounts().querySelector(
+        '[data-profile-field="mount-name"]',
+      );
+      const woundsRow = mounts().querySelector(
+        '[data-profile-field="mount-wounds"]',
+      );
+      const label = nameRow.querySelector("dt").getBoundingClientRect();
+      const value = nameRow.querySelector("dd").getBoundingClientRect();
+      const nameBounds = nameRow.getBoundingClientRect(),
+        woundsBounds = woundsRow.getBoundingClientRect();
+      check(
+        `${name}: Name label and value stay on one line`,
+        Math.abs(label.top + label.height / 2 - value.top - value.height / 2) <
+          2 &&
+          nameRow.querySelector("dd").scrollWidth <=
+            nameRow.querySelector("dd").clientWidth + 1,
+      );
+      check(
+        `${name}: Wounds keeps only its content width`,
+        woundsBounds.width < 170,
+      );
+      check(
+        `${name}: boxes fit beside each other or Wounds moves below`,
+        nameBounds.right <= woundsBounds.left + 1 ||
+          woundsBounds.top >= nameBounds.bottom - 1,
+      );
+      check(
+        `${name}: Mounts stays within the viewport`,
+        mounts().scrollWidth <= mounts().clientWidth &&
+          document.documentElement.scrollWidth <= innerWidth + 1,
+      );
+    }
+    mount.name = "Reik";
+    Hooks.emit("updateActor", mount, { name: mount.name });
+    await tick();
     check("Mounted checkbox has a 44px touch target", screen.querySelector('[data-profile-resource="mounted"] label').getBoundingClientRect().height >= 44);
     await clickTab("trappings");
     const inventoryIds = ["money", "weapons", "armour", "ammunition", "trappings", "containers"];
@@ -2384,14 +2423,12 @@ try {
     screen.querySelector('[data-profile-section="weapons"]').scrollIntoView({ block: "start" });
   }
   if (params.get("preview") === "mounts") {
-    actor.mount = { id: "horse", uuid: "Actor.horse", name: "Reik", system: { status: { wounds: { value: 9, max: 18 } } } };
+    actor.mount = { id: "horse", uuid: "Actor.horse", name: "Light Warhorse", system: { status: { wounds: { value: 22, max: 22 } } } };
     actor.system.status.mount = { id: "horse", mounted: false, isToken: false };
     Hooks.emit("updateActor", actor, {});
     await tick();
     await clickTab("combat");
     screen.querySelector('[data-profile-section="mounts"]').scrollIntoView({ block: "center" });
-    const rules = screen.querySelector('[data-profile-section="movement"] .mc-profile-section-tooltip-trigger');
-    if (rules) { rules.scrollIntoView({ block: "center" }); rules.click(); }
   }
   if (params.get("preview") === "armour") {
     await clickTab("combat");
