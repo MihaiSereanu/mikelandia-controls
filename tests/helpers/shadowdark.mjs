@@ -33,7 +33,7 @@ export function createShadowdarkFixture({ pulp = false, specialAbilities = false
     calls.push({ kind, target, config, receiver: actor.system });
     config.actorUuid = actor.uuid;
     if (kind === "stat") config.check = { stat: target };
-    else config.itemUuid = target;
+    else config.itemUuid ??= target;
     if (kind === "spell") config.cast = { spellUuid: target };
     if (!await fixture.prompt(kind, target, config)) return false;
     const hook = kind === "stat" ? "SD-Stat-Check" : kind === "spell" ? "SD-Player-Spell" : kind === "ability" ? "SD-Player-classAbility" : "SD-Player-Attack";
@@ -47,10 +47,14 @@ export function createShadowdarkFixture({ pulp = false, specialAbilities = false
       hooks.emit("updateItem", ability, {});
     }
     rolls.push({ kind, target });
-    if (kind === "spell" && !fixture.success) {
-      const spell = actor.items.find(item => item.uuid === target);
-      spell.system.lost = true;
-      hooks.emit("updateItem", spell, {});
+    if (kind === "spell") {
+      const source = actor.items.find(item => item.uuid === config.itemUuid);
+      if (source?.type === "Scroll") await actor.deleteEmbeddedDocuments("Item", [source.id]);
+      else if (!fixture.success) {
+        if (source?.type === "Wand") source.system.spells.find(link => link.uuid === target).lost = true;
+        else source.system.lost = true;
+        hooks.emit("updateItem", source, {});
+      }
     }
     return fixture.success;
   };

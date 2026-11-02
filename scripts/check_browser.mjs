@@ -99,7 +99,7 @@ const cases = [
   ["shadowdark-pulp-phone", 390, 844, "shadowdark", "layout=phone&pulp=true"],
   ["shadowdark-tablet", 1024, 768, "shadowdark", "layout=tablet&pulp=false"],
   ["shadowdark-pulp-tablet", 1024, 768, "shadowdark", "layout=tablet&pulp=true"],
-  ...["main", "spells", "inventory", "abilities"].flatMap(preview =>
+  ...["main", "spells", "item-spells", "inventory", "abilities", "coin-editor", "quantity-editor", "resource-editor"].flatMap(preview =>
     [["phone", 390, 844], ["tablet", 1024, 768]].map(([layout, width, height]) =>
       [`shadowdark-${preview}-${layout}`, width, height, "shadowdark", `layout=${layout}&preview=${preview}`])),
   ["presentation-phone", 390, 844, "presentation", "layout=phone"],
@@ -236,8 +236,8 @@ try {
     let report;
     // Missing registration consumes the production five-second cleanup timeout
     // before startup and fixture assertions can finish.
-    // The WFRP fixture also awaits equipment, mount and dependent-actor refreshes.
-    const reportTimeoutMs = name === "shared-entry-upgrade-missing-phone" ? 15000 : name.startsWith("damage-") || fixture === "warhammer" ? 9000 : 5000;
+    // System fixtures also await equipment, description and dependent-actor refreshes.
+    const reportTimeoutMs = name === "shared-entry-upgrade-missing-phone" ? 15000 : name.startsWith("damage-") || ["warhammer", "shadowdark"].includes(fixture) ? 9000 : 5000;
     const reportDeadline = performance.now() + reportTimeoutMs;
     while (performance.now() < reportDeadline) {
       const { result } = await send("Runtime.evaluate", { expression: 'document.querySelector("#results")?.textContent', returnByValue: true }, sessionId);

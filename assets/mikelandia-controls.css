@@ -3264,6 +3264,10 @@ body.mc-mobile-running #pause {
 .mc-profile-labelled-control .mc-profile-resource-editor { margin: 0; }
 .mc-profile-section-metric { color: var(--mc-subtle); overflow-wrap: anywhere; }
 .mc-profile-description { flex: 1 0 100%; min-width: 0; }
+.mc-mobile-app button.mc-profile-item-disclosure { display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-height: 44px; width: 100%; height: auto; padding: 0; border: 0; background: transparent; color: inherit; text-align: start; white-space: normal; }
+.mc-profile-item-disclosure > span { min-width: 0; overflow-wrap: anywhere; }
+.mc-profile-item-disclosure > .mc-profile-disclosure-arrow { flex: 0 0 auto; width: 0; height: 0; border-block: 5px solid transparent; border-inline-start: 7px solid currentColor; }
+.mc-profile-item-disclosure[aria-expanded="true"] > .mc-profile-disclosure-arrow { transform: rotate(90deg); }
 .mc-profile-group-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .mc-profile-group > summary { min-height: 44px; align-content: center; cursor: pointer; font-weight: 700; color: var(--mc-text); }
 .mc-profile-group > summary h3 { display: inline; margin: 0; }
@@ -3277,6 +3281,17 @@ body.mc-mobile-running #pause {
 .mc-profile-spell-row > dd { position: absolute; top: 8px; right: 8px; display: flex; align-items: center; gap: 8px; }
 .mc-profile-spell-row .mc-profile-action { width: 44px; justify-content: center; }
 .mc-profile-tier > h4 { margin: 12px 0 4px; color: var(--mc-subtle); }
+.mc-profile-tier > summary { min-height: 44px; display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--mc-subtle); font-size: 1.15em; font-weight: 600; }
+.mc-profile-tier > summary::before { content: ""; width: 0; height: 0; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 6px solid currentColor; }
+.mc-profile-tier[open] > summary::before { transform: rotate(90deg); }
+.mc-profile-tier > summary::marker { content: ""; }
+.mc-profile-spell-source { display: block; padding-inline: 8px 110px; color: var(--mc-subtle); overflow-wrap: anywhere; }
+.mc-profile-spell-no-value .mc-profile-spell-description summary { padding-inline-end: 52px; }
+.mc-profile-spell-no-value .mc-profile-spell-source { padding-inline-end: 52px; }
+.mc-profile-spell-loss { display: flex; align-items: center; gap: 8px; min-height: 44px; width: fit-content; cursor: pointer; }
+.mc-profile-spell-loss input { width: 20px; height: 20px; margin: 0; }
+[data-profile-section="item-spells"] .mc-profile-section-heading h3 { flex-basis: auto; }
+[data-profile-section="item-spells"] .mc-profile-group-content { align-items: start; }
 @media (max-width: 479px) { .mc-profile-group-content { grid-template-columns: minmax(0, 1fr); } }
 .mc-profile-description summary { min-height: 44px; align-content: center; cursor: pointer; }
 .mc-profile-description p { margin: 8px 0 0; white-space: pre-line; overflow-wrap: anywhere; }
@@ -11368,6 +11383,32 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 [data-profile-section="coins"] .mc-profile-coin > .mc-profile-resource-open { text-align: center; }
 [data-profile-section="coins"] .mc-profile-coin-controls { grid-template-columns: repeat(2, 44px); }
 [data-profile-section="coins"] .mc-profile-coin > div:not(.mc-profile-coin-controls) { grid-column: 1 / -1; }
+/* Profiles can opt numeric edits into a compact, centered layout. */
+.mc-mobile-app .mc-profile-row:has(> .mc-profile-resource-stacked.is-editing) {
+  display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; row-gap: 8px;
+}
+[data-profile-section="coins"] dl:has(.mc-profile-resource-stacked.is-editing) { align-items: start; }
+.mc-profile-row:has(> .mc-profile-resource-stacked.is-editing):not(:has(> .mc-profile-quantity)) > dt { display: none; }
+.mc-mobile-app .mc-profile-row:has(> .mc-profile-resource-stacked.is-editing) > .mc-profile-resource-stacked.is-editing {
+  position: static; grid-column: 1 / -1; grid-row: auto; display: grid;
+  grid-template-columns: minmax(0, 1fr); width: 100%; min-width: 0; margin-inline: 0;
+}
+.mc-mobile-app .mc-profile-row.mc-profile-equipment-row:has(> .mc-profile-resource-stacked.is-editing) {
+  grid-template-columns: minmax(0, 1fr) var(--mc-equipment-column-width);
+}
+.mc-profile-equipment-row:has(> .mc-profile-resource-stacked.is-editing) > .mc-profile-labelled-control { grid-column: 2; grid-row: 1; }
+.mc-profile-resource-form-stacked { display: grid; justify-items: center; gap: 8px; width: 100%; }
+.mc-profile-resource-form-stacked .mc-profile-resource-label {
+  display: grid; justify-items: center; gap: 8px; width: 100%; min-width: 0; text-align: center;
+}
+.mc-profile-resource-form-stacked .mc-profile-resource-label input {
+  width: min(9rem, 100%); min-width: 0; box-sizing: border-box; text-align: center; font: inherit;
+}
+.mc-profile-resource-form-stacked .mc-profile-resource-buttons {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: min(14rem, 100%);
+}
+.mc-profile-resource-form-stacked .mc-profile-resource-buttons button { min-width: 0; width: 100%; }
+
 /* Shadowdark tablets use matching three-column resource, stat and coin grids. */
 .mc-mobile-app[data-form-factor="tablet"] .mc-profile-content[aria-labelledby$="-tab-abilities"] .mc-profile-summary-triple:has(> [data-profile-section="hp"] .mc-profile-counter),
 .mc-mobile-app[data-form-factor="tablet"] .mc-profile-content[aria-labelledby$="-tab-abilities"] [data-profile-section="stats"] dl,

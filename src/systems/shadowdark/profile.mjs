@@ -2,6 +2,7 @@ import { abilities, carriedItem, stashedItem, ownedItem, physicalTypes, knownSpe
 
 import { customResources, readCustomResource } from "./resources.mjs";
 import { localizeFoundry } from "../../foundry/settings/localization.mjs";
+import { itemSpells } from "./item-spells.mjs";
 
 const field = (id, key, label, path, extra = {}) => ({ id, labelKey: key, label, path,
   ...(["hp", "def", "xp", "grit", "luck"].includes(id) ? { editControl: "counter" } : {}), ...extra });
@@ -37,30 +38,36 @@ export function shadowdarkPlayerProfile(context, actor) {
     ] },
     { id: "spells", labelKey: "SHADOWDARK.sheet.player.tab.spells", label: "Spells", sections: [
       { id: "known-spells", kind: "items", labelKey: "SHADOWDARK.sheet.item.tab.spellsknown", label: "Spells Known", collectionPath: "items", itemTypes: ["Spell"],
-        compareRows: (a, b) => a.value - b.value || a.label.localeCompare(b.label), groupByValue: true,
+        compareRows: (a, b) => a.value - b.value || a.label.localeCompare(b.label), groupByValue: true, collapsibleTiers: true,
         actionIdPrefix: "spell", valuePath: "system.tier", valueLabelKey: "SHADOWDARK.sheet.player.spells_tier", valueLabel: "Tier",
         descriptionPath: "system.description", descriptionToggle: "name",
-        include: (item, _context, actor) => knownSpell(item, actor) && item.system.lost === false },
-      { id: "lost-spells", kind: "items", labelKey: "MIKELANDIA_CONTROLS.Panels.LostSpells", label: "Lost Spells", collectionPath: "items", itemTypes: ["Spell"],
-        compareRows: (a, b) => a.value - b.value || a.label.localeCompare(b.label), groupByValue: true,
-        valuePath: "system.tier", valueLabelKey: "SHADOWDARK.sheet.player.spells_tier", valueLabel: "Tier",
-        descriptionPath: "system.description", descriptionToggle: "name",
-        include: (item, _context, actor) => knownSpell(item, actor) && item.system.lost === true }
+        readLost: item => item.system.lost, showCastButton: true, lossActionIdPrefix: "spell-loss",
+        include: (item, _context, actor) => knownSpell(item, actor) },
+      { id: "item-spells", kind: "group", labelKey: "MIKELANDIA_CONTROLS.Panels.SpellsFromItems", label: "Spells from Items", sections: [
+        ...[["wands", "Wands", "Wand"], ["scrolls", "Scrolls", "Scroll"]].map(([id, label, type]) => ({
+          id, label, labelKey: `SHADOWDARK.inventory.section.${id}`, kind: "items", itemTypes: [type], readItems: itemSpells,
+          collapsible: true, defaultOpen: true, actionIdPrefix: "item-spell",
+          descriptionPath: "system.description", descriptionToggle: "name", readLost: row => row.system.lost,
+          readSourceLabel: row => row.item.name, showCastButton: true,
+          ...(type === "Wand" ? { lossActionIdPrefix: "wand-loss" } : {}),
+          include: row => row.type === type
+        }))
+      ] }
     ] },
     { id: "inventory", labelKey: "SHADOWDARK.sheet.player.tab.inventory", label: "Inventory", sections: [
       { id: "equipped-gear", kind: "items", keepEmpty: true, labelKey: "MIKELANDIA_CONTROLS.Panels.EquippedGear", label: "Equipped Gear",
-        collectionPath: "items", itemTypes: physicalTypes, equipmentEditable: true,
+        collectionPath: "items", itemTypes: physicalTypes, equipmentEditable: true, descriptionPath: "system.description", descriptionToggle: "item-name",
         valuePath: "system.quantity", include: (item, _context, actor) => carriedItem(item, actor) && item.system.equipped === true },
       { id: "gear", kind: "items", keepEmpty: true, labelKey: "MIKELANDIA_CONTROLS.Panels.CarriedGear", label: "Carried Gear", collectionPath: "items", itemTypes: physicalTypes,
         summary: [field("slots", "SHADOWDARK.inventory.slots", "Slots", null, { read: actor => actor.system.getSlotUsage?.().total, maxPath: "system.slots" })],
-        valuePath: "system.quantity", quantityEditable: true, equipmentEditable: true,
+        valuePath: "system.quantity", quantityEditable: true, equipmentEditable: true, descriptionPath: "system.description", descriptionToggle: "item-name",
         include: (item, _context, actor) => carriedItem(item, actor) && item.system.equipped !== true },
       { id: "coins", kind: "values", layout: "inline", labelKey: "SHADOWDARK.inventory.coins", label: "Coins",
         summary: [field("coin-slots", "SHADOWDARK.inventory.slots", "Slots", null, { read: actor => actor.system.getSlotUsage?.().coins })],
         fields: ["gp", "sp", "cp"].map(id =>
         field(id, `SHADOWDARK.coins.${id}`, id.toUpperCase(), `system.coins.${id}`, { editId: `coin-${id}` })) },
       { id: "stashed", kind: "items", labelKey: "SHADOWDARK.inventory.stashed_gear", label: "Stashed Gear", collectionPath: "items", itemTypes: physicalTypes,
-        valuePath: "system.quantity", quantityEditable: true, include: (item, _context, actor) => stashedItem(item, actor) }
+        valuePath: "system.quantity", quantityEditable: true, descriptionPath: "system.description", descriptionToggle: "item-name", include: (item, _context, actor) => stashedItem(item, actor) }
 
     ] },
     { id: "talents", labelKey: "SHADOWDARK.sheet.player.tab.talents", label: "Talents", sections: [
@@ -74,7 +81,7 @@ export function shadowdarkPlayerProfile(context, actor) {
   const inventory = profile.tabs.find(tab => tab.id === "inventory");
   return { tabs: [{ ...inventory, sections: inventory.sections.filter(section => section.id !== "equipped-gear").map(section => {
     if (section.id === "gear") return { ...section, labelKey: "MIKELANDIA_CONTROLS.Panels.Gear", label: "Gear", equipmentEditable: false,
-      descriptionPath: "system.description", include: (item, _context, actor) => carriedItem(item, actor) };
-    return section.id === "stashed" ? { ...section, descriptionPath: "system.description" } : section;
+      include: (item, _context, actor) => carriedItem(item, actor) };
+    return section;
   }) }] };
 }

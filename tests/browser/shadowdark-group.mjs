@@ -66,6 +66,26 @@ try {
   check("equipped and unequipped items share Gear with quantities", ["sword", "torch"].every(id => main.querySelector(`[data-profile-section="gear"] [data-profile-edit="quantity:${id}"]`)));
   check("Slots, Coins and Stashed Gear remain", main.textContent.includes("4 / 10") && !!main.querySelector('[data-profile-section="coins"]') && !!main.querySelector('[data-profile-section="stashed"]'));
   check("item descriptions remain available", main.textContent.includes("Shared spare sword") && main.textContent.includes("Supplies at the inn"));
+  const dagger = f.actor.items.get("dagger");
+  for (const description of [undefined, "", " \n\t", '<p>&nbsp;<br></p>', '<div class="secret">Secret only</div><script>bad()</script>', '<p><img src="data:image/png;base64,AA=="></p>']) {
+    dagger.system.description = description;
+    Hooks.emit("updateItem", dagger, {}); await tick();
+    check("missing or visually empty descriptions have no toggle", !main.querySelector('[data-profile-field="dagger"] .mc-profile-item-disclosure'));
+  }
+  dagger.system.description = '<p><img src="/icons/svg/sword.svg" alt="Blade"></p>';
+  Hooks.emit("updateItem", dagger, {}); await tick();
+  check("safe image-only descriptions have a toggle", !!main.querySelector('[data-profile-field="dagger"] .mc-profile-item-disclosure'));
+  dagger.system.description = "";
+  Hooks.emit("updateItem", dagger, {}); await tick();
+  for (const id of ["sword", "stash"]) {
+    const row = main.querySelector(`[data-profile-field="${id}"]`);
+    const toggle = row.querySelector('.mc-profile-item-disclosure'), content = row.querySelector('.mc-profile-description');
+    check(`${id} Group description starts closed beside quantity controls`, !!toggle && content.hidden && !!row.querySelector(`[data-profile-edit="quantity:${id}"]`));
+    toggle.click();
+    check(`${id} Group name opens description`, !content.hidden && toggle.getAttribute("aria-expanded") === "true");
+    toggle.click();
+    check(`${id} Group name closes description`, content.hidden && toggle.getAttribute("aria-expanded") === "false");
+  }
   main.querySelector('[data-profile-add-item]').click();
   check("basic and catalog creation choices remain", !!main.querySelector('[data-profile-item-mode="custom"]') && !!main.querySelector('[data-profile-item-mode="catalog"]'));
   main.querySelector('[data-profile-item-mode="custom"]').click();
@@ -80,6 +100,10 @@ try {
   main.querySelector('[data-profile-edit="quantity:sword"]').click();
   await tick();
   const quantity = main.querySelector('[data-profile-resource-input="quantity:sword"]');
+  const quantityForm = quantity.closest('form');
+  const quantityBounds = quantity.getBoundingClientRect();
+  check("Group quantity editor uses a centered label, compact input and buttons below", quantityForm.querySelector('label > span').textContent === "Quantity"
+    && quantityBounds.width <= 145 && quantityForm.querySelector('[data-profile-resource-save]').getBoundingClientRect().top >= quantityBounds.bottom);
   quantity.value = "3";
   quantity.dispatchEvent(new Event("input", { bubbles: true }));
   quantity.closest("form").querySelector('[data-profile-resource-save]').click();

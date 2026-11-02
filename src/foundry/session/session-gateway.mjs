@@ -340,6 +340,11 @@ export function createFoundrySessionGateway({
         });
       }
 
+      getSystemIntegration().watchActorProfile?.(scope, sourceUuid => {
+        if (generation !== watchGeneration || sourceUuid !== selectedActorSourceUuid) return;
+        queueRefresh({ hook: "profileReady", domains: ["actors"], sourceUuid });
+      });
+
       // Hooks are owned before the baseline read. A hook raised during this
       // synchronous projection is coalesced into the following microtask.
       latestSnapshot = read();

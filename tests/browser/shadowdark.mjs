@@ -1,3 +1,4 @@
+import { addItemSpells } from "/tests/helpers/shadowdark-item-spells.mjs";
 import { createShadowdarkFixture } from "/tests/helpers/shadowdark.mjs";
 import { createActor, collection } from "/tests/helpers/foundry.mjs";
 import { createFoundrySessionGateway } from "/src/foundry/session/session-gateway.mjs";
@@ -33,6 +34,9 @@ try {
   document.querySelector("main").dataset.formFactor = params.get("layout") ?? "phone";
   if (params.has("large")) document.querySelector("main").style.setProperty("font-size", "24px", "important");
   const f = createShadowdarkFixture({ pulp: initialPulp, specialAbilities: true });
+  f.actor.items.get("sword").system.description = '<p>A <strong>keen blade</strong>.</p><div class="secret">Hidden inventory secret</div>';
+  f.actor.items.get("torch").system.description = '<p>Burns for an hour.</p>';
+  f.actor.items.get("dagger").system.description = '<p>&nbsp;<br></p>';
   globalThis.game = f.game; globalThis.Hooks = f.hooks;
   let removal;
   const previousFoundry = globalThis.foundry;
@@ -165,7 +169,32 @@ try {
   const begin = async id => { screen.querySelector(`[data-profile-action="${id}"]`).click(); await tick(); };
   const confirm = async () => { dialog.element.querySelector("[data-native-confirm]").click(); await tick(); };
   const cancel = async () => { dialog.element.querySelector("[data-native-cancel]").click(); await tick(); };
-  const resource = async id => { const lock = screen.querySelector(`[data-profile-counter-lock="${id}"]`); if (lock?.getAttribute("aria-pressed") === "true") lock.click(); screen.querySelector(`[data-profile-edit="${id}"]`).click(); await tick(); return screen.querySelector(`[data-profile-resource-input="${id}"]`); };
+  const checkedEditors = new Set();
+  const resource = async id => {
+    const lock = screen.querySelector(`[data-profile-counter-lock="${id}"]`);
+    if (lock?.getAttribute("aria-pressed") === "true") lock.click();
+    screen.querySelector(`[data-profile-edit="${id}"]`).click(); await tick();
+    const input = screen.querySelector(`[data-profile-resource-input="${id}"]`);
+    if (!checkedEditors.has(id)) {
+      const form = input.closest('form'), label = form.querySelector('label > span');
+      const [save, cancel] = form.querySelectorAll('button');
+      const bounds = input.getBoundingClientRect(), labelBounds = label.getBoundingClientRect();
+      const saveBounds = save.getBoundingClientRect(), cancelBounds = cancel.getBoundingClientRect();
+      check(`${id} editor centers its label above a compact input`, labelBounds.bottom <= bounds.top
+        && Math.abs(labelBounds.left + labelBounds.width / 2 - bounds.left - bounds.width / 2) <= 1 && bounds.width <= 145);
+      check(`${id} editor aligns equal Save and Cancel buttons below input`, saveBounds.top >= bounds.bottom
+        && Math.abs(saveBounds.top - cancelBounds.top) <= 1 && Math.abs(saveBounds.width - cancelBounds.width) <= 1
+        && saveBounds.height >= 44 && cancelBounds.height >= 44);
+      const card = form.closest('.mc-profile-section').getBoundingClientRect();
+      check(`${id} editor stays within its card`, saveBounds.bottom <= card.bottom + 1 && cancelBounds.bottom <= card.bottom + 1
+        && bounds.left >= card.left && bounds.right <= card.right);
+      check(`${id} editor retains selected numeric input and fits viewport`, input.inputMode === 'numeric'
+        && document.activeElement === input && input.selectionStart === 0 && input.selectionEnd === input.value.length
+        && document.documentElement.scrollWidth <= innerWidth + 1);
+      checkedEditors.add(id);
+    }
+    return input;
+  };
   const save = async input => { input.dispatchEvent(new Event("input", { bubbles: true })); input.closest("form").querySelector("[data-profile-resource-save]").click(); await tick(); };
   check("PC uses Main/Spells/Inventory labels", [...screen.querySelectorAll('[role="tab"]')].map(node => node.textContent).join(",") === "Main,Spells,Inventory");
   check("prepared stats and modifiers are displayed", field("str") === "Str14 (+2)");
@@ -314,21 +343,32 @@ try {
     addTierSpell("arcane", "Arcane", 3), addTierSpell("lostextra", "Zzz lost", 1, true)];
   await tick();
   const spellSection = id => screen.querySelector(`[data-profile-section="${id}"]`);
+  const tier = () => spellSection("known-spells").querySelector('[data-profile-tier="2"]');
+  check("Tiers start expanded with accessible headings", tier().open && tier().querySelector('summary').getAttribute('aria-expanded') === "true");
+  check("Tier headings match the former row value size and weight", getComputedStyle(tier().querySelector('summary')).fontSize === getComputedStyle(spellSection("known-spells").querySelector('.mc-profile-spell-row dd')).fontSize
+    && getComputedStyle(tier().querySelector('summary')).fontWeight === '600');
+  check("grouped spell rows omit their redundant Tier value", [...spellSection("known-spells").querySelectorAll('.mc-profile-spell-row dd')].every(element => !element.textContent.trim()));
+  tier().querySelector('summary').click(); await tick();
+  check("Tier heading collapses its spell list", !tier().open && tier().querySelector('summary').getAttribute('aria-expanded') === "false");
+  await tab("abilities"); await tab("spells");
+  check("Tier closure survives tab changes", !tier().open);
   const orderIds = id => [...spellSection(id).querySelectorAll('[data-profile-field]')].map(row => row.dataset.profileField).join(",");
-  check("spell tiers ascend before alphabetical names", orderIds("known-spells") === "spell,zebra,cloud,arcane"
+  check("spell tiers ascend before alphabetical names", orderIds("known-spells") === "spell,lost,zebra,lostextra,cloud,arcane"
     && [...spellSection("known-spells").querySelectorAll('[data-profile-tier]')].map(group => group.dataset.profileTier).join(",") === "1,2,3");
   check("spell ordering has no manual reorder controls", !screen.querySelector('[data-profile-reorder-toggle], [data-profile-reorder]'));
   const zebra = f.actor.items.get("zebra");
   zebra.name = "AAA renamed"; Hooks.emit("updateItem", zebra, {}); await tick();
-  check("spell renames refresh alphabetical order within tier", orderIds("known-spells") === "zebra,spell,cloud,arcane");
+  check("Tier closure survives actor refresh", !tier().open);
+  check("spell renames refresh alphabetical order within tier", orderIds("known-spells") === "zebra,spell,lost,lostextra,cloud,arcane");
   zebra.system.lost = true; Hooks.emit("updateItem", zebra, {}); await tick();
-  check("Lost spells sort alphabetically and have no casting action", orderIds("lost-spells") === "zebra,lost,lostextra"
+  check("Lost spells keep alphabetical positions and have disabled casting", orderIds("known-spells") === "zebra,spell,lost,lostextra,cloud,arcane"
+    && screen.querySelector('[data-profile-field="zebra"] s') && screen.querySelector('[data-profile-field="zebra"] button:disabled')
     && !screen.querySelector('[data-profile-action="spell:zebra"]'));
   zebra.system.lost = false; Hooks.emit("updateItem", zebra, {}); await tick();
-  check("recovered spells return to alphabetical tier order", orderIds("known-spells") === "zebra,spell,cloud,arcane");
+  check("recovered spells return to alphabetical tier order", orderIds("known-spells") === "zebra,spell,lost,lostextra,cloud,arcane");
   for (const item of extraSpells) { f.actor.items.splice(f.actor.items.indexOf(item), 1); Hooks.emit("deleteItem", item, {}); }
   await tick();
-  check("known and lost spells use separate sections", screen.textContent.includes("Spells Known") && screen.textContent.includes("Lost Spells") && !screen.querySelector('[data-profile-action="spell:lost"]'));
+  check("known and lost spells share one section", screen.textContent.includes("Spells Known") && !screen.textContent.includes("Lost Spells") && !screen.querySelector('[data-profile-action="spell:lost"]') && screen.querySelector('[data-profile-field="lost"] button:disabled'));
   const spellDescription = screen.querySelector('[data-profile-field="spell"] details');
   const lostDescription = screen.querySelector('[data-profile-field="lost"] details');
   check("known and lost spell descriptions start collapsed", spellDescription && lostDescription && !spellDescription.open && !lostDescription.open);
@@ -340,9 +380,52 @@ try {
   spellDescription.querySelector('summary').click(); await tick();
   lostDescription.querySelector('summary').click(); await tick();
   check("spell names toggle closed and lost spell remains readable", !spellDescription.open && lostDescription.open && lostDescription.textContent.includes('Native sleep text'));
+  const manualCalls = f.calls.length;
+  const lostInput = () => screen.querySelector('[data-profile-spell-loss="lost"]');
+  check("Lost checkbox lives inside the expanded description and reflects native state", lostInput().checked && lostInput().closest('details').open);
+  lostInput().click(); await tick();
+  check("manual recovery restores casting and retains the open description", !f.actor.items.get("lost").system.lost && !lostInput().checked
+    && lostInput().closest('details').open && screen.querySelector('[data-profile-action="spell:lost"]'));
+  lostInput().click(); await tick();
+  check("manual loss strikes the name and disables casting without rolling", f.actor.items.get("lost").system.lost
+    && screen.querySelector('[data-profile-field="lost"] s') && !screen.querySelector('[data-profile-action="spell:lost"]') && f.calls.length === manualCalls);
   f.success = false; await begin("spell:spell"); await confirm();
   check("failed casting retains native spell loss", f.rolls.length === 3 && f.actor.items.get("spell").system.lost && !screen.querySelector('[data-profile-action="spell:spell"]'));
   check("spell hook is removed after failure", Hooks.count("SD-Player-Spell") === 0);
+  const magic = addItemSpells(f);
+  globalThis.fromUuidSync = magic.resolve;
+  Hooks.emit("updateActor", f.actor, {}); await tick();
+  check("item spells show Wands and Scrolls with source names", spellSection("item-spells")?.textContent.includes("Spells from Items")
+    && spellSection("wands").textContent.includes("Ivory Wand") && spellSection("scrolls").textContent.includes("Scroll of Light"));
+  check("item spell category fits the viewport", document.documentElement.scrollWidth <= innerWidth + 1);
+  check("item subsections start expanded and lost wand spells are disabled", spellSection("wands").open && spellSection("scrolls").open
+    && spellSection("wands").querySelector('[data-profile-field="wand-0"] s') && spellSection("wands").querySelector('[data-profile-field="wand-0"] button:disabled'));
+  spellSection("wands").querySelector('summary').click(); await tick();
+  await tab("abilities"); await tab("spells");
+  check("Wand closure survives tab changes independently of Scrolls", !spellSection("wands").open && spellSection("scrolls").open);
+  spellSection("wands").querySelector('summary').click(); await tick();
+  const itemDescription = spellSection("wands").querySelector('[data-profile-field="wand-1"] details');
+  const itemCalls = f.calls.length;
+  itemDescription.querySelector('summary').click(); await tick();
+  check("item spell description opens independently of casting", itemDescription.open && itemDescription.querySelector('strong')?.textContent === "light" && f.calls.length === itemCalls);
+  const wandLost = () => screen.querySelector('[data-profile-spell-loss="wand-1"]');
+  wandLost().click(); await tick();
+  check("manual wand loss changes only its native reference", magic.wand.system.spells[1].lost && !magic.spells[0].system.lost
+    && wandLost().checked && wandLost().closest('details').open && !screen.querySelector('[data-profile-action="item-spell:wand-1"]'));
+  wandLost().click(); await tick();
+  check("manual wand recovery restores native casting and Scrolls have no Lost control", !magic.wand.system.spells[1].lost
+    && screen.querySelector('[data-profile-action="item-spell:wand-1"]') && !spellSection("scrolls").querySelector('[data-profile-spell-loss]'));
+  f.success = true; await begin("item-spell:scroll-0"); await cancel();
+  check("cancelled scroll casting preserves its item", f.actor.items.get("scroll"));
+  await begin("item-spell:scroll-0"); await confirm();
+  check("native scroll casting consumes item and hides empty Scrolls subsection", !f.actor.items.get("scroll") && !spellSection("scrolls")
+    && f.calls.at(-1).config.itemUuid === magic.scroll.uuid && f.calls.at(-1).target === magic.spells[0].uuid);
+  f.success = false; await begin("item-spell:wand-1"); await confirm();
+  check("native wand failure strikes through its spell and disables casting", magic.wand.system.spells[1].lost
+    && spellSection("wands").querySelector('[data-profile-field="wand-1"] s') && !screen.querySelector('[data-profile-action="item-spell:wand-1"]'));
+  magic.wand.system.broken = true; Hooks.emit("updateItem", magic.wand, {}); await tick();
+  check("no eligible item spells hides the whole category", !spellSection("item-spells"));
+  f.actor.items.splice(f.actor.items.indexOf(magic.wand), 1); Hooks.emit("deleteItem", magic.wand, {}); await tick();
   await tab("abilities");
   const ability = f.actor.items.get("ability");
   const abilitySection = () => screen.querySelector('[data-profile-section="special-abilities"]');
@@ -363,6 +446,21 @@ try {
   check("Special Abilities section disappears when the PC has none", !abilitySection());
   f.actor.items.push(ability); Hooks.emit('createItem', ability, {}); await tick();
   await tab("inventory");
+  const checkItemDescription = (id, section, text) => {
+    const row = screen.querySelector(`[data-profile-section="${section}"] [data-profile-field="${id}"]`);
+    const toggle = row.querySelector('.mc-profile-item-disclosure'), content = row.querySelector('.mc-profile-description');
+    check(`${id} name toggle starts closed`, toggle?.textContent === f.actor.items.get(id).name && toggle.getAttribute("aria-expanded") === "false" && content.hidden);
+    const arrow = toggle.querySelector('.mc-profile-disclosure-arrow').getBoundingClientRect();
+    check(`${id} toggle keeps a visible arrow and touch target`, arrow.width > 0 && arrow.height > 0 && toggle.getBoundingClientRect().height >= 44);
+    toggle.click();
+    check(`${id} name opens formatted description`, !content.hidden && content.textContent.includes(text) && toggle.getAttribute("aria-expanded") === "true");
+    toggle.click();
+    check(`${id} name closes description`, content.hidden && toggle.getAttribute("aria-expanded") === "false");
+  };
+  checkItemDescription("sword", "equipped-gear", "keen blade");
+  checkItemDescription("torch", "gear", "Burns for an hour");
+  check("inventory preserves safe formatting and excludes secret content", !!screen.querySelector('[data-profile-field="sword"] .mc-description-content strong') && !screen.textContent.includes("Hidden inventory secret"));
+  check("empty HTML descriptions have no toggle", !screen.querySelector('[data-profile-field="dagger"] .mc-profile-item-disclosure'));
   const equipment = () => screen.querySelector('[data-profile-resource-input="equipped:sword"]');
   check("equipped and carried gear occupy separate sections", screen.querySelector('[data-profile-section="equipped-gear"]').textContent.includes('Sword')
     && !screen.querySelector('[data-profile-section="gear"]').textContent.includes('Sword') && screen.querySelector('[data-profile-section="gear"]').textContent.includes('Torch'));
@@ -511,9 +609,10 @@ try {
   f.actor.system.slots = 12; f.actor.system.coins = { gp: 25, sp: 3, cp: 0 };
   f.actor.system.getSlotUsage = () => ({ total: 8, coins: 1 });
   const addItem = (id, type, system) => { const item = { id, name: id, type, system, parent: f.actor, uuid: `${f.actor.uuid}.Item.${id}` }; f.actor.items.push(item); Hooks.emit("createItem", item, {}); };
-  addItem("stash", "Basic", { isPhysical: true, isIdentified: true, stashed: true, quantity: 2 });
+  addItem("stash", "Basic", { isPhysical: true, isIdentified: true, stashed: true, quantity: 2, description: '<p>Supplies at the inn.</p>' });
   addItem("talent", "Talent", { talentClass: "class", description: '<p>Native <strong>talent text</strong></p><p>Second paragraph<br>Next line</p><ul><li><em>Talent benefit</em></li></ul><script>bad()</script><div class="secret">GM secret</div>' });
   await tick(); await tab("inventory");
+  checkItemDescription("stash", "stashed", "Supplies at the inn");
   check("Gear displays native used and maximum Slots", screen.querySelector('[data-profile-metric="slots"]').textContent.includes("8 / 12"));
   check("Coins displays native denominations and slot use", screen.querySelector('[data-profile-section="coins"]').textContent.includes("25") && screen.querySelector('[data-profile-metric="coin-slots"]').textContent.includes("1"));
   const coinBoxes = [...screen.querySelectorAll('[data-profile-section="coins"] [data-profile-field]')].map(e => e.getBoundingClientRect());
@@ -588,19 +687,35 @@ try {
   check("HP unlock choice survives actor navigation", lock("hp").getAttribute("aria-pressed") === "false");
   for (const id of ["hp", "def", "xp", "grit", "luck"]) if (lock(id).getAttribute("aria-pressed") === "false") lock(id).click();
   const preview = params.get("preview");
-  if (preview === "spells") {
+  if (["spells", "item-spells"].includes(preview)) {
     const spell = f.actor.items.get("spell");
     spell.system.lost = false; Hooks.emit("updateItem", spell, { "system.lost": false }); await tick();
     await tab("spells");
     addTierSpell("light", "Light", 1);
     addTierSpell("invisibility", "Invisibility", 2);
     addTierSpell("dispel", "Dispel Magic", 3);
+    const previewMagic = addItemSpells(f); globalThis.fromUuidSync = previewMagic.resolve;
+    Hooks.emit("updateActor", f.actor, {});
     await tick();
     for (const disclosure of screen.querySelectorAll('.mc-profile-spell-description')) disclosure.open = true;
+    if (preview === "item-spells") spellSection("item-spells").scrollIntoView({ block: "start" });
   } else if (preview === "inventory") {
     f.actor.system.coins = { gp: 25, sp: 3, cp: 0 };
     Hooks.emit("updateActor", f.actor, { "system.coins": f.actor.system.coins }); await tick();
     await tab("inventory");
+    screen.querySelector('[data-profile-field="sword"] .mc-profile-item-disclosure').click();
+  }
+  else if (["coin-editor", "quantity-editor", "resource-editor"].includes(preview)) {
+    if (preview === "resource-editor") { await tab("abilities"); await resource("hp"); }
+    else {
+      await tab("inventory");
+      if (preview === "coin-editor") await resource("coin-gp");
+      else {
+        const [item] = await f.actor.createEmbeddedDocuments("Item", [{ name: "Torch", type: "Basic", system: { quantity: 10 } }]);
+        await tick(); await resource(`quantity:${item.id}`);
+      }
+    }
+    screen.querySelector('.mc-profile-resource-form-stacked').closest('.mc-profile-section').scrollIntoView({ block: 'center' });
   }
   else if (preview === "main") {
     await tab("abilities");

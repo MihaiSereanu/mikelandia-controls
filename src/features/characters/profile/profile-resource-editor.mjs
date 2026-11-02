@@ -33,6 +33,8 @@ export function renderProfileResourceEditor(row, actor, commands, scope) {
   const counter = row.editControl === "counter";
   const booleanCounter = counter && row.edit.kind === "boolean";
   const numeric = row.edit.kind === "integer" || booleanCounter;
+  const stacked = numeric && actor.numericEditorLayout === "stacked";
+  const layoutClass = stacked ? " mc-profile-resource-stacked" : "";
   const value = booleanCounter ? Number(row.value) : row.value;
   const min = booleanCounter ? 0 : row.edit.min;
   const max = booleanCounter ? 1 : row.edit.max ?? Number.MAX_SAFE_INTEGER;
@@ -64,7 +66,8 @@ export function renderProfileResourceEditor(row, actor, commands, scope) {
       const close = () => { open.parentElement.classList.remove("is-editing"); body.replaceChildren(); open.hidden = false; open.focus(); };
       const save = node("button", { text: text("Save", "Save"), attrs: { type: "submit", "data-profile-resource-save": true } });
       const cancel = node("button", { text: text("Cancel", "Cancel"), attrs: { type: "button", "data-profile-resource-cancel": true }, on: { click: close } }, scope);
-      const form = node("form", { className: "mc-profile-resource-form", children: [input,
+      const form = node("form", { className: `mc-profile-resource-form${stacked ? " mc-profile-resource-form-stacked" : ""}`, children: [
+        stacked ? node("label", { className: "mc-profile-resource-label", children: [node("span", { text: quantity ? text("Quantity", "Quantity") : row.label }), input] }) : input,
         node("div", { className: "mc-profile-resource-buttons", children: [save, cancel] })], on: { submit: async event => {
         event.preventDefault();
         if (scope.disposed || save.disabled) return;
@@ -118,7 +121,7 @@ export function renderProfileResourceEditor(row, actor, commands, scope) {
         open.hidden = false;
         refreshLock();
       } } }, scope);
-    const root = node("div", { className: "mc-profile-resource-editor mc-profile-counter", dataset: { profileResource: row.edit.id },
+    const root = node("div", { className: `mc-profile-resource-editor mc-profile-counter${layoutClass}`, dataset: { profileResource: row.edit.id },
       children: [lock, minus, open, plus, body] });
     const refreshLock = () => {
       lock.replaceChildren(vectorIcon("0 0 24 24", [
@@ -137,7 +140,7 @@ export function renderProfileResourceEditor(row, actor, commands, scope) {
     refreshLock();
     return root;
   }
-  return node("div", { className: `mc-profile-resource-editor${quantity ? " mc-profile-quantity" : coin ? " mc-profile-coin" : ""}`, dataset: { profileResource: row.edit.id },
+  return node("div", { className: `mc-profile-resource-editor${quantity ? " mc-profile-quantity" : coin ? " mc-profile-coin" : ""}${layoutClass}`, dataset: { profileResource: row.edit.id },
     children: coin ? [open, node("div", { className: "mc-profile-coin-controls", children: [adjust(-1), adjust(1)] }), body]
       : quantity ? [adjust(-1), open, adjust(1), body] : [open, body] });
 }

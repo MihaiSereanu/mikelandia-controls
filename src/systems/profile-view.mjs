@@ -82,9 +82,11 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
       return scalar(value, "text") ? Object.freeze({ id: entry.id, label: label(entry), kind: "text", text: value }) : null;
     }
     if (entry.kind === "items" && Array.isArray(entry.itemTypes)) {
-      const source = readProfilePath(actor, entry.collectionPath);
       let items;
-      try { items = Array.from(source?.contents ?? source ?? []); } catch { return null; }
+      try {
+        const source = typeof entry.readItems === "function" ? entry.readItems(actor, context) : readProfilePath(actor, entry.collectionPath);
+        items = Array.from(source?.contents ?? source ?? []);
+      } catch { return null; }
       const projected = [];
       const seen = new Set();
       for (const item of items) {
@@ -98,9 +100,14 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
           seen.add(id);
           const properties = typeof entry.readProperties === "function" ? entry.readProperties(item, context, actor) : [];
           projected.push(Object.freeze({ id, label: name, value, format: entry.format ?? "number",
+            ...(entry.readLost ? { lost: entry.readLost(item) === true } : {}),
+            ...(entry.showCastButton === true ? { showCastButton: true } : {}),
+            ...(entry.lossActionIdPrefix && actions.has(`${entry.lossActionIdPrefix}:${id}`)
+              ? { lossAction: actionFor(`${entry.lossActionIdPrefix}:${id}`).action } : {}),
+            ...(entry.readSourceLabel ? { sourceLabel: String(entry.readSourceLabel(item) ?? "") } : {}),
             ...((typeof readProfilePath(item, entry.descriptionPath) === "string" || properties?.length)
               ? { descriptionUuid: String(item.uuid ?? `${actor.uuid}.Item.${id}`) } : {}),
-            ...(entry.descriptionToggle === "name" ? { descriptionToggle: "name" } : {}),
+            ...(["name", "item-name"].includes(entry.descriptionToggle) ? { descriptionToggle: entry.descriptionToggle } : {}),
             ...(Array.isArray(properties) && properties.length ? { properties: Object.freeze(properties.filter(property => scalar(property?.label, "text")).map(property => Object.freeze({
               label: property.label, description: typeof property.description === "string" ? property.description : "", kind: property.kind === "flaw" ? "flaw" : "quality"
             }))) } : {}),
@@ -119,6 +126,8 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
       projected.sort(entry.compareRows ?? ((a, b) => a.label.localeCompare(b.label)));
       return projected.length || entry.keepEmpty === true ? Object.freeze({ id: entry.id, label: label(entry), kind: "items", rows: Object.freeze(projected), summary: rows(entry.summary),
         ...(entry.groupByValue === true ? { groupByValue: true } : {}),
+        ...(entry.collapsibleTiers === true ? { collapsibleTiers: true } : {}),
+        ...(entry.defaultOpen === true ? { defaultOpen: true } : {}),
         ...(entry.collapsible === true ? { collapsible: true } : {}),
         ...(entry.layout === "rows" ? { layout: "rows" } : {}) }) : null;
     }

@@ -16,6 +16,15 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
   const active = tabs.find(tab => tab.id === state.characterTab) ?? tabs[0];
   const inventory = actor.profileInventory && active.id === "inventory" ? renderProfileInventory(actor, commands, scope) : null;
   const prefix = `mc-profile-${actor.sourceUuid.replace(/[^a-zA-Z0-9_-]/gu, "-")}`;
+  // Record explicit closures separately so default-open disclosures survive rerenders.
+  const closedSections = presentation.closedSections ??= new Set();
+  const bindSection = (element, heading, key, defaultOpen = false) => {
+    element.open = defaultOpen ? !closedSections.has(key) : presentation.openSections.has(key);
+    bindDetailsDisclosure(element, heading, open => {
+      if (open) { presentation.openSections.add(key); closedSections.delete(key); }
+      else { presentation.openSections.delete(key); closedSections.add(key); }
+    }, scope);
+  };
   const valueText = row => {
     if (row.format === "boolean") return localizedText(commands.localize,
       row.value ? "MIKELANDIA_CONTROLS.Panels.Active" : "MIKELANDIA_CONTROLS.Panels.Inactive", row.value ? "Active" : "Inactive");
@@ -24,10 +33,10 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
     const value = localizedNumber(row.value, locale);
     return row.max === undefined ? value : `${value} / ${localizedNumber(row.max, locale)}`;
   };
-  const renderRow = (row, equipmentColumn = false) => {
+  const renderRow = (row, equipmentColumn = false, grouped = false) => {
     const descriptionOptions = { gateway: commands.descriptions, uuid: row.descriptionUuid, scope };
     let description;
-    if (row.description && row.descriptionToggle !== "name") {
+    if (row.description && !["name", "item-name"].includes(row.descriptionToggle)) {
       const rendered = renderEnrichedDescription(row.description, "", descriptionOptions);
       const { content, text } = rendered;
       if (text && row.descriptionDisplay === "tooltip") {
@@ -55,7 +64,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
         content
       ] });
     }
-    const label = row.action ? node("button", {
+    let label = row.action ? node("button", {
       className: "mc-profile-action", attrs: { type: "button", "data-profile-action": row.action.id },
       children: [node("span", { text: row.label }), icon(row.action.icon ?? "fa-dice")],
       on: { click: async event => {
@@ -74,6 +83,20 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
         }
       } }
     }, scope) : node("span", { text: row.label });
+    if (row.descriptionToggle === "item-name" && row.description) {
+      const rendered = renderEnrichedDescription(row.description, "", descriptionOptions);
+      if (rendered.text.replace(/\u00a0/gu, "").trim() || rendered.content.querySelector("img[src]")) {
+        const id = `${prefix}-description-${row.id}`;
+        description = node("div", { className: "mc-profile-description", attrs: { id, hidden: true }, children: [rendered.content] });
+        label = node("button", { className: "mc-profile-item-disclosure", children: [node("span", { className: "mc-profile-disclosure-arrow", attrs: { "aria-hidden": "true" } }), node("span", { text: row.label })],
+          attrs: { type: "button", "aria-expanded": "false", "aria-controls": id },
+          on: { click: event => {
+            description.hidden = !description.hidden;
+            event.currentTarget.setAttribute("aria-expanded", String(!description.hidden));
+          } }
+        }, scope);
+      }
+    }
     const secondary = row.secondaryAction ? node("button", {
       className: "mc-profile-secondary-action", attrs: { type: "button", "data-profile-action": row.secondaryAction.id,
         "aria-label": row.secondaryAction.label, title: row.secondaryAction.label }, children: [icon(row.secondaryAction.icon)],
@@ -92,16 +115,39 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
       renderProfileResourceEditor({ ...row.equipment, label: `${row.equipment.label}: ${row.label}` }, actor, commands, scope)
     ] }) : null;
     if (row.descriptionToggle === "name") {
+      const descriptionKey = `${active.id}:spell-description:${row.id}`;
+      const lostLabel = localizedText(commands.localize, "MIKELANDIA_CONTROLS.Panels.Lost", "Lost");
+      const lossControl = row.lossAction ? node("label", { className: "mc-profile-spell-loss", children: [
+        node("input", { attrs: { type: "checkbox", checked: row.lost === true, "aria-label": `${lostLabel}: ${row.label}` },
+          dataset: { profileSpellLoss: row.id },
+          on: { change: async event => {
+            const input = event.currentTarget;
+            input.disabled = true;
+            try { await commands.execute(ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, {
+              actorSourceUuid: actor.sourceUuid, actionId: row.lossAction.id, actionRevision: row.lossAction.revision
+            }); } catch (error) {
+              input.checked = row.lost === true;
+              if (!scope.disposed) commands.reportCharacterMutationError?.(error);
+            } finally { if (!scope.disposed) input.disabled = false; }
+          } }
+        }, scope), node("span", { text: lostLabel })
+      ] }) : null;
       if (row.action) {
         label.replaceChildren(icon(row.action.icon ?? "fa-dice"));
         label.setAttribute("aria-label", `${localizedText(commands.localize, "Roll", "Roll")} ${row.label}`);
       }
+      if (!row.action && row.showCastButton) label = node("button", {
+        className: "mc-profile-action", attrs: { type: "button", disabled: true, "aria-label": `${localizedText(commands.localize, "Cast", "Cast")} ${row.label}` },
+        children: [icon("fa-dice")]
+      });
       const disclosure = node("details", { className: "mc-profile-description mc-profile-spell-description", children: [
-        node("summary", { text: row.label }), renderEnrichedDescription(row.description ?? "", "", descriptionOptions).content
+        node("summary", { children: [node(row.lost ? "s" : "span", { text: row.label })] }),
+        renderEnrichedDescription(row.description ?? "", "", descriptionOptions).content, lossControl
       ] });
-      return node("div", { className: "mc-profile-row mc-profile-spell-row", dataset: { profileField: row.id }, children: [
-        node("dt", { children: [disclosure] }),
-        node("dd", { children: [row.value === undefined ? null : node("span", { text: `${row.valueLabel ?? ""} ${valueText(row)}`.trim() }), row.action ? label : null] })
+      if (row.lossAction) bindSection(disclosure, disclosure.querySelector("summary"), descriptionKey);
+      return node("div", { className: `mc-profile-row mc-profile-spell-row${grouped || row.value === undefined ? " mc-profile-spell-no-value" : ""}`, dataset: { profileField: row.id }, children: [
+        node("dt", { children: [disclosure, row.sourceLabel ? node("span", { className: "mc-profile-spell-source", text: row.sourceLabel }) : null] }),
+        node("dd", { children: [grouped || row.value === undefined ? null : node("span", { text: `${row.valueLabel ?? ""} ${valueText(row)}`.trim() }), row.action || row.showCastButton ? label : null] })
       ] });
     }
     const properties = row.properties?.length ? node("details", { className: "mc-profile-description mc-profile-properties", children: [
@@ -177,10 +223,13 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
         ] });
       const rows = section.groupByValue ? [...new Set(section.rows.map(row => row.value))].map(value => {
         const group = section.rows.filter(row => row.value === value);
-        return node("div", { className: "mc-profile-tier", dataset: { profileTier: value }, children: [
-          node("h4", { text: `${group[0].valueLabel ?? ""} ${valueText(group[0])}`.trim() }),
-          node("dl", { children: group.map(row => renderRow(row)) })
+        const heading = node(section.collapsibleTiers ? "summary" : "h4", { text: `${group[0].valueLabel ?? ""} ${valueText(group[0])}`.trim() });
+        const tier = node(section.collapsibleTiers ? "details" : "div", { className: "mc-profile-tier", dataset: { profileTier: value }, children: [
+          heading,
+          node("dl", { children: group.map(row => renderRow(row, false, true)) })
         ] });
+        if (section.collapsibleTiers) bindSection(tier, heading, `${active.id}:${section.id}:tier:${value}`, true);
+        return tier;
       }) : [node("dl", { children: section.rows.map(row => renderRow(row, Boolean(equipmentLabel))) })];
       const element = node(section.collapsible ? "details" : "section", {
         className: `mc-profile-section mc-profile-${section.kind}${section.collapsible ? " mc-profile-inventory-disclosure" : ""}${equipmentLabel ? " mc-profile-equipment-section" : ""}${section.layout === "inline" ? " mc-profile-section-inline" : section.layout === "table" ? " mc-profile-section-table" : section.layout === "rows" ? " mc-profile-section-rows" : ""}`, dataset: { profileSection: section.id },
@@ -188,10 +237,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
       });
       if (section.collapsible && sectionHeading) {
         const key = `${active.id}:${section.id}`;
-        element.open = presentation.openSections.has(key);
-        bindDetailsDisclosure(element, sectionHeading, open => {
-          if (open) presentation.openSections.add(key); else presentation.openSections.delete(key);
-        }, scope);
+        bindSection(element, sectionHeading, key, section.defaultOpen);
       }
       if (nested) { destination.append(element); }
       else if (compact) {

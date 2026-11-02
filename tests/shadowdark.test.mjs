@@ -4,6 +4,9 @@ import { createFoundryCommandGateway, ACTOR_COMMANDS } from "../src/foundry/comm
 import { resolveSystemIntegration } from "../src/systems/registry.mjs";
 import { installGlobals, collection } from "./helpers/foundry.mjs";
 import { createShadowdarkFixture } from "./helpers/shadowdark.mjs";
+import { addItemSpells } from "./helpers/shadowdark-item-spells.mjs";
+import { createTaskScope } from "../src/kernel/lifecycle/task-scope.mjs";
+import { createFoundrySessionGateway } from "../src/foundry/session/session-gateway.mjs";
 
 const action = ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, edit = ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE;
 
@@ -133,7 +136,139 @@ function addSpell(f, id, name, tier = 1, lost = false) {
 }
 const spellRows = f => f.view().panels.find(tab => tab.id === "spells").sections.flatMap(section => section.rows);
 
-test("spells always sort alphabetically within ascending tiers in Known and Lost sections", t => {
+test("item spells match native eligibility and distinguish their sources", t => {
+  const f = setup(t), magic = addItemSpells(f);
+  installGlobals(t, { fromUuidSync: magic.resolve });
+  const category = () => f.view().panels.find(tab => tab.id === "spells")?.sections.find(section => section.id === "item-spells");
+  assert.deepEqual(category().sections.map(section => section.label), ["Wands", "Scrolls"]);
+  const [wands, scrolls] = category().sections;
+  assert.ok(wands.collapsible && wands.defaultOpen);
+  assert.deepEqual(wands.rows.map(row => row.label), ["Light", "Sleep"]);
+  assert.equal(wands.rows[0].sourceLabel, "Ivory Wand");
+  assert.equal(wands.rows[1].lost, true);
+  assert.equal(wands.rows[1].action, undefined);
+  assert.equal(scrolls.rows[0].descriptionUuid, magic.spells[0].uuid);
+  f.actor.system.canUseMagicItems = false;
+  assert.equal(category().sections[0].rows[0].action, undefined);
+  f.actor.system.isSpellCaster = false;
+  f.actor.system.canUseMagicItems = true;
+  assert.ok(category().sections[0].rows[0].action);
+  magic.wand.system.broken = true;
+  assert.deepEqual(category().sections.map(section => section.id), ["scrolls"]);
+  magic.scroll.system.stashed = true;
+  assert.equal(category(), undefined);
+  magic.scroll.system.stashed = false;
+  magic.scroll.system.isIdentified = false;
+  assert.equal(category(), undefined);
+  magic.scroll.system.isIdentified = true;
+  magic.spells[0].visible = false;
+  assert.equal(category(), undefined);
+});
+
+test("item casting preserves source UUID, native cancellation, loss and scroll consumption", async t => {
+  const f = setup(t), magic = addItemSpells(f);
+  installGlobals(t, { fromUuidSync: magic.resolve });
+  f.prompt = async () => false;
+  assert.equal((await f.gateway.execute(action, f.request("item-spell:scroll-0"))).cancelled, true);
+  assert.ok(f.actor.items.get("scroll"));
+  f.prompt = async () => true;
+  await f.gateway.execute(action, f.request("item-spell:scroll-0"));
+  assert.equal(f.calls.at(-1).target, magic.spells[0].uuid);
+  assert.equal(f.calls.at(-1).config.itemUuid, magic.scroll.uuid);
+  assert.equal(f.actor.items.get("scroll"), undefined);
+  f.success = false;
+  await f.gateway.execute(action, f.request("item-spell:wand-1"));
+  assert.equal(magic.wand.system.spells[1].lost, true);
+  assert.equal(magic.spells[0].system.lost, false);
+  assert.equal(f.hooks.count("SD-Player-Spell"), 0);
+  assert.equal(f.rolls.length, 2);
+});
+
+test("manual known-spell loss and recovery updates the owned item without rolling", async t => {
+  const f = setup(t), spell = f.actor.items.get("spell");
+  const stale = f.request("spell-loss:spell");
+  await f.gateway.execute(action, stale);
+  assert.equal(spell.system.lost, true);
+  assert.equal(spellRows(f).find(row => row.id === "spell").action, undefined);
+  await assert.rejects(f.gateway.execute(action, stale), { code: "STALE_STATE" });
+  await f.gateway.execute(action, f.request("spell-loss:spell"));
+  assert.equal(spell.system.lost, false);
+  assert.equal(f.calls.length, 0);
+  assert.equal(f.rolls.length, 0);
+  assert.deepEqual(f.writes, []);
+});
+
+test("manual wand loss stays on its spell reference and cannot repair a broken wand", async t => {
+  const f = setup(t), magic = addItemSpells(f);
+  installGlobals(t, { fromUuidSync: magic.resolve });
+  await f.gateway.execute(action, f.request("wand-loss:wand-1"));
+  assert.equal(magic.wand.system.spells[1].lost, true);
+  assert.equal(magic.spells[0].system.lost, false);
+  await f.gateway.execute(action, f.request("wand-loss:wand-1"));
+  assert.equal(magic.wand.system.spells[1].lost, false);
+  const pending = f.request("wand-loss:wand-1");
+  magic.wand.system.broken = true;
+  await assert.rejects(f.gateway.execute(action, pending), { code: "CAPABILITY_UNAVAILABLE" });
+  assert.equal(magic.wand.system.broken, true);
+  assert.equal(f.gateway.capabilitiesForActor(f.actor).profileActions.some(action => action.id.startsWith("spell-loss:scroll")), false);
+  assert.equal(f.calls.length, 0);
+  assert.equal(f.rolls.length, 0);
+});
+
+for (const change of ["stashed", "broken", "lost", "link", "permission", "identity", "spellIdentity"]) {
+  test(`item casting rejects ${change} changes during its native dialog`, async t => {
+    const f = setup(t), magic = addItemSpells(f);
+    installGlobals(t, { fromUuidSync: magic.resolve });
+    f.prompt = async () => {
+      if (change === "stashed") magic.wand.system.stashed = true;
+      if (change === "broken") magic.wand.system.broken = true;
+      if (change === "lost") magic.wand.system.spells[1].lost = true;
+      if (change === "link") magic.wand.system.spells[1].uuid = magic.spells[1].uuid;
+      if (change === "permission") f.actor.system.canUseMagicItems = false;
+      if (change === "identity") f.actor.items.splice(f.actor.items.indexOf(magic.wand), 1, { ...magic.wand });
+      if (change === "spellIdentity") magic.spells[0] = { ...magic.spells[0] };
+      return true;
+    };
+    await assert.rejects(f.gateway.execute(action, f.request("item-spell:wand-1")), { code: "CAPABILITY_UNAVAILABLE" });
+    assert.equal(f.rolls.length, 0);
+    assert.equal(f.hooks.count("SD-Player-Spell"), 0);
+  });
+}
+
+test("uncached compendium item spells asynchronously refresh the selected profile and dispose cleanly", async t => {
+  const f = setup(t), magic = addItemSpells(f);
+  let finish, reads = 0;
+  installGlobals(t, { fromUuidSync: () => null, fromUuid: async uuid => {
+    reads++;
+    await new Promise(resolve => { finish = resolve; });
+    return magic.resolve(uuid);
+  } });
+  // Use one linked UUID so the pending load has a single completion checkpoint.
+  magic.wand.system.spells = [{ uuid: magic.spells[0].uuid, lost: false }];
+  const scope = createTaskScope("item-spell-cache");
+  t.after(() => scope.dispose());
+  const session = createFoundrySessionGateway({ capabilitiesForActor: f.gateway.capabilitiesForActor });
+  let published, error;
+  session.watch(scope, value => { published = value; }, value => { error = value; });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(reads, 1);
+  finish();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(error, undefined);
+  assert.ok(published.selectedActor.panels.find(tab => tab.id === "spells").sections.some(section => section.id === "item-spells"));
+  magic.wand.system.spells = [{ uuid: magic.spells[1].uuid, lost: false }];
+  magic.scroll.system.spellUuid = magic.spells[1].uuid;
+  f.hooks.emit("updateItem", magic.wand, {});
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(reads, 2);
+  const previous = published;
+  scope.dispose();
+  finish();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(published, previous);
+});
+
+test("known and lost spells share alphabetical ascending tiers", t => {
   const f = setup(t);
   const z = addSpell(f, "z", "Zebra");
   addSpell(f, "a", "Aardvark", 3);
@@ -144,15 +279,18 @@ test("spells always sort alphabetically within ascending tiers in Known and Lost
   // Previously saved manual ranks must have no effect on alphabetical ordering.
   f.actor.flags = { "mikelandia-controls": { shadowdarkSpellOrder: ["z", "spell", "light", "lost", "lostlow"] } };
   const sections = () => f.view().panels.find(tab => tab.id === "spells").sections;
-  assert.deepEqual(sections()[0].rows.map(row => row.id), ["light", "spell", "z", "c", "a"]);
-  assert.deepEqual(sections()[1].rows.map(row => row.id), ["lostlow", "lost", "losthigh"]);
+  assert.deepEqual(sections()[0].rows.map(row => row.id), ["light", "lostlow", "spell", "lost", "z", "c", "losthigh", "a"]);
+  assert.equal(sections().length, 1);
+  assert.equal(sections()[0].collapsibleTiers, true);
   assert.ok(sections().every(section => section.groupByValue === true));
   assert.equal(spellRows(f).some(row => row.reorder), false);
   assert.equal(f.gateway.capabilitiesForActor(f.actor).profileActions.some(action => action.id.startsWith("spell-order-")), false);
   z.name = "AAA renamed";
   assert.equal(sections()[0].rows[0].id, "z");
   z.system.lost = true;
-  assert.equal(sections()[1].rows[0].id, "z");
+  assert.equal(sections()[0].rows[0].id, "z");
+  assert.equal(sections()[0].rows[0].lost, true);
+  assert.equal(sections()[0].rows[0].showCastButton, true);
   z.system.lost = false;
   z.system.tier = 4;
   assert.equal(sections()[0].rows.at(-1).id, "z");
