@@ -3,7 +3,7 @@ import { readCombatHealth } from "../combat-health.mjs";
 import { readDamageHealth } from "../damage-health.mjs";
 import { fallbackIntegration } from "../fallback/integration.mjs";
 import { createProfilePanels } from "../profile-view.mjs";
-import { isShadowdarkPlayer, shadowdarkContext } from "./context.mjs";
+import { isShadowdarkPlayer, isShadowdarkItemTracker, shadowdarkContext } from "./context.mjs";
 import { shadowdarkPlayerProfile } from "./profile.mjs";
 import { createShadowdarkCommands } from "./commands.mjs";
 import { itemSpells, watchItemSpells } from "./item-spells.mjs";
@@ -37,6 +37,6 @@ export const shadowdarkIntegration = Object.freeze({
     if (!context) return identity;
     const capabilities = capabilitiesForActor(actor, user);
     const panels = createProfilePanels(actor, shadowdarkPlayerProfile(context, actor), { actions: capabilities?.profileActions, edits: capabilities?.profileEdits });
-    return panels.length ? Object.freeze({ ...identity, presentation: "profile", profileId: "shadowdark-player", numericEditorLayout: "stacked", profileInventory: capabilities.profileInventory === true, notesAvailable: shadowdarkNotes.available(actor), notesRevision: shadowdarkNotes.available(actor) ? shadowdarkNotes.read(actor) : "", capabilities: { editBiography: true }, panels }) : identity;
+    return panels.length ? Object.freeze({ ...identity, typeLabel: isShadowdarkItemTracker(actor) ? "" : identity.typeLabel, presentation: "profile", profileId: "shadowdark-player", numericEditorLayout: "stacked", profileInventory: capabilities.profileInventory === true, notesAvailable: shadowdarkNotes.available(actor), notesRevision: shadowdarkNotes.available(actor) ? shadowdarkNotes.read(actor) : "", capabilities: { editBiography: true }, panels }) : identity;
   }
 });
