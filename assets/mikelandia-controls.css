@@ -3276,6 +3276,7 @@ body.mc-mobile-running #pause {
 .mc-profile-spell-description summary { padding-inline-end: 110px; color: var(--mc-text); }
 .mc-profile-spell-row > dd { position: absolute; top: 8px; right: 8px; display: flex; align-items: center; gap: 8px; }
 .mc-profile-spell-row .mc-profile-action { width: 44px; justify-content: center; }
+.mc-profile-tier > h4 { margin: 12px 0 4px; color: var(--mc-subtle); }
 @media (max-width: 479px) { .mc-profile-group-content { grid-template-columns: minmax(0, 1fr); } }
 .mc-profile-description summary { min-height: 44px; align-content: center; cursor: pointer; }
 .mc-profile-description p { margin: 8px 0 0; white-space: pre-line; overflow-wrap: anywhere; }

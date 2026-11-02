@@ -175,11 +175,16 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
             node("span", { text: row.label }), renderProfileResourceEditor(row, actor, commands, scope)
           ] }))
         ] });
+      const rows = section.groupByValue ? [...new Set(section.rows.map(row => row.value))].map(value => {
+        const group = section.rows.filter(row => row.value === value);
+        return node("div", { className: "mc-profile-tier", dataset: { profileTier: value }, children: [
+          node("h4", { text: `${group[0].valueLabel ?? ""} ${valueText(group[0])}`.trim() }),
+          node("dl", { children: group.map(row => renderRow(row)) })
+        ] });
+      }) : [node("dl", { children: section.rows.map(row => renderRow(row, Boolean(equipmentLabel))) })];
       const element = node(section.collapsible ? "details" : "section", {
         className: `mc-profile-section mc-profile-${section.kind}${section.collapsible ? " mc-profile-inventory-disclosure" : ""}${equipmentLabel ? " mc-profile-equipment-section" : ""}${section.layout === "inline" ? " mc-profile-section-inline" : section.layout === "table" ? " mc-profile-section-table" : section.layout === "rows" ? " mc-profile-section-rows" : ""}`, dataset: { profileSection: section.id },
-        children: [sectionHeading, inventorySection ? inventory.body : null, section.kind === "text" ? node("p", { text: section.text }) : node("dl", {
-          children: section.rows.map(row => renderRow(row, Boolean(equipmentLabel)))
-        }), disclosure]
+        children: [sectionHeading, inventorySection ? inventory.body : null, ...(section.kind === "text" ? [node("p", { text: section.text })] : rows), disclosure]
       });
       if (section.collapsible && sectionHeading) {
         const key = `${active.id}:${section.id}`;

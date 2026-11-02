@@ -124,6 +124,40 @@ function setup(t, options) {
   f.view = () => resolveSystemIntegration("shadowdark").createActorViewRecord(f.actor, f.game.user, f.gateway.capabilitiesForActor);
   return f;
 }
+
+function addSpell(f, id, name, tier = 1, lost = false) {
+  const item = { id, name, type: "Spell", parent: f.actor, uuid: `${f.actor.uuid}.Item.${id}`,
+    system: { isSpell: true, tier, lost, description: `<p>${name}</p>` } };
+  f.actor.items.push(item);
+  return item;
+}
+const spellRows = f => f.view().panels.find(tab => tab.id === "spells").sections.flatMap(section => section.rows);
+
+test("spells always sort alphabetically within ascending tiers in Known and Lost sections", t => {
+  const f = setup(t);
+  const z = addSpell(f, "z", "Zebra");
+  addSpell(f, "a", "Aardvark", 3);
+  addSpell(f, "c", "Cloud", 2);
+  addSpell(f, "light", "Light");
+  addSpell(f, "losthigh", "A Lost High Tier", 3, true);
+  addSpell(f, "lostlow", "Lost Low Tier", 1, true);
+  // Previously saved manual ranks must have no effect on alphabetical ordering.
+  f.actor.flags = { "mikelandia-controls": { shadowdarkSpellOrder: ["z", "spell", "light", "lost", "lostlow"] } };
+  const sections = () => f.view().panels.find(tab => tab.id === "spells").sections;
+  assert.deepEqual(sections()[0].rows.map(row => row.id), ["light", "spell", "z", "c", "a"]);
+  assert.deepEqual(sections()[1].rows.map(row => row.id), ["lostlow", "lost", "losthigh"]);
+  assert.ok(sections().every(section => section.groupByValue === true));
+  assert.equal(spellRows(f).some(row => row.reorder), false);
+  assert.equal(f.gateway.capabilitiesForActor(f.actor).profileActions.some(action => action.id.startsWith("spell-order-")), false);
+  z.name = "AAA renamed";
+  assert.equal(sections()[0].rows[0].id, "z");
+  z.system.lost = true;
+  assert.equal(sections()[1].rows[0].id, "z");
+  z.system.lost = false;
+  z.system.tier = 4;
+  assert.equal(sections()[0].rows.at(-1).id, "z");
+  assert.deepEqual(f.writes, []);
+});
 for (const pulp of [false, true]) {
   test(`${pulp ? "Pulp" : "normal"} PC panels retain Shadowdark labels, prepared Stats, Luck, inventory and spells`, t => {
     const f = setup(t, { pulp });

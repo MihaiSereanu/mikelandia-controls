@@ -2930,15 +2930,6 @@ function formatCapacity(value, locale = "en") {
   return Number.isInteger(rounded) ? localizedNumber(rounded, locale) : localizedNumber(rounded, locale, 1);
 }
 
-function compactAction(label, value, enabled, onClick, scope, proficientSave = false, localize = null, accessibleLabel = label) {
-  return node("button", {
-    className: proficientSave ? "is-save-proficient" : "",
-    attrs: { type: "button", disabled: !enabled, title: proficientSave ? localizedText(localize, "MIKELANDIA_CONTROLS.Character.Labels.Proficientsavingthrow", "Proficient saving throw") : undefined, "aria-label": localizedText(localize, proficientSave ? "MIKELANDIA_CONTROLS.Character.Labels.ProficientRoll" : "MIKELANDIA_CONTROLS.Character.Labels.Roll", proficientSave ? "{label} {value}; proficient" : "{label} {value}", { label: accessibleLabel, value }) },
-    on: { click: (event) => onClick(event.currentTarget) },
-    children: [abilityActionLabel(label, proficientSave), node("b", { text: value })]
-  }, scope);
-}
-
 function abilityActionLabel(label, proficientSave) {
   return node("span", { className: "mc-ability-action-label", children: [label, proficientSave ? saveProficiencyMarker() : null] });
 }

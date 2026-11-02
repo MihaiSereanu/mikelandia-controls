@@ -304,6 +304,30 @@ try {
   await save(input);
   check("Luck save refreshes the correct native field", field("luck") === (initialPulp ? "Luck4" : "Luck0"));
   await tab("spells");
+  const addTierSpell = (id, name, tier, lost = false) => {
+    const item = { id, name, type: "Spell", parent: f.actor, uuid: `${f.actor.uuid}.Item.${id}`,
+      system: { isSpell: true, tier, lost, description: `<p>${name} spell description.</p>` } };
+    f.actor.items.push(item); Hooks.emit("createItem", item, {});
+    return item;
+  };
+  const extraSpells = [addTierSpell("zebra", "Zebra", 1), addTierSpell("cloud", "Cloud", 2),
+    addTierSpell("arcane", "Arcane", 3), addTierSpell("lostextra", "Zzz lost", 1, true)];
+  await tick();
+  const spellSection = id => screen.querySelector(`[data-profile-section="${id}"]`);
+  const orderIds = id => [...spellSection(id).querySelectorAll('[data-profile-field]')].map(row => row.dataset.profileField).join(",");
+  check("spell tiers ascend before alphabetical names", orderIds("known-spells") === "spell,zebra,cloud,arcane"
+    && [...spellSection("known-spells").querySelectorAll('[data-profile-tier]')].map(group => group.dataset.profileTier).join(",") === "1,2,3");
+  check("spell ordering has no manual reorder controls", !screen.querySelector('[data-profile-reorder-toggle], [data-profile-reorder]'));
+  const zebra = f.actor.items.get("zebra");
+  zebra.name = "AAA renamed"; Hooks.emit("updateItem", zebra, {}); await tick();
+  check("spell renames refresh alphabetical order within tier", orderIds("known-spells") === "zebra,spell,cloud,arcane");
+  zebra.system.lost = true; Hooks.emit("updateItem", zebra, {}); await tick();
+  check("Lost spells sort alphabetically and have no casting action", orderIds("lost-spells") === "zebra,lost,lostextra"
+    && !screen.querySelector('[data-profile-action="spell:zebra"]'));
+  zebra.system.lost = false; Hooks.emit("updateItem", zebra, {}); await tick();
+  check("recovered spells return to alphabetical tier order", orderIds("known-spells") === "zebra,spell,cloud,arcane");
+  for (const item of extraSpells) { f.actor.items.splice(f.actor.items.indexOf(item), 1); Hooks.emit("deleteItem", item, {}); }
+  await tick();
   check("known and lost spells use separate sections", screen.textContent.includes("Spells Known") && screen.textContent.includes("Lost Spells") && !screen.querySelector('[data-profile-action="spell:lost"]'));
   const spellDescription = screen.querySelector('[data-profile-field="spell"] details');
   const lostDescription = screen.querySelector('[data-profile-field="lost"] details');
@@ -568,6 +592,10 @@ try {
     const spell = f.actor.items.get("spell");
     spell.system.lost = false; Hooks.emit("updateItem", spell, { "system.lost": false }); await tick();
     await tab("spells");
+    addTierSpell("light", "Light", 1);
+    addTierSpell("invisibility", "Invisibility", 2);
+    addTierSpell("dispel", "Dispel Magic", 3);
+    await tick();
     for (const disclosure of screen.querySelectorAll('.mc-profile-spell-description')) disclosure.open = true;
   } else if (preview === "inventory") {
     f.actor.system.coins = { gp: 25, sp: 3, cp: 0 };

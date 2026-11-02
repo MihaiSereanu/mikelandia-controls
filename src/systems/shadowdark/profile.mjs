@@ -37,10 +37,12 @@ export function shadowdarkPlayerProfile(context, actor) {
     ] },
     { id: "spells", labelKey: "SHADOWDARK.sheet.player.tab.spells", label: "Spells", sections: [
       { id: "known-spells", kind: "items", labelKey: "SHADOWDARK.sheet.item.tab.spellsknown", label: "Spells Known", collectionPath: "items", itemTypes: ["Spell"],
+        compareRows: (a, b) => a.value - b.value || a.label.localeCompare(b.label), groupByValue: true,
         actionIdPrefix: "spell", valuePath: "system.tier", valueLabelKey: "SHADOWDARK.sheet.player.spells_tier", valueLabel: "Tier",
         descriptionPath: "system.description", descriptionToggle: "name",
         include: (item, _context, actor) => knownSpell(item, actor) && item.system.lost === false },
       { id: "lost-spells", kind: "items", labelKey: "MIKELANDIA_CONTROLS.Panels.LostSpells", label: "Lost Spells", collectionPath: "items", itemTypes: ["Spell"],
+        compareRows: (a, b) => a.value - b.value || a.label.localeCompare(b.label), groupByValue: true,
         valuePath: "system.tier", valueLabelKey: "SHADOWDARK.sheet.player.spells_tier", valueLabel: "Tier",
         descriptionPath: "system.description", descriptionToggle: "name",
         include: (item, _context, actor) => knownSpell(item, actor) && item.system.lost === true }

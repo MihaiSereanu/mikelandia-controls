@@ -116,8 +116,9 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
             ...actionFor(validId(entry.actionIdPrefix) ? `${entry.actionIdPrefix}:${id}` : undefined) }));
         } catch { /* A malformed item cannot expose extra fields or break a section. */ }
       }
-      projected.sort((a, b) => a.label.localeCompare(b.label));
+      projected.sort(entry.compareRows ?? ((a, b) => a.label.localeCompare(b.label)));
       return projected.length || entry.keepEmpty === true ? Object.freeze({ id: entry.id, label: label(entry), kind: "items", rows: Object.freeze(projected), summary: rows(entry.summary),
+        ...(entry.groupByValue === true ? { groupByValue: true } : {}),
         ...(entry.collapsible === true ? { collapsible: true } : {}),
         ...(entry.layout === "rows" ? { layout: "rows" } : {}) }) : null;
     }

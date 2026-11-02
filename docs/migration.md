@@ -4,8 +4,6 @@ Use this runbook to move a world from `ve-mobile` to `mikelandia-controls`. See 
 
 ## Installation
 
-After the renamed package is published:
-
 1. Back up each world before changing its enabled modules.
 2. Disable the old `ve-mobile` module in that world.
 3. Install `https://github.com/MihaiSereanu/mikelandia-controls/releases/download/latest/module.json` and enable **Mikelandia Controls**.

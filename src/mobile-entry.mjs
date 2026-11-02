@@ -10,7 +10,6 @@ import {
   KEYS,
   MODULE_ID,
   readKeepScreenAwake,
-  readLocale,
   readLoggingLevel,
   readProtectMcStyling,
   readPreferences,
