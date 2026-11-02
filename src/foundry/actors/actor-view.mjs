@@ -371,6 +371,7 @@ function itemViewRecord(actor, item, user) {
   const detail = itemDetailRecord(item);
   return {
     id: String(item.id ?? ""),
+    descriptionUuid: String(item.uuid ?? `${actor.uuid}.Item.${item.id}`),
     name: String(item.name ?? localizeFoundry("MIKELANDIA_CONTROLS.Character.ActorView.UnknownItem", "Unknown item")),
     img: item.img ?? "",
     type: String(item.type ?? "item"),

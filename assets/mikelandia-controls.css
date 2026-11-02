@@ -3426,6 +3426,13 @@ body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .mc-roll
   overflow-wrap: anywhere;
 }
 
+.mc-reference-tooltip { width: min(420px, calc(100vw - 16px)); white-space: normal; }
+.mc-reference-tooltip > header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.mc-reference-tooltip > header button { min-width: 44px; min-height: 44px; flex: 0 0 auto; }
+.mc-reference-tooltip > header strong { min-width: 0; overflow-wrap: anywhere; }
+.mc-description-content :is(a.content-link, a.inline-roll) { cursor: pointer; text-decoration: underline; }
+.mc-description-content :is(a.content-link, a.inline-roll) i { margin-inline-end: 0.25em; }
+
 .mc-profile-section-inline dl {
   display: flex;
   gap: 6px;

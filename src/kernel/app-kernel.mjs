@@ -5,6 +5,7 @@ import { createAppFrame } from "../ui/frame/app-frame.mjs";
 import { targetsVisible } from "../features/combat/targeting-surface.mjs";
 import { createAuthoritativeResynchronizer } from "./connection/authoritative-resync.mjs";
 import { createFoundryDamageGateway } from "../foundry/actors/damage-gateway.mjs";
+import { createFoundryDescriptionGateway } from "../foundry/actors/description-gateway.mjs";
 
 import { ACTOR_COMMANDS } from "./state/command-names.mjs";
 
@@ -65,6 +66,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     store.dispatch({ type: "action-navigation-invalidated" });
     return store.dispatch(event);
   };
+  const descriptionGateway = createFoundryDescriptionGateway();
   const commands = Object.freeze({
     navigate: (route) => dispatchNavigation({ type: "navigate", route }),
     navigateBack: () => dispatchNavigation({ type: "navigate-back" }),
@@ -324,6 +326,8 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     logout: () => preferencesGateway.logout(),
     requestScreenWakeLock: () => wakeLockController.requestFromUserGesture(),
     sendChat: (content) => guardConnection(() => session.sendChat(content, store.state.selectedActorSourceUuid)),
+    descriptions: Object.freeze(Object.fromEntries(["enrich", "preview", "roll"].map(method => [method,
+      payload => guardConnection(() => descriptionGateway[method](payload))]))),
     readCharacterBiography: async (actorSourceUuid) => {
       const sourceUuid = String(actorSourceUuid ?? "");
       if (store.state.route !== "characters" || !["biography", "notes"].includes(store.state.characterTab)

@@ -15,7 +15,7 @@ import { actorSheetTabs, actorOriginBack, collectiveHeaderContent, renderCollect
 import { renderNativeCharacter } from "./sheets/native-sheet.mjs";
 import { renderTargets } from "../combat/targets.mjs";
 import { characterHasTargets } from "../combat/targeting-surface.mjs";
-import { renderDescription } from "../../ui/primitives/description.mjs";
+import { renderEnrichedDescription } from "../../ui/primitives/enriched-description.mjs";
 
 const SHEET_TABS = Object.freeze([
   ["favourites", "favourites", "Favourites"],
@@ -2096,7 +2096,9 @@ function effectRow(effect, actor, commands, scope) {
   bindEffectContextMenu(summary, effect, actor, commands, scope);
   return node("details", { className: "mc-effect-detail", children: [
     summary,
-    effect.descriptionHtml || effect.description ? renderDescription(effect.descriptionHtml || effect.description, "mc-effect-description").content : null,
+    effect.descriptionHtml || effect.description ? renderEnrichedDescription(effect.descriptionHtml || effect.description, "mc-effect-description", {
+      gateway: commands.descriptions, uuid: effect.effectUuid, scope
+    }).content : null,
     node("p", { className: "mc-effect-metadata", text: meta })
   ] });
 }
@@ -2502,10 +2504,9 @@ function thresholdMarker(stop, label) {
 function itemInlineSummary(item, actor, commands, status, openItem, scope) {
   const description = node("div", { className: "mc-sheet-item-inline-description" });
   if (item.descriptionHtml) {
-    description.innerHTML = item.descriptionHtml;
-    scope.listen(description, "click", (event) => {
-      if (event.target.closest?.("a")) event.preventDefault();
-    });
+    description.append(renderEnrichedDescription(item.descriptionHtml, "", {
+      gateway: commands.descriptions, uuid: item.descriptionUuid, scope
+    }).content);
   } else {
     description.append(node("p", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Presenter.NoDescriptionIsAvailableForThisItem", "No description is available for this item.") }));
   }
@@ -2639,10 +2640,9 @@ function itemDetailContent(item, close, scope, commands) {
 
   if (item.descriptionHtml) {
     const description = node("div", { className: "mc-item-modal-description" });
-    description.innerHTML = item.descriptionHtml;
-    scope.listen(description, "click", (event) => {
-      if (event.target.closest?.("a")) event.preventDefault();
-    });
+    description.append(renderEnrichedDescription(item.descriptionHtml, "", {
+      gateway: commands.descriptions, uuid: item.descriptionUuid, scope
+    }).content);
     sections.push(itemModalSection(localizedText(commands.localize, "MIKELANDIA_CONTROLS.Character.Copy.Description", "Description"), [description]));
   }
 

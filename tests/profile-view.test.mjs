@@ -5,6 +5,16 @@ import { createProfilePanels, readProfilePath } from "../src/systems/profile-vie
 const field = (id, extra = {}) => ({ id, label: id, path: `system.${id}`, ...extra });
 const profile = fields => ({ tabs: [{ id: "main", label: "Game Main", sections: [{ id: "resources", label: "Game Resources", kind: "counters", fields }] }] });
 
+test("description rows retain exact embedded and compendium Item UUIDs without serializing documents", () => {
+  const items = [{ id: "embedded", name: "Embedded", type: "spell", uuid: "Scene.scene.Token.token.Actor.actor.Item.embedded", system: { description: "Rules" } },
+    { id: "pack", name: "Pack", type: "spell", uuid: "Compendium.rules.spells.Item.pack", system: { description: "Pack rules" } }];
+  const rows = createProfilePanels({ uuid: "Actor.actor", items }, { tabs: [{ id: "main", label: "Main", sections: [
+    { id: "spells", label: "Spells", kind: "items", collectionPath: "items", itemTypes: ["spell"], descriptionPath: "system.description" }
+  ] }] })[0].sections[0].rows;
+  assert.deepEqual(rows.map(row => row.descriptionUuid), items.map(item => item.uuid));
+  assert.ok(rows.every(row => !Object.values(row).includes(items[0])));
+});
+
 test("missing and malformed numeric data is omitted while zero remains visible", () => {
   const actor = { system: { zero: 0, empty: "", absent: null, bool: false, nan: NaN, infinite: Infinity, object: {} } };
   const panels = createProfilePanels(actor, profile(["zero", "empty", "absent", "bool", "nan", "infinite", "object", "missing"].map(id => field(id))));

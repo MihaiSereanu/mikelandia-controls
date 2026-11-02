@@ -7,7 +7,7 @@ import { bindDetailsDisclosure } from "../../../ui/primitives/disclosure.mjs";
 import { renderProfileConditions } from "./profile-conditions.mjs";
 import { renderTargets } from "../../combat/targets.mjs";
 import { characterHasTargets } from "../../combat/targeting-surface.mjs";
-import { renderDescription } from "../../../ui/primitives/description.mjs";
+import { renderEnrichedDescription } from "../../../ui/primitives/enriched-description.mjs";
 
 /** Profiles provide game labels. This renderer has no system IDs or rule paths. */
 export function renderProfilePanels(actor, state, commands, scope, renderNotes = null, presentation = { openSections: new Set() }) {
@@ -25,9 +25,11 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
     return row.max === undefined ? value : `${value} / ${localizedNumber(row.max, locale)}`;
   };
   const renderRow = (row, equipmentColumn = false) => {
+    const descriptionOptions = { gateway: commands.descriptions, uuid: row.descriptionUuid, scope };
     let description;
     if (row.description && row.descriptionToggle !== "name") {
-      const { content, text } = renderDescription(row.description);
+      const rendered = renderEnrichedDescription(row.description, "", descriptionOptions);
+      const { content, text } = rendered;
       if (text && row.descriptionDisplay === "tooltip") {
         const tooltip = node("div", { className: "mc-profile-note-tooltip", children: [content],
           attrs: { id: `${prefix}-note-${row.id}`, popover: "auto", role: "tooltip" } });
@@ -45,6 +47,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
             tooltip.style.left = `${left}px`; tooltip.style.top = `${top}px`;
           } }
         }, scope);
+        void rendered.ready?.then(result => { if (!scope.disposed) trigger.textContent = result.text; });
         scope.listen(tooltip, "toggle", () => trigger.setAttribute("aria-expanded", String(tooltip.matches(":popover-open"))));
         description = node("div", { className: "mc-profile-note", children: [trigger, tooltip] });
       } else if (text) description = node("details", { className: "mc-profile-description", children: [
@@ -94,7 +97,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
         label.setAttribute("aria-label", `${localizedText(commands.localize, "Roll", "Roll")} ${row.label}`);
       }
       const disclosure = node("details", { className: "mc-profile-description mc-profile-spell-description", children: [
-        node("summary", { text: row.label }), renderDescription(row.description ?? "").content
+        node("summary", { text: row.label }), renderEnrichedDescription(row.description ?? "", "", descriptionOptions).content
       ] });
       return node("div", { className: "mc-profile-row mc-profile-spell-row", dataset: { profileField: row.id }, children: [
         node("dt", { children: [disclosure] }),
@@ -104,7 +107,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
     const properties = row.properties?.length ? node("details", { className: "mc-profile-description mc-profile-properties", children: [
       node("summary", { text: "Qualities & Flaws" }),
       ...row.properties.map(property => node("div", { className: "mc-profile-property", children: [
-        node("strong", { text: property.label }), renderDescription(property.description).content
+        node("strong", { text: property.label }), renderEnrichedDescription(property.description, "", { ...descriptionOptions, fragment: true }).content
       ] }))
     ] }) : null;
     const heading = node("dt", { className: "mc-profile-item-name", children: [label, secondary] });

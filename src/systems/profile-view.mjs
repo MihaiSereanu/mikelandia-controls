@@ -98,6 +98,8 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
           seen.add(id);
           const properties = typeof entry.readProperties === "function" ? entry.readProperties(item, context, actor) : [];
           projected.push(Object.freeze({ id, label: name, value, format: entry.format ?? "number",
+            ...((typeof readProfilePath(item, entry.descriptionPath) === "string" || properties?.length)
+              ? { descriptionUuid: String(item.uuid ?? `${actor.uuid}.Item.${id}`) } : {}),
             ...(entry.descriptionToggle === "name" ? { descriptionToggle: "name" } : {}),
             ...(Array.isArray(properties) && properties.length ? { properties: Object.freeze(properties.filter(property => scalar(property?.label, "text")).map(property => Object.freeze({
               label: property.label, description: typeof property.description === "string" ? property.description : "", kind: property.kind === "flaw" ? "flaw" : "quality"

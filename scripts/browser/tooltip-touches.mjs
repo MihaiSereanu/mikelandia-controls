@@ -1,3 +1,52 @@
+/** Exercise UUID navigation with trusted touches and native light dismissal. */
+export async function checkDescriptionTouches(send, checks) {
+  const evaluate = async expression => {
+    const response = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
+    if (response.exceptionDetails) throw new Error(JSON.stringify(response.exceptionDetails));
+    return response.result.value;
+  };
+  const settle = () => evaluate("new Promise(resolve => setTimeout(resolve, 100))");
+  const tap = async selector => {
+    const point = await evaluate(`(() => {
+      const element = document.querySelector(${JSON.stringify(selector)});
+      element.scrollIntoView({block: "nearest", behavior: "instant"});
+      const r = element.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + r.height / 2};
+    })()`);
+    await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
+    await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await settle();
+  };
+  const check = async (name, expression) => {
+    if (!await evaluate(expression)) throw new Error(name);
+    checks.push(name);
+  };
+  const link = '.description-touch > p a.content-link';
+  const open = 'document.querySelector(".mc-reference-tooltip")?.matches(":popover-open")';
+  await tap(link);
+  await check("touch: UUID opens a preview", `${open} && document.querySelector('.mc-reference-body').textContent.includes('First rules')`);
+  await tap('.mc-reference-tooltip [data-uuid="Item.second"]');
+  await check("touch: nested UUID replaces preview", `${open} && document.querySelector('.mc-reference-body').textContent.includes('Second rules')`);
+  await tap('.mc-reference-tooltip header button');
+  await check("touch: Back restores previous preview", `${open} && document.querySelector('.mc-reference-body').textContent.includes('First rules')`);
+  await tap(link);
+  await check("touch: retap closes preview", `!(${open})`);
+  await tap(link);
+  await evaluate(`(() => {
+    const button = document.createElement('button'); button.id = 'description-outside'; button.textContent = 'Outside';
+    button.style.cssText = 'position:fixed;bottom:4px;left:4px;width:90px;height:44px';
+    button.onclick = () => button.dataset.tapped = 'true'; document.querySelector('main').append(button);
+  })()`);
+  await tap('#description-outside');
+  await check("touch: outside tap dismisses and activates control", `!(${open}) && document.querySelector('#description-outside').dataset.tapped === 'true'`);
+  await evaluate("document.querySelector('#description-outside').remove()");
+  await tap(link);
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await settle();
+  await check("touch: Escape dismisses preview", `!(${open})`);
+  await tap(link); // Leave the preview visible for screenshot review.
+}
+
 /** Trusted touch input is required to exercise browser popover light dismissal. */
 export async function checkTooltipTouches(send, checks) {
   const evaluate = async expression => {
