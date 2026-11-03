@@ -1,4 +1,4 @@
-import { localizedText, localizedNumber } from "../primitives/localized-text.mjs";
+import { localizedText } from "../primitives/localized-text.mjs";
 import { icon, node } from "../primitives/dom.mjs";
 import { renderCharacters } from "../../features/characters/presenter.mjs";
 import { renderJournals } from "../../features/journals/presenter.mjs";
@@ -8,12 +8,12 @@ import { renderCombat, renderGmCombatControls } from "../../features/combat/pres
 import { resolveCharacterThemeProfile } from "../../features/characters/appearance/character-theme.mjs";
 import { createMcBackDispatcher } from "../navigation/mc-back-dispatcher.mjs";
 import { createMcCloseWatcherBack, mcCloseWatcherLayers } from "../navigation/mc-close-watcher-back.mjs";
-import { createElapsedWorkerClock } from "../timing/elapsed-worker-clock.mjs";
-import { createLoadingCheckpoints } from "../bootstrap/loading-checkpoints.mjs";
 import { bindCharacterHeaderScroll } from "../../features/characters/appearance/character-header-scroll.mjs";
 import { createControlsGuide } from "../help/controls-guide.mjs";
 import { createControlsInvitation } from "../help/controls-invitation.mjs";
 import { createDamageFeedback } from "../media/damage-feedback.mjs";
+
+import { createReconnectInteractionGuard } from "./reconnect-interactions.mjs";
 
 const SCREENS = Object.freeze({
   characters: renderCharacters,
@@ -30,6 +30,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
   const damageFeedback = createDamageFeedback({ root, scope, localize: commands.localize, locale: () => commands.readLocale?.() ?? "en" });
   const panelOverlays = node("div", { className: "mc-panel-overlays", attrs: { "aria-live": "polite" } });
   const nav = node("nav", { className: "mc-bottom-nav", attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.Primary", "Primary") } });
+  const reconnectInteractions = createReconnectInteractionGuard({ root, scope });
   const navSideIcon = icon("fa-arrow-left");
   let screenScope = null, combatControlsScope = null, combatControlsRenderKey = "", renderedState = null;
   let mounted = true, characterScrollRestoreGeneration = 0, characterScrollRestoreScope = null, characterHeaderScroll = null;
@@ -76,7 +77,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     const button = node("button", { className: "mc-main-nav-item", attrs: { type: "button" }, dataset: { route }, on: { click: () => commands.navigate(route) }, children: [typeof createIcon === "function" ? createIcon() : icon(createIcon), node("span", { text: commands.localize?.(`MIKELANDIA_CONTROLS.Navigation.${label}`, label) ?? label })] }, scope);
     return [route, button];
   }));
-  nav.append(rotateSuggestion, node("div", { className: "mc-nav-routes", children: [...navButtons.values()] }), navSideToggle);
+  nav.append(reconnectBlocker.element, rotateSuggestion, node("div", { className: "mc-nav-routes", children: [...navButtons.values()] }), navSideToggle);
   const backDispatcher = createMcBackDispatcher({ getState: () => store.state, commands, nativeApplications: {
     topmost: () => nativeApplications?.settings?.topmost?.() ?? nativeApplications?.admissions?.topmost?.(),
     closeTopmost: () => nativeApplications?.settings?.topmost?.() ? nativeApplications.settings.closeTopmost() : nativeApplications?.admissions?.closeTopmost?.()
@@ -86,14 +87,14 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
   mobileBackGateway?.enable(scope, { onBack: () => backDispatcher.back(), getDiagnosticContext: () => ({ route: store.state.route, routeDepth: store.state.routeHistory?.length ?? 0, topmostDismissible: backDispatcher.peek(), closeWatcher: closeWatcherBack.snapshot() }) });
   const controlsGuide = createControlsGuide({ scope, readContext: () => commands.readControlsContext(), localize: key => commands.localize(key), onVisibility: () => closeWatcherBack.sync() });
   const controlsInvitation = createControlsInvitation({ root, scope, commands, getState: () => store.state, isReady: () => commands.controlsUiReady?.(), isNativeOpen: () => nativeApplications?.settings?.topmost?.() ?? nativeApplications?.admissions?.topmost?.(), openGuide: anchor => controlsGuide.show(anchor) });
-  root.append(viewport, panelOverlays, nav, combatControlsHost, reconnectBlocker.element, modeTransitionBlocker.element, controlsInvitation.element, controlsGuide.element);
+  root.append(viewport, panelOverlays, nav, combatControlsHost, modeTransitionBlocker.element, controlsInvitation.element, controlsGuide.element);
   function syncCombatControlGeometry() {
     const height = combatControlsHost.hidden ? 0 : combatControlsHost.getBoundingClientRect().height;
     const navBounds = nav.getBoundingClientRect();
     if (navBounds.width > navBounds.height && navBounds.height > 0) root.style.setProperty("--mc-nav-dock-height", `${navBounds.height}px`);
     root.style.setProperty("--mc-gm-combat-row-reservation", height > 0 ? `${height + 8}px` : "0px");
   }
-  const render = state => {
+  const renderScreen = state => {
     if (!mounted || scope.disposed) return;
     performanceObserver?.increment?.("render.frame");
     const latestPolicy = policy();
@@ -105,7 +106,9 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     reconnectBlocker.update(state.reconnect); modeTransitionBlocker.update(state.modeTransition);
     root.dataset.reconnectPhase = state.reconnect?.phase ?? "ready";
     root.dataset.modeTransitionPhase = state.modeTransition?.phase ?? "ready";
-    viewport.inert = nav.inert = reconnectActive || modeTransitionActive;
+    viewport.inert = nav.inert = modeTransitionActive;
+    viewport.setAttribute("aria-busy", String(reconnectActive));
+    reconnectInteractions.update(reconnectActive);
     const tabletNavSide = state.tabletNavSide === "left" ? "left" : "right";
     const layoutKey = `${latestPolicy.formFactor}:${latestPolicy.orientation}:${tabletNavSide}`;
     commands.syncFoundryTheme?.(latestPolicy.theme);
@@ -313,6 +316,12 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
       return;
     }
 
+    const preserveReadingPosition = renderedState?.route === state.route
+      && renderedState?.journal?.id === state.journal?.id
+      && renderedState?.journalPageId === state.journalPageId
+      && renderedState?.journalHeading === state.journalHeading;
+    const readingTop = viewport.scrollTop, readingLeft = viewport.scrollLeft;
+    const openFolders = new Set([...viewport.querySelectorAll(".mc-journal-folder[open]")].map(folder => folder.dataset.folderId));
     const previousCharacterContext = characterScrollContext(renderedState);
     const previousCharacterScrollTop = characterScrollTop();
     if (previousCharacterContext) characterScrollMemory.remember(previousCharacterContext.sourceUuid, previousCharacterContext.tab, previousCharacterScrollTop);
@@ -375,6 +384,19 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
       }));
       if (state.route === "characters") characterHeaderScroll = bindCharacterHeaderScroll({ scroller: characterScroller(), screen: viewport.firstElementChild, scope: screenScope, restorePosition: restoreCharacterScrollPosition });
       if (nextCharacterContext) restoreCharacterScroll(state, desiredCharacterScrollTop);
+      else if (preserveReadingPosition) {
+        for (const folder of viewport.querySelectorAll(".mc-journal-folder")) folder.open = openFolders.has(folder.dataset.folderId);
+        const readingScreen = viewport.firstElementChild;
+        const restoreReadingPosition = () => {
+          if (!mounted || scope.disposed || viewport.firstElementChild !== readingScreen) return;
+          viewport.scrollTop = readingTop;
+          viewport.scrollLeft = readingLeft;
+        };
+        restoreReadingPosition();
+        // Journal presenters queue heading navigation while mounting. A refresh
+        // of the same page must retain where the reader subsequently scrolled.
+        queueMicrotask(restoreReadingPosition);
+      }
     } catch (error) {
       console.error(`Mikelandia Controls | Could not render ${state.route}`, error);
       screenScope?.dispose();
@@ -387,6 +409,10 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     renderedState = screenState(state, layoutKey);
   };
 
+  const render = state => {
+    try { renderScreen(state); }
+    finally { reconnectInteractions.update(Boolean(state.reconnect)); }
+  };
   scope.own(store.subscribe(render, { immediate: false }));
   scope.own(store.subscribe(() => { controlsInvitation.reconcile(); controlsGuide.refresh(); closeWatcherBack.sync(); }, { immediate: false }));
   render(store.state);
@@ -411,171 +437,51 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
   });
 }
 
-export function createReconnectBlocker(scope, {
-  localize = null,
-  locale = "en",
-  onReload = () => {},
-  delayMs = RECONNECT_BLOCKER_DELAY_MS,
-  now = () => globalThis.performance?.now?.() ?? Date.now(),
-  elapsedUpdateMs = 200
-} = {}) {
-  const checkpointDefinitions = Object.freeze([
-    Object.freeze({ id: "connection", label: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RestoringConnection", "Restoring connection"), message: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RestoringConnection2", "Restoring connection…") }),
-    Object.freeze({ id: "collections", label: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RefreshingWorldData", "Refreshing world data"), message: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RefreshingWorldData2", "Refreshing world data…") }),
-    Object.freeze({ id: "foundry-session", label: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.SynchronisingSessionData", "Synchronizing session data"), message: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.SynchronisingSessionData2", "Synchronizing session data…") }),
-    Object.freeze({ id: "mobile-session", label: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RestoringSession", "Restoring session"), message: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.RestoringYourSession", "Restoring your session…") }),
-    Object.freeze({ id: "presentation", label: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RestoringInterface", "Restoring interface"), message: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.RestoringMobileInterface", "Restoring mobile interface…") }),
-    Object.freeze({ id: "interactions", label: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.RestoringControls", "Restoring controls"), message: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.RestoringControls", "Restoring controls…") })
-  ]);
-  const title = node("h2", { text: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.Reconnecting", "Reconnecting"), attrs: { id: "mc-reconnect-title" } });
-  const message = node("p", {
-    className: "mc-reconnect-phase",
-    text: checkpointDefinitions[0].message,
-    attrs: { "aria-live": "polite", "aria-atomic": "true" }
-  });
-  const progress = node("span", { className: "mc-reconnect-progress", attrs: { hidden: true } });
-  const elapsed = node("span", { className: "mc-reconnect-elapsed", text: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ElapsedMs", "Elapsed · 0 ms") });
-  const elapsedClock = createElapsedWorkerClock(elapsed, { now, elapsedLabel: localizedText(localize, "MIKELANDIA_CONTROLS.Timer.Elapsed", "Elapsed"), locale });
-  const previous = node("span", { className: "mc-reconnect-previous", text: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.LastResync", "Last resync · —") });
-  const timing = node("div", { className: "mc-reconnect-timing", children: [elapsed, previous] });
-  const checkpoints = createLoadingCheckpoints(document, checkpointDefinitions, { label: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ResynchronisationCheckpoints", "Resynchronization checkpoints") });
+/** A status in the disabled navigation dock; the readable viewport stays unobscured. */
+export function createReconnectBlocker(scope, { localize = null, onReload = () => {}, delayMs = RECONNECT_BLOCKER_DELAY_MS } = {}) {
+  const message = node("span");
   const reload = node("button", {
+    className: "mc-reconnect-reload",
     attrs: { type: "button", hidden: true },
-    children: [icon("fa-rotate"), node("span", { text: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ReloadFoundry", "Reload Foundry") })]
+    text: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ReloadFoundry", "Reload Foundry")
   });
   const element = node("div", {
-    className: "mc-reconnect-blocker",
-    attrs: { hidden: true, role: "dialog", "aria-modal": "true", "aria-labelledby": "mc-reconnect-title" },
-    children: [node("section", { className: "mc-reconnect-card", children: [
-      node("div", { className: "mc-reconnect-spinner", children: [icon("fa-arrows-rotate")] }),
-      title,
-      message,
-      progress,
-      checkpoints.element,
-      timing,
-      reload
-    ] })]
+    className: "mc-reconnect-status",
+    attrs: { hidden: true },
+    children: [node("span", { attrs: { role: "status", "aria-live": "polite", "aria-atomic": "true" },
+      children: [icon("fa-arrows-rotate"), message] }), reload]
   });
-  let generation = null;
-  let presentationScope = null;
-  let activeState = null;
-
-  const reveal = () => {
-    element.dataset.visible = "true";
-  };
-  const formatTiming = (value) => {
-    const milliseconds = Math.max(0, Number(value) || 0);
-    if (milliseconds < 1_000) return `${localizedNumber(Math.round(milliseconds), locale)} ms`;
-    return `${localizedNumber(milliseconds / 1_000, locale, 1)} s`;
-  };
-  const renderTiming = () => {
-    const startedAt = Number(activeState?.startedAt);
-    const current = Number(now());
-    const running = activeState?.startedAt !== null
-      && activeState?.startedAt !== undefined
-      && Number.isFinite(startedAt) && Number.isFinite(current);
-    const elapsedMs = running
-      ? Math.max(0, current - startedAt)
-      : 0;
-    elapsed.hidden = !running;
-    elapsed.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.Elapsed", "Elapsed · {formatTimingelapsedMs}", { formatTimingelapsedMs: (formatTiming(elapsedMs)) });
-    if (running) elapsedClock.start(startedAt);
-    const lastSuccessfulMs = Number(activeState?.lastSuccessfulMs);
-    const hasPrevious = activeState?.lastSuccessfulMs !== null
-      && activeState?.lastSuccessfulMs !== undefined
-      && Number.isFinite(lastSuccessfulMs)
-      && lastSuccessfulMs >= 0;
-    previous.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.LastResync2", "Last resync · {hasPreviousformatTimin}", { hasPreviousformatTimin: (hasPrevious ? formatTiming(lastSuccessfulMs) : "—") });
-  };
-  const scheduleElapsed = (ownedScope, ownedGeneration) => {
-    ownedScope.timeout(() => {
-      if (generation !== ownedGeneration || presentationScope !== ownedScope || ownedScope.disposed) return;
-      renderTiming();
-      scheduleElapsed(ownedScope, ownedGeneration);
-    }, elapsedUpdateMs);
-  };
-  const resetPresentation = (state) => {
-    presentationScope?.dispose();
-    elapsedClock.stop();
-    presentationScope = scope.child("reconnect-presentation-delay");
-    element.dataset.visible = "false";
-    const ownedScope = presentationScope;
-    const ownedGeneration = state.generation;
-    if (state.phase === "reconnecting") ownedScope.timeout(() => {
-      if (generation === ownedGeneration && presentationScope === ownedScope) reveal();
-    }, delayMs);
-    else reveal();
-    scheduleElapsed(ownedScope, ownedGeneration);
-  };
+  let generation = null, presentationScope = null;
+  const reveal = () => { element.hidden = false; };
   scope.listen(reload, "click", onReload);
   scope.own(() => presentationScope?.dispose());
-  scope.own(() => elapsedClock.stop());
-
-  const updatePresentation = (state) => {
-    const activeIndex = Math.max(0, checkpointDefinitions.findIndex(({ id }) => id === state.checkpoint));
-    checkpoints.update(state.checkpoint, { failed: state.phase === "failed" });
-    if (state.phase !== "failed" && state.phase !== "reloading") {
-      message.textContent = state.detail || checkpointDefinitions[activeIndex].message;
-      message.hidden = message.textContent === checkpointDefinitions[activeIndex].message;
-    }
-    const phaseProgress = state.progress ?? {};
-    const parts = [];
-    const pct = Number(phaseProgress.pct);
-    const current = Number(phaseProgress.current);
-    const total = Number(phaseProgress.total);
-    if (phaseProgress.pct !== null && phaseProgress.pct !== undefined && Number.isFinite(pct)) {
-      parts.push(`${Math.round(Math.max(0, Math.min(100, pct)))}%`);
-    }
-    if (phaseProgress.current !== null && phaseProgress.current !== undefined
-      && phaseProgress.total !== null && phaseProgress.total !== undefined
-      && Number.isFinite(current) && Number.isFinite(total) && total > 0) {
-      parts.push(localizedText(localize, "MIKELANDIA_CONTROLS.Recovery.Progress", "{current} of {total}", { current: localizedNumber(Math.max(0, current), locale), total: localizedNumber(Math.max(0, total), locale) }));
-    }
-    progress.textContent = parts.join(" · ");
-    progress.hidden = parts.length === 0;
-    element.dataset.progress = progress.hidden ? "indeterminate" : "determinate";
-    renderTiming();
-  };
-
   return Object.freeze({
     element,
     update(state) {
       if (!state) {
-        presentationScope?.dispose();
-        presentationScope = null;
-        generation = null;
-        activeState = null;
-        elapsedClock.stop();
+        presentationScope?.dispose(); presentationScope = null; generation = null;
         element.hidden = true;
-        element.dataset.visible = "false";
         return;
       }
-      activeState = state;
-      element.hidden = false;
-      if (generation !== state.generation) {
-        generation = state.generation;
-        resetPresentation(state);
-      }
+      element.dataset.phase = state.phase;
       reload.hidden = state.phase !== "failed";
-      updatePresentation(state);
-      if (state.phase === "failed") {
+      const messages = {
+        reconnecting: ["ReconnectingStatus", "Reconnecting…"],
+        resynchronising: ["SyncingStatus", "Syncing…"],
+        reloading: ["ReloadingStatus", "Reloading…"],
+        failed: ["RecoveryFailedStatus", "Connection recovery failed."]
+      };
+      const [key, fallback] = messages[state.phase] ?? messages.resynchronising;
+      const text = localizedText(localize, `MIKELANDIA_CONTROLS.Interface.AppFrame.${key}`, fallback);
+      if (message.textContent !== text) message.textContent = text;
+      if (generation !== state.generation) {
         presentationScope?.dispose();
-        presentationScope = null;
-        title.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ResynchronisationInterrupted", "Resynchronization interrupted");
-        message.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.MCMobileCouldNotRestoreTheSessionReloadFoundry", "Mikelandia Controls could not restore the session. Reload Foundry to recover safely.");
-        message.hidden = false;
-        reveal();
-      } else if (state.phase === "reloading") {
-        title.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.FinishingRecovery", "Finishing recovery");
-        message.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.ReloadingFoundryToFinishRecovery", "Reloading Foundry to finish recovery…");
-        message.hidden = false;
-        reveal();
-      } else if (state.phase === "resynchronising") {
-        title.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.SynchronisingGame", "Synchronizing game…");
-        reveal();
-      } else {
-        title.textContent = localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.Reconnecting", "Reconnecting");
+        presentationScope = scope.child("reconnect-status-delay");
+        generation = state.generation;
+        element.hidden = true;
+        presentationScope.timeout(reveal, delayMs);
       }
+      if (state.phase !== "reconnecting") reveal();
     }
   });
 }

@@ -13,6 +13,7 @@ export function createMcBackDispatcher({
 }) {
   const next = () => {
     const state = getState?.() ?? {};
+    if (state.reconnect) return ["reconnecting"];
     const guide = getRoot?.()?.querySelector?.(".mc-controls-guide:not([hidden])");
     if (guide) return ["controls-guide", () => closeTransient(guide)];
     const admitted = nativeApplications?.topmost?.();

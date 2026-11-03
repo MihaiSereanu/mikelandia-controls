@@ -38,6 +38,8 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     connectionGeneration: connectionGeneration?.current ?? 0
   });
   const guardConnection = async (action) => {
+    if (store.state.reconnect || store.state.modeTransition) throw new Error(localizedText(localize,
+      "MIKELANDIA_CONTROLS.Interface.AppKernel.WaitForConnectionRecovery", "Wait for connection recovery to finish."));
     const generation = connectionGeneration?.current ?? 0;
     const owner = runtimeScope;
     const result = await runMobileApplicationWorkflow(() => action({ ...expectedSession(), connectionGeneration: generation }),
@@ -63,6 +65,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       || sourceUuid !== store.state.selectedActorSourceUuid) throw new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.ThisActorViewIsNoLongerActive", "This Actor view is no longer active."));
   };
   const dispatchNavigation = (event) => {
+    if (store.state.reconnect || store.state.modeTransition) return store.state;
     store.dispatch({ type: "action-navigation-invalidated" });
     return store.dispatch(event);
   };
@@ -324,7 +327,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       return result;
     },
     updateCharacterCollectionPreference: (key, value) => guardConnection(() => preferencesGateway.setCharacterCollectionPreference({ key, value })),
-    reloadApplication: () => globalThis.window?.location?.reload?.(),
+    reloadApplication,
     openFoundrySettings: () => settingsCompatibilityGateway.openFoundrySettings(),
     logout: () => preferencesGateway.logout(),
     requestScreenWakeLock: () => wakeLockController.requestFromUserGesture(),
@@ -463,7 +466,9 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
           return session.read();
         },
         applySnapshot: async (snapshot, generation, context) => {
-          if (!context.isCurrent()) return;
+          const finishPresentation = performanceObserver?.start?.("reconnect.presentation") ?? (() => {});
+          const presentationStartedAt = globalThis.performance?.now?.() ?? Date.now();
+          if (!context.isCurrent()) { finishPresentation(); return; }
           const journalId = store.state.journal?.id ?? "";
           const pageId = store.state.journalPageId;
           loadTimingGateway?.note?.({ checkpoint: "presentation" });
@@ -471,17 +476,19 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
           session.adopt?.(snapshot);
           store.dispatch({ type: "session-loaded", snapshot });
           if (journalId && snapshot.journals?.some((journal) => journal.id === journalId)) {
-            void commands.openJournal(journalId).then((journal) => {
-              if (context.isCurrent() && journal?.id === journalId && store.state.journal?.id === journalId) {
-                commands.selectJournalPage(pageId);
-              }
-            }).catch(() => {});
+            const heading = store.state.journalHeading;
+            const journal = await session.readJournal(journalId, expectedSession());
+            if (!context.isCurrent()) { finishPresentation(); return; }
+            store.dispatch({ type: "journal-loaded", journal, target: { pageId, anchor: heading } });
           }
-          await nextRenderedFrame();
-          if (!context.isCurrent()) return;
+          // Store subscribers render synchronously. Waiting for animation frames
+          // adds no readiness evidence and can stall recovery in a hidden tab.
+          if (!context.isCurrent()) { finishPresentation(); return; }
           loadTimingGateway?.note?.({ checkpoint: "interactions" });
           store.dispatch({ type: "reconnect-progress", generation, checkpoint: "interactions", detail: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.RestoringControls", "Restoring controls…") });
-          await nextRenderedFrame();
+          const presentationMs = Math.max(0, (globalThis.performance?.now?.() ?? Date.now()) - presentationStartedAt);
+          finishPresentation();
+          diagnostics?.record?.("debug", `Reconnect interface restoration | total=${Math.round(presentationMs)}ms`);
         },
         onError: (error) => diagnostics?.record?.("error", "Authoritative reconnect resynchronisation failed", error)
       });
@@ -699,6 +706,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       return result;
     },
     open(route) {
+      if (store.state.reconnect || store.state.modeTransition) return;
       store.dispatch({ type: "navigate", route });
     },
     async openJournalTarget(journalId, target = {}) {
@@ -713,13 +721,6 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     snapshot() {
       return store.state.snapshot ? structuredClone(store.state.snapshot) : null;
     }
-  });
-}
-
-function nextRenderedFrame() {
-  return new Promise((resolve) => {
-    if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(() => resolve());
-    else queueMicrotask(resolve);
   });
 }
 

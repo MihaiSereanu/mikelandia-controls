@@ -1,6 +1,6 @@
 # Mikelandia Controls migration
 
-Use this runbook to move a world from `ve-mobile` to `mikelandia-controls`. See [current status](current-status.md#deployment) for the last recorded deployment state and [architecture](architecture.md#mobile-frame-and-upgrades) for internal namespaces.
+Migrate worlds from `ve-mobile` to `mikelandia-controls`. See [current status](current-status.md#deployment) for recorded deployments and [architecture](architecture.md#mobile-frame-and-upgrades) for internal namespaces.
 
 ## Installation
 
@@ -13,9 +13,9 @@ Foundry treats the new ID as a separate module. Enabling it in one world does no
 
 ## Preserved data
 
-Each browser copies its old preferences, bootstrap cache, controls-guide receipt, chat dock state, and Carolingian restoration receipt before the new interface reads them. Existing destination values win. A completion marker prevents consumed receipts from being copied again. Original entries remain available for rollback. A failed transfer is retryable and leaves the normal Foundry interface available without starting the new mobile interface.
+Before first reads, each browser copies preferences, bootstrap cache, controls-guide receipt, chat dock state and Carolingian restoration receipt. Destination values win; a completion marker prevents recopying consumed receipts. Originals remain for rollback. Failed transfers are retryable and leave native Foundry available without starting the companion.
 
-One active GM copies missing flags from world Actors and raw unlinked-token deltas. Existing new values win, including zero, false, null, and arrays. The complete old flag namespace is retained, including historical Renown. Imported or compendium Actors can still read their legacy resource values before those values are written under the new namespace. Packs are not bulk rewritten.
+One active GM copies missing flags from world Actors and raw unlinked-token deltas. Existing new values win, including zero, false, null, and arrays. Retain all old flags, including historical Renown. Imported/compendium Actors read legacy resources until written under the new namespace; packs are not bulk rewritten.
 
 Legacy identifiers remain where migration, release-asset retirement, and deployment/rollback records require them. Original MIT notices remain in `LICENSE`.
 

@@ -56,6 +56,12 @@ const cases = [
   ["ui-isolation-tablet", 1024, 768, "ui-isolation", "layout=tablet"],
   ["ui-isolation-common-display-phone", 390, 844, "ui-isolation", "layout=phone&common-display=true"],
   ["ui-isolation-common-display-tablet", 1024, 768, "ui-isolation", "layout=tablet&common-display=true"],
+  ...(process.env.MC_RECONNECT_TIMING ? [
+    ["reconnect-timing-before", 390, 844, "in-person", "layout=phone&timing=true&baseline=true"],
+    ["reconnect-timing-after", 390, 844, "in-person", "layout=phone&timing=true"]
+  ] : []),
+  ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844]].map(([layout, width, height]) =>
+    [`reconnect-${layout}`, width, height, "in-person", `layout=${layout === "tablet" ? "tablet" : "phone"}&reconnect=true`]),
   ["in-person-phone", 390, 844, "in-person", "layout=phone"],
   ["in-person-tablet", 1024, 768, "in-person", "layout=tablet"],
   ["in-person-dnd-phone", 390, 844, "in-person", "layout=phone&system=dnd5e"],
@@ -255,6 +261,28 @@ try {
       try { await checkDescriptionTouches((method, params) => send(method, params, sessionId), report.checks); }
       catch (error) { report.status = "failed"; report.error = error.stack; }
     }
+    if (report?.status === "passed" && /^reconnect-(phone|tablet|narrow)$/.test(name)) {
+      try {
+        await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 }, sessionId);
+        const expression = `(() => { const pane = document.querySelector('.mc-character-content-scroller') ?? document.querySelector('.mc-viewport'); pane.scrollTop = 0; const r = pane.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`;
+        const { result } = await send("Runtime.evaluate", { expression, returnByValue: true }, sessionId);
+        const touch = result.value;
+        await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ ...touch, id: 1 }] }, sessionId);
+        for (let step = 1; step <= 8; step++) {
+          await send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: touch.x, y: touch.y - step * 18, id: 1 }] }, sessionId);
+          await new Promise(resolve => setTimeout(resolve, 20));
+        }
+        await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }, sessionId);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        const { result: scrolling } = await send("Runtime.evaluate", { expression: `(document.querySelector('.mc-character-content-scroller') ?? document.querySelector('.mc-viewport')).scrollTop`, returnByValue: true }, sessionId);
+        if (!(scrolling.value > 20)) throw new Error("Touch scrolling did not move the reading pane during sync: " + scrolling.value);
+        const diagnostic = await send("Runtime.evaluate", { expression: `(() => { const e = document.querySelector('.mc-reconnect-status'); const t = e.querySelector('[role="status"]'); return { text: t.textContent, hidden: e.hidden, statusBounds: e.getBoundingClientRect().toJSON(), textBounds: t.getBoundingClientRect().toJSON(), visibility: getComputedStyle(t).visibility, color: getComputedStyle(t).color }; })()`, returnByValue: true }, sessionId);
+        if (diagnostic.result.value.hidden || diagnostic.result.value.visibility !== "visible" || !diagnostic.result.value.textBounds.height) throw new Error("Reconnect status disappeared after touch scrolling");
+        report.checks.push("compact synchronization status remains visible after touch scrolling");
+        report.checks.push("trusted Chromium touch gesture scrolls the reading pane during synchronization");
+      } catch (error) { report.status = "failed"; report.error = error.stack; }
+    }
+    if (report?.status === "passed" && report.timings) await writeFile(join(root, "dist", `${name}-timings.json`), JSON.stringify(report.timings, null, 2) + "\n");
     if (report?.status !== "passed" || report.width !== width || report.height !== height) {
       const screenshot = await send("Page.captureScreenshot", { format: "png" }, sessionId);
       await writeFile(join(root, "dist", `${name}-failed.png`), Buffer.from(screenshot.data, "base64"));

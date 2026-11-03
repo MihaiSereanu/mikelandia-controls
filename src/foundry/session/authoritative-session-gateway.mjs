@@ -149,7 +149,10 @@ export function createFoundryAuthoritativeSessionGateway({
         return Object.freeze({ applied: false, reason: "stale-generation" });
       }
       progress("foundry-session", localizeFoundry("MIKELANDIA_CONTROLS.Interface.AuthoritativeSessionGateway.RestoringGameMessages", "Restoring game messages…"));
-      await Promise.resolve(getUi()?.chat?.render?.({ force: true }));
+      // Native chat needs rebuilding only when authoritative data changed.
+      if (changedCollections.size) {
+        await Promise.resolve(getUi()?.chat?.render?.({ force: true }));
+      }
       if (!currentSession()) {
         finishTotal();
         return Object.freeze({ applied: false, reason: "stale-generation" });

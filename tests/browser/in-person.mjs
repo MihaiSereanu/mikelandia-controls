@@ -1,7 +1,7 @@
 import { createShadowdarkFixture } from "/tests/helpers/shadowdark.mjs";
 import { createWarhammerActor, createWarhammerGame, addWarhammerMagic } from "/tests/helpers/warhammer.mjs";
 import { createActor, createGame, createHooks, collection } from "/tests/helpers/foundry.mjs";
-import { createAppKernel } from "/src/kernel/app-kernel.mjs";
+import { createAppKernel as currentAppKernel } from "/src/kernel/app-kernel.mjs";
 import { createSignalStore } from "/src/kernel/state/signal-store.mjs";
 import { initialAppState, reduceAppState } from "/src/kernel/state/app-state.mjs";
 import { createFoundrySessionGateway } from "/src/foundry/session/session-gateway.mjs";
@@ -13,12 +13,18 @@ import { createFoundryPreferencesGateway, registerPreferences } from "/src/found
 import { createConnectionGeneration } from "/src/kernel/connection/connection-generation.mjs";
 import { checkDamageFeedback } from "/tests/browser/damage-feedback.mjs";
 
+import { createAppFrame } from "/src/ui/frame/app-frame.mjs";
+import { checkReconnect } from "/tests/browser/reconnect.mjs";
+
 const checks = [];
 const check = (name, condition) => { if (!condition) throw new Error(name); checks.push(name); };
 const tick = () => new Promise(resolve => setTimeout(resolve, 60));
 let kernel;
 try {
   const params = new URLSearchParams(location.search);
+  const { createAppKernel } = params.get("baseline") === "true"
+    ? await import("/dist/reconnect-baseline-kernel.mjs") : { createAppKernel: currentAppKernel };
+  let timings;
   const legacy = params.get("system") === "dnd5e";
   const warhammer = params.get("system") === "wfrp4e";
   const actor = warhammer ? createWarhammerActor() : legacy ? createActor() : null;
@@ -80,9 +86,13 @@ try {
     getEndCombatDialog: () => ({ confirm: async options => options.yes.callback() })
   });
   const session = createFoundrySessionGateway({ capabilitiesForActor: commands.capabilitiesForActor, combatForSnapshot: combat.snapshot, combatControlsForSnapshot: combat.controlsSnapshot });
+  let recovery = async () => ({ applied: true });
+  let reloads = 0, uiCommands;
   kernel = createAppKernel({
+    createFrame: options => { uiCommands = options.commands; return createAppFrame(options); },
     store, session, commandGateway: commands, combatGateway: combat, targetingGateway: createFoundryTargetingGateway(),
-    authoritativeGateway: { resync: async () => ({ applied: true }) },
+    authoritativeGateway: { resync: context => recovery(context) },
+    reloadApplication: () => { reloads++; },
     connectionGeneration: createConnectionGeneration(),
     preferencesGateway: createFoundryPreferencesGateway(),
     readPolicy: policy, isControlsUiReady: () => true,
@@ -94,6 +104,21 @@ try {
   kernel.reconcile(); await tick(); await tick();
   check("complete kernel starts without a canvas", kernel.active);
   const root = document.querySelector(".mc-mobile-app");
+  if (params.get("timing") === "true") {
+    const samples = [];
+    recovery = async () => { await new Promise(resolve => setTimeout(resolve, 25)); return { applied: true }; };
+    for (let i = 1; i <= 9; i++) {
+      kernel.beginReconnect(i);
+      const started = performance.now();
+      await kernel.resync(i);
+      if (i > 2) samples.push(performance.now() - started);
+      check(`timing run ${i} restores readiness`, !store.state.reconnect);
+    }
+    timings = { samplesMs: samples, medianMs: [...samples].sort((a, b) => a - b)[3], simulatedFetchMs: 25 };
+  } else if (params.get("reconnect") === "true") {
+    await checkReconnect({ kernel, store, root, f, check, tick,
+      commands: uiCommands, setRecovery: callback => { recovery = callback; }, getReloads: () => reloads });
+  } else {
   check("main Combat navigation is now Initiative", root.querySelector('[data-route="combat"]').textContent === "Initiative");
   check("application uses Mikelandia Controls name", root?.getAttribute("aria-label") === "Mikelandia Controls");
   check("exactly five navigation screens remain", [...root.querySelectorAll(".mc-main-nav-item")].map(b => b.dataset.route).join(",") === "characters,chat,journals,combat,settings");
@@ -250,7 +275,8 @@ try {
       && dialog.top >= 0 && dialog.bottom <= innerHeight && document.activeElement === composer
       && [...root.querySelectorAll(".mc-modal-button")].every(button => button.getBoundingClientRect().height >= 44));
   }
-  document.querySelector("#results").textContent = JSON.stringify({ status: "passed", width: innerWidth, height: innerHeight, checks });
+  }
+  document.querySelector("#results").textContent = JSON.stringify({ status: "passed", timings, width: innerWidth, height: innerHeight, checks });
 } catch (error) {
   kernel?.stop();
   document.querySelector("#results").textContent = JSON.stringify({ status: "failed", checks, error: error.stack });

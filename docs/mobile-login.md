@@ -1,6 +1,6 @@
 # Mobile login and PWA runbook
 
-The login page is hosted at `https://mikelandia.duckdns.org/mobile/` from `/srv/mikelandia-mobile`. Foundry owns users, passwords, and sessions; the page remembers only a per-world player ID, clears submitted passwords, and disables connected users. Visiting establishes a native `/join` session, logging out an existing world login in that browser. Module activation and mode selection remain independent.
+Login: `https://mikelandia.duckdns.org/mobile/` from `/srv/mikelandia-mobile`. Foundry owns users/passwords/sessions. The page remembers only per-world player ID, clears passwords and disables connected users. Visiting establishes `/join`, ending that browser's world login. Module activation/mode selection are independent.
 
 ## Build and check
 
@@ -12,11 +12,11 @@ Latest deployed evidence and pending phone checks: [current status](current-stat
 
 ## App installation
 
-The collapsed **Install Mikelandia Controls** section detects Android, iPhone/iPad (including desktop-identified iPads), or other browsers. Android Chrome: **Install and create shortcut > Install**, **Add to home screen > Install**, or **Install app**, depending on version. iOS Safari: **Share > Add to Home Screen**, keeping **Open as Web App** on if shown. Open Mikelandia from the home screen. Regular tabs retain browser controls.
+The collapsed **Install Mikelandia Controls** section detects Android, iPhone/iPad (including desktop-identified iPads) and other browsers. Android Chrome: **Install and create shortcut > Install**, **Add to home screen > Install**, or **Install app**, depending on version. iOS Safari: **Share > Add to Home Screen**, keeping **Open as Web App** on if shown. Open Mikelandia from the home screen. Regular tabs retain browser controls.
 
 Manifest: standalone display, start `./`, scope `../` relative to `/mobile/manifest.webmanifest`, covering login and `/game`; route prefixes work. OS bars remain device-controlled. Installation controls hide when installed/standalone and work independently of Foundry availability. No service worker or offline game cache.
 
-The in-game companion frame follows the [standalone spacing contract](architecture.md#mobile-frame-and-upgrades). Browser fixtures explicitly activate that CSS branch because CDP display-mode emulation does not establish standalone context. Physical installed-app review remains required.
+[Standalone spacing](architecture.md#mobile-frame-and-upgrades) fixtures explicitly activate the CSS branch: CDP display-mode emulation cannot establish standalone context. Review installed apps physically.
 
 ## Hosting and updates
 
@@ -37,7 +37,7 @@ mikelandia.duckdns.org {
 }
 ```
 
-Replace static files without a service restart. For Caddy changes, run `sudo caddy validate --config /etc/caddy/Caddyfile`, then reload Caddy. Verify public hashes, `/mobile` redirect, and native `/`, `/join`, `/game`, and Socket.IO routes. Foundry need not restart.
+Static updates need no restart. For Caddy changes, run `sudo caddy validate --config /etc/caddy/Caddyfile`, then reload Caddy. Verify public hashes, `/mobile` redirect, and native `/`, `/join`, `/game`, and Socket.IO routes. Foundry need not restart.
 
 Caddy can serve the page while Foundry is stopped; connection failures offer retry. No active world triggers a 20-second retry. Stopping the AWS instance stops both.
 

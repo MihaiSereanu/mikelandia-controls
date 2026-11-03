@@ -1152,6 +1152,10 @@
         "MCMobileCouldNotRestoreTheSessionReloadFoundry": "Mikelandia Controls could not restore the session. Reload Foundry to recover safely.",
         "FinishingRecovery": "Finishing recovery",
         "ReloadingFoundryToFinishRecovery": "Reloading Foundry to finish recovery…",
+        "ReconnectingStatus": "Reconnecting…",
+        "SyncingStatus": "Syncing…",
+        "ReloadingStatus": "Reloading…",
+        "RecoveryFailedStatus": "Connection recovery failed.",
         "SynchronisingGame": "Synchronizing game…",
         "ChangingPresentation": "Changing presentation",
         "ApplyingTheRequestedMobilePresentation": "Applying the requested mobile presentation.",
@@ -1174,6 +1178,7 @@
         "SynchronisingSessionData2": "Synchronizing session data…"
       },
       "AppKernel": {
+        "WaitForConnectionRecovery": "Wait for connection recovery to finish.",
         "ThisActorViewIsNoLongerActive": "This Actor view is no longer active.",
         "ThisCharacterMenuIsNoLongerActive": "This character menu is no longer active.",
         "TheSelectedBiographyIsNoLongerActive": "The selected biography is no longer active.",

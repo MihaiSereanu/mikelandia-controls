@@ -22,7 +22,7 @@ function renderBranch(branch, commands, scope) {
 }
 
 function folderNode(branch, commands, scope) {
-  const details = node("details", { className: "mc-journal-folder", children: [
+  const details = node("details", { className: "mc-journal-folder", dataset: { folderId: branch.folder.id }, children: [
     node("summary", { attrs: { "aria-expanded": "false" }, children: [icon("fa-chevron-right"), icon("fa-folder"), node("strong", { text: branch.folder.name }), node("small", { text: journalBranchCount(branch) })] }),
     node("div", { className: "mc-journal-folder-contents", children: renderBranch(branch, commands, scope) })
   ] });
