@@ -588,7 +588,6 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
           diagnostics?.record?.("info", `MODE TRANSITION ${JSON.stringify({ event: "completed", generation, to: policy.formFactor, orientation: policy.orientation, timings, slowestCheckpoint: slowest[0] ?? "unknown", totalMs: timings?.total ?? 0, viewportAfter: after?.visualViewport ?? after?.viewportBounds ?? null, route: after?.route ?? store.state.route, rootCount: after?.rootCount ?? null, interactionListeners: after?.interactionListeners ?? null })}`);
         },
         onError: (error, { generation, checkpoint }) => {
-          frame?.cancelModeTransitionRestore?.();
           store.dispatch({ type: "mode-transition-failed", generation });
           diagnostics?.record?.("error", `Mode change stalled at ${checkpoint}`, error);
         }

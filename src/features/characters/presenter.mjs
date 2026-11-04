@@ -877,15 +877,9 @@ function deathSaveControl(actor, commands, status, scope) {
               status,
               localizedText(
                 commands.localize,
-                "MIKELANDIA_CONTROLS.Character.Presenter.RollingDeathSave",
-                "Rolling death save…",
-              ),
-              localizedText(
-                commands.localize,
                 "MIKELANDIA_CONTROLS.Character.Presenter.DeathSave",
                 "Death save",
               ),
-              scope,
             ),
         },
         children: [
@@ -3186,11 +3180,6 @@ function headerInitiative(actor, commands, status, scope) {
             status,
             localizedText(
               commands.localize,
-              "MIKELANDIA_CONTROLS.Character.Presenter.RollingInitiative",
-              "Rolling initiative…",
-            ),
-            localizedText(
-              commands.localize,
               "MIKELANDIA_CONTROLS.Character.Presenter.Initiative",
               "Initiative",
             ),
@@ -3706,12 +3695,6 @@ function skillsPanel(actor, commands, status, scope, compact = false) {
                     { skill: skill.key },
                     commands,
                     status,
-                    localizedText(
-                      commands.localize,
-                      "MIKELANDIA_CONTROLS.Character.Presenter.RollingSkill",
-                      "Rolling {label}…",
-                      { label: skill.label },
-                    ),
                     skill.label,
                   ),
               },
@@ -5198,14 +5181,6 @@ function conditionControl(condition, actor, commands, status, scope) {
             { conditionId: condition.id, active: !condition.active },
             commands,
             status,
-            localizedText(
-              commands.localize,
-              condition.active
-                ? "MIKELANDIA_CONTROLS.Character.Presenter.RemovingCondition"
-                : "MIKELANDIA_CONTROLS.Character.Presenter.ApplyingCondition",
-              condition.active ? "Removing {label}…" : "Applying {label}…",
-              { label: condition.label },
-            ),
             "",
           ),
       },
@@ -5381,11 +5356,6 @@ function exhaustionControl(condition, actor, commands, status, scope) {
               { originalLevel: level, level: level + direction },
               commands,
               status,
-              localizedText(
-                commands.localize,
-                "MIKELANDIA_CONTROLS.Character.Presenter.UpdatingExhaustion",
-                "Updating exhaustion…",
-              ),
               "",
             );
             for (const entry of buttons) entry.disabled = true;
@@ -7149,7 +7119,6 @@ function itemActionButton(item, actor, commands, status, scope) {
 }
 
 function runItemAction(button, item, actor, commands, status) {
-  const hasActivity = item.useMode === "activity";
   return runActorCommand(
     button,
     ACTOR_COMMANDS.USE_ITEM,
@@ -7160,14 +7129,6 @@ function runItemAction(button, item, actor, commands, status) {
     },
     commands,
     status,
-    localizedText(
-      commands.localize,
-      hasActivity
-        ? "MIKELANDIA_CONTROLS.Character.Presenter.UsingItem"
-        : "MIKELANDIA_CONTROLS.Character.Presenter.SharingItem",
-      hasActivity ? "Using {name}…" : "Sharing {name}…",
-      { name: item.name },
-    ),
     item.name,
   );
 }
@@ -7467,12 +7428,6 @@ function abilitiesSavesPreview(actor, onViewAll, commands, status, scope) {
                             { skill: skill.key },
                             commands,
                             status,
-                            localizedText(
-                              commands.localize,
-                              "MIKELANDIA_CONTROLS.Character.Presenter.RollingSkill",
-                              "Rolling {label}…",
-                              { label: skill.label },
-                            ),
                             skill.label,
                           ),
                       },
@@ -7572,12 +7527,6 @@ function abilityScoresPreview(actor, commands, status, scope) {
                     status,
                     localizedText(
                       commands.localize,
-                      "MIKELANDIA_CONTROLS.Character.Presenter.RollingAbilityCheck",
-                      "Rolling {label} check…",
-                      { label: ability.label },
-                    ),
-                    localizedText(
-                      commands.localize,
                       "MIKELANDIA_CONTROLS.Character.Presenter.AbilityCheck",
                       "{label} check",
                       { label: ability.label },
@@ -7603,12 +7552,6 @@ function abilityScoresPreview(actor, commands, status, scope) {
                     { ability: ability.key },
                     commands,
                     status,
-                    localizedText(
-                      commands.localize,
-                      "MIKELANDIA_CONTROLS.Character.Presenter.RollingAbilitySave",
-                      "Rolling {label} save…",
-                      { label: ability.label },
-                    ),
                     localizedText(
                       commands.localize,
                       "MIKELANDIA_CONTROLS.Character.Presenter.AbilitySave",
@@ -7672,12 +7615,6 @@ function toolProficiencyButton(tool, actor, commands, status, scope) {
             { tool: tool.key },
             commands,
             status,
-            localizedText(
-              commands.localize,
-              "MIKELANDIA_CONTROLS.Character.Presenter.RollingTool",
-              "Rolling {label}…",
-              { label: tool.label },
-            ),
             tool.label,
           ),
       },
@@ -8093,7 +8030,6 @@ async function runActorCommand(
   payload,
   commands,
   status,
-  pendingMessage,
   resultLabel,
 ) {
   if (button.disabled) return;
@@ -8158,15 +8094,6 @@ function formatModifier(value) {
     return "—";
   const numeric = Number(value);
   return numeric >= 0 ? `+${numeric}` : String(numeric);
-}
-
-function ordinal(value) {
-  const tens = value % 100;
-  if (tens >= 11 && tens <= 13) return `${value}th`;
-  if (value % 10 === 1) return `${value}st`;
-  if (value % 10 === 2) return `${value}nd`;
-  if (value % 10 === 3) return `${value}rd`;
-  return `${value}th`;
 }
 
 function characterRecordSourceUuid(actor) {

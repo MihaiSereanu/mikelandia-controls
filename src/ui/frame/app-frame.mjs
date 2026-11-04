@@ -68,7 +68,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     }
   };
 
-  const reconnectBlocker = createReconnectBlocker(scope, { localize: commands.localize, locale: commands.readLocale?.() ?? "en", onReload: () => commands.reloadApplication() });
+  const reconnectBlocker = createReconnectBlocker(scope, { localize: commands.localize, onReload: () => commands.reloadApplication() });
   const modeTransitionBlocker = createModeTransitionBlocker(scope, { localize: commands.localize });
   const rotateSuggestion = tabletRotateSuggestion(commands.localize);
   const navSideToggle = node("button", { className: "mc-tablet-nav-side-toggle", attrs: { type: "button" }, children: [navSideIcon], on: { click: () => commands.toggleTabletNavSide() } }, scope);
@@ -442,8 +442,21 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     captureModeTransitionState: () => ({ formFactor: store.state.formFactor, orientation: store.state.orientation, route: store.state.route, viewportScrollTop: characterScrollTop(), viewportScrollLeft: viewport.scrollLeft }),
     modeTransitionDiagnosticSnapshot: () => ({ formFactor: store.state.formFactor, orientation: store.state.orientation, route: store.state.route, rootCount: document.querySelectorAll(".mc-mobile-app").length, viewportBounds: elementViewport(viewport) }),
     settleModeTransition: ({ isCurrent = () => true } = {}) => waitForStableElementGeometry(viewport, { localize: commands.localize, isCurrent, maxFrames: 45 }),
-    async restoreModeTransitionState(preserved, bounds, { isCurrent = () => true } = {}) { if (!isCurrent()) return false; if (store.state.route === "characters") restoreCharacterScrollPosition(characterScroller(), Number(preserved?.viewportScrollTop) || 0, characterHeaderScroll, { clampContent: true }); else viewport.scrollTop = Number(preserved?.viewportScrollTop) || 0; viewport.scrollLeft = Number(preserved?.viewportScrollLeft) || 0; return Boolean(bounds); },
-    cancelModeTransitionRestore() {}
+    async restoreModeTransitionState(preserved, bounds, { isCurrent = () => true } = {}) {
+      if (!isCurrent()) return false;
+      if (store.state.route === "characters") {
+        restoreCharacterScrollPosition(
+          characterScroller(),
+          Number(preserved?.viewportScrollTop) || 0,
+          characterHeaderScroll,
+          { clampContent: true }
+        );
+      } else {
+        viewport.scrollTop = Number(preserved?.viewportScrollTop) || 0;
+      }
+      viewport.scrollLeft = Number(preserved?.viewportScrollLeft) || 0;
+      return Boolean(bounds);
+    }
   });
 }
 

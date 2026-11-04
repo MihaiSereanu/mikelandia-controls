@@ -473,7 +473,7 @@ export function createFoundryPreferencesGateway({
     moveToChatAfterRoll: readers.moveToChatAfterRoll,
     actionSummaries: () => pick(["showActionSummaries", "compactActionSummaries"]),
     snapshot() {
-      const fields = preferenceFields(setting, localize, getNavigator, getGame, getSystemIntegration().features);
+      const fields = preferenceFields(setting, localize, getNavigator, getSystemIntegration().features);
       return Object.freeze({
         ...presentation(),
         wakeLockSupported: typeof getNavigator()?.wakeLock?.request === "function",
@@ -527,7 +527,7 @@ export function createFoundryPreferencesGateway({
       restoring = true;
       try {
         const session = getGame();
-        const fields = preferenceFields(setting, localize, getNavigator, getGame, getSystemIntegration().features);
+        const fields = preferenceFields(setting, localize, getNavigator, getSystemIntegration().features);
         let requiresReload = false;
 
         for (const settingKey of Object.values(CHARACTER_COLLECTION_SETTING_KEYS)) {
@@ -564,9 +564,7 @@ export function createFoundryPreferencesGateway({
   });
 }
 
-/** A live proxy description of Foundry v13's native client performance setting. */
-
-function preferenceFields(setting, localize, getNavigator, getGame, features) {
+function preferenceFields(setting, localize, getNavigator, features) {
   return Object.freeze([
     choiceField(KEYS.MODE, "Mode", normalizedModePreference(setting(KEYS.MODE)), localize),
     choiceField(KEYS.THEME, "Theme", setting(KEYS.THEME), localize),
@@ -599,15 +597,16 @@ function preferenceFields(setting, localize, getNavigator, getGame, features) {
       wakeLock: true,
       failure: localize("MIKELANDIA_CONTROLS.Settings.KeepScreenAwake.Failure")
     })
-  ].filter(field => field.namespace !== MODULE_ID || supportsPreference(field.key, features)).map(field => Object.freeze({
+  ].filter(field => supportsPreference(field.key, features)).map(field => Object.freeze({
     ...field,
     ...(field.key === KEYS.COLOR_SCHEME && !features.legacyCharacterSheet ? {
       value: effectiveColorScheme(normalizedColorScheme(field.value), features),
       choices: field.choices.filter(choice => choice.value !== "class"),
       hint: localize("MIKELANDIA_CONTROLS.Settings.ColourScheme.PlainHint")
     } : {}),
-    defaultValue: field.namespace === MODULE_ID ? (field.key === KEYS.COLOR_SCHEME ? effectiveColorScheme(DEFAULTS[field.key], features) : DEFAULTS[field.key])
-      : (findRegisteredSetting(getGame(), field.namespace, field.key)?.default ?? false)
+    defaultValue: field.key === KEYS.COLOR_SCHEME
+      ? effectiveColorScheme(DEFAULTS[field.key], features)
+      : DEFAULTS[field.key]
   })));
 }
 

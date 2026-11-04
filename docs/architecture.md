@@ -19,7 +19,7 @@ Character themes, header artwork, and header scrolling live in `features/charact
 
 ### Task map
 
-Paths below are relative to `src/`; Node names are relative to `tests/` and end in `.test.mjs`. Browser expressions match case names in `scripts/check_browser.mjs`: list with `--list --filter "<expression>"`, then run the selected cases without `--list`. These are starting points; inspect imports and assertions for the specific change.
+Paths are relative to `src/`; Node names are relative to `tests/` and end in `.test.mjs`. Brace groups abbreviate paths/test names; expand before use. Browser expressions match case names: `node scripts/check_browser.mjs --list --filter "<expression>"`, then omit `--list` to run. Inspect imports and assertions for the specific change.
 
 | Task / contract | Source owners | Node tests | Browser expression |
 |---|---|---|---|
@@ -38,7 +38,7 @@ Paths below are relative to `src/`; Node names are relative to `tests/` and end 
 | [Controls guide](#controls-guide) / descriptions | `features/help/`, `ui/help/`, `ui/primitives/{description,enriched-description,localized-text}.mjs`, `foundry/actors/description-gateway.mjs` | `in-person`, `profile-view`, `description-gateway` | `^(descriptions|in-person|tooltip-touch|warhammer)-` |
 | [Login / PWA](mobile-login.md) | `../mobile-login/`, `foundry/presentation/mobile-back-gateway.mjs` | `mobile-login`, `mobile-logout` | `^mobile-login-` |
 
-Bio/Notes browser fixtures: `tests/browser/actor-notes.mjs`. Editor fixtures use native API doubles by default; `--native-assets` additionally loads installed Foundry ProseMirror source, dependencies, full core CSS and icons through a local read-only asset bridge. Actor Notes then exercises native menus with trusted Chromium touch input. Native source is never copied into the release. Brace groups abbreviate paths/test names; expand them before using a literal filename. Browser coverage is fixture evidence. Roll-dialog icon checks and `^control-contrast-native$` additionally use `--native-assets`; see [native applications](#native-applications-and-rolls) and [resources](#resources-recovery-and-notes).
+Bio/Notes fixtures: `tests/browser/actor-notes.mjs`. Editors use native API doubles by default. `--native-assets` loads installed Foundry ProseMirror source/dependencies, core CSS and icons through a local read-only bridge; Actor Notes then tests native menus with trusted Chromium touch. Native source stays out of releases. This remains fixture evidence. Also use `--native-assets` for [roll-dialog icons](#native-applications-and-rolls) and [`^control-contrast-native$`](#resources-recovery-and-notes).
 
 ### Startup contract
 
@@ -56,13 +56,15 @@ Five routes: Character, Chat, Journals, Initiative, Settings (internal route key
 
 Resolve fresh Actor/Item state by UUID. Validate ownership, session/config revisions, and duplicate submissions; clean up pending actions on cancellation. Never accept arbitrary client paths or native method names. Refresh after native updates; system models own derived values. Share implementation while retaining each game's terminology/grouping. Unsupported systems get identity and native sheets; isolate D&D handlers.
 
-Notes fields are WFRP `system.details.biography.value` and Shadowdark `system.notes`. Notes and D&D Biography/About/Details use Foundry's local ProseMirror editor and native formatting toolbar. Preserve meaningful line breaks; an unchanged Save retains exact source markup. Opening and Cancel never write. Exclude GM notes; compare exact original source before saving. Notes and HTML journals share `ui/primitives/text-editor.mjs` and `foundry/presentation/rich-text-editor.mjs`; Markdown journals retain source editing and native format, and ambitions stay plain text. Text dialogs fill the available viewport up to 1100px wide, keep toolbar/Save/Cancel visible when the keyboard reduces its height, and open with the caret and scroll position at the end. Native typing follows the caret without forcing readers back down. Reuse the native Chat editor's touch submenu handling; admit its formatting dropdown without requiring an open native sheet. Escape dismisses formatting before the editor. Native editors are noncollaborative and never write directly to documents; caller Save/conflict checks remain authoritative.
+Notes fields are WFRP `system.details.biography.value` and Shadowdark `system.notes`. Notes and D&D Biography/About/Details use Foundry's local ProseMirror editor and native formatting toolbar. Preserve meaningful line breaks; an unchanged Save retains exact source markup. Opening and Cancel never write. Exclude GM notes; compare exact original source before saving. Notes and HTML journals share `ui/primitives/text-editor.mjs` and `foundry/presentation/rich-text-editor.mjs`; Markdown journals retain source editing and native format, and ambitions stay plain text.
+
+Text dialogs fill the viewport up to 1100px wide, keep toolbar/Save/Cancel visible above the keyboard, and open with caret/scroll at the end. Native typing follows the caret without forcing readers back down. Reuse the native Chat editor's touch submenu handling; admit its formatting dropdown without requiring an open native sheet. Escape dismisses formatting before the editor. Native editors are noncollaborative and never write directly to documents; caller Save/conflict checks remain authoritative.
 
 Item descriptions, profile properties and Effects Notes share `ui/primitives/enriched-description.mjs`. Exact Item/Effect UUIDs supply native `TextEditor.enrichHTML` context and roll data, including unidentified D&D descriptions and source-Item property fragments. Strip secrets before enrichment; recheck identity, access and source afterward. Preserve safe formatting, images, plain-text breaks and internally scrolling wide content; exclude executable markup, native controls, source classes/styles and unsafe URLs. Retain only native enriched roll/link metadata and icons; D&D effects keep full descriptions.
 
 Inline rolls use native Roll/chat, source Item data, Actor speaker and privacy modes; Actor rolls require OWNER. UUID references use viewport-bounded native popovers. Nested references replace content; Back resolves previous references afresh. Recheck compendium/journal/page access and exclude GM/secrets on every lookup. Show unavailable targets; dismiss on outside tap, retap or Escape, discarding pending loads on dismissal/disposal.
 
-Notes-only changes invalidate selected-Actor snapshots. Same-Actor refreshes retain the editor, draft, focus and selection; Actor/tab changes or disposal remove it. Keep duplicate-save guards until native writes settle; failures retain drafts for retry.
+Notes-only changes invalidate selected-Actor snapshots. Same-Actor refreshes retain editor/draft/focus/selection; Actor/tab changes or disposal remove it. Keep duplicate-save guards until native writes settle; failures retain drafts for retry.
 
 ## Controls guide
 
@@ -102,15 +104,15 @@ ID: `mikelandia-controls`; branding: Mikelandia Controls; CSS/data: `mc-`; local
 
 ## Mobile reconnect recovery
 
-An intact foreground connection leaves the screen ready. Disconnect keeps reading visible/scrollable, replacing disabled navigation with compact Reconnecting/Syncing status: a polite live region outside the busy pane, without covering content or taking focus. Mode changes retain their full-screen blocker.
+Disconnect preserves visible, scrollable content and replaces disabled navigation with compact Reconnecting/Syncing status: a polite live region outside the busy pane that neither covers content nor takes focus. Mode changes retain their full-screen blocker.
 
 Recovery capture-phase input guards block activation, editing, submission and navigation, allowing touch/wheel scrolling, reading and copy; restore control accessibility attributes afterward. Kernel guards independently reject navigation/writes; Back consumes without navigating. Preserve connection generations and native editor cleanup.
 
-Concurrently fetch permission-filtered User, Folder, Actor, Combat, JournalEntry and ChatMessage collections. Retain unchanged document identities; reconcile changes/additions/deletions before unlocking. Rerender native chat only for changed authoritative collections. Preserve accessible character/tab/disclosures and latest reading position. Await journal refresh, preserving page/heading and post-heading scroll; remove revoked/deleted content.
+Concurrently fetch permission-filtered User, Folder, Actor, Combat, JournalEntry and ChatMessage collections. Reconcile changes/additions/deletions before unlocking, retaining unchanged document identities. Rerender native chat only for changed authoritative collections. Preserve accessible character/tab/disclosures and latest reading position. Await journal refresh, preserving page/heading and post-heading scroll; remove revoked/deleted content.
 
 Render store subscribers synchronously, independent of hidden-tab animation frames. Fetch/reconciliation timers and `reconnect.presentation` separate data work from UI restoration. Retain five-minute connection grace and reload on recovery failure. No service worker/persistent world cache; OS-discarded pages reload.
 
-The task map locates reconnect coverage. `node scripts/measure_reconnect.mjs` compares HEAD/checkout with identical synthetic inputs, writing `dist/reconnect-timing-comparison.json`. Hosted latency and installed Android/iPhone behavior require separate checks.
+`node scripts/measure_reconnect.mjs` compares HEAD/checkout with identical synthetic inputs, writing `dist/reconnect-timing-comparison.json`. Hosted latency and installed Android/iPhone behavior require separate checks.
 
 ## Native applications and rolls
 
@@ -130,7 +132,9 @@ Shadowdark `rollStatCheck`, `rollAttack`, and `castSpell` roll internally: do no
 
 Phone/Tablet Journals keeps the folder tree for an empty search and groups matching pages by Journal otherwise. Every query word must occur in the combined Journal title, page title and readable authored text, ignoring case/accents. Search covers accessible world Journals, excluding attachment contents, compendiums and dynamically embedded documents. Explicit authored link/roll labels remain searchable. Page hits open normally; titles/excerpts alone highlight matches. Query state persists through tab/reader navigation until cleared or reloaded.
 
-`features/journals/search-controller.mjs` owns lazy, session-local indexing, 200 ms debounce, caching and stale-generation rejection. `readJournalSearchIndex` applies native entry/page access and secret visibility, authoritative HTML/Markdown conversion and final source/identity/session rechecks. `watch` invokes `onJournalSearchChange` for every journals invalidation even when snapshot signatures are unchanged. Invalidation withdraws results immediately; reconnect/mode transitions suspend indexing and rebuild on recovery. The library updates in place to retain typing focus/selection and results scroll. Search heading/result buttons override native fixed heights with content-sized heights in base and protected styles. Keep highlights in normal inline flow and prevent result titles/excerpts from shrinking; multi-line content must fit inside each card without overlapping adjacent results.
+`features/journals/search-controller.mjs` owns lazy, session-local indexing, 200 ms debounce, caching and stale-generation rejection. `readJournalSearchIndex` applies native entry/page access and secret visibility, authoritative HTML/Markdown conversion and final source/identity/session rechecks. `watch` invokes `onJournalSearchChange` for every journals invalidation even when snapshot signatures are unchanged. Invalidation withdraws results immediately; reconnect/mode transitions suspend indexing and rebuild on recovery. The library updates in place to retain typing focus/selection and results scroll.
+
+Search heading/result buttons override native fixed heights with content-sized heights in base and protected styles. Keep highlights in normal inline flow and prevent result titles/excerpts from shrinking; multi-line content must fit inside each card without overlapping adjacent results.
 
 ## Journal access
 
@@ -156,7 +160,9 @@ Write owned embedded Item `system.equipped.value` through native `Item.update`, 
 
 Combat shows Mounted beside Movement when native `actor.mount` resolves. Match rider-sheet permissions: mount ownership/visibility is unnecessary for display or toggling the owned rider's `system.status.mount.mounted`. Native preparation owns movement. In 5e, Mounted text opens a scrollable rules popover without toggling: Automated/Not Automated h3 headings and system 10.1.2 mounted-Dodge discrepancy are owned by `mount-rules.mjs`.
 
-Below Armour, Mounts shows assigned Name and read-only current/max Wounds in either mounted state. Name takes remaining width on one line with horizontal overflow; Wounds uses content width and wraps below as needed. Resolve native actor/token assignment via `mount.mjs`, never creature names. Hide unavailable/off-scene token mounts without calling the native off-scene getter. Include mount identity in revisions; `profileDependencySources` refreshes riders on mount changes without granting mount navigation/editing.
+Below Armour, Mounts shows assigned Name and read-only current/max Wounds in either mounted state. Name takes remaining width on one line with horizontal overflow; Wounds uses content width and wraps below as needed.
+
+Resolve native actor/token assignment via `mount.mjs`, never creature names. Hide unavailable/off-scene token mounts without calling the native off-scene getter. Include mount identity in revisions; `profileDependencySources` refreshes riders on mount changes without granting mount navigation/editing.
 
 ### Encumbrance
 
@@ -202,7 +208,7 @@ PC Bio retains internal `notes` and editable Notes, followed by read-only, nonbl
 
 Inventory names/arrows toggle initially closed player descriptions in Equipped/Carried/Stashed Gear, including Group. Empty or sanitized-away descriptions have no toggle; safe image-only content does. Quantity/equipment controls remain independent.
 
-Spells Known sorts all spells, including lost ones, by ascending Tier then name. Tier headings match resource-value typography; rows omit Tier labels and reserve only cast-button space. Tiers start expanded, retaining choices across same-character refresh/tab changes until character change/reload. Lost names strike through with visible disabled casting. Names/arrows disclose descriptions; dice alone casts. Expanded descriptions expose Lost, writing owned Spell `system.lost` without rolling and preserving disclosure state.
+Spells Known sorts all spells, including lost ones, by Tier then name ascending. Tier headings match resource-value typography; rows omit Tier labels and reserve only cast-button space. Tiers start expanded, retaining choices across same-character refresh/tab changes until character change/reload. Lost names strike through with visible disabled casting. Names/arrows disclose descriptions; dice alone casts. Expanded descriptions expose Lost, writing owned Spell `system.lost` without rolling and preserving disclosure state.
 
 Spells from Items lists identified carried Scrolls/unbroken Wands with resolvable native Spell links; omit empty subsections. Wands/Scrolls start expanded and retain state like Tiers; alphabetical rows show source and separate description/cast controls. Wand Lost uses native `toggleSpellLost` on the source reference after ownership/link/revision/unbroken checks, never the compendium Spell. Scrolls omit Lost.
 
@@ -210,7 +216,7 @@ Item casting requires `canUseMagicItems` and native `actor.system.castSpell(spel
 
 Main retains internal `abilities` for tab state/Targets. Special Abilities shows owned native Class Ability Items with descriptions and native group/uses summaries. Call `actor.system.useAbility(item.uuid, config)` once; scoped `SD-Player-classAbility` checks identity, uses, loss and roll fields before native consumption/chat. Lost/exhausted abilities remain readable without actions.
 
-Inventory places the total Slots used/maximum in a standalone row above Equipped Gear, then separates Equipped/Carried/Stashed Gear, keeping Slots/Add Gear when empty. Group uses the same standalone Slots row above Gear. Equipped quantities are read-only in UI/capabilities until unequipped. Owned, identified, carried Items with native `canBeEquipped` delegate to sheet `_onToggleEquipped`, retaining shield/two-handed handling. Validate expected equipment/handedness dependencies; invent no flags. HP/read-only AC cards share height. Keep each coin label/value/controls together, wrapping between denominations. Tablet resources use HP/AC/DEF then XP/Grit/Luck; Stats/Coins also use three columns.
+Inventory shows total Slots used/maximum in a standalone row above Equipped Gear, followed by Carried/Stashed Gear; keep Gear/Slots/Add Gear visible when empty. Group uses the same standalone Slots row above Gear. Equipped quantities are read-only in UI/capabilities until unequipped. Owned, identified, carried Items with native `canBeEquipped` delegate to sheet `_onToggleEquipped`, retaining shield/two-handed handling. Validate expected equipment/handedness dependencies; invent no flags. HP/read-only AC cards share height. Keep each coin label/value/controls together, wrapping between denominations. Tablet resources use HP/AC/DEF then XP/Grit/Luck; Stats/Coins also use three columns.
 
 Phone/Tablet `Player` Actors named `Group` (trimmed, case-insensitive) open Item Tracking: Inventory by default plus native Notes. Gear combines identified carried physical Items, including equipped ones; omit Equipped Gear/equip controls. Quantities remain editable without changing equipment flags. Retain Coins, Slots, Stashed Gear, descriptions and custom/catalog Add Gear. Renaming across Group invalidates quantity requests and refreshes profiles; desktop stays native.
 
@@ -220,7 +226,7 @@ HP/DEF/XP/Grit/Luck padlocks start locked after reload and persist per Actor/res
 
 Shadowdark/Group numeric resource, coin and quantity editors use `numericEditorLayout: "stacked"`: centered label/input (at most 9rem/card width), equal Save/Cancel buttons and cards tall enough for the form. Hide duplicate coin/resource labels; keep gear name plus Quantity. Preserve focus/selection, numeric keyboard and validation; other profiles keep their layouts.
 
-Keep Gear/Slots/add visible when empty. Custom/catalog choice supports Cancel, Escape, and Back; render only the selected editor. Catalog auto-loads, searches all words across name/source ignoring case/accents, and keeps all results scrollable. Success/Cancel removes the editor; native cancellation retains it. Dispose chooser and ignore late responses.
+Custom/catalog choice supports Cancel, Escape, and Back; render only the selected editor. Catalog auto-loads, searches all words across name/source ignoring case/accents, and keeps all results scrollable. Success/Cancel removes the editor; native cancellation retains it. Dispose chooser and ignore late responses.
 
 Custom Basic Items start at quantity 1; `system.slots.{slots_used,per_slot}` default to 1, with `free_carry=0`. Validate nonnegative/positive safe integers respectively; native weight is `ceil(quantity / per_slot) * slots_used`. Custom fields cannot override catalog acquisition.
 

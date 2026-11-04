@@ -64,10 +64,36 @@ export function groupSpells(spells = [], sortMode = "manual", localize = null) {
     const level = Math.max(0, Number(spell.level) || 0);
     const methodKey = String(method?.key ?? "other").trim().toLowerCase() || "other";
     const levelSection = !isItemSpell && ["spell", "spellcasting"].includes(methodKey);
-    const key = isItemSpell ? `source:${source.id || `${sourceType}:${sourceName.toLowerCase()}`}` : levelSection ? `method:${methodKey}:level:${level}` : `method:${methodKey}`;
-    const label = isItemSpell ? sourceName : levelSection ? (level === 0 ? collectionText(localize, "Spells.Cantrips", "Cantrips") : collectionText(localize, "Spells.Level", "Level {ordinal}", { ordinal: String(level) })) : String(method?.label ?? "").trim() || collectionText(localize, "Spells.Other", "Other Spells");
-    const group = levelSection ? "spellcasting" : "other";
-    const current = sections.get(key) ?? { key, label, group, level: levelSection ? level : undefined, order: isItemSpell ? 1000 : Number.isFinite(Number(method?.order)) ? Number(method.order) : 100, firstIndex: index, spells: [] };
+    let key;
+    let label;
+    if (isItemSpell) {
+      key = `source:${source.id || `${sourceType}:${sourceName.toLowerCase()}`}`;
+      label = sourceName;
+    } else if (levelSection) {
+      key = `method:${methodKey}:level:${level}`;
+      label = level === 0
+        ? collectionText(localize, "Spells.Cantrips", "Cantrips")
+        : collectionText(localize, "Spells.Level", "Level {ordinal}", { ordinal: String(level) });
+    } else {
+      key = `method:${methodKey}`;
+      label = String(method?.label ?? "").trim() || collectionText(localize, "Spells.Other", "Other Spells");
+    }
+
+    let current = sections.get(key);
+    if (!current) {
+      let order = 100;
+      if (isItemSpell) order = 1000;
+      else if (Number.isFinite(Number(method?.order))) order = Number(method.order);
+      current = {
+        key,
+        label,
+        group: levelSection ? "spellcasting" : "other",
+        level: levelSection ? level : undefined,
+        order,
+        firstIndex: index,
+        spells: []
+      };
+    }
     current.spells.push(spell);
     sections.set(key, current);
   }
@@ -279,10 +305,7 @@ export function itemSubtitle(item) {
     const preparation = item.preparationEligible || item.alwaysPrepared ? item.preparationStatus : "";
     return [preparation, item.castingTime || item.activation].filter(Boolean).join(" · ");
   }
-  const parts = [];
-  const type = item.typeLabel || titleCase(item.type);
-  if (type) parts.push(type);
-  return parts.join(" · ");
+  return String(item.typeLabel || titleCase(item.type) || "");
 }
 
 export function countInventoryContents(node) {
@@ -334,15 +357,6 @@ function sourcePriority(type) {
   if (type === "race" || type === "species") return -90;
   if (type === "background") return -80;
   return 0;
-}
-
-function ordinal(value) {
-  const tens = value % 100;
-  if (tens >= 11 && tens <= 13) return `${value}th`;
-  if (value % 10 === 1) return `${value}st`;
-  if (value % 10 === 2) return `${value}nd`;
-  if (value % 10 === 3) return `${value}rd`;
-  return `${value}th`;
 }
 
 function titleCase(value) {

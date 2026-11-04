@@ -42,6 +42,9 @@ while ($ancestor) {
 function Copy-ModuleTree([string]$From, [string]$To) {
     New-Item -ItemType Directory -Path $To -Force | Out-Null
     foreach ($item in Get-ChildItem -LiteralPath $From -Force) {
+        if ($From -ieq $source -and $item.Name -eq 'dist') {
+            continue
+        }
         if ($item.Name -in @('.git', 'deploy.local.json', '.env') -or
             ($item.Name -like '.env.*' -and $item.Name -ne '.env.example')) {
             continue
