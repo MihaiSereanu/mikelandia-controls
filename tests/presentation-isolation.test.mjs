@@ -27,6 +27,23 @@ test("legacy audio opt-out no longer exposes a mobile or native preference", t =
   assert.equal(f.gateway.snapshot().fields.some(field => field.key === "muteMobileAudio"), false);
   assert.deepEqual(f.writes, []);
 });
+
+for (const system of ["shadowdark", "wfrp4e", "dnd5e"]) {
+  test(`${system} Move to Chat preference defaults off, saves a Boolean and restores off`, async t => {
+    const f = setup(t, system);
+    const key = "moveToChatAfterRoll", namespace = "mikelandia-controls";
+    const definition = f.registered.get(`${namespace}.${key}`);
+    assert.equal(definition.scope, "client");
+    assert.equal(definition.default, false);
+    assert.equal(f.gateway.moveToChatAfterRoll(), false);
+    assert.equal(f.gateway.snapshot().fields.find(field => field.key === key).defaultValue, false);
+    await assert.rejects(f.gateway.set({ key, value: "true" }));
+    await f.gateway.set({ key, value: true });
+    assert.equal(f.gateway.moveToChatAfterRoll(), true);
+    await f.gateway.restoreDefaults();
+    assert.equal(f.gateway.moveToChatAfterRoll(), false);
+  });
+}
 test("physical desktop registers no visible module controls or help menu", t => {
   const f = setup(t, "dnd5e");
   const menus = [];

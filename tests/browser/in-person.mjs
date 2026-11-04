@@ -17,6 +17,7 @@ import { checkDamageFeedback } from "/tests/browser/damage-feedback.mjs";
 
 import { createAppFrame } from "/src/ui/frame/app-frame.mjs";
 import { checkReconnect } from "/tests/browser/reconnect.mjs";
+import { checkRollChat } from "/tests/browser/roll-chat.mjs";
 
 const checks = [];
 const check = (name, condition) => { if (!condition) throw new Error(name); checks.push(name); };
@@ -108,7 +109,9 @@ try {
   kernel.reconcile(); await tick(); await tick();
   check("complete kernel starts without a canvas", kernel.active);
   const root = document.querySelector(".mc-mobile-app");
-  if (params.get("timing") === "true") {
+  if (params.get("rollChat") === "true") {
+    await checkRollChat({ f, store, commands, uiCommands, root, values, legacy, warhammer, check, tick });
+  } else if (params.get("timing") === "true") {
     const samples = [];
     recovery = async () => { await new Promise(resolve => setTimeout(resolve, 25)); return { applied: true }; };
     for (let i = 1; i <= 9; i++) {

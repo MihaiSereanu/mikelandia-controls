@@ -210,6 +210,12 @@ export function createDnd5eCommandGateway({
         }
         if (rollResult && diceWaiter) rollResult = await diceWaiter.finalize(rollResult, game, output);
         const response = { ok: true, command: name, actorId, ...(explicitSourceUuid ? { actorSourceUuid: sourceUuid } : {}) };
+        if ([ACTOR_COMMANDS.ROLL_ABILITY, ACTOR_COMMANDS.ROLL_SAVE, ACTOR_COMMANDS.ROLL_SKILL,
+          ACTOR_COMMANDS.ROLL_TOOL, ACTOR_COMMANDS.ROLL_INITIATIVE, ACTOR_COMMANDS.ROLL_DEATH_SAVE, ACTOR_COMMANDS.USE_ITEM].includes(name)) {
+          response.rolled = Boolean(resultFromRollOutput(output) || uniqueMessages([...messageDocuments(game), ...(actionCapture?.messages ?? [])])
+            .some(message => !existingMessageIds.has(messageIdentifier(message)) && message.rolls?.length
+              && isAcceptedActionMessage(message, actor, actionItem, name, payload, game.user.id)));
+        }
         if (name === ACTOR_COMMANDS.ADJUST_HIT_DICE && output) response.hitDice = output;
         if (name === ACTOR_COMMANDS.UPDATE_CURRENCY && output) {
           response.changed = output.changed;

@@ -22,6 +22,21 @@ test("D&D capability detection and native checks survive extraction", async t =>
   assert.equal(response.actorSourceUuid, actor.uuid);
 });
 
+test("D&D completion excludes cancelled rolls and unrelated messages", async t => {
+  const { actor, game, gateway } = setup(t);
+  const run = () => gateway.execute(ACTOR_COMMANDS.ROLL_ABILITY, { actorSourceUuid: actor.uuid, ability: "str" });
+  actor.rollAbilityCheck = async () => null;
+  assert.equal((await run()).rolled, false);
+  actor.rollAbilityCheck = async () => {
+    game.messages.push({ id: "unrelated", speaker: { actor: actor.id }, user: game.user,
+      rolls: [{ total: 12 }], flags: { dnd5e: { roll: { type: "skill", skill: "ath" } } } });
+    return null;
+  };
+  assert.equal((await run()).rolled, false);
+  actor.rollAbilityCheck = async () => [{ total: 1, formula: "1d20", parent: { id: "native-result" } }];
+  assert.equal((await run()).rolled, true);
+});
+
 test("D&D legacy ability and saving throw methods retain their arguments", async t => {
   const calls = [];
   const actor = createActor({

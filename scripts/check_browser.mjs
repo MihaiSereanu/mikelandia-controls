@@ -10,6 +10,9 @@ import { checkEditorTouches } from "./browser/editor-touches.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ...["shadowdark", "dnd5e", "wfrp4e"].flatMap(system => [["phone", 390, 844], ["tablet", 1024, 768]].map(([layout, width, height]) =>
+    [`roll-chat-${system}-${layout}`, width, height, "in-person", `layout=${layout}&system=${system}&rollChat=true`])),
+  ["roll-chat-wfrp4e-4e-phone", 390, 844, "in-person", "layout=phone&system=wfrp4e&edition=4e&rollChat=true"],
   ["journal-search-phone", 390, 844, "in-person", "layout=phone&search=true"],
   ["journal-search-tablet", 1024, 768, "in-person", "layout=tablet&search=true"],
   ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844]].map(([layout, width, height]) =>

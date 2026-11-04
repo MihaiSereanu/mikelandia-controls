@@ -91,7 +91,7 @@ export function createWarhammerCommands({ getGame = () => globalThis.game } = {}
         if (rest.skill && test.item && (String(test.item.id) !== String(rest.skill.id)
           || test.item.type !== "skill" || test.item.parent !== actor)) throw unavailable();
         await test.roll();
-        return Object.freeze({ ok: true, actorId: String(actor.id), actorSourceUuid: sourceUuid });
+        return Object.freeze({ ok: true, rolled: true, actorId: String(actor.id), actorSourceUuid: sourceUuid });
       }
       const [kind, id] = action.id.split(":");
       const skill = kind === "skill" ? skillForActor(actor, id) : null;
@@ -136,7 +136,7 @@ export function createWarhammerCommands({ getGame = () => globalThis.game } = {}
       if (kind === "wind" && test.context?.wind !== undefined && test.context.wind !== id) throw unavailable();
       if (typeof test.roll !== "function") throw unavailable();
       await test.roll();
-      return Object.freeze({ ok: true, command: name, actorId: String(actor.id), actorSourceUuid: sourceUuid });
+      return Object.freeze({ ok: true, rolled: true, command: name, actorId: String(actor.id), actorSourceUuid: sourceUuid });
     }
   });
 }

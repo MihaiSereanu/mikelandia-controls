@@ -47,6 +47,7 @@ export function createShadowdarkFixture({ pulp = false, specialAbilities = false
       hooks.emit("updateItem", ability, {});
     }
     rolls.push({ kind, target });
+    hooks.emit("createChatMessage", { user: game.user, flags: { shadowdark: { rollConfig: config } }, rolls: [{ total: fixture.success ? 20 : 1 }] }, {}, game.user.id);
     if (kind === "spell") {
       const source = actor.items.find(item => item.uuid === config.itemUuid);
       if (source?.type === "Scroll") await actor.deleteEmbeddedDocuments("Item", [source.id]);

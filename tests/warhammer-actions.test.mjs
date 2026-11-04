@@ -28,6 +28,7 @@ for (const use5e of [false, true]) {
     const outcome = await gateway.execute(command, payload("characteristic:ws", use5e ? "5e" : "4e"));
     assert.deepEqual(calls, [["characteristic", "ws"], ["roll"]]);
     assert.equal(outcome.ok, true);
+    assert.equal(outcome.rolled, true);
     assert.equal(outcome.actionSession, undefined);
     assert.equal(outcome.rollResult, undefined);
   });
@@ -73,6 +74,7 @@ test("native cancellation releases the command lock without rolling", async t =>
     actor.setupCharacteristic = async () => result;
     const outcome = await gateway.execute(command, payload());
     assert.equal(outcome.cancelled, true);
+    assert.notEqual(outcome.rolled, true);
   }
   assert.deepEqual(calls, []);
 });

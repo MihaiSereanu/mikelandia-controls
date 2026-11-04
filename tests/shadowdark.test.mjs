@@ -185,6 +185,39 @@ function setup(t, options) {
   return f;
 }
 
+test("only a completed Shadowdark roll reports rolled, including an unsuccessful check", async t => {
+  const f = setup(t);
+  f.prompt = async () => false;
+  assert.equal((await f.gateway.execute(action, f.request("stat:str"))).rolled, false);
+  f.prompt = async () => true;
+  f.success = false;
+  assert.equal((await f.gateway.execute(action, f.request("stat:str"))).rolled, true);
+  assert.equal(f.hooks.count("createChatMessage"), 0);
+  f.error = true;
+  await assert.rejects(f.gateway.execute(action, f.request("stat:str")));
+  assert.equal(f.hooks.count("createChatMessage"), 0);
+});
+
+test("submitted Shadowdark dialogs and unrelated chat do not establish a completed roll", async t => {
+  const f = setup(t);
+  f.actor.system.rollStatCheck = async (stat, config) => {
+    Object.assign(config, { actorUuid: f.actor.uuid, check: { stat } });
+    f.hooks.call("SD-Stat-Check", config);
+    const emit = (rollConfig, user = f.game.user, rolls = [{ total: 1 }]) => f.hooks.emit("createChatMessage", {
+      user, flags: { shadowdark: { rollConfig } }, rolls
+    }, {}, user.id);
+    emit({ ...config, actorUuid: "Actor.other" });
+    emit({ ...config, check: { stat: "dex" } });
+    emit(config, { id: "other" });
+    emit(config, f.game.user, []);
+    return false;
+  };
+  const result = await f.gateway.execute(action, f.request("stat:str"));
+  assert.equal(result.cancelled, false);
+  assert.equal(result.rolled, false);
+  assert.equal(f.hooks.count("createChatMessage"), 0);
+});
+
 function addSpell(f, id, name, tier = 1, lost = false) {
   const item = { id, name, type: "Spell", parent: f.actor, uuid: `${f.actor.uuid}.Item.${id}`,
     system: { isSpell: true, tier, lost, description: `<p>${name}</p>` } };

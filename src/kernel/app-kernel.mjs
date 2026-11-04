@@ -381,6 +381,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
         payload?.ability, payload?.skill, payload?.tool, payload?.actionId, payload?.resourceId]);
       let executionSequence;
       const generation = connectionGeneration?.current ?? 0;
+      const navigationRevision = store.state.navigationRevision;
       const worldId = store.state.snapshot?.world?.id, userId = store.state.snapshot?.user?.id;
       const ownsExecution = !activeActionExecutions.has(executionKey);
       if (ownsExecution) activeActionExecutions.set(executionKey, ++actionExecutionSequence);
@@ -403,6 +404,12 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
         const current = owner === runtimeScope && !owner.disposed && activationCommitted
           && generation === (connectionGeneration?.current ?? 0)
           && worldId === store.state.snapshot?.world?.id && userId === store.state.snapshot?.user?.id;
+        if (current && readPolicy().active && !store.state.reconnect && !store.state.modeTransition
+          && store.state.navigationRevision === navigationRevision && store.state.route === "characters"
+          && store.state.selectedActorSourceUuid === sourceUuid && preferencesGateway.moveToChatAfterRoll?.() === true
+          && outcome?.ok === true && outcome.cancelled !== true && outcome.rolled === true) {
+          dispatchNavigation({ type: "navigate", route: "chat" });
+        }
         if (!outcome?.actionSession || (!summaryExecution.dismissed && current)) return outcome;
         const { actionSession: _dismissed, ...rest } = outcome;
         return Object.freeze(rest);

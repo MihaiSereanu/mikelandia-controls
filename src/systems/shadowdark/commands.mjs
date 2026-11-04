@@ -106,7 +106,20 @@ export function createShadowdarkCommands({ getGame = () => globalThis.game, getH
 
       const hook = kind === "stat" ? "SD-Stat-Check" : ["spell", "item-spell"].includes(kind) ? "SD-Player-Spell" : kind === "ability" ? "SD-Player-classAbility" : "SD-Player-Attack";
       const config = kind.startsWith("attack-") ? { attack: { type: kind.slice(7) } } : itemSpell ? { itemUuid: item.uuid } : {};
-      let seen = false, failure;
+      let seen = false, rolled = false, failure;
+      const userId = game.user.id;
+      const completed = (message, _options, initiatingUserId) => {
+        const rollConfig = message?.flags?.shadowdark?.rollConfig;
+        const author = message?.author?.id ?? message?.user?.id ?? message?.user;
+        if (!seen || !message?.rolls?.length || rollConfig?.actorUuid !== sourceUuid
+          || String(author ?? initiatingUserId ?? "") !== String(userId)
+          || (initiatingUserId && String(initiatingUserId) !== String(userId))) return;
+        if ((kind === "stat" && rollConfig.check?.stat !== id)
+          || (item && rollConfig.itemUuid !== item.uuid)
+          || (["spell", "item-spell"].includes(kind) && rollConfig.cast?.spellUuid !== (itemSpell?.spell.uuid ?? item.uuid))
+          || (kind.startsWith("attack-") && rollConfig.attack?.type !== kind.slice(7))) return;
+        rolled = true;
+      };
       const guard = current => {
         if (current !== config) return;
         try {
@@ -119,6 +132,7 @@ export function createShadowdarkCommands({ getGame = () => globalThis.game, getH
         } catch (error) { failure = error; return false; }
       };
       hooks.on(hook, guard);
+      hooks.on("createChatMessage", completed);
       try {
         // These native methods own dialogs, rolling, chat, and post-roll effects.
         context.rollTiming?.mark("native-invoked");
@@ -127,8 +141,8 @@ export function createShadowdarkCommands({ getGame = () => globalThis.game, getH
         else if (kind === "ability") await model.useAbility(item.uuid, config);
         else await model.rollAttack(item.uuid, config);
         if (failure) throw failure;
-        return { ok: true, actorSourceUuid: sourceUuid, cancelled: !seen, nativeHandled: true };
-      } finally { hooks.off(hook, guard); }
+        return { ok: true, actorSourceUuid: sourceUuid, cancelled: !seen, rolled, nativeHandled: true };
+      } finally { hooks.off(hook, guard); hooks.off("createChatMessage", completed); }
     }
   });
 }

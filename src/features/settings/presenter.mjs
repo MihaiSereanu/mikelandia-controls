@@ -368,7 +368,7 @@ export function groupSettings(fields) {
     {
       id: "actions",
       title: "Action Results",
-      keys: ["showActionSummaries", "compactActionSummaries"],
+      keys: ["showActionSummaries", "compactActionSummaries", "moveToChatAfterRoll"],
     },
     {
       id: "appearance",
@@ -833,7 +833,7 @@ function settingCopy(entry, controlId, hintId, detail = null, commands) {
             attrs: hintId ? { id: hintId } : {},
             text:
               entry.hint +
-              (entry.defaultValue !== undefined
+              (entry.defaultValue !== undefined && !entry.hideDefault
                 ? ` (${uiText(commands, "Default", "Default: {value}.", { value: defaultLabel(entry, commands) })})`
                 : ""),
           })

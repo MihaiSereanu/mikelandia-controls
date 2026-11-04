@@ -18,6 +18,7 @@ const KEYS = Object.freeze({
 
   SHOW_ACTION_SUMMARIES: "showActionSummaries",
   COMPACT_ACTION_SUMMARIES: "compactActionSummaries",
+  MOVE_TO_CHAT_AFTER_ROLL: "moveToChatAfterRoll",
 
   DICE_RENDERING: "diceRendering",
 
@@ -58,7 +59,7 @@ const CHOICES = Object.freeze({
   [KEYS.CHARACTER_FAVOURITES_SOURCE]: Object.freeze(["core", "tidy", "both", "off"]),
 });
 
-const DEFAULTS = Object.freeze({ mode: "auto", theme: "system", colorScheme: "class", headerArtwork: "automatic", headerArtworkOpacity: 1, showActionSummaries: true, compactActionSummaries: false, diceRendering: "auto", keepScreenAwake: false, protectMcStyling: true, characterInventorySort: "manual", characterSpellSort: "manual", characterSpellFilter: "all", characterFeatureSort: "manual", characterFavouritesSort: "manual", characterEffectsSort: "manual", characterFavouritesSource: "core" });
+const DEFAULTS = Object.freeze({ mode: "auto", theme: "system", colorScheme: "class", headerArtwork: "automatic", headerArtworkOpacity: 1, showActionSummaries: true, compactActionSummaries: false, moveToChatAfterRoll: false, diceRendering: "auto", keepScreenAwake: false, protectMcStyling: true, characterInventorySort: "manual", characterSpellSort: "manual", characterSpellFilter: "all", characterFeatureSort: "manual", characterFavouritesSort: "manual", characterEffectsSort: "manual", characterFavouritesSource: "core" });
 
 const CHARACTER_COLLECTION_SETTING_KEYS = Object.freeze({
   inventorySort: KEYS.CHARACTER_INVENTORY_SORT,
@@ -189,6 +190,16 @@ export function registerPreferences({
     type: Boolean,
     default: DEFAULTS.compactActionSummaries,
     onChange: changed(KEYS.COMPACT_ACTION_SUMMARIES, onApplicationChange)
+  });
+
+  game.settings.register(MODULE_ID, KEYS.MOVE_TO_CHAT_AFTER_ROLL, {
+    name: "MIKELANDIA_CONTROLS.Settings.MoveToChatAfterRoll.Name",
+    hint: "MIKELANDIA_CONTROLS.Settings.MoveToChatAfterRoll.Hint",
+    scope: "client",
+    config: mobileControls,
+    type: Boolean,
+    default: DEFAULTS.moveToChatAfterRoll,
+    onChange: changed(KEYS.MOVE_TO_CHAT_AFTER_ROLL, onApplicationChange)
   });
 
   game.settings.register(MODULE_ID, KEYS.DICE_RENDERING, {
@@ -419,6 +430,8 @@ export function createFoundryPreferencesGateway({
     showActionSummaries: () => getSystemIntegration().features.actionSummaries && setting(KEYS.SHOW_ACTION_SUMMARIES) !== false,
     compactActionSummaries: () => getSystemIntegration().features.actionSummaries && setting(KEYS.COMPACT_ACTION_SUMMARIES) === true,
 
+    moveToChatAfterRoll: () => setting(KEYS.MOVE_TO_CHAT_AFTER_ROLL) === true,
+
     diceRendering: () => normalizedChoice(KEYS.DICE_RENDERING, setting(KEYS.DICE_RENDERING), DEFAULTS.diceRendering),
 
     keepScreenAwake: () => Boolean(setting(KEYS.KEEP_SCREEN_AWAKE)),
@@ -457,6 +470,7 @@ export function createFoundryPreferencesGateway({
     frame: () => pick(["colorScheme", "headerArtworkOpacity", "protectMcStyling", ]),
     character: () => pick(["colorScheme", "headerArtwork", "characterCollections", "characterFavouritesSource", "characterFavouritesEnabled"]),
 
+    moveToChatAfterRoll: readers.moveToChatAfterRoll,
     actionSummaries: () => pick(["showActionSummaries", "compactActionSummaries"]),
     snapshot() {
       const fields = preferenceFields(setting, localize, getNavigator, getGame, getSystemIntegration().features);
@@ -574,6 +588,7 @@ function preferenceFields(setting, localize, getNavigator, getGame, features) {
 
     booleanField(KEYS.SHOW_ACTION_SUMMARIES, "ShowActionSummaries", setting(KEYS.SHOW_ACTION_SUMMARIES) !== false, localize),
     booleanField(KEYS.COMPACT_ACTION_SUMMARIES, "CompactActionSummaries", setting(KEYS.COMPACT_ACTION_SUMMARIES) === true, localize),
+    Object.freeze({ ...booleanField(KEYS.MOVE_TO_CHAT_AFTER_ROLL, "MoveToChatAfterRoll", setting(KEYS.MOVE_TO_CHAT_AFTER_ROLL) === true, localize), hideDefault: true }),
 
     choiceField(KEYS.DICE_RENDERING, "DiceRendering", normalizedChoice(KEYS.DICE_RENDERING, setting(KEYS.DICE_RENDERING), DEFAULTS.diceRendering), localize),
 
@@ -733,7 +748,7 @@ function booleanField(key, group, value, localize) {
 }
 
 function normalizeSetting(key, value) {
-  if ([KEYS.KEEP_SCREEN_AWAKE, KEYS.PROTECT_MC_STYLING, KEYS.SHOW_ACTION_SUMMARIES, KEYS.COMPACT_ACTION_SUMMARIES].includes(key)) {
+  if ([KEYS.KEEP_SCREEN_AWAKE, KEYS.PROTECT_MC_STYLING, KEYS.SHOW_ACTION_SUMMARIES, KEYS.COMPACT_ACTION_SUMMARIES, KEYS.MOVE_TO_CHAT_AFTER_ROLL].includes(key)) {
     if (typeof value !== "boolean") throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Settings.Errors.BooleanExpected", "That setting requires an on or off value."));
     return value;
   }

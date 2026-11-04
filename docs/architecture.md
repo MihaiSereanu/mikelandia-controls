@@ -29,7 +29,7 @@ Paths below are relative to `src/`; Node names are relative to `tests/` and end 
 | [Audio / board drawing](#isolation-and-audio) | `foundry/media/mobile-audio.mjs`, `foundry/presentation/hidden-canvas-rendering.mjs` | `mobile-audio`, `hidden-canvas-rendering` | `^(in-person|targeting)-` |
 | [Targeting / health / distance](#combat-targeting) | `features/combat/`, `foundry/combat/`, `foundry/session/session-gateway.mjs`, `systems/combat-health.mjs` | `targeting`, `target-distance`, `combat-health`, `session-integration` | `^(targeting|in-person)-` |
 | [Damage feedback](#mobile-frame-and-upgrades) | `foundry/actors/damage-gateway.mjs`, `systems/damage-health.mjs`, `ui/media/damage-feedback.mjs` | `damage-feedback` | `^damage-` |
-| [Native sheets / roll dialogs](#native-applications-and-rolls) | `features/characters/sheets/`, `foundry/presentation/native-roll-presentation.mjs`, `systems/{shadowdark,wfrp4e}/commands.mjs` | `native-sheet-gateway`, `native-close-animation`, `warhammer-actions`, `shadowdark` | `^(fallback|roll-dialogs)-` |
+| [Native sheets / roll dialogs](#native-applications-and-rolls) | `features/characters/sheets/`, `foundry/presentation/native-roll-presentation.mjs`, `systems/{shadowdark,wfrp4e}/commands.mjs` | `native-sheet-gateway`, `native-close-animation`, `warhammer-actions`, `shadowdark` | `^(fallback|roll-dialogs|roll-chat)-` |
 | [Warhammer panels / actions](#warhammer-resources) | `systems/wfrp4e/`, `features/characters/profile/` | `warhammer-{profile,resources,equipment,effects,magic,weapons,rest,ambitions,actions}` | `^warhammer-` |
 | [Theme / Momentum](#warhammer-resources) | `foundry/compatibility/wfrp-theme-policy.mjs`, `wfrp-opposed-momentum.mjs` in the same folder | `wfrp-theme-policy`, `wfrp-opposed-momentum` | `^(wfrp-theme-policy|shared-entry)-` |
 | [Shadowdark gear / counters / spells / Bio](#shadowdark-resources-and-gear) | `systems/shadowdark/` (Bio: `bio.mjs`) | `shadowdark`, `shadowdark-inventory`, `shadowdark-equipment` | `^(shadowdark|actor-notes)-` |
@@ -49,6 +49,8 @@ Foundry does not await package top-level async work before init. Mobile clients 
 Upgrade cleanup follows settings registration. Clients with historical receipts get a temporary pre-Canvas boundary restoring owned graphics/noCanvas and native theme. Carolingian's async registration gets a five-second wait without blocking canvas. Verify restoration before retiring receipts; failures retain recovery data and warn without blocking mobile startup. Successful restoration requiring reload waits for that reload.
 
 ## Scope and action validation
+
+The client setting **Move to Chat after rolling** (`moveToChatAfterRoll`, default Off) appears under Settings > Action Results in Phone/Tablet modes. Only completed rolls launched through Mikelandia actor commands move to Chat; cancellation, errors, non-roll edits and intervening navigation keep the current route. Shadowdark completion uses a matching locally authored rolled chat message; WFRP marks completed native `test.roll()` calls; D&D uses returned rolls or matching action messages. Native desktop behavior stays unchanged.
 
 Five routes: Character, Chat, Journals, Initiative, Settings (internal route key: `combat`). Character selection never controls tokens. Synthetic Actor UUIDs support character data and chat provenance. Initiative retains End Turn and GM encounter progression with native permissions, stale-state checks, and end confirmation. Map/token/light controls, placement, scene overlays and graphics profiles are outside scope.
 

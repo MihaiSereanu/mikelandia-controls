@@ -137,7 +137,7 @@
         "PlainHint": "Choose the accent colors used by the mobile interface.",
         "Hint": "Choose the colors used in Mikelandia Controls. Based on class uses a character's class; Neutral is used for player-owned NPCs, and Bestiary for other NPCs.",
         "Class": "Based on class",
-        "Red": "Mikelandia Controls Red",
+        "Red": "Red",
         "Neutral": "Neutral",
         "Bestiary": "Bestiary"
       },
@@ -148,6 +148,10 @@
       "HeaderArtworkOpacity": {
         "Name": "Header artwork opacity",
         "Hint": "Set how strongly the chosen artwork appears behind the Character header."
+      },
+      "MoveToChatAfterRoll": {
+        "Name": "Move to Chat after rolling",
+        "Hint": "Switch to Chat after a roll launched from Mikelandia Controls completes. Cancelling keeps your current tab."
       },
       "ShowActionSummaries": {
         "Name": "Show action summaries",
