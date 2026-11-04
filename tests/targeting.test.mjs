@@ -54,9 +54,9 @@ test("multiple targets use native toggles; deselecting preserves outside targets
   assert.deepEqual([...f.game.user.targets], [outside]);
 });
 
-test("feature targets persist across turns but clear on character/scene/encounter/end changes", () => {
+test("feature targets persist across turns but clear on character/scene/encounter removal changes", () => {
   for (const change of [f => f.gateway.refresh("Actor.other"), f => { f.canvas.scene = { id: "other" }; },
-    f => { f.game.combat = { ...f.game.combat, id: "next" }; }, f => { f.game.combat.started = false; }]) {
+    f => { f.game.combat = { ...f.game.combat, id: "next" }; }, f => { f.game.combat = null; }]) {
     const f = targetingFixture(), native = f.canvas.tokens.get("neutral");
     native.setTarget(true, { releaseOthers: false });
     f.gateway.toggle(f.request("enemy"));
@@ -64,6 +64,21 @@ test("feature targets persist across turns but clear on character/scene/encounte
     assert.equal(f.game.user.targets.size, 2);
     change(f); f.gateway.snapshot();
     assert.deepEqual([...f.game.user.targets], [native]);
+  }
+});
+
+test("prepared encounters expose native targets before Start Combat and retain selection on start", () => {
+  for (const linked of [true, false]) {
+    const f = targetingFixture();
+    f.game.combat.started = false;
+    if (!linked) f.game.combat.scene = null;
+    assert.deepEqual(f.gateway.snapshot().entries.map(entry => entry.id), ["pc", "enemy", "neutral"]);
+    f.gateway.toggle(f.request("enemy"));
+    f.game.combat.started = true;
+    assert.ok(f.gateway.snapshot().entries.find(entry => entry.id === "enemy").selected);
+    f.canvas.scene = { id: "another-scene" };
+    assert.equal(f.gateway.snapshot(), null);
+    assert.equal(f.game.user.targets.size, 0);
   }
 });
 
@@ -111,6 +126,42 @@ test("hooks refresh collapsed/background state, reconcile deletion and dispose",
   await Promise.resolve(); assert.equal(f.game.user.targets.size, 0);
   scope.dispose(); assert.equal(f.hooks.count("targetToken"), 0);
 });
+
+for (const initial of ["missing", "foreign-scene"]) {
+  test(`late tracker selection refreshes Targets after canvasReady with ${initial} combat`, async t => {
+    const f = targetingFixture(), encounter = f.game.combat;
+    f.game.combat = initial === "missing" ? null : { ...encounter, id: "previous", scene: { id: "other-scene" } };
+    const scope = createTaskScope(), updates = [];
+    t.after(() => scope.dispose());
+    installGlobals(t, { Hooks: f.hooks });
+    f.gateway.watch(scope, () => f.actor.uuid, state => updates.push(state));
+    f.hooks.emit("canvasReady", f.canvas);
+    await Promise.resolve();
+    assert.equal(updates.at(-1), null);
+
+    // Foundry selects the viewed encounter after its canvas draw completes.
+    f.game.combat = encounter;
+    for (let i = 0; i < 3; i++) f.hooks.emit("renderCombatTracker", {});
+    await Promise.resolve();
+    assert.equal(updates.length, 2);
+    assert.equal(updates.at(-1).sourceId, "pc");
+    assert.ok(updates.at(-1).entries.some(entry => entry.id === "enemy" && entry.enabled));
+    f.hooks.emit("renderCombatTracker", {});
+    await Promise.resolve();
+    assert.equal(updates.length, 2); // An unchanged tracker render publishes nothing.
+
+    const external = f.canvas.tokens.get("neutral");
+    external.setTarget(true, { releaseOthers: false });
+    f.gateway.toggle(f.request("enemy"));
+    f.game.combat = { ...encounter, scene: { id: "other-scene" } };
+    f.hooks.emit("renderCombatTracker", {});
+    await Promise.resolve();
+    assert.equal(updates.at(-1), null);
+    assert.deepEqual([...f.game.user.targets], [external]);
+    scope.dispose();
+    assert.equal(f.hooks.count("renderCombatTracker"), 0);
+  });
+}
 
 test("external release/reacquire relinquishes feature ownership; no ready canvas disables toggles", async t => {
   const f = targetingFixture(); installGlobals(t, { Hooks: f.hooks });

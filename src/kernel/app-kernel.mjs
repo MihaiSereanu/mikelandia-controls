@@ -1,3 +1,4 @@
+import { createJournalSearchController } from "../features/journals/search-controller.mjs";
 import { localizedText } from "../ui/primitives/localized-text.mjs";
 import { runMobileApplicationWorkflow } from "../foundry/presentation/mobile-ui-isolation.mjs";
 import { createTaskScope } from "./lifecycle/task-scope.mjs";
@@ -20,6 +21,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
   let frame = null;
   let rollResultSequence = 0;
   let journalRequestSequence = 0;
+  let journalSearch = null;
   let resynchronizer = null;
   let modeTransition = null;
   const dismissedActionSessions = new Set();
@@ -202,6 +204,8 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
     closeExperienceEditor: () => store.dispatch({ type: "close-experience-editor" }),
     openCharacterPortrait: (image) => store.dispatch({ type: "open-character-portrait", image }),
     closeCharacterPortrait: () => store.dispatch({ type: "close-character-portrait" }),
+    setJournalSearch: query => journalSearch?.setQuery(query),
+    retryJournalSearch: () => journalSearch?.retry(),
     openJournal: async (journalId, target = {}) => {
       const request = ++journalRequestSequence;
       const generation = connectionGeneration?.current ?? 0;
@@ -431,6 +435,10 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       // activation and reconnect access remain closed until every stage succeeds.
       runtimeScope = createTaskScope("application", performanceObserver);
       const owner = runtimeScope;
+      journalSearch = createJournalSearchController({ store, readIndex: expected => session.readJournalSearchIndex(expected), expectedSession });
+      const ownedJournalSearch = journalSearch;
+      owner.own(() => { ownedJournalSearch.dispose(); if (journalSearch === ownedJournalSearch) journalSearch = null; });
+
       dismissedActionSessions.clear();
       let previousActionSession = store.state.actionSession;
       owner.own(store.subscribe((state) => {
@@ -474,6 +482,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
           loadTimingGateway?.note?.({ checkpoint: "presentation" });
           store.dispatch({ type: "reconnect-progress", generation, checkpoint: "presentation", detail: localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.RestoringMobileInterface", "Restoring mobile interface…") });
           session.adopt?.(snapshot);
+          journalSearch?.invalidate();
           store.dispatch({ type: "session-loaded", snapshot });
           if (journalId && snapshot.journals?.some((journal) => journal.id === journalId)) {
             const heading = store.state.journalHeading;
@@ -501,12 +510,20 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       runtimeScope.own(store.subscribe(state => {
         if (state.reconnect || state.modeTransition) actorEditorGateway?.closeAll?.();
       }, { immediate: false }));
+      let searchSuspended = false;
+      owner.own(store.subscribe(state => {
+        const blocked = Boolean(state.reconnect || state.modeTransition);
+        if (blocked === searchSuspended) return;
+        searchSuspended = blocked;
+        if (blocked) journalSearch?.suspend();
+        else journalSearch?.resume();
+      }, { immediate: false }));
       frame.mount();
       assertCurrent();
       const initialSnapshot = session.watch(runtimeScope, (snapshot) => store.dispatch({ type: "session-loaded", snapshot }), (error) => {
         diagnostics?.record?.("error", "The Foundry session stopped updating", error);
         store.dispatch({ type: "session-error", error });
-      }, { onJournalChange: (journalId) => {
+      }, { onJournalSearchChange: () => journalSearch?.invalidate(), onJournalChange: (journalId) => {
         const state = store.state;
         if (state.journal?.id !== journalId || state.route !== "journals") return;
         void commands.openJournal(journalId, { pageId: state.journalPageId }).catch((error) => {

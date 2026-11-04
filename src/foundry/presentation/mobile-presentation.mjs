@@ -116,11 +116,14 @@ export function enableMobileApplications(scope, {
   scope.own(() => { for (const restore of closeGuards.values()) restore(); closeGuards.clear(); });
   const controls = new Map();
   const reconcileControls = () => {
-    for (const [element, layer] of controls) if (!element.isConnected || !admissions.size) {
+    const textEditorOpen = Boolean(document?.querySelector?.(".mc-biography-editor .mc-rich-text-editor"));
+    for (const [element, layer] of controls) if (!element.isConnected
+      || (!admissions.size && !(textEditorOpen && element.id === "prosemirror-dropdown"))) {
       layer.restore(); element.classList.remove("mc-mobile-native-control"); controls.delete(element);
     }
-    if (!admissions.size) return;
+    if (!admissions.size && !textEditorOpen) return;
     for (const element of document?.querySelectorAll?.("#context-menu, #prosemirror-dropdown") ?? []) {
+      if (!admissions.size && element.id !== "prosemirror-dropdown") continue;
       if (controls.has(element) || element.closest(".mc-mobile-admitted-app")) continue;
       element.classList.add("mc-mobile-native-control");
       const layer = promoteNativeWindow(element);

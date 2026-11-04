@@ -613,17 +613,17 @@ try {
   addItem("talent", "Talent", { talentClass: "class", description: '<p>Native <strong>talent text</strong></p><p>Second paragraph<br>Next line</p><ul><li><em>Talent benefit</em></li></ul><script>bad()</script><div class="secret">GM secret</div>' });
   await tick(); await tab("inventory");
   checkItemDescription("stash", "stashed", "Supplies at the inn");
-  check("Gear displays native used and maximum Slots", screen.querySelector('[data-profile-metric="slots"]').textContent.includes("8 / 12"));
+  check("Inventory displays native used and maximum Slots", screen.querySelector('[data-profile-field="slots"]').textContent.includes("8 / 12"));
   check("Coins displays native denominations and slot use", screen.querySelector('[data-profile-section="coins"]').textContent.includes("25") && screen.querySelector('[data-profile-metric="coin-slots"]').textContent.includes("1"));
   const coinBoxes = [...screen.querySelectorAll('[data-profile-section="coins"] [data-profile-field]')].map(e => e.getBoundingClientRect());
   check("all three compact coin rows fit their card", coinBoxes.length === 3 && coinBoxes.every(r => r.left >= 0 && r.right <= innerWidth));
   if (params.get("layout") === "tablet") check("tablet coins use three columns", coinBoxes.every(box => Math.abs(box.top - coinBoxes[0].top) < 1)
     && coinBoxes[0].left < coinBoxes[1].left && coinBoxes[1].left < coinBoxes[2].left);
   const gearHeader = screen.querySelector('[data-profile-section="gear"] header'), addButton = gearHeader.querySelector('[data-profile-add-item]');
-  const gearTitle = gearHeader.querySelector("h3").getBoundingClientRect(), slotsMetric = gearHeader.querySelector('[data-profile-metric="slots"]').getBoundingClientRect();
-  check("Carried Gear keeps Slots in its heading and the add icon at the right", !!addButton.querySelector(".fa-plus") && !addButton.textContent.trim()
-    && slotsMetric.left >= gearHeader.getBoundingClientRect().left && slotsMetric.right <= gearHeader.getBoundingClientRect().right
-    && slotsMetric.top >= gearTitle.top && slotsMetric.bottom <= gearHeader.getBoundingClientRect().bottom
+  const slotsSection = screen.querySelector('[data-profile-section="slots"]'), equippedSection = screen.querySelector('[data-profile-section="equipped-gear"]');
+  check("Slots has its own row above Equipped Gear", slotsSection.getBoundingClientRect().bottom <= equippedSection.getBoundingClientRect().top
+    && !gearHeader.querySelector('[data-profile-metric="slots"]') && screen.querySelectorAll('[data-profile-field="slots"]').length === 1);
+  check("Carried Gear keeps the add icon at the right", !!addButton.querySelector(".fa-plus") && !addButton.textContent.trim()
     && Math.abs(addButton.getBoundingClientRect().right - gearHeader.getBoundingClientRect().right) < 2);
   for (const denomination of ["gp", "sp", "cp"]) {
     const coin = () => screen.querySelector(`[data-profile-resource="coin-${denomination}"]`);

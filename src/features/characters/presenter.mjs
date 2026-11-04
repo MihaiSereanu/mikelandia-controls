@@ -1,10 +1,6 @@
 import { preserveTextLineBreaks } from "../../ui/primitives/text-line-breaks.mjs";
 import { openTextEditor } from "../../ui/primitives/text-editor.mjs";
 import {
-  notesHTMLToMarkdown,
-  notesMarkdownToHTML,
-} from "../../ui/primitives/notes-markdown.mjs";
-import {
   localizedNumber,
   localizedText,
   localizedCount,
@@ -4486,19 +4482,10 @@ function biographyPanel(
           section: notes ? "notes" : "biography",
           label: storyLabel,
           iconName: "fa-feather-pointed",
-          value: notesHTMLToMarkdown(
-            storyEditor.editorText,
-            anchor.ownerDocument,
-          ),
+          value: storyEditor.editorText,
           originalValue: storyEditor.originalSource,
           biographyField: storyEditor.editField,
           richText: true,
-          markdown: true,
-          sourceLabel: localizedText(
-            commands.localize,
-            "MIKELANDIA_CONTROLS.Character.Presenter.NotesMarkdown",
-            "Supports Text and Markdown",
-          ),
         },
         commands,
         status,
@@ -4914,7 +4901,7 @@ function openBiographyEditor(anchor, config, commands, pageStatus, scope) {
           ...(config.section === "characteristics"
             ? { values, originalValues: config.originalValues }
             : {
-                value: config.markdown ? notesMarkdownToHTML(value) : value,
+                value,
                 originalValue: config.originalValue,
                 biographyField: config.biographyField,
                 ...(config.notesContextRevision !== undefined

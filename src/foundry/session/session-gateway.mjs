@@ -1,4 +1,5 @@
 import { isJournalVisible, isJournalPageVisible } from "../journals/journal-visibility.mjs";
+import { readJournalSearchText } from "../journals/journal-search-text.mjs";
 import { localizeFoundry } from "../settings/localization.mjs";
 import { ownMobileApplication } from "../presentation/mobile-ui-isolation.mjs";
 import { resolveSystemIntegration } from "../../systems/registry.mjs";
@@ -38,6 +39,8 @@ export const SESSION_INVALIDATION_MAP = Object.freeze({
   createCombatant: Object.freeze(["combat"]),
   updateCombatant: Object.freeze(["combat"]),
   deleteCombatant: Object.freeze(["combat"]),
+  // The tracker can select its viewed encounter after canvasReady without a document update.
+  renderCombatTracker: Object.freeze(["combat"]),
 
   createToken: Object.freeze(["combat"]),
   deleteToken: Object.freeze(["combat"]),
@@ -55,7 +58,8 @@ export function createFoundrySessionGateway({
   combatForSnapshot = () => null,
   combatControlsForSnapshot = () => Object.freeze({ isGM: false }),
 
-  performanceObserver = null
+  performanceObserver = null,
+  journalSearchText = readJournalSearchText
 } = {}) {
   const actorEligible = (actor, user) => isActorEligible(actor, user, getSystemIntegration());
   let refreshQueued = false;
@@ -251,7 +255,7 @@ export function createFoundrySessionGateway({
       return this.selectCharacterSource(target, expectedSession);
     },
 
-    watch(scope, onSnapshot, onError, { onJournalChange = () => {} } = {}) {
+    watch(scope, onSnapshot, onError, { onJournalChange = () => {}, onJournalSearchChange = () => {} } = {}) {
       const generation = ++watchGeneration;
       const queueRefresh = (invalidation) => {
 
@@ -336,6 +340,7 @@ export function createFoundrySessionGateway({
             count("hook.ignored");
             return;
           }
+          if (invalidation.domains.includes("journals")) onJournalSearchChange();
           queueRefresh(invalidation);
         });
       }
@@ -350,6 +355,51 @@ export function createFoundrySessionGateway({
       latestSnapshot = read();
       latestDomainSignatures = snapshotDomainSignatures(latestSnapshot);
       return latestSnapshot;
+    },
+    async readJournalSearchIndex(expectedSession = {}) {
+      assertSession(expectedSession);
+      const session = { worldId: game.world.id, userId: game.user.id };
+      const capturedGame = game;
+      const capturedUser = game.user;
+      const captures = [];
+      const records = [];
+      for (const journal of visibleJournals(capturedUser)) {
+        const record = journalRecord(journal);
+        const pages = [];
+        const visiblePages = Array.from(journal.pages ?? []).filter(page => isJournalPageVisible(page, journal, capturedUser))
+          .sort((left, right) => (Number(left.sort) || 0) - (Number(right.sort) || 0) || String(left.name ?? "").localeCompare(String(right.name ?? "")));
+        const capture = { journal, metadata: JSON.stringify(record), pages: [] };
+        captures.push(capture);
+        for (const page of visiblePages) {
+          const type = String(page.type ?? "text");
+          const format = type === "text" ? journalTextFormat(page) : null;
+          const source = type === "text" ? journalTextSource(page, format) : "";
+          const secrets = Boolean(page.isOwner ?? journal.isOwner);
+          capture.pages.push({ page, type, format, source, secrets, sort: Number(page.sort) || 0 });
+          const text = type === "text" ? await journalSearchText(page, { secrets }) : "";
+          pages.push(Object.freeze({ id: String(page.id ?? ""), name: String(page.name ?? ""), type, text: String(text) }));
+        }
+        records.push(Object.freeze({ ...record, pages: Object.freeze(pages) }));
+      }
+      assertSession(expectedSession);
+      assertSession(session);
+      if (game !== capturedGame || game.user !== capturedUser) throw new Error("The Foundry session changed while searching Journals.");
+      const currentJournals = visibleJournals(capturedUser);
+      if (currentJournals.length !== captures.length || currentJournals.some((entry, index) => entry !== captures[index].journal)) {
+        throw new Error("Journals changed while searching. Try again.");
+      }
+      for (const { journal, metadata, pages } of captures) {
+        if (game.journal?.get?.(journal.id) !== journal || !isJournalVisible(journal, capturedUser)
+          || JSON.stringify(journalRecord(journal)) !== metadata) throw new Error("Journals changed while searching. Try again.");
+        for (const { page, type, format, source, secrets, sort } of pages) {
+          if (journal.pages?.get?.(page.id) !== page || !isJournalPageVisible(page, journal, capturedUser)
+            || String(page.type ?? "text") !== type || Boolean(page.isOwner ?? journal.isOwner) !== secrets || (Number(page.sort) || 0) !== sort
+            || (type === "text" && (journalTextFormat(page) !== format || journalTextSource(page, format) !== source))) {
+            throw new Error("Journal text changed while searching. Try again.");
+          }
+        }
+      }
+      return Object.freeze(records);
     },
     async readJournal(journalId, expectedSession = {}) {
       assertSession(expectedSession);

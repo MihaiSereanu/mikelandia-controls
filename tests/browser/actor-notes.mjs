@@ -1,3 +1,5 @@
+import { installRichEditorFixture, editorInput, prepareEditorGame } from "/tests/browser/rich-editor-fixture.mjs";
+import { enableMobileApplications } from "/src/foundry/presentation/mobile-presentation.mjs";
 import { renderCharacters } from "/src/features/characters/presenter.mjs";
 import { createTaskScope } from "/src/kernel/lifecycle/task-scope.mjs";
 import { createFoundryBiographyGateway } from "/src/foundry/actors/biography-gateway.mjs";
@@ -11,6 +13,8 @@ import { notesHTMLToMarkdown, notesMarkdownToHTML } from "/src/ui/primitives/not
 const checks = [], check = (name, value) => { if (!value) throw new Error(name); checks.push(name); };
 const tick = () => new Promise(resolve => setTimeout(resolve, 30));
 try {
+  await installRichEditorFixture();
+  document.querySelector("main").dataset.formFactor = innerWidth >= 720 ? "tablet" : "phone";
   const legacy = "<p><span>74g</span><br><span>-50g registration fee</span><br><br><span>+10g gambling</span></p>";
   check("screenshot HTML becomes readable text with blank lines", notesHTMLToMarkdown(legacy) === "74g\n-50g registration fee\n\n+10g gambling");
   for (const text of ["First\nSecond\n\nFourth\n", "\n", "\n# Heading\n\n- One\n\n", "# Heading\n**Bold** and *italic*\n- One\n- Two\n\n1. First\n2. Second", "Literal <p> and \\*stars\\* & coins"]) {
@@ -47,6 +51,7 @@ try {
     const read = createFoundryBiographyGateway({ getTextEditor: () => ({ enrichHTML: async value => value }) });
     const gateway = createFoundryCommandGateway();
     globalThis.Hooks = fixture?.hooks ?? createHooks();
+    prepareEditorGame(game);
     const secondActor = createActor({ id: "second", uuid: "Actor.second", name: "Second adventurer", type: "unsupported",
       folder: { id: "party", name: "Adventurers", sort: 0 } });
     game.actors.push(secondActor);
@@ -102,55 +107,55 @@ try {
       check("clearing a Bio field hides only that section", bio().map(section => section.dataset.profileSection).join() === "languages,background");
       delete globalThis.fromUuidSync;
     }
-    main.querySelector(".mc-biography-edit").click(); await tick();
-    check(`${systemId} shared editor opens and focuses text`, document.activeElement === main.querySelector("textarea"));
-    check(`${systemId} editor hides stored HTML and explains Markdown`, main.querySelector("textarea").value === "Existing notes" && main.querySelector(".mc-biography-editor-composer").textContent.includes("Markdown"));
-    main.querySelector("textarea").value = "Cancelled";
+    main.querySelector(".mc-biography-edit").click(); await tick(); await tick();
+    check(`${systemId} shared editor opens and focuses text: ${main.querySelector(".mc-biography-editor-status")?.textContent}`, document.activeElement === editorInput(main)?.element);
+    check(`${systemId} editor shows formatted content and native toolbar`, editorInput(main).value === "Existing notes" && !!main.querySelector(".mc-rich-text-editor menu"));
+    editorInput(main).value = "Cancelled";
     main.querySelector(".mc-modal-button.is-secondary").click();
-    check(`${systemId} Cancel preserves native notes`, writes === 0 && get().includes("Existing") && !main.querySelector("textarea"));
-    main.querySelector(".mc-biography-edit").click();
-    main.querySelector("textarea").value = "Saved notes";
+    check(`${systemId} Cancel preserves native notes`, writes === 0 && get().includes("Existing") && !editorInput(main));
+    main.querySelector(".mc-biography-edit").click(); await tick();
+    editorInput(main).value = "Saved notes";
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
-    check(`${systemId} Save updates exact native notes`, writes === 1 && get() === "<p>Saved notes</p>" && !main.querySelector("textarea"));
+    check(`${systemId} Save updates exact native notes`, writes === 1 && get() === "<p>Saved notes</p>" && !editorInput(main));
     check(`${systemId} Save refreshes displayed text through session hooks`, main.querySelector(".mc-character-biography-prose").textContent === "Saved notes");
-    main.querySelector(".mc-biography-edit").click();
-    check(`${systemId} reopening editor reads latest saved native text`, main.querySelector("textarea").value === "Saved notes");
-    main.querySelector("textarea").value = "Second save";
+    main.querySelector(".mc-biography-edit").click(); await tick();
+    check(`${systemId} reopening editor reads latest saved native text`, editorInput(main).value === "Saved notes");
+    editorInput(main).value = "Second save";
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
-    check(`${systemId} second save works without refresh`, writes === 2 && !main.querySelector("textarea") && main.querySelector(".mc-character-biography-prose").textContent === "Second save");
+    check(`${systemId} second save works without refresh`, writes === 2 && !editorInput(main) && main.querySelector(".mc-character-biography-prose").textContent === "Second save");
     writeMode = "deferred";
-    main.querySelector(".mc-biography-edit").click();
-    const pendingInput = main.querySelector("textarea");
+    main.querySelector(".mc-biography-edit").click(); await tick();
+    const pendingInput = editorInput(main);
     pendingInput.value = "Delayed save";
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
     actor.name += " Updated";
     Hooks.emit("updateActor", actor, { name: actor.name }); await tick();
-    check(`${systemId} pending native write survives actor refresh and disables resubmit`, main.querySelector("textarea") === pendingInput && pendingInput.disabled && main.querySelector(".mc-biography-editor").getAttribute("aria-busy") === "true");
+    check(`${systemId} pending native write survives actor refresh and disables resubmit`, editorInput(main) === pendingInput && pendingInput.disabled && main.querySelector(".mc-biography-editor").getAttribute("aria-busy") === "true");
     releaseWrite(); await tick();
-    check(`${systemId} delayed write settles once and unlocks editor`, writes === 3 && !main.querySelector("textarea") && main.querySelector(".mc-character-biography-prose").textContent === "Delayed save");
+    check(`${systemId} delayed write settles once and unlocks editor`, writes === 3 && !editorInput(main) && main.querySelector(".mc-character-biography-prose").textContent === "Delayed save");
     writeMode = "rejected";
-    main.querySelector(".mc-biography-edit").click();
-    main.querySelector("textarea").value = "Retried save";
+    main.querySelector(".mc-biography-edit").click(); await tick();
+    editorInput(main).value = "Retried save";
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
-    check(`${systemId} rejected write retains draft and restores controls`, writes === 3 && main.querySelector("textarea").value === "Retried save" && !main.querySelector("textarea").disabled && main.querySelector(".mc-biography-editor-status").textContent === "Native write rejected");
+    check(`${systemId} rejected write retains draft and restores controls`, writes === 3 && editorInput(main).value === "Retried save" && !editorInput(main).disabled && main.querySelector(".mc-biography-editor-status").textContent === "Native write rejected");
     writeMode = "immediate";
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
-    check(`${systemId} retry after rejected write succeeds and clears busy guard`, writes === 4 && !main.querySelector("textarea") && main.querySelector(".mc-character-biography-prose").textContent === "Retried save");
-    main.querySelector(".mc-biography-edit").click();
-    const draftInput = main.querySelector("textarea");
+    check(`${systemId} retry after rejected write succeeds and clears busy guard`, writes === 4 && !editorInput(main) && main.querySelector(".mc-character-biography-prose").textContent === "Retried save");
+    main.querySelector(".mc-biography-edit").click(); await tick();
+    const draftInput = editorInput(main);
     draftInput.value = "My draft";
     await tick(); draftInput.focus(); draftInput.setSelectionRange(2, 5);
     set("Other player update");
     Hooks.emit("updateActor", actor, { [fixture ? "system.notes" : "system.details.biography.value"]: get() });
     await tick();
-    check(`${systemId} external update preserves active draft`, main.querySelector("textarea")?.value === "My draft");
-    check(`${systemId} external update keeps editor connected, focused and selected`, main.querySelector("textarea") === draftInput && document.activeElement === draftInput && draftInput.selectionStart === 2 && draftInput.selectionEnd === 5);
+    check(`${systemId} external update preserves active draft`, editorInput(main)?.value === "My draft");
+    check(`${systemId} external update keeps editor connected, focused and selected`, editorInput(main) === draftInput && document.activeElement === draftInput.element && draftInput.selectionStart === 2 && draftInput.selectionEnd === 5);
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
-    check(`${systemId} concurrent updates preserve draft and report conflict`, writes === 4 && main.querySelector("textarea").value === "My draft" && main.querySelector(".mc-biography-editor-status").textContent.includes("changed"));
+    check(`${systemId} concurrent updates preserve draft and report conflict`, writes === 4 && editorInput(main).value === "My draft" && main.querySelector(".mc-biography-editor-status").textContent.includes("changed"));
     main.querySelector(".mc-modal-button.is-secondary").click();
-    main.querySelector(".mc-biography-edit").click();
+    main.querySelector(".mc-biography-edit").click(); await tick();
     const multiline = "First line\nSecond line\n\nFourth line";
-    main.querySelector("textarea").value = multiline;
+    editorInput(main).value = multiline;
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
     const prose = main.querySelector(".mc-character-biography-prose");
     const lineTops = [0, 2, 5].map(index => {
@@ -161,11 +166,11 @@ try {
     check(`${systemId} saved Notes preserves newlines and blank lines visually`, notesHTMLToMarkdown(get()) === multiline
       && prose.querySelectorAll("br").length === 3
       && lineTops[1] > lineTops[0] && lineTops[2] - lineTops[1] > 1.5 * (lineTops[1] - lineTops[0]));
-    main.querySelector(".mc-biography-edit").click();
-    check(`${systemId} multiline reopen preserves exact draft text`, main.querySelector("textarea").value === multiline);
-    main.querySelector("textarea").value = "# Ledger\n**Gold** and *silver*\n- Rations\n- Torches\n\n<img src=x onerror=alert(1)>";
+    main.querySelector(".mc-biography-edit").click(); await tick();
+    check(`${systemId} multiline reopen preserves exact draft text`, editorInput(main).value === multiline);
+    editorInput(main).html = "<h1>Ledger</h1><p><strong>Gold</strong> and <em>silver</em></p><ul><li>Rations</li><li>Torches</li></ul>";
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
-    check(`${systemId} Markdown renders safely`, !!main.querySelector(".mc-character-biography-prose h1") && !!main.querySelector(".mc-character-biography-prose strong") && !!main.querySelector(".mc-character-biography-prose em") && main.querySelectorAll(".mc-character-biography-prose li").length === 2 && !main.querySelector(".mc-character-biography-prose img"));
+    check(`${systemId} rich formatting saves through the native field`, !!main.querySelector(".mc-character-biography-prose h1") && !!main.querySelector(".mc-character-biography-prose strong") && !!main.querySelector(".mc-character-biography-prose em") && main.querySelectorAll(".mc-character-biography-prose li").length === 2 && !main.querySelector(".mc-character-biography-prose img"));
     if (!fixture) {
       const field = id => main.querySelector(`[data-notes-field="${id}"]`);
       const paddedAmbitions = () => [...main.querySelectorAll("[data-notes-field] > p")].every(paragraph => {
@@ -184,46 +189,46 @@ try {
       check("5e empty ambition placeholders have Biography body insets", paddedAmbitions());
       const biographyBefore = get();
       field("personal-long").querySelector("button").click();
-      main.querySelector("textarea").value = '<img src=x onerror="window.ambitionInjected=true">';
+      editorInput(main).value = '<img src=x onerror="window.ambitionInjected=true">';
       main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
       check("ambition save refreshes as plain text through native actor hook", !field("personal-long").querySelector("img") && !window.ambitionInjected && field("personal-long").textContent.includes("<img src=x") && get() === biographyBefore);
       field("personal-long").querySelector("button").click();
-      check("ambition editor reopens with current saved text", main.querySelector("textarea").value.includes("<img src=x"));
+      check("ambition editor reopens with current saved text", editorInput(main).value.includes("<img src=x"));
       const longAmbition = "Rule the duchy\n" + "AnUnbrokenAmbitionThatMustWrapWithinTheCard".repeat(15);
-      main.querySelector("textarea").value = longAmbition;
+      editorInput(main).value = longAmbition;
       main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
       check("ambition saves twice without refresh and preserves hidden short terms", field("personal-long").textContent.includes("Rule the duchy") && actor.system.details["personal-ambitions"]["short-term"] === "Keep short" && Object.keys(nativeWrites.at(-1)).join() === "system.details.personal-ambitions.long-term");
       const longBody = field("personal-long").querySelector("p");
       const longRange = document.createRange(); longRange.selectNodeContents(longBody);
       check("5e long multiline ambition wraps within padded body", paddedAmbitions() && longRange.getClientRects().length > 2 && longBody.textContent === longAmbition);
       field("party-long").querySelector("button").click();
-      main.querySelector("textarea").value = "Party draft";
+      editorInput(main).value = "Party draft";
       actor.system.details["party-ambitions"]["long-term"] = "External party goal";
       Hooks.emit("updateActor", actor, { "system.details.party-ambitions.long-term": "External party goal" }); await tick();
       main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
-      check("ambition stale save preserves draft and native external update", main.querySelector("textarea").value === "Party draft" && main.querySelector(".mc-biography-editor-status").textContent.includes("changed") && actor.system.details["party-ambitions"]["long-term"] === "External party goal");
+      check("ambition stale save preserves draft and native external update", editorInput(main).value === "Party draft" && main.querySelector(".mc-biography-editor-status").textContent.includes("changed") && actor.system.details["party-ambitions"]["long-term"] === "External party goal");
       main.querySelector(".mc-modal-button.is-secondary").click();
       field("party-long").querySelector("button").click();
-      main.querySelector("textarea").value = "Edition draft";
+      editorInput(main).value = "Edition draft";
       use5e = false; Hooks.emit("updateSetting", { key: "wfrp4e.editionSettings" }, {}); await tick();
       check("4e grouped ambitions keep body insets after live edition switch", paddedAmbitions());
       main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
-      check("edition switch preserves ambition draft and rejects stale edition save", main.querySelector("textarea").value === "Edition draft" && main.querySelector(".mc-biography-editor-status").textContent.includes("edition changed"));
+      check("edition switch preserves ambition draft and rejects stale edition save", editorInput(main).value === "Edition draft" && main.querySelector(".mc-biography-editor-status").textContent.includes("edition changed"));
       main.querySelector(".mc-modal-button.is-secondary").click();
       field("party-long").querySelector("button").click();
-      main.querySelector("textarea").value = "Find a safe home";
+      editorInput(main).value = "Find a safe home";
       writeMode = "rejected";
       main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
-      check("ambition rejected write preserves draft and allows retry", main.querySelector("textarea").value === "Find a safe home" && !main.querySelector("textarea").disabled && main.querySelector(".mc-biography-editor-status").textContent === "Native write rejected");
+      check("ambition rejected write preserves draft and allows retry", editorInput(main).value === "Find a safe home" && !editorInput(main).disabled && main.querySelector(".mc-biography-editor-status").textContent === "Native write rejected");
       writeMode = "immediate";
       main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
-      check("ambition retry updates exact selected character field", !main.querySelector("textarea") && field("party-long").textContent.includes("Find a safe home") && Object.keys(nativeWrites.at(-1)).join() === "system.details.party-ambitions.long-term");
+      check("ambition retry updates exact selected character field", !editorInput(main) && field("party-long").textContent.includes("Find a safe home") && Object.keys(nativeWrites.at(-1)).join() === "system.details.party-ambitions.long-term");
     }
     main.querySelector(".mc-character-select-trigger").click();
     main.querySelector(".mc-character-menu-folder summary").click();
     const nextActor = [...main.querySelectorAll(".mc-character-menu-actor")].find(button => button.textContent.includes(secondActor.name));
     nextActor.click(); await tick();
-    check(`${systemId} dropdown switches actor and removes notes editor`, snapshot.selectedActor.sourceUuid === secondActor.uuid && main.querySelector("h2").textContent === secondActor.name && !main.querySelector("textarea"));
+    check(`${systemId} dropdown switches actor and removes notes editor`, snapshot.selectedActor.sourceUuid === secondActor.uuid && main.querySelector("h2").textContent === secondActor.name && !editorInput(main));
     scope.dispose(); main.replaceChildren();
     check(`${systemId} actor teardown removes editor`, !document.querySelector(".mc-biography-editor-layer"));
   }
@@ -242,6 +247,7 @@ try {
     };
     globalThis.game = createGame([actor]); game.user.character = actor;
     globalThis.Hooks = createHooks();
+    prepareEditorGame(game);
     const gateway = createFoundryCommandGateway();
     const session = createFoundrySessionGateway({ capabilitiesForActor: gateway.capabilitiesForActor });
     const reader = createFoundryBiographyGateway({ getTextEditor: () => ({ enrichHTML: async value => value }) });
@@ -250,18 +256,60 @@ try {
     const render = () => main.replaceChildren(renderCharacters({ state: { snapshot: session.read(), characterTab: "biography" }, commands, scope }));
     render(); await tick();
     const edit = () => main.querySelector(".mc-character-biography-story .mc-biography-edit").click();
-    edit();
-    check("D&D Biography editor converts existing HTML", main.querySelector("textarea").value === "74g\n-50g registration fee\n\n+10g gambling");
+    edit(); await tick();
+    check("D&D Biography editor converts existing HTML", editorInput(main).value === "74g\n-50g registration fee\n\n+10g gambling");
     main.querySelector(".mc-modal-button.is-secondary").click();
     check("D&D Cancel leaves native source unchanged", writes === 0 && actor.system.details.biography.value === legacy);
-    edit(); main.querySelector("textarea").value = "**Ledger**\n\nSecond line";
+    edit(); await tick(); editorInput(main).html = "<p><strong>Ledger</strong><br><br>Second line</p>";
     main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
-    check("D&D saves Markdown into native biography HTML", writes === 1 && actor.system.details.biography.value === "<p><strong>Ledger</strong><br><br>Second line</p>");
-    render(); await tick(); edit();
-    check("D&D reopens readable Markdown and preserves blank lines", main.querySelector("textarea").value === "**Ledger**\n\nSecond line");
+    check("D&D saves native rich biography HTML", writes === 1 && actor.system.details.biography.value === "<p><strong>Ledger</strong><br><br>Second line</p>");
+    render(); await tick(); edit(); await tick();
+    check("D&D reopens rich text and preserves blank lines", editorInput(main).value === "Ledger\n\nSecond line" && !!main.querySelector(".editor-content strong"));
     await new Promise(resolve => setTimeout(resolve, 250));
     const dialog = main.querySelector(".mc-biography-editor").getBoundingClientRect();
     check("Notes editor fits viewport", dialog.left >= 0 && dialog.right <= innerWidth && dialog.top >= 0 && dialog.bottom <= innerHeight);
+    main.querySelector(".mc-modal-button.is-secondary").click();
+    actor.system.details.biography.value = '<div data-preserve="exact"><p>Original <strong>formatting</strong></p></div>';
+    render(); await tick(); edit(); await tick();
+    main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
+    check("unchanged rich Save preserves exact native markup", actor.system.details.biography.value === '<div data-preserve="exact"><p>Original <strong>formatting</strong></p></div>');
+    actor.system.details.biography.value = Array.from({ length: 60 }, (_, index) => `<p>Ledger entry ${index + 1}: supplies and expedition costs.</p>`).join("");
+    render(); await tick();
+    const nativeAssets = new URLSearchParams(location.search).has("native-assets");
+    if (nativeAssets) enableMobileApplications(scope, { getExistingApplications: () => [] });
+    edit(); await tick(); await tick();
+    const longInput = editorInput(main), text = longInput.element;
+    check("long Notes open at the bottom with the caret at the end", text.scrollHeight > text.clientHeight
+      && text.scrollTop + text.clientHeight >= text.scrollHeight - 2);
+    check("text dialog uses the available width and height", main.querySelector(".mc-biography-editor").getBoundingClientRect().width >= innerWidth - 32
+      && text.clientHeight > innerHeight * 0.5);
+    text.scrollTop = 0; await tick();
+    check("scrolling back to earlier text stays under user control", text.scrollTop === 0);
+    if (nativeAssets) {
+      longInput.setSelectionRange(0, 6);
+      const format = main.querySelector(".mc-rich-text-editor .pm-dropdown.format");
+      format.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" }));
+      format.click(); await tick();
+      const menu = document.getElementById("prosemirror-dropdown");
+      check("native formatting dropdown escapes mobile isolation without an admitted sheet", menu?.classList.contains("mc-mobile-native-control")
+        && menu.matches(":popover-open") && getComputedStyle(menu).display !== "none");
+      const inline = menu.querySelector('[data-action="inline"]');
+      inline.click(); await tick();
+      check("touch opens native inline formatting submenu", inline.classList.contains("mc-chat-menu-expanded"));
+      menu.querySelector('[data-action="bold"]').click(); await tick();
+      check("native toolbar applies Bold to the selection", text.querySelector("strong")?.textContent === "Ledger");
+      main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
+      check("toolbar formatting saves to native Biography", actor.system.details.biography.value.includes("<strong>Ledger</strong>"));
+      render(); await tick(); edit(); await tick();
+    }
+    document.body.style.setProperty("--mc-mobile-viewport-height", "360px");
+    await tick();
+    const shortDialog = main.querySelector(".mc-biography-editor").getBoundingClientRect();
+    const saveBounds = main.querySelector(".mc-modal-button.is-primary").getBoundingClientRect();
+    check("keyboard-sized viewport keeps Save and text visible", shortDialog.bottom <= 360 && saveBounds.bottom <= 360
+      && editorInput(main).element.clientHeight > 40);
+    document.body.style.removeProperty("--mc-mobile-viewport-height");
+    await new Promise(resolve => setTimeout(resolve, 250));
     // Leave the open editor visible for passing screenshots.
   }
   if (new URLSearchParams(location.search).get("preview") === "bio") {

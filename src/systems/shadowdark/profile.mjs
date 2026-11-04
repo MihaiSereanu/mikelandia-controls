@@ -7,6 +7,7 @@ import { itemSpells } from "./item-spells.mjs";
 const field = (id, key, label, path, extra = {}) => ({ id, labelKey: key, label, path,
   ...(["hp", "def", "xp", "grit", "luck"].includes(id) ? { editControl: "counter" } : {}), ...extra });
 export function shadowdarkPlayerProfile(context, actor) {
+  const slots = field("slots", "SHADOWDARK.inventory.slots", "Slots", null, { read: actor => actor.system.getSlotUsage?.().total, maxPath: "system.slots" });
   const profile = { tabs: [
     { id: "abilities", summaryLayout: "triple", labelKey: "MIKELANDIA_CONTROLS.Panels.Main", label: "Main", sections: [
       { id: "hp", kind: "counters", labelKey: "SHADOWDARK.sheet.actor.hp", label: "HP", fields: [
@@ -55,11 +56,11 @@ export function shadowdarkPlayerProfile(context, actor) {
       ] }
     ] },
     { id: "inventory", labelKey: "SHADOWDARK.sheet.player.tab.inventory", label: "Inventory", sections: [
+      { id: "slots", kind: "values", labelKey: "SHADOWDARK.inventory.slots", label: "Slots", fields: [slots] },
       { id: "equipped-gear", kind: "items", keepEmpty: true, labelKey: "MIKELANDIA_CONTROLS.Panels.EquippedGear", label: "Equipped Gear",
         collectionPath: "items", itemTypes: physicalTypes, equipmentEditable: true, descriptionPath: "system.description", descriptionToggle: "item-name",
         valuePath: "system.quantity", include: (item, _context, actor) => carriedItem(item, actor) && item.system.equipped === true },
       { id: "gear", kind: "items", keepEmpty: true, labelKey: "MIKELANDIA_CONTROLS.Panels.CarriedGear", label: "Carried Gear", collectionPath: "items", itemTypes: physicalTypes,
-        summary: [field("slots", "SHADOWDARK.inventory.slots", "Slots", null, { read: actor => actor.system.getSlotUsage?.().total, maxPath: "system.slots" })],
         valuePath: "system.quantity", quantityEditable: true, equipmentEditable: true, descriptionPath: "system.description", descriptionToggle: "item-name",
         include: (item, _context, actor) => carriedItem(item, actor) && item.system.equipped !== true },
       { id: "coins", kind: "values", layout: "inline", labelKey: "SHADOWDARK.inventory.coins", label: "Coins",

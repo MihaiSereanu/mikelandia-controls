@@ -36,7 +36,7 @@ export function createFoundryTargetingGateway({ getGame = () => globalThis.game,
     // Native encounters may be globally available (scene:null). Each combatant
     // then supplies its own sceneId; an explicit encounter scene still wins.
     const tokenSceneId = combatant => combatant.sceneId ?? combatant.token?.parent?.id ?? combatSceneId;
-    const visible = Boolean(scene && combat?.started && (combatSceneId ? combatSceneId === scene.id
+    const visible = Boolean(scene && combat && (combatSceneId ? combatSceneId === scene.id
       : turns.some(combatant => tokenSceneId(combatant) === scene.id)));
     const nextContext = `${game?.user?.id ?? ""}|${sourceUuid}|${scene?.id ?? ""}|${combat?.id ?? ""}|${visible}`;
     if (context !== nextContext) {
@@ -124,7 +124,8 @@ export function createFoundryTargetingGateway({ getGame = () => globalThis.game,
         queueMicrotask(() => { queued = false; if (!scope.disposed) gateway.refresh(readSource()); });
       };
       for (const hook of ["createToken", "updateToken", "deleteToken", "createCombat", "updateCombat", "deleteCombat",
-        "createCombatant", "updateCombatant", "deleteCombatant", "updateScene", "canvasReady", "canvasTearDown", "updateActor", "deleteActor", "updateUser", "updateSetting"]) scope.hook(hook, refresh);
+        "createCombatant", "updateCombatant", "deleteCombatant", "updateScene", "canvasReady", "canvasTearDown", "updateActor", "deleteActor", "updateUser", "updateSetting",
+        "renderCombatTracker"]) scope.hook(hook, refresh);
       scope.hook("refreshToken", (token, flags) => {
         // Animation changes the live TokenDocument after updateToken. Measure
         // those positions once per frame without polling or rebuilding controls.

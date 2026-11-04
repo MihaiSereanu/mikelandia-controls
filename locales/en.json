@@ -435,8 +435,8 @@
         "CouldNotBeSaved": "{label} could not be saved.",
         "Edit": "Edit {label}",
         "CloseEditor": "Close {label} editor",
-        "TextAndFoundryRichHTML": "Text and Foundry-rich HTML",
-        "NotesMarkdown": "Supports Text and Markdown",
+        "TextTooLong": "Text is too long to save.",
+        "RichEditorUnavailable": "Foundry's rich-text editor is unavailable. Reload Foundry and try again.",
         "No": "No {label}.",
         "Conditions": "Conditions",
         "Active": "Active: {activeCount}",
@@ -830,6 +830,12 @@
       "ZoomIn": "Zoom in"
     },
     "Journals": {
+      "Search": "Search journals and pages",
+      "ClearSearch": "Clear",
+      "RetrySearch": "Retry search",
+      "Searching": "Searching journals\u2026",
+      "NoSearchResults": "No matching journals or pages.",
+      "SearchFailed": "Journal search could not be completed.",
       "Opening": "Opening journal…",
       "Library": "Library",
       "Title": "Journals",

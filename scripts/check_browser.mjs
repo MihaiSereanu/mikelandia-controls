@@ -5,9 +5,13 @@ import { tmpdir } from "node:os";
 import { dirname, resolve, relative, isAbsolute, join, extname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkTooltipTouches, checkDescriptionTouches } from "./browser/tooltip-touches.mjs";
+import { serveNativeEditorAsset } from "./browser/native-editor-assets.mjs";
+import { checkEditorTouches } from "./browser/editor-touches.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ["journal-search-phone", 390, 844, "in-person", "layout=phone&search=true"],
+  ["journal-search-tablet", 1024, 768, "in-person", "layout=tablet&search=true"],
   ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844]].map(([layout, width, height]) =>
     [`descriptions-${layout}`, width, height, "descriptions", ""]),
   ["shared-entry-desktop", 1280, 900, "shared-entry", "device=desktop"],
@@ -114,6 +118,7 @@ const cases = [
   ["journal-editor-tablet", 1024, 768, "in-person", "layout=tablet&preview=journal-editor"],
   ["actor-notes-phone", 390, 844, "actor-notes", ""],
   ["actor-notes-tablet", 1024, 768, "actor-notes", ""],
+  ["actor-notes-narrow", 320, 844, "actor-notes", ""],
   ["shadowdark-bio-phone", 390, 844, "actor-notes", "preview=bio"],
   ["shadowdark-bio-tablet", 1024, 768, "actor-notes", "preview=bio"],
   ["profile-layout-narrow", 320, 844, "profile-layout", "layout=phone"],
@@ -160,10 +165,17 @@ const contentTypes = { ".html": "text/html", ".mjs": "text/javascript", ".css": 
 let simulateStandalone = false;
 const server = createServer(async (request, response) => {
   try {
+    const pathname = new URL(request.url, "http://localhost").pathname;
+    const app = process.env.FOUNDRY_APP_PATH ?? "C:/Program Files/Foundry Virtual Tabletop/resources/app";
+    if (nativeAssets && await serveNativeEditorAsset(pathname, response, app)) return;
     const nativeFiles = {
       "/native-fixture/fa-solid-900.woff2": ["public/fonts/fontawesome/webfonts/fa-solid-900.woff2", "font/woff2"],
       "/native-fixture/fa-duotone-900.woff2": ["public/fonts/fontawesome/webfonts/fa-duotone-900.woff2", "font/woff2"],
-      "/native-fixture/foundry2.css": ["public/css/foundry2.css", "text/css"]
+      "/native-fixture/foundry2.css": ["public/css/foundry2.css", "text/css"],
+      "/native-fixture/fontawesome.css": ["public/fonts/fontawesome/css/all.min.css", "text/css"],
+      "/webfonts/fa-solid-900.woff2": ["public/fonts/fontawesome/webfonts/fa-solid-900.woff2", "font/woff2"],
+      "/webfonts/fa-duotone-900.woff2": ["public/fonts/fontawesome/webfonts/fa-duotone-900.woff2", "font/woff2"],
+      "/native-fixture/en.json": ["public/lang/en.json", "application/json"]
     };
     const nativeFile = nativeFiles[new URL(request.url, "http://localhost").pathname];
     if (nativeAssets && nativeFile) {
@@ -183,7 +195,10 @@ const server = createServer(async (request, response) => {
     }
     response.writeHead(200, { "Content-Type": contentTypes[extname(path)] ?? "application/octet-stream" });
     response.end(content);
-  } catch { response.writeHead(404).end(); }
+  } catch (error) {
+    if (request.url.startsWith("/native-editor")) console.error(`Native editor fixture: ${request.url}: ${error.message}`);
+    response.writeHead(404).end();
+  }
 });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
 await mkdir(join(root, "dist"), { recursive: true });
@@ -245,7 +260,7 @@ try {
     // Missing registration consumes the production five-second cleanup timeout
     // before startup and fixture assertions can finish.
     // System fixtures also await equipment, description and dependent-actor refreshes.
-    const reportTimeoutMs = name === "shared-entry-upgrade-missing-phone" ? 15000 : name.startsWith("damage-") || ["warhammer", "shadowdark"].includes(fixture) ? 9000 : 5000;
+    const reportTimeoutMs = (name === "shared-entry-upgrade-missing-phone" || name.startsWith("journal-")) ? 15000 : name.startsWith("damage-") || ["warhammer", "shadowdark"].includes(fixture) ? 9000 : 5000;
     const reportDeadline = performance.now() + reportTimeoutMs;
     while (performance.now() < reportDeadline) {
       const { result } = await send("Runtime.evaluate", { expression: 'document.querySelector("#results")?.textContent', returnByValue: true }, sessionId);
@@ -260,6 +275,12 @@ try {
     if (report?.status === "passed" && name.startsWith("descriptions-")) {
       try { await checkDescriptionTouches((method, params) => send(method, params, sessionId), report.checks); }
       catch (error) { report.status = "failed"; report.error = error.stack; }
+    }
+    if (report?.status === "passed" && nativeAssets && name.startsWith("actor-notes-")) {
+      try {
+        await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 }, sessionId);
+        await checkEditorTouches((method, params) => send(method, params, sessionId), report.checks);
+      } catch (error) { report.status = "failed"; report.error = error.stack; }
     }
     if (report?.status === "passed" && /^reconnect-(phone|tablet|narrow)$/.test(name)) {
       try {

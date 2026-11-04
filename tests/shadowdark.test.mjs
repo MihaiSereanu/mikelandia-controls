@@ -85,7 +85,9 @@ test("Group PCs use an inventory-only profile with native Notes and all carried 
       assert.ok(row.edit);
       assert.equal(row.equipment, undefined);
     }
-    assert.ok(gear.summary.some(row => row.id === "slots"));
+    assert.equal(sections[0].id, "slots");
+    assert.equal(sections[0].rows[0].id, "slots");
+    assert.equal(gear.summary.length, 0);
     assert.ok(sections.find(section => section.id === "coins"));
     assert.equal(f.gateway.capabilitiesForActor(f.actor).profileActions, undefined);
     assert.equal(JSON.stringify(view).includes("Secret Relic"), false);
@@ -597,7 +599,7 @@ test("inventory uses native slot totals, coins, stashed gear, and nonempty talen
   f.actor.items.push(item("stash", "Basic", { isPhysical: true, isIdentified: true, stashed: true, quantity: 3 }));
   f.actor.items.push(item("talent", "Talent", { talentClass: "class", description: "<p>Native talent text</p>" }));
   const view = f.view(), inventory = view.panels.find(p => p.id === "inventory");
-  assert.deepEqual(inventory.sections.find(s => s.id === "gear").summary[0], { id: "slots", label: "Slots", value: 9, max: 12, format: "number" });
+  assert.deepEqual(inventory.sections.find(s => s.id === "slots").rows[0], { id: "slots", label: "Slots", value: 9, max: 12, format: "number" });
   assert.equal(inventory.sections.find(s => s.id === "coins").summary[0].value, 2);
   assert.equal(inventory.sections.find(s => s.id === "coins").rows.find(r => r.id === "gp").value, 40);
   assert.deepEqual(inventory.sections.find(s => s.id === "stashed").rows.map(r => r.id), ["stash"]);

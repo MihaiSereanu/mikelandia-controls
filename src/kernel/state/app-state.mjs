@@ -26,6 +26,7 @@ export const initialAppState = Object.freeze({
   spellSlotEditor: null,
   xpEditor: false,
   portraitImage: null,
+  journalSearch: Object.freeze({ query: "", loading: false, results: [], error: "" }),
   journal: null,
   journalLoading: false,
   journalError: "",
@@ -197,6 +198,8 @@ function reduceState(state, event) {
       return event.image?.src ? { ...state, portraitImage: Object.freeze({ src: String(event.image.src), name: String(event.image.name ?? "") }), xpEditor: false, hitPointEditor: "", restEditor: false, spellSlotEditor: null } : state;
     case "close-character-portrait":
       return state.portraitImage ? { ...state, portraitImage: null } : state;
+    case "journal-search-changed":
+      return { ...state, journalSearch: Object.freeze(event.search) };
     case "journal-loading":
       return { ...state, journalLoading: true, journalError: "", journalImage: null };
     case "journal-loaded": {

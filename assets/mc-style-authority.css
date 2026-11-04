@@ -554,3 +554,16 @@
   border: 1px solid var(--mc-border) !important;
   border-radius: 6px !important;
 }
+
+@layer mc-mobile-style-authority {
+  .mc-mobile-app[data-mc-style-authority] .mc-journal-search-group > h3 { margin: 0 !important; font: 700 1.1rem/1.4 system-ui, sans-serif !important; }
+  .mc-mobile-app[data-mc-style-authority] .mc-journal-search-heading { display: block !important; height: auto !important; max-height: none !important; min-height: 44px !important; padding: .5rem .75rem !important; font: inherit !important; text-align: start !important; white-space: normal !important; }
+  .mc-mobile-app[data-mc-style-authority] .mc-journal-search-result { display: flex !important; flex-direction: column !important; align-items: stretch !important; justify-content: flex-start !important; height: auto !important; max-height: none !important; min-height: 44px !important; padding: .75rem !important; gap: .35rem !important; border: 1px solid var(--mc-border) !important; border-radius: 9px !important; background: var(--mc-surface) !important; color: var(--mc-text) !important; font: inherit !important; text-align: start !important; white-space: normal !important; }
+  .mc-mobile-app[data-mc-style-authority] .mc-journal-search-result > * { flex: 0 0 auto !important; min-width: 0 !important; line-height: 1.5 !important; }
+  .mc-mobile-app[data-mc-style-authority] .mc-journal-search-input { min-height: 44px !important; padding: .6rem .75rem !important; font: inherit !important; }
+}
+
+/* Keep the inventory-wide Slots value readable over native definition-list styles. */
+.mc-mobile-app[data-mc-style-authority] [data-profile-section="slots"] .mc-profile-row dd {
+  color: var(--mc-text) !important;
+}

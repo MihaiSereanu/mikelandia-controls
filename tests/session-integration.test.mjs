@@ -4,6 +4,7 @@ import { createFoundrySessionGateway, isActorEligible } from "../src/foundry/ses
 import { createTaskScope } from "../src/kernel/lifecycle/task-scope.mjs";
 import { resolveSystemIntegration } from "../src/systems/registry.mjs";
 import { createActor, createGame, createHooks, installGlobals } from "./helpers/foundry.mjs";
+import { createFoundryCombatGateway } from "../src/foundry/combat/combat-gateway.mjs";
 
 const dnd5e = resolveSystemIntegration("dnd5e");
 
@@ -100,4 +101,36 @@ test("incremental discovery rechecks integration eligibility after ownership cha
   await new Promise(resolve => queueMicrotask(resolve));
   assert.deepEqual(errors, []);
   assert.deepEqual(snapshots.at(-1).actors, []);
+});
+
+test("late tracker selection refreshes Initiative without document updates or actor reprojection", async t => {
+  const actor = createActor(), game = createGame([actor]), hooks = createHooks();
+  game.user.character = actor;
+  game.combat = null;
+  const scope = createTaskScope(), updates = [], errors = [];
+  t.after(() => scope.dispose());
+  installGlobals(t, { game, Hooks: hooks });
+  const combat = createFoundryCombatGateway();
+  const gateway = createFoundrySessionGateway({ combatForSnapshot: combat.snapshot, combatControlsForSnapshot: combat.controlsSnapshot });
+  const initial = gateway.watch(scope, snapshot => updates.push(snapshot), error => errors.push(error));
+  assert.equal(initial.combat, null);
+  hooks.emit("canvasReady");
+  await Promise.resolve();
+  game.combat = { id: "already-running", started: true, round: 3, turn: 0, turns: [] };
+  for (let i = 0; i < 3; i++) hooks.emit("renderCombatTracker", {});
+  await Promise.resolve();
+  assert.deepEqual(errors, []);
+  assert.equal(updates.length, 1);
+  assert.equal(updates[0].combat.id, "already-running");
+  assert.equal(updates[0].combat.round, 3);
+  assert.equal(updates[0].selectedActor, initial.selectedActor);
+  hooks.emit("renderCombatTracker", {});
+  await Promise.resolve();
+  assert.equal(updates.length, 1);
+  game.combat = null;
+  hooks.emit("renderCombatTracker", {});
+  await Promise.resolve();
+  assert.equal(updates.at(-1).combat, null);
+  scope.dispose();
+  assert.equal(hooks.count("renderCombatTracker"), 0);
 });

@@ -9760,7 +9760,10 @@ details.mc-action-session-compact-result {
 .mc-biography-editor-layer {
   position: fixed;
   z-index: var(--mc-layer-modal);
-  inset: 0;
+  inset: var(--mc-mobile-viewport-top, 0px) auto auto var(--mc-mobile-viewport-left, 0px);
+  width: var(--mc-mobile-viewport-width, 100%);
+  height: var(--mc-mobile-viewport-height, 100dvh);
+  box-sizing: border-box;
   padding: max(12px, var(--mc-safe-top)) 12px max(12px, var(--mc-safe-bottom));
   display: grid;
   place-items: center;
@@ -9833,6 +9836,55 @@ details.mc-action-session-compact-result {
 
 .mc-biography-editor input { min-height: 44px; padding: 8px 9px; }
 .mc-biography-editor textarea { min-height: 150px; padding: 10px; resize: vertical; }
+.mc-biography-editor.is-text-editor {
+  width: min(100%, 1100px);
+  height: min(900px, calc(var(--mc-mobile-viewport-height, 100dvh) - 24px));
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.mc-biography-editor.is-text-editor > header,
+.mc-biography-editor.is-text-editor > .mc-modal-actions,
+.mc-biography-editor.is-text-editor > .mc-biography-editor-status { flex: 0 0 auto; }
+.mc-biography-editor.is-text-editor > .mc-biography-editor-composer {
+  flex: 1 1 0;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr);
+}
+.mc-biography-editor.is-text-editor > label.mc-biography-editor-composer { grid-template-rows: auto minmax(0, 1fr); }
+.mc-biography-editor.is-text-editor textarea { height: 100%; min-height: 0; resize: none; font-size: 16px; }
+.mc-rich-text-editor {
+  --menu-height: 56px;
+  --menu-button-height: 44px;
+  --menu-padding: 6px;
+  --menu-background: var(--mc-surface-up);
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  gap: 6px;
+  color: var(--mc-text);
+  font: 16px/1.5 system-ui, sans-serif;
+  font-weight: 400;
+}
+.mc-rich-text-editor .menu-container { min-width: 0; }
+.mc-rich-text-editor .editor-container { min-height: 0; }
+.mc-rich-text-editor .editor-content {
+  padding: 12px;
+  border: 1px solid var(--mc-border);
+  border-radius: 9px;
+  background: var(--mc-surface-up);
+  color: var(--mc-text);
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+}
+.mc-rich-text-editor .editor-content :is(p, ul, ol) { margin-block: 0 0.75em; }
+.mc-rich-text-editor .editor-content :is(ul, ol) { padding-inline-start: 1.5em; }
+.mc-rich-text-editor menu { overflow: hidden; }
+.mc-rich-text-editor menu button { min-height: 44px; min-width: 44px; color: var(--mc-text); }
+.mc-rich-text-editor menu button.active { background: var(--mc-character-accent); color: var(--mc-surface); }
+.mc-rich-text-editor .source-editor { flex: 1; min-height: 0; }
+.mc-rich-text-editor[aria-disabled="true"] { pointer-events: none; opacity: 0.58; }
 .mc-biography-editor-status { min-height: 19px; margin: 8px 2px; color: var(--mc-subtle); font-size: 0.68rem; text-align: center; }
 .mc-biography-editor-status.is-error { color: #ee7b7b; }
 
@@ -11509,3 +11561,16 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 
 .mc-journal-reader { --mc-character-accent: var(--mc-gold); }
 .mc-preserve-lines { white-space: pre-wrap; }
+
+/* Journal library content search, shared by phone and tablet.
+ * Foundry buttons have a fixed height; text cards must size to their contents. */
+.mc-mobile-app .mc-journal-search { display: flex; gap: .5rem; align-items: center; margin-block: .75rem; }
+.mc-mobile-app .mc-journal-search-input { flex: 1; min-width: 0; width: 100%; min-height: 44px; padding: .6rem .75rem; font: inherit; }
+.mc-mobile-app .mc-journal-search button { min-height: 44px; }
+.mc-mobile-app .mc-journal-search-group { margin-block: 1rem; }
+.mc-mobile-app .mc-journal-search-group > h3 { margin: 0; font: 700 1.1rem/1.4 system-ui, sans-serif; }
+.mc-mobile-app .mc-journal-search-heading { display: block; width: 100%; height: auto; max-height: none; min-height: 44px; padding: .5rem .75rem; font: inherit; color: var(--mc-text); text-align: start; white-space: normal; overflow-wrap: anywhere; }
+.mc-mobile-app .mc-journal-search-result { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; gap: .35rem; width: 100%; height: auto; max-height: none; min-height: 44px; padding: .75rem; margin-block: .4rem; border: 1px solid var(--mc-border); border-radius: 9px; background: var(--mc-surface); color: var(--mc-text); font: inherit; text-align: start; white-space: normal; overflow-wrap: anywhere; }
+.mc-mobile-app .mc-journal-search-result > * { flex: 0 0 auto; min-width: 0; line-height: 1.5; }
+.mc-mobile-app .mc-journal-search-excerpt { font-size: .9em; }
+.mc-mobile-app .mc-journal-library mark { background: #f4d77c; color: #211b0a; border-radius: .15em; }

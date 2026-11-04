@@ -1,3 +1,4 @@
+import { journalMatchRanges, journalSearchWords } from "./search.mjs";
 import { preserveTextLineBreaks } from "../../ui/primitives/text-line-breaks.mjs";
 import { openTextEditor } from "../../ui/primitives/text-editor.mjs";
 import { localizedText, localizedCount } from "../../ui/primitives/localized-text.mjs";
@@ -7,14 +8,76 @@ import { buildJournalTree, journalBranchCount } from "./model.mjs";
 
 export function renderJournals({ state, commands, scope }) {
   if (state.journal) return journalReader(state, commands, scope);
-  const journals = state.snapshot?.journals ?? [];
-  const localize = (key, fallback, data) => commands.localize?.(key, fallback, data) ?? fallback;
-  const status = node("p", { className: `mc-journal-status${state.journalError ? " is-error" : ""}`, attrs: { role: "status", "aria-live": "polite" }, text: state.journalLoading ? localize("MIKELANDIA_CONTROLS.Journals.Opening", "Opening journal…") : localize(state.journalError, state.journalError) });
-  return node("section", { className: "mc-list-screen mc-journal-library", attrs: { "aria-busy": String(Boolean(state.journalLoading)) }, children: [
-    node("header", { children: [node("div", { children: [node("small", { text: localize("MIKELANDIA_CONTROLS.Journals.Library", "Library").toLocaleUpperCase() }), node("h2", { text: localize("MIKELANDIA_CONTROLS.Journals.Title", "Journals") })] }), node("span", { className: "mc-count", text: journals.length })] }),
-    status,
-    journals.length ? node("div", { className: "mc-journal-tree", children: renderBranch(buildJournalTree(journals), commands, scope) }) : node("div", { className: "mc-empty", children: [icon("fa-book-open"), node("p", { text: localize("MIKELANDIA_CONTROLS.Journals.None", "No visible journals.") })] })
+  const localize = (key, fallback) => commands.localize?.(`MIKELANDIA_CONTROLS.Journals.${key}`, fallback) ?? fallback;
+  const input = node("input", { className: "mc-journal-search-input", attrs: { type: "search", placeholder: localize("Search", "Search journals and pages"), "aria-label": localize("Search", "Search journals and pages") }, on: { input: event => commands.setJournalSearch(event.target.value) } }, scope);
+  const clear = node("button", { attrs: { type: "button" }, text: localize("ClearSearch", "Clear"), on: { click: () => { commands.setJournalSearch(""); input.focus(); } } }, scope);
+  const status = node("p", { className: "mc-journal-status", attrs: { role: "status", "aria-live": "polite" } });
+  const retry = node("button", { attrs: { type: "button" }, text: localize("RetrySearch", "Retry search"), on: { click: () => commands.retryJournalSearch() } }, scope);
+  const count = node("span", { className: "mc-count" });
+  const body = node("div", { className: "mc-journal-library-body" });
+  const screen = node("section", { className: "mc-list-screen mc-journal-library", children: [
+    node("header", { children: [node("div", { children: [node("small", { text: localize("Library", "Library").toLocaleUpperCase() }), node("h2", { text: localize("Title", "Journals") })] }), count] }),
+    node("div", { className: "mc-journal-search", children: [input, clear] }), status, retry, body
   ] });
+  let bodyScope = null, previous = null, pendingScrollTop = null;
+  screen.updateJournalLibrary = next => {
+    const journals = next.snapshot?.journals ?? [];
+    const search = next.journalSearch ?? { query: "", results: [] };
+    const active = Boolean(search.query.trim());
+    if (input.value !== search.query) input.value = search.query;
+    clear.hidden = !search.query;
+    retry.hidden = !search.error;
+    count.textContent = active ? search.results.length : journals.length;
+    screen.setAttribute("aria-busy", String(Boolean(search.loading || next.journalLoading)));
+    status.classList.toggle("is-error", Boolean(search.error || next.journalError));
+    status.textContent = next.journalLoading ? localize("Opening", "Opening journal\u2026")
+      : search.error ? localize("SearchFailed", "Journal search could not be completed.")
+      : next.journalError ? commands.localize?.(next.journalError, next.journalError) ?? next.journalError
+      : search.loading ? localize("Searching", "Searching journals\u2026")
+      : active && !search.results.length ? localize("NoSearchResults", "No matching journals or pages.") : "";
+    if (previous?.journals === journals && previous?.results === search.results && previous?.query === search.query) return;
+    const folders = new Set([...body.querySelectorAll("details[open]")].map(el => el.dataset.folderId));
+    const scroller = screen.closest(".mc-viewport");
+    const top = scroller?.scrollTop;
+    if (search.loading && previous?.query === search.query && pendingScrollTop === null) {
+      pendingScrollTop = top ?? 0;
+      body.style.minHeight = `${body.getBoundingClientRect().height}px`;
+    }
+
+    bodyScope?.dispose(); bodyScope = scope.child("journal-library-results");
+    const owner = bodyScope;
+    if (!active) {
+      body.replaceChildren(journals.length ? node("div", { className: "mc-journal-tree", children: renderBranch(buildJournalTree(journals), commands, owner) })
+        : node("div", { className: "mc-empty", children: [icon("fa-book-open"), node("p", { text: localize("None", "No visible journals.") })] }));
+      for (const folder of body.querySelectorAll("details")) folder.open = folders.has(folder.dataset.folderId);
+    } else {
+      const words = journalSearchWords(search.query);
+      body.replaceChildren(...search.results.map(journal => node("section", { className: "mc-journal-search-group", children: [
+        node("h3", { children: [node("button", { className: "mc-journal-search-heading", attrs: { type: "button" }, children: highlighted(journal.name, words), on: { click: () => void commands.openJournal(journal.id).catch(() => {}) } }, owner)] }),
+        ...journal.pages.map(page => node("button", { className: "mc-journal-search-result", attrs: { type: "button" }, on: { click: () => void commands.openJournal(journal.id, { pageId: page.id }).catch(() => {}) }, children: [
+          node("strong", { children: highlighted(page.name, words) }),
+          page.excerpt ? node("span", { className: "mc-journal-search-excerpt", children: highlighted(page.excerpt, words) }) : null
+        ] }, owner))
+      ] })));
+    }
+    if (!search.loading) body.style.minHeight = "";
+    if (scroller && previous?.query === search.query) scroller.scrollTop = pendingScrollTop ?? top;
+    if (!search.loading) pendingScrollTop = null;
+    previous = { journals, results: search.results, query: search.query };
+  };
+  screen.updateJournalLibrary(state);
+  return screen;
+}
+
+function highlighted(text, words) {
+  const children = [];
+  let offset = 0;
+  for (const [start, end] of journalMatchRanges(text, words)) {
+    children.push(document.createTextNode(text.slice(offset, start)), node("mark", { text: text.slice(start, end) }));
+    offset = end;
+  }
+  children.push(document.createTextNode(text.slice(offset)));
+  return children;
 }
 
 function renderBranch(branch, commands, scope) {
@@ -59,6 +122,7 @@ function journalReader(state, commands, scope) {
         openTextEditor(anchor, {
           section: "journal", subjectName: journal.name, label: page.name, iconName: "fa-book",
           richText: true, value: source.value,
+          markdown: source.format === 2,
           sourceLabel: source.format === 2 ? "Markdown" : undefined,
           save: value => commands.saveJournalText({ journalId: journal.id, pageId: page.id, value,
             originalValue: source.originalValue, format: source.format }),

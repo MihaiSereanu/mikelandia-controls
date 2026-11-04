@@ -27,6 +27,7 @@ export const RECONNECT_BLOCKER_DELAY_MS = 120;
 export function createAppFrame({ store, commands, policy, scope, mobileBackGateway = null, performanceObserver = null, nativeApplications = null }) {
   const root = node("div", { className: "mc-mobile-app", attrs: { role: "application", "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.MCMobile", "Mikelandia Controls") } });
   const viewport = node("main", { className: "mc-viewport" });
+  let journalLibraryScrollTop = 0;
   const damageFeedback = createDamageFeedback({ root, scope, localize: commands.localize, locale: () => commands.readLocale?.() ?? "en" });
   const panelOverlays = node("div", { className: "mc-panel-overlays", attrs: { "aria-live": "polite" } });
   const nav = node("nav", { className: "mc-bottom-nav", attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.AppFrame.Primary", "Primary") } });
@@ -190,6 +191,13 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
       return;
     }
 
+    if (sameScreen && state.status === "ready" && state.route === "journals"
+      && !state.journal && viewport.firstElementChild?.updateJournalLibrary) {
+      viewport.firstElementChild.updateJournalLibrary(state);
+      renderedState = screenState(state, layoutKey);
+      return;
+    }
+
     // Preserve the text draft and selection while journal hooks refresh its source.
     if (sameScreen && state.status === "ready" && state.route === "journals"
       && renderedState?.journal?.id === state.journal?.id
@@ -321,6 +329,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
       && renderedState?.journalPageId === state.journalPageId
       && renderedState?.journalHeading === state.journalHeading;
     const readingTop = viewport.scrollTop, readingLeft = viewport.scrollLeft;
+    if (renderedState?.route === "journals" && !renderedState?.journal) journalLibraryScrollTop = readingTop;
     const openFolders = new Set([...viewport.querySelectorAll(".mc-journal-folder[open]")].map(folder => folder.dataset.folderId));
     const previousCharacterContext = characterScrollContext(renderedState);
     const previousCharacterScrollTop = characterScrollTop();
@@ -382,6 +391,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
         scope: screenScope,
         overlayHost: null
       }));
+      if (state.route === "journals" && !state.journal && !preserveReadingPosition) viewport.scrollTop = journalLibraryScrollTop;
       if (state.route === "characters") characterHeaderScroll = bindCharacterHeaderScroll({ scroller: characterScroller(), screen: viewport.firstElementChild, scope: screenScope, restorePosition: restoreCharacterScrollPosition });
       if (nextCharacterContext) restoreCharacterScroll(state, desiredCharacterScrollTop);
       else if (preserveReadingPosition) {
@@ -743,6 +753,7 @@ function screenState(state, layoutKey = "") {
     spellSlotEditor: state.spellSlotEditor,
     xpEditor: state.xpEditor,
     portraitImage: state.portraitImage,
+    journalSearch: state.journalSearch,
     journal: state.journal,
     journalLoading: state.journalLoading,
     journalError: state.journalError,
@@ -756,7 +767,8 @@ function screenState(state, layoutKey = "") {
 }
 
 export function journalPresentationChanged(previous, current) {
-  return previous?.journal !== current?.journal
+  return previous?.journalSearch !== current?.journalSearch
+    || previous?.journal !== current?.journal
     || previous?.journalLoading !== current?.journalLoading
     || previous?.journalError !== current?.journalError
     || previous?.journalPageId !== current?.journalPageId

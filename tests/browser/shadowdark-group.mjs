@@ -1,3 +1,4 @@
+import { installRichEditorFixture, editorInput, prepareEditorGame } from "/tests/browser/rich-editor-fixture.mjs";
 import { createShadowdarkFixture } from "/tests/helpers/shadowdark.mjs";
 import { createFoundrySessionGateway } from "/src/foundry/session/session-gateway.mjs";
 import { createFoundryCommandGateway } from "/src/foundry/commands/command-gateway.mjs";
@@ -9,6 +10,7 @@ const checks = [], check = (name, value) => { if (!value) throw new Error(name);
 const tick = () => new Promise(resolve => setTimeout(resolve, 30));
 const scope = createTaskScope("shadowdark-group-browser");
 try {
+  await installRichEditorFixture();
   const params = new URLSearchParams(location.search);
   const main = document.querySelector("main");
   main.dataset.formFactor = params.get("layout") ?? "phone";
@@ -20,7 +22,7 @@ try {
     check("native button sizing available", !!rule);
     const style = document.createElement("style");
     style.textContent = `@layer modules { ${rule} }`;
-    document.head.prepend(style);
+    document.head.append(style);
     const font = new FontFace("Native fixture icons", 'url("/native-fixture/fa-solid-900.woff2")', { weight: "900" });
     document.fonts.add(await font.load());
     const icons = document.createElement("style");
@@ -38,6 +40,7 @@ try {
   f.actor.items.push(stash);
   globalThis.game = f.game;
   globalThis.Hooks = f.hooks;
+  prepareEditorGame(game);
   const gateway = createFoundryCommandGateway();
   const biography = createFoundryBiographyGateway({ getTextEditor: () => ({ enrichHTML: async value => value }) });
   const session = createFoundrySessionGateway({ capabilitiesForActor: gateway.capabilitiesForActor });
@@ -65,6 +68,11 @@ try {
   check("Equipped Gear and equip checkboxes are absent", !main.querySelector('[data-profile-section="equipped-gear"]') && !main.querySelector('input[type="checkbox"]'));
   check("equipped and unequipped items share Gear with quantities", ["sword", "torch"].every(id => main.querySelector(`[data-profile-section="gear"] [data-profile-edit="quantity:${id}"]`)));
   check("Slots, Coins and Stashed Gear remain", main.textContent.includes("4 / 10") && !!main.querySelector('[data-profile-section="coins"]') && !!main.querySelector('[data-profile-section="stashed"]'));
+  const slots = main.querySelector('[data-profile-section="slots"]'), gear = main.querySelector('[data-profile-section="gear"]');
+  check("Group Slots has its own row above Gear", slots?.textContent.includes("4 / 10")
+    && slots.getBoundingClientRect().bottom <= gear.getBoundingClientRect().top
+    && main.querySelectorAll('[data-profile-field="slots"]').length === 1 && !gear.querySelector('[data-profile-metric="slots"]'));
+  check("Slots value uses the readable theme text color", getComputedStyle(slots.querySelector("dd")).color === getComputedStyle(main).color);
   check("item descriptions remain available", main.textContent.includes("Shared spare sword") && main.textContent.includes("Supplies at the inn"));
   const dagger = f.actor.items.get("dagger");
   for (const description of [undefined, "", " \n\t", '<p>&nbsp;<br></p>', '<div class="secret">Secret only</div><script>bad()</script>', '<p><img src="data:image/png;base64,AA=="></p>']) {
@@ -112,9 +120,9 @@ try {
   main.querySelector('[data-profile-tab="notes"]').click();
   await tick();
   check("Notes displays native text", main.textContent.includes("Party supplies"));
-  main.querySelector(".mc-biography-edit").click();
+  main.querySelector(".mc-biography-edit").click(); await tick();
   await tick();
-  main.querySelector("textarea").value = "Shared treasure ledger";
+  editorInput(main).value = "Shared treasure ledger";
   main.querySelector("form.mc-biography-editor").requestSubmit();
   await tick();
   check("Notes saves to native field and refreshes", f.actor.system.notes === "<p>Shared treasure ledger</p>" && main.textContent.includes("Shared treasure ledger"));
