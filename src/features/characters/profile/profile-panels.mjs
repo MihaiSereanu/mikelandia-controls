@@ -36,6 +36,29 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
     return row.max === undefined ? value : `${value} / ${localizedNumber(row.max, locale)}`;
   };
   const renderRow = (row, equipmentColumn = false, grouped = false) => {
+    if (row.editControl === "checkbox" && row.format === "boolean" && !row.edit) {
+      const id = `${prefix}-condition-${row.id}`;
+      const input = node("input", { attrs: { id, type: "checkbox", "data-profile-condition": row.id,
+        "aria-label": row.label, disabled: !row.action }, on: { change: async () => {
+        if (scope.disposed || input.disabled) return;
+        input.disabled = true;
+        input.setAttribute("aria-busy", "true");
+        try { await commands.execute(ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, { actorSourceUuid: actor.sourceUuid,
+          actionId: row.action.id, actionRevision: row.action.revision }); }
+        catch (error) { if (!scope.disposed) commands.reportCharacterMutationError?.(error); }
+        finally { if (!scope.disposed) { input.checked = row.value; input.disabled = false; input.setAttribute("aria-busy", "false"); } }
+      } } }, scope);
+      input.checked = row.value;
+      const reference = row.tooltip?.length || row.description ? renderProfileTooltip(row.tooltip?.length ? row
+        : { ...row, tooltip: [{ label: row.label, bullets: [] }] }, `${id}-explanation`, scope, { showHeadings: false }) : null;
+      if (reference && row.description) reference.tooltip.replaceChildren(renderEnrichedDescription(row.description, "",
+        { gateway: commands.descriptions, uuid: row.descriptionUuid, scope }).content);
+      if (reference) reference.trigger.dataset.profileConditionReference = row.id;
+      return node("div", { className: "mc-profile-row mc-profile-checkbox-row", dataset: { profileField: row.id }, children: [
+        node("dt", { children: [reference?.trigger ?? node("label", { text: row.label, attrs: { for: id } })] }),
+        node("dd", { children: [node("label", { className: "mc-profile-boolean-target", attrs: { for: id }, children: [input] })] }), reference?.tooltip
+      ] });
+    }
     const descriptionOptions = { gateway: commands.descriptions, uuid: row.descriptionUuid, scope };
     let description;
     if (row.description && !["name", "item-name"].includes(row.descriptionToggle)) {
@@ -67,7 +90,8 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
       ] });
     }
     let label = row.action ? node("button", {
-      className: "mc-profile-action", attrs: { type: "button", "data-profile-action": row.action.id },
+      className: "mc-profile-action", attrs: { type: "button", "data-profile-action": row.action.id,
+        ...(typeof row.action.active === "boolean" ? { "aria-pressed": String(row.action.active) } : {}) },
       children: [node("span", { text: row.label }), icon(row.action.icon ?? "fa-dice")],
       on: { click: async event => {
         const button = event.currentTarget;
@@ -136,7 +160,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
       ] }) : null;
       if (row.action) {
         label.replaceChildren(icon(row.action.icon ?? "fa-dice"));
-        label.setAttribute("aria-label", `${localizedText(commands.localize, "Roll", "Roll")} ${row.label}`);
+        label.setAttribute("aria-label", `${row.action.icon === "fa-lightbulb" ? localizedText(commands.localize, "Toggle", "Toggle") : localizedText(commands.localize, "Roll", "Roll")} ${row.label}`);
       }
       if (!row.action && row.showCastButton) label = node("button", {
         className: "mc-profile-action", attrs: { type: "button", disabled: true, "aria-label": `${localizedText(commands.localize, "Cast", "Cast")} ${row.label}` },
@@ -170,7 +194,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
   };
   // Keep related small sections together, with the last card using spare width.
   // Larger collections retain the full sheet width for their own responsive rows.
-  const sections = active.id === "notes" ? [renderNotes()] : [];
+  const sections = active.id === "notes" && !actor.notesAfterSections ? [renderNotes()] : [];
   if (characterHasTargets(actor, active.id)) {
     const targets = renderTargets({ targeting: state.targeting, commands, scope });
     if (targets) sections.push(targets);
@@ -199,7 +223,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
         sections.push(renderProfileConditions(section, actor, commands, scope, presentation));
         continue;
       }
-      const compact = section.layout !== "table" && ["values", "counters"].includes(section.kind) && section.rows.length === 1;
+      const compact = !section.fullWidth && section.layout !== "table" && ["values", "counters"].includes(section.kind) && section.rows.length === 1;
       const inventorySection = inventory && section.id === "gear";
       const equipmentLabel = section.rows.find(row => row.equipment?.edit)?.equipment.label;
       const heading = [node("h3", { text: section.label }), ...(section.summary ?? []).map(row => node("span", {
@@ -215,7 +239,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
           if (open) presentation.openSections.add(key); else presentation.openSections.delete(key);
         }, scope);
       }
-      const sectionHeading = compact && section.label === section.rows[0].label && !section.summary?.length ? null
+      const sectionHeading = (compact || section.fullWidth) && section.label === section.rows[0].label && !section.summary?.length ? null
         : node(section.collapsible ? "summary" : "header", { className: "mc-profile-section-heading", children: [
           ...(inventorySection ? [node("div", { className: "mc-profile-section-title", children: heading }), inventory.button] : heading),
           equipmentLabel ? node("span", { className: "mc-profile-equipment-heading", text: equipmentLabel }) : null,
@@ -235,10 +259,12 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
         ] });
         if (section.collapsibleTiers) bindSection(tier, heading, `${active.id}:${section.id}:tier:${value}`, true);
         return tier;
-      }) : [node("dl", { children: section.rows.map(row => renderRow(row, Boolean(equipmentLabel))) })];
+      }) : [node("dl", { children: section.rows.map(row => renderRow(section.layout === "actions" ? { ...row, value: undefined } : row, Boolean(equipmentLabel))) })];
       const element = node(section.collapsible ? "details" : "section", {
-        className: `mc-profile-section mc-profile-${section.kind}${section.collapsible ? " mc-profile-inventory-disclosure" : ""}${equipmentLabel ? " mc-profile-equipment-section" : ""}${section.layout === "inline" ? " mc-profile-section-inline" : section.layout === "table" ? " mc-profile-section-table" : section.layout === "rows" ? " mc-profile-section-rows" : ""}`, dataset: { profileSection: section.id },
-        children: [sectionHeading, inventorySection ? inventory.body : null, ...(section.kind === "text" ? [node("p", { text: section.text })] : rows), disclosure]
+        className: `mc-profile-section mc-profile-${section.kind}${section.fullWidth ? " mc-profile-section-full-width" : ""}${section.collapsible ? " mc-profile-inventory-disclosure" : ""}${equipmentLabel ? " mc-profile-equipment-section" : ""}${section.layout === "inline" ? " mc-profile-section-inline" : section.layout === "table" ? " mc-profile-section-table" : section.layout === "rows" ? " mc-profile-section-rows" : section.layout === "actions" ? " mc-profile-section-actions" : ""}`, dataset: { profileSection: section.id },
+        children: [sectionHeading, inventorySection ? inventory.body : null, ...(section.kind === "text" ? [section.richText
+          ? renderEnrichedDescription(section.text, "", { gateway: commands.descriptions, uuid: actor.sourceUuid, scope, fragment: true }).content
+          : node("p", { text: section.text })] : rows), disclosure]
       });
       if (section.collapsible && sectionHeading) {
         const key = `${active.id}:${section.id}`;
@@ -252,6 +278,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
     }
   };
   appendSections(active.sections, sections);
+  if (active.id === "notes" && actor.notesAfterSections) sections.push(renderNotes());
   return [
     node("nav", { className: "mc-profile-tabs", attrs: { role: "tablist" }, children: tabs.map(tab => node("button", {
       text: tab.label,
@@ -259,7 +286,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
         "aria-selected": String(tab === active), "data-profile-tab": tab.id },
       on: { click: () => commands.selectCharacterTab(tab.id) }
     }, scope)) }),
-    node("div", { className: "mc-profile-content", attrs: { role: "tabpanel", id: `${prefix}-panel-${active.id}`,
+    node("div", { className: "mc-profile-content", dataset: { profileId: actor.profileId }, attrs: { role: "tabpanel", id: `${prefix}-panel-${active.id}`,
       "aria-labelledby": `${prefix}-tab-${active.id}` }, children: sections })
   ];
 }

@@ -21,12 +21,13 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
     ...(typeof actions.get(id).active === "boolean" ? { active: actions.get(id).active } : {}),
     ...(actions.get(id).icon === "fa-lightbulb" ? { icon: "fa-lightbulb" } : {}) }) } : {};
   const edits = new Map((Array.isArray(context.edits) ? context.edits : []).filter(edit => edit && typeof edit.id === "string" && /^(?:[a-z][a-z0-9-]{0,63}|(?:quantity|equipped):[a-zA-Z0-9_-]{1,128})$/u.test(edit.id)
-    && typeof edit.revision === "string" && ["integer", "boolean"].includes(edit.kind)).map(edit => [edit.id, edit]));
+    && typeof edit.revision === "string" && ["integer", "number", "boolean"].includes(edit.kind)).map(edit => [edit.id, edit]));
   const editFor = (id, value) => {
     const edit = edits.get(id);
     if (!edit || edit.value !== value) return {};
     return { edit: Object.freeze({ id, revision: edit.revision, kind: edit.kind,
-      ...(edit.kind === "integer" ? { min: edit.min, ...(edit.max !== undefined ? { max: edit.max } : {}) } : {}) }) };
+      ...(["integer", "number"].includes(edit.kind) ? { min: edit.min, ...(edit.max !== undefined ? { max: edit.max } : {}),
+        ...(Array.isArray(edit.choices) ? { choices: Object.freeze(edit.choices.map(choice => Object.freeze({ value: choice.value, label: String(choice.label) }))) } : {}) } : {}) }) };
   };
   const label = entry => typeof entry.label === "string" && entry.label.trim()
     ? localizedText(localize, entry.labelKey ?? entry.label, entry.label) : "";
@@ -57,7 +58,7 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
       catch { return []; }
       if (!scalar(value, entry.format)) return [];
       seen.add(entry.id);
-      const max = entry.maxPath ? readProfilePath(actor, entry.maxPath) : undefined;
+      const max = entry.readMax ? entry.readMax(actor, context) : entry.maxPath ? readProfilePath(actor, entry.maxPath) : undefined;
       return [Object.freeze({ id: entry.id, label: label(entry), value, format: entry.format ?? "number",
         ...tooltipFor(entry),
         ...(entry.editControl === "checkbox" && entry.format === "boolean" ? { editControl: "checkbox" } : {}),
@@ -84,8 +85,9 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
         if (scalar(text, "text") && label(entry.disclosure)) disclosure = Object.freeze({ label: label(entry.disclosure), text });
       } catch { /* Missing native data leaves the disclosure unavailable. */ }
       return projected.length ? Object.freeze({ id: entry.id, label: label(entry), kind: entry.kind, rows: projected, summary: rows(entry.summary), controls: rows(entry.controls),
+        ...(entry.fullWidth === true ? { fullWidth: true } : {}),
         ...(disclosure ? { disclosure } : {}),
-        ...(["inline", "table"].includes(entry.layout) ? { layout: entry.layout } : {}) }) : null;
+        ...(["inline", "table", "actions"].includes(entry.layout) ? { layout: entry.layout } : {}) }) : null;
     }
     if (entry.kind === "text") {
       const value = readProfilePath(actor, entry.path);
@@ -110,6 +112,7 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
           seen.add(id);
           const properties = typeof entry.readProperties === "function" ? entry.readProperties(item, context, actor) : [];
           projected.push(Object.freeze({ id, label: name, value, format: entry.format ?? "number",
+            ...(entry.editControl === "checkbox" && entry.format === "boolean" ? { editControl: "checkbox" } : {}),
             ...(entry.readLost ? { lost: entry.readLost(item) === true } : {}),
             ...(entry.showCastButton === true ? { showCastButton: true } : {}),
             ...(entry.lossActionIdPrefix && actions.has(`${entry.lossActionIdPrefix}:${id}`)
@@ -127,8 +130,9 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
             ...(typeof entry.valuePrefix === "string" ? { valuePrefix: entry.valuePrefix } : {}),
             ...(entry.quantityEditable ? editFor(`quantity:${id}`, value) : {}),
             ...(entry.equipmentEditable && edits.has(`equipped:${id}`) ? { equipment: Object.freeze({
-              id: `equipped:${id}`, label: localizedText(localize, "Equipped", "Equipped"), value: edits.get(`equipped:${id}`).value,
-              format: "boolean", editControl: "checkbox", ...editFor(`equipped:${id}`, edits.get(`equipped:${id}`).value)
+              id: `equipped:${id}`, label: edits.get(`equipped:${id}`).choices ? localizedText(localize, "Equipment", "Equipment") : localizedText(localize, "Equipped", "Equipped"), value: edits.get(`equipped:${id}`).value,
+              format: edits.get(`equipped:${id}`).kind === "boolean" ? "boolean" : "number", editControl: "checkbox",
+              ...editFor(`equipped:${id}`, edits.get(`equipped:${id}`).value)
             }) } : {}),
             ...actionFor(validId(entry.actionIdPrefix) ? `${entry.actionIdPrefix}:${id}` : undefined) }));
         } catch { /* A malformed item cannot expose extra fields or break a section. */ }

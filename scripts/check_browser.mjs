@@ -4,12 +4,23 @@ import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, resolve, relative, isAbsolute, join, extname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkTooltipTouches, checkDescriptionTouches } from "./browser/tooltip-touches.mjs";
+import { checkTooltipTouches, checkDescriptionTouches, checkSwadeConditionTouches } from "./browser/tooltip-touches.mjs";
 import { serveNativeEditorAsset } from "./browser/native-editor-assets.mjs";
 import { checkEditorTouches } from "./browser/editor-touches.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844], ["large-text", 390, 844]].map(([layout, width, height]) =>
+    [`swade-wealth-${layout}`, width, height, "native-systems", `system=swade&wealth=true&layout=${layout === "tablet" ? "tablet" : "phone"}${layout === "large-text" ? "&large=true" : ""}`]),
+  ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844]].map(([layout, width, height]) =>
+    [`swade-condition-touch-${layout}`, width, height, "native-systems", `system=swade&layout=${layout === "tablet" ? "tablet" : "phone"}&large=true&preview=effects`]),
+  ...[["phone", 390, 844], ["tablet", 1024, 768]].map(([layout, width, height]) =>
+    [`swade-powers-${layout}`, width, height, "native-systems", `system=swade&layout=${layout}&preview=powers`]),
+  ...["swade", "honor-and-intrigue"].flatMap(system => ["main", "combat", "effects", "notes"].flatMap(preview => [["phone", 390, 844], ["tablet", 1024, 768]].map(([layout, width, height]) =>
+    [`${system}-${preview}-${layout}`, width, height, "native-systems", `system=${system}&layout=${layout}&preview=${preview}`]))),
+  ...["swade", "honor-and-intrigue"].map(system => [`${system}-unprotected`, 390, 844, "native-systems", `system=${system}&unprotected=true`]),
+  ...["swade", "honor-and-intrigue"].flatMap(system => [["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844], ["large-text", 390, 844]].map(([layout, width, height]) =>
+    [`${system}-${layout}`, width, height, "native-systems", `system=${system}&layout=${layout === "tablet" ? "tablet" : "phone"}${layout === "large-text" ? "&large=true" : ""}`])),
   ...["shadowdark", "dnd5e", "wfrp4e"].flatMap(system => [["phone", 390, 844], ["tablet", 1024, 768]].map(([layout, width, height]) =>
     [`roll-chat-${system}-${layout}`, width, height, "in-person", `layout=${layout}&system=${system}&rollChat=true`])),
   ["roll-chat-wfrp4e-4e-phone", 390, 844, "in-person", "layout=phone&system=wfrp4e&edition=4e&rollChat=true"],
@@ -274,6 +285,12 @@ try {
     if (report?.status === "passed" && name.startsWith("tooltip-touch-")) {
       try { await checkTooltipTouches((method, params) => send(method, params, sessionId), report.checks); }
       catch (error) { report.status = "failed"; report.error = error.stack; }
+    }
+    if (report?.status === "passed" && name.startsWith("swade-condition-touch-")) {
+      try {
+        await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 }, sessionId);
+        await checkSwadeConditionTouches((method, params) => send(method, params, sessionId), report.checks);
+      } catch (error) { report.status = "failed"; report.error = error.stack; }
     }
     if (report?.status === "passed" && name.startsWith("descriptions-")) {
       try { await checkDescriptionTouches((method, params) => send(method, params, sessionId), report.checks); }

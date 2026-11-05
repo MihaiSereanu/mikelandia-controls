@@ -1025,10 +1025,10 @@ body.mc-mobile-running .mc-mobile-dialog :is(input, select, textarea) {
   font-size: max(16px, 1em);
 }
 
-/* Restyle only admitted Shadowdark/Warhammer roll forms. Native DOM, actions,
+/* Restyle only admitted system roll forms. Native DOM, actions,
  * hidden modifiers and rerenders remain owned by the systems. Dialogs are body
  * siblings of the shell, so resolve their palette from the active shell. */
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app {
   --mc-surface: var(--mc-panel);
   --mc-surface-up: var(--mc-panel-up);
   --mc-border: var(--mc-line);
@@ -1050,7 +1050,7 @@ body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile
   text-shadow: none !important;
 }
 
-body.mc-mobile-running:has(.mc-mobile-app[data-theme="light"]) :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app {
+body.mc-mobile-running:has(.mc-mobile-app[data-theme="light"]) :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app {
   --mc-surface: #fffdf9;
   --mc-surface-up: #f0e8dc;
   --mc-border: #d5c8b8;
@@ -1059,7 +1059,7 @@ body.mc-mobile-running:has(.mc-mobile-app[data-theme="light"]) :is(#sd-roll-dial
   color-scheme: light;
 }
 
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app .window-header {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app .window-header {
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
@@ -1070,19 +1070,19 @@ body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile
   border-bottom: 1px solid var(--mc-border) !important;
 }
 
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(.window-title, h2, h3, label, button:not(.icon), input, select, textarea) {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app :is(.window-title, h2, h3, label, button:not(.icon):not(.header-control), input, select, textarea) {
   font-family: inherit !important;
   text-shadow: none !important;
 }
 
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(.window-content, .application-content) {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app :is(.window-content, .application-content) {
   padding: 16px !important;
   background: transparent !important;
   color: var(--mc-text) !important;
   gap: 14px;
 }
 
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(h2, h3) {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app :is(h2, h3) {
   color: var(--mc-text) !important;
   font-size: 1.15em !important;
   font-weight: 700;
@@ -1090,7 +1090,7 @@ body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile
   margin: 0 0 12px;
 }
 
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(.form-group, .roll-input) {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app :is(.form-group, .roll-input) {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -1099,7 +1099,7 @@ body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile
   min-width: 0;
 }
 
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(.form-group, .roll-input, .situational-options, .dialog-modifiers) > label {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app :is(.form-group, .roll-input, .situational-options, .dialog-modifiers) > label {
   flex: initial;
   height: auto !important;
   line-height: 1.4 !important;
@@ -1113,14 +1113,14 @@ body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile
   overflow-wrap: anywhere;
 }
 
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(.form-fields, .dialog-fields) {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app :is(.form-fields, .dialog-fields) {
   flex: 1 1 auto !important;
   width: auto !important;
   min-width: 0;
   gap: 8px;
 }
 
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea, button) {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea, button) {
   box-sizing: border-box;
   min-width: 0;
   max-width: 100%;
@@ -1137,7 +1137,7 @@ body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile
 }
 
 /* Frame icons put their Font Awesome classes on the button itself. */
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app .window-header button.header-control {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app .window-header button.header-control {
   flex: 0 0 44px !important;
   width: 44px !important;
   min-height: 44px !important;
@@ -1148,28 +1148,28 @@ body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile
   box-shadow: none !important;
 }
 
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(input[type="checkbox"], input[type="radio"]) {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app :is(input[type="checkbox"], input[type="radio"]) {
   accent-color: var(--mc-red);
 }
 
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(button, input, select, textarea, a):focus-visible {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app :is(button, input, select, textarea, a):focus-visible {
   outline: 2px solid var(--mc-red-bright) !important;
   outline-offset: 2px;
 }
 
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(button[type="submit"], .form-footer button.default) {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app :is(button[type="submit"], .form-footer button.default) {
   border-color: var(--mc-red) !important;
   background: var(--mc-red) !important;
   color: #fff !important;
   font-weight: 700;
 }
 
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app button:disabled {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(.form-footer, .roll-footer) {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app :is(.form-footer, .roll-footer) {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -1177,7 +1177,7 @@ body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile
   border-top: 1px solid var(--mc-border);
 }
 
-body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2).mc-mobile-admitted-app :is(.form-footer, .roll-footer) > :is(button, select) {
+body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app :is(.form-footer, .roll-footer) > :is(button, select) {
   flex: 1 1 140px;
 }
 
@@ -11574,3 +11574,37 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 .mc-mobile-app .mc-journal-search-result > * { flex: 0 0 auto; min-width: 0; line-height: 1.5; }
 .mc-mobile-app .mc-journal-search-excerpt { font-size: .9em; }
 .mc-mobile-app .mc-journal-library mark { background: #f4d77c; color: #211b0a; border-radius: .15em; }
+
+.mc-mobile-app .mc-profile-equipment-state select { min-width: 0; width: 100%; min-height: 44px; font: inherit; color: var(--mc-text); background: var(--mc-surface); }
+.mc-mobile-app .mc-profile-equipment-row:has(.mc-profile-equipment-state) { grid-template-columns: minmax(0, 1fr) max-content; }
+.mc-mobile-app .mc-profile-equipment-row:has(.mc-profile-equipment-state) > .mc-profile-labelled-control { grid-column: 1 / -1; grid-row: auto; width: 100%; justify-content: stretch; }
+.mc-mobile-app .mc-profile-equipment-row .mc-profile-equipment-state { width: 100%; }
+.mc-mobile-app .mc-combat-initiative-label { max-width: 9rem; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; font-family: inherit; }
+
+body.mc-mobile-running :is(.swade.roll-dialog, .honor-intrigue.roll-dialog).mc-mobile-admitted-app .window-title { color: var(--mc-text) !important; }
+body.mc-mobile-running .honor-intrigue.roll-dialog.mc-mobile-admitted-app :is(button, input:not([type="hidden"]), select) { min-width: 44px !important; }
+body.mc-mobile-running .honor-intrigue.roll-dialog.mc-mobile-admitted-app .input-stepper { display: flex; min-width: 132px; }
+body.mc-mobile-running .honor-intrigue.roll-dialog.mc-mobile-admitted-app .form-footer > .roll-mode-buttons { display: flex; flex-wrap: wrap; flex: 1 1 176px; width: auto; justify-content: flex-end; }
+body.mc-mobile-running .swade.roll-dialog.mc-mobile-admitted-app .window-header button.header-control { font-family: var(--font-awesome) !important; font-weight: 900 !important; }
+
+.mc-mobile-app .mc-profile-section-actions dl { grid-template-columns: minmax(0, 1fr); }
+.mc-mobile-app .mc-profile-section-actions .mc-profile-row { display: block; }
+.mc-mobile-app .mc-profile-section-actions dt, .mc-mobile-app .mc-profile-section-actions .mc-profile-action { width: 100%; min-width: 0; }
+.mc-mobile-app .mc-profile-section-actions .mc-profile-action { display: flex; justify-content: space-between; height: auto; min-height: 44px; white-space: normal; text-align: start; }
+.mc-mobile-app .mc-profile-section-actions .mc-profile-action span { min-width: 0; overflow-wrap: anywhere; }
+.mc-mobile-app .mc-profile-row.mc-profile-checkbox-row { grid-template-columns: minmax(0, 1fr) 44px; align-items: center; }
+.mc-mobile-app .mc-profile-checkbox-row dd { margin: 0; }
+.mc-mobile-app [data-profile-field="conviction"] dt:has(.mc-profile-secondary-action) { display: grid; grid-template-columns: minmax(0, 1fr) 44px 44px; padding-inline: 0; }
+.mc-mobile-app [data-profile-field="conviction"] dt > span { min-width: 0; white-space: nowrap; }
+.mc-mobile-app .mc-profile-section-full-width dl { grid-template-columns: minmax(0, 1fr); }
+.mc-mobile-app .mc-profile-checkbox-row .mc-profile-section-tooltip-trigger { width: 100%; min-width: 0; max-width: 100%; height: auto; white-space: normal; overflow-wrap: anywhere; }
+
+/* H+I lists keep long names readable without horizontal scrolling. */
+.mc-mobile-app [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows .mc-profile-row { grid-template-columns: minmax(0, 1fr) max-content; overflow-x: visible; }
+.mc-mobile-app [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows .mc-profile-row dt { grid-column: 1; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.mc-mobile-app [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows .mc-profile-row dd { grid-column: 2; white-space: nowrap; }
+.mc-mobile-app [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows :is(.mc-profile-action, .mc-profile-item-disclosure, summary) { white-space: normal; height: auto; min-height: 44px; max-width: 100%; overflow-wrap: anywhere; }
+.mc-mobile-app [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows .mc-profile-description { grid-column: 1 / -1; }
+
+.mc-mobile-app [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows .mc-profile-spell-row > dd { position: static; grid-column: 2; grid-row: 1; }
+.mc-mobile-app [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows .mc-profile-spell-description summary { padding-inline-end: 0; }

@@ -1,6 +1,8 @@
 export function characterHasTargets(actor, tab) {
   if (actor?.profileId === "wfrp4e-character") return tab === "combat" || tab === "magic";
   if (actor?.profileId === "shadowdark-player") return tab === "abilities" || tab === "spells";
+  if (actor?.profileId === "swade-character") return tab === "combat" || tab === "powers";
+  if (actor?.profileId === "honor-and-intrigue-hero") return tab === "combat";
   return Boolean(actor && !["native", "profile"].includes(actor.presentation) && ["overview", "spells"].includes(tab));
 }
 

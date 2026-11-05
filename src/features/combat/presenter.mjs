@@ -173,7 +173,8 @@ function combatantRow(combat, combatant, commands, status, scope) {
         node("strong", { text: combatant.name }),
         node("small", { className: "mc-combat-health", text: combatHealthText(combatant.health, commands), attrs: { hidden: !combatant.health } })
       ].filter(Boolean) }), combatant.defeated ? node("small", { text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Interface.Presenter.Defeated", "Defeated") }) : null].filter(Boolean) }),
-      combatant.initiative === null ? node("span", { className: "mc-combat-initiative is-empty", text: "—" }) : node("span", { className: "mc-combat-initiative", text: formatInitiative(combatant.initiative, combat.initiativeDecimals, commands.readLocale?.() ?? "en") }),
+      combatant.initiativeLabel ? node("span", { className: "mc-combat-initiative mc-combat-initiative-label", text: combatant.initiativeLabel })
+        : combatant.initiative === null ? node("span", { className: "mc-combat-initiative is-empty", text: "—" }) : node("span", { className: "mc-combat-initiative", text: formatInitiative(combatant.initiative, combat.initiativeDecimals, commands.readLocale?.() ?? "en") }),
       controls.length ? node("div", { className: "mc-combat-row-controls", children: controls }) : null
     ].filter(Boolean)
   });

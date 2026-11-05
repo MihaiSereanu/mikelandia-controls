@@ -6,6 +6,8 @@ test("only the exact D&D system ID enables legacy rules", () => {
   assert.equal(resolveSystemIntegration("dnd5e").id, "dnd5e");
   assert.equal(resolveSystemIntegration("wfrp4e").id, "wfrp4e");
   assert.equal(resolveSystemIntegration("shadowdark").id, "shadowdark");
+  assert.equal(resolveSystemIntegration("swade").id, "swade");
+  assert.equal(resolveSystemIntegration("honor-and-intrigue").id, "honor-and-intrigue");
   for (const id of [undefined, null, "", "DND5E", "WFRP4E", "SHADOWDARK", "custom"]) {
     assert.equal(resolveSystemIntegration(id).id, "fallback");
   }

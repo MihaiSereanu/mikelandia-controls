@@ -234,6 +234,7 @@ function combatantRecord(combatant, currentId, game, integration) {
 
     name: String(combatant.name ?? token?.name ?? combatant.actor?.name ?? "Combatant"),
     img: String(combatant.img ?? token?.texture?.src ?? combatant.actor?.img ?? ""),
+    ...(integration.initiativeLabel ? { initiativeLabel: String(integration.initiativeLabel(combatant) ?? "") } : {}),
     initiative: combatant.initiative !== null && combatant.initiative !== undefined && Number.isFinite(Number(combatant.initiative))
       ? Number(combatant.initiative)
       : null,

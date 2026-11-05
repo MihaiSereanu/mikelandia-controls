@@ -1,12 +1,12 @@
 import { node } from "../../../ui/primitives/dom.mjs";
 
 /** Code-owned section references share the Conditions popover presentation. */
-export function renderProfileTooltip(section, id, scope) {
+export function renderProfileTooltip(section, id, scope, { showHeadings = true } = {}) {
   const tooltip = node("div", {
     className: "mc-profile-note-tooltip mc-profile-condition-tooltip mc-profile-section-tooltip",
     attrs: { id, popover: "auto", role: "tooltip", "aria-label": section.tooltip[0].label },
     children: section.tooltip.flatMap(group => [
-      node("h3", { text: group.label }),
+      showHeadings ? node("h3", { text: group.label }) : null,
       node("ul", { children: group.bullets.map(text => node("li", {
         children: text.split(/(\*\*.*?\*\*)/gu).map(part => part.startsWith("**") && part.endsWith("**")
           ? node("strong", { text: part.slice(2, -2) }) : part)

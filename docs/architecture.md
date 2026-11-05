@@ -13,7 +13,7 @@ The shared entry point installs system fixes and upgrade cleanup. Only active ph
 | Foundry data and actions | `src/foundry/{actors,chat,combat,commands,journals,session}/` |
 | Foundry client behavior | `src/foundry/{presentation,settings,compatibility,media,diagnostics}/` |
 | Shared UI | `src/ui/{bootstrap,frame,help,media,navigation,primitives,timing}/` |
-| System profiles | `src/systems/registry.mjs`, `{dnd5e,wfrp4e,shadowdark,fallback}/`, `profile-view.mjs` |
+| System profiles | `src/systems/registry.mjs`, `{dnd5e,wfrp4e,shadowdark,swade,honor-and-intrigue,fallback}/`, `profile-view.mjs`, `native-profile.mjs` |
 
 Character themes, header artwork, and header scrolling live in `features/characters/appearance/`. The banner catalogue resolves artwork relative to its own module; the elapsed clock loads its worker from `ui/timing/`. Preserve these URLs when moving their modules.
 
@@ -33,6 +33,7 @@ Paths are relative to `src/`; Node names are relative to `tests/` and end in `.t
 | [Warhammer panels / actions](#warhammer-resources) | `systems/wfrp4e/`, `features/characters/profile/` | `warhammer-{profile,resources,equipment,effects,magic,weapons,rest,ambitions,actions}` | `^warhammer-` |
 | [Theme / Momentum](#warhammer-resources) | `foundry/compatibility/wfrp-theme-policy.mjs`, `wfrp-opposed-momentum.mjs` in the same folder | `wfrp-theme-policy`, `wfrp-opposed-momentum` | `^(wfrp-theme-policy|shared-entry)-` |
 | [Shadowdark gear / counters / spells / Bio](#shadowdark-resources-and-gear) | `systems/shadowdark/` (Bio: `bio.mjs`) | `shadowdark`, `shadowdark-inventory`, `shadowdark-equipment` | `^(shadowdark|actor-notes)-` |
+| [SWADE / Honor + Intrigue PCs](#swade-and-honor--intrigue) | `systems/{swade,honor-and-intrigue}/`, `systems/native-profile.mjs`, shared profile controls | `swade`, `honor-and-intrigue`, `system-registry`, `profile-view`, `combat-health` | `^(swade|honor-and-intrigue)-` |
 | Journal content search | `features/journals/{search,search-controller,presenter}.mjs`, `foundry/journals/journal-search-text.mjs`, session gateway | `journal-search`, `journal-search-gateway` | `^journal-search-` |
 | [Notes](#scope-and-action-validation) / [journals](#journal-access) | `systems/actor-notes.mjs`, `foundry/actors/biography-gateway.mjs`, `foundry/session/session-gateway.mjs`, `foundry/journals/`, `features/journals/presenter.mjs`, `ui/primitives/{text-editor,text-line-breaks}.mjs`, `foundry/presentation/rich-text-editor.mjs` | `actor-notes`, `notes-markdown`, `warhammer-ambitions`, `journal-visibility`, `journal-editing` | `^(actor-notes|in-person|journal-editor)-` |
 | [Controls guide](#controls-guide) / descriptions | `features/help/`, `ui/help/`, `ui/primitives/{description,enriched-description,localized-text}.mjs`, `foundry/actors/description-gateway.mjs` | `in-person`, `profile-view`, `description-gateway` | `^(descriptions|in-person|tooltip-touch|warhammer)-` |
@@ -74,7 +75,7 @@ Tab names render as subheadings, and controls as a list. Localized copy supports
 
 ## Combat targeting
 
-Initiative contains the tracker and Targets. Targets also appears above WFRP Combat/Magic, Shadowdark Main/Spells and D&D Overview/Spells, sharing target state, disclosure and token-source choice. Scores/turn markers remain in Initiative. Refresh on entering a target surface and native movement while visible; distance-only updates preserve rows/focus.
+Initiative contains the tracker and Targets. Targets also appears above WFRP Combat/Magic, Shadowdark Main/Spells, SWADE Combat/Powers, H+I Combat and D&D Overview/Spells, sharing target state, disclosure and token-source choice. Scores/turn markers remain in Initiative. Refresh on entering a target surface and native movement while visible; distance-only updates preserve rows/focus.
 
 `targeting-gateway.mjs` uses native user targets without controlling/moving tokens. Show the selector for prepared or started encounters linked to the loaded scene, or global encounters with participants there. Starting combat retains native target selections; removing the encounter clears feature-owned selections. Filter each combatant by scene before resolving tokens. Eligible combatants/tokens must be in that combat and nonhidden, regardless of ownership or line of sight. Friendly disposition forms Friendly; others form Enemies. Require the character's scene token: exact token for synthetic Actors, explicit choice for ambiguous world Actors.
 
@@ -90,7 +91,7 @@ Expanded, visible Targets refreshes distances at most once per animation frame o
 
 ## Mobile frame and upgrades
 
-Damage feedback follows the exact selected owned PC across routes: D&D 5e characters (including temporary HP), Shadowdark Players and WFRP characters. Read raw native HP/Wounds updates to preserve consecutive hits before snapshots coalesce. Report resource loss, including manual reductions, but no overkill beyond zero. Ignore healing, initial load, maximum-only changes, NPCs, unsupported systems and observer Actors.
+Damage feedback follows the exact selected owned PC across routes: D&D 5e characters (including temporary HP), Shadowdark Players, WFRP/SWADE characters and H+I Heroes. Read raw native updates before snapshots coalesce. Remaining HP/Wounds and H+I Lifeblood decrease on damage; SWADE Wounds increase. H+I retains its native negative Lifeblood minimum. Ignore healing, initial load, maximum-only changes, NPCs, unsupported systems and observer Actors.
 
 Each hit replaces feedback with a 0.4-second shake, soft red edge mist and damage/wounds amount. Ordinary feedback clears within two seconds or on Close/Escape. Crossing positive HP/Wounds to zero or below adds “You're down!”; notification/shake expire, leaving same-strength mist. Close/Escape preserves this mist until remaining HP/Wounds changes; maximum-only, temporary-HP-only and unrelated updates cannot clear it. Further damage starts new feedback. Selection, reconnect and disposal clear/rebaseline silently. Preserve focus, route persistence and pointer passthrough outside the notification; reduced motion disables shake.
 
@@ -116,7 +117,7 @@ Render store subscribers synchronously, independent of hidden-tab animation fram
 
 ## Native applications and rolls
 
-Admitted Shadowdark `#sd-roll-dialog` and WFRP `.warhammer.roll-dialog-v2` forms follow the mobile palette, typography and touch styling, preserving native controls/handlers/hidden effects. Headers stay transparent/borderless with 44px targets; `.icon` buttons keep native fonts.
+Admitted Shadowdark `#sd-roll-dialog`, WFRP `.warhammer.roll-dialog-v2`, SWADE `.swade.roll-dialog` and H+I `.honor-intrigue.roll-dialog` forms follow the mobile palette, typography and touch styling, preserving native controls/handlers/hidden effects. Headers stay transparent/borderless with 44px targets; `.icon` buttons keep native fonts.
 
 `native-roll-presentation.mjs` restores labels on release. Keep 5e test ADV/DISADV distinct from 4e combat Advantage; desktop/D&D styling remains native. Run `node scripts/check_browser.mjs --filter "^roll-dialogs-" --native-assets --screenshots` for installed icon-font fixtures (`FOUNDRY_APP_PATH` overrides location); never copy/ship the font.
 
@@ -142,7 +143,20 @@ List/read policy requires effective native OBSERVER permission and sheet page vi
 
 Edit existing text pages only with effective OWNER on entry and visible page, including inherited permissions. Read fresh source; save only HTML `text.content` or Markdown `text.markdown`, preserving `text.format` and siblings. Use Foundry's configured converter for Markdown reading. Validate session, exact documents, ownership, source/format and duplicate saves. Same-page refreshes/errors retain draft/focus/selection; Save/Cancel refresh the reader and preserve line breaks. Nontext pages use native editors; no page creation or permission changes.
 
+## SWADE and Honor + Intrigue
+
+Exact IDs `swade` and `honor-and-intrigue` select PC-only profiles for `character` and `hero`. Other actor types retain native-sheet access; existing integrations are unchanged. Target SWADE 6.0.4 and H+I 0.2.0 on Foundry 14. H+I still declares v13 verification; isolated v14 evidence belongs in current status.
+
+`native-profile.mjs` shares projection, native Notes, condition controls and validated commands. Capabilities contain opaque per-Actor revision tokens, not repeated serialized documents. Revalidate ownership/session/source state before dispatch and native chat/document commits; serialize interactive actions and release hooks on cancellation/failure. Observe native status readback because H+I's toggle override does not return its update promise. Background HTML uses the safe description renderer.
+
+SWADE delegates checks to `rollAttribute`/`rollSkill`, item actions and power use to `game.swade.itemChatCardHelper.handleAction`, Bennies to `spendBenny`/`getBenny`, equipment to `setEquipState`, and conditions to `toggleActiveEffect`. Bennies change one at a time. Wounds/Fatigue may exceed their displayed maxima, matching native sheet controls. Optional Conviction, wealth and power-point pools follow settings. Equipment states are Stored, Carried, Off-hand, Equipped, Main-hand and Two hands; native per-item rejection filters the selector. Quantity zero retains the item. Conviction uses one counter card, matching the other counters, with a native Spend/End button beside its padlock. Combat Actions use full-width rows. Wealth occupies a full-width row. SWADE condition names open brief rules summaries from `systems/swade/condition-descriptions.mjs`; independent checkboxes apply/remove native statuses. Unknown custom statuses retain their checkboxes without an invented summary. The shared tooltip preserves native touch dismissal and scrolling. Basic Actions contains only native `action` items; Special Abilities (excluding archetypes) and Ancestry have separate sections when present.
+
+H+I quality rolls own combat-ability/career modifiers; do not call `rollCharacteristic` with a combat ability as the quality. Use `system.rollManeuver` and native weapon damage, preserve weapon UUID/loading context, reset loading only after completion, and dispatch style activation through the native sheet handler. Lifeblood uses its native minimum/maximum; Arcane Power requires an arcane career. Advancement Points are derived and read-only: the native displayed-value write did not persist on v14. Equipment uses Dropped/Held/Stowed; conditions use native `toggleStatusEffect`. Condition names open explanations from `systems/honor-and-intrigue/condition-descriptions.mjs`; separate checkboxes toggle statuses. Dueling Styles use the same checkbox presentation and retain native sheet activation and description access. Bio starts with populated Motivation, then native Background fields with localized labels and English fallbacks, followed by editable Notes. Advancement Points fills the final resource row. Long item lists and weapon maneuver actions use full-width rows; compact values retain grids. Loaded/Unloaded text is omitted for every weapon, while applicable reload progress and native loading mechanics remain.
+
+Initiative preserves native `combat.turns` and actions. SWADE's optional `initiativeLabel` shows native card text, Hold and lost-turn state instead of its numeric sorting value. Friendly health shows native counts, including SWADE zero-max Wounds and H+I negative Lifeblood; enemies receive status only. Neither integration converts Wounds into HP percentages.
+
 ## Warhammer resources
+
 
 WFRP 4e/5e share `wfrp4e`. At `i18nInit`, every client overrides Primary/Secondary Arm with fixed English Right/Left Arm labels. Localization changes only; native handedness/hit-location calculations remain.
 

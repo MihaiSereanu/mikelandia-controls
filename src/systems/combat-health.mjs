@@ -18,8 +18,12 @@ export function projectCombatHealth(integration, token) {
     const health = integration.readCombatHealth?.(token.actor);
     if (!health) return null;
     // Enemy records carry only a status, never the underlying numbers.
-    return token.disposition === 1 ? health : {
-      status: health.value <= health.max * .1 ? "Critical" : health.value <= health.max * .5 ? "Bloodied" : "Healthy"
+    if (token.disposition === 1) {
+      const { status: _status, ...visible } = health;
+      return visible;
+    }
+    return {
+      status: health.status ?? (health.value <= health.max * .1 ? "Critical" : health.value <= health.max * .5 ? "Bloodied" : "Healthy")
     };
   } catch { return null; }
 }

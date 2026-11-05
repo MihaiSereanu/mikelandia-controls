@@ -7,6 +7,22 @@ const unlockedCounters = new Set();
 
 /** Capability data supplies input constraints; the adapter validates every save. */
 export function renderProfileResourceEditor(row, actor, commands, scope) {
+  if (Array.isArray(row.edit.choices)) {
+    const select = node("select", { attrs: { "aria-label": row.label, "data-profile-resource-input": row.edit.id },
+      children: row.edit.choices.map(choice => node("option", { text: choice.label, attrs: { value: choice.value } })),
+      on: { change: async () => {
+        if (scope.disposed || select.disabled) return;
+        select.disabled = true;
+        select.setAttribute("aria-busy", "true");
+        try {
+          await commands.execute(ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, { actorSourceUuid: actor.sourceUuid,
+            resourceId: row.edit.id, resourceRevision: row.edit.revision, expectedValue: row.value, value: Number(select.value) });
+        } catch (error) { if (!scope.disposed) commands.reportCharacterMutationError?.(error); }
+        finally { if (!scope.disposed) { select.value = String(row.value); select.disabled = false; select.setAttribute("aria-busy", "false"); } }
+      } } }, scope);
+    select.value = String(row.value);
+    return node("div", { className: "mc-profile-resource-editor mc-profile-equipment-state", children: [select] });
+  }
   if (row.edit.kind === "boolean" && row.editControl === "checkbox") {
     const input = node("input", { attrs: { type: "checkbox", "aria-label": row.label,
       "data-profile-resource-input": row.edit.id }, on: { change: async () => {
@@ -32,7 +48,8 @@ export function renderProfileResourceEditor(row, actor, commands, scope) {
   const coin = row.edit.id.startsWith("coin-");
   const counter = row.editControl === "counter";
   const booleanCounter = counter && row.edit.kind === "boolean";
-  const numeric = row.edit.kind === "integer" || booleanCounter;
+  const numeric = ["integer", "number"].includes(row.edit.kind) || booleanCounter;
+  const decimal = row.edit.kind === "number";
   const stacked = numeric && actor.numericEditorLayout === "stacked";
   const layoutClass = stacked ? " mc-profile-resource-stacked" : "";
   const value = booleanCounter ? Number(row.value) : row.value;
@@ -50,13 +67,13 @@ export function renderProfileResourceEditor(row, actor, commands, scope) {
       open.parentElement.classList.add("is-editing");
       const input = node("input", { attrs: { type: numeric ? "text" : "checkbox",
         "aria-label": row.label, "data-profile-resource-input": row.edit.id,
-        ...(numeric ? { min, max: booleanCounter ? 1 : row.edit.max, pattern: "[0-9]*", required: true, inputmode: "numeric", value } : {}) } });
+        ...(numeric ? { min, max: booleanCounter ? 1 : row.edit.max, pattern: decimal ? "-?[0-9]+([.][0-9]+)?" : min < 0 ? "-?[0-9]+" : "[0-9]*", required: true, inputmode: min < 0 ? "text" : decimal ? "decimal" : "numeric", value } : {}) } });
       let validate = () => {};
       if (!numeric) input.checked = row.value;
       else {
         validate = () => {
           const value = Number(input.value);
-          const valid = /^\d+$/u.test(input.value) && Number.isSafeInteger(value)
+          const valid = (decimal ? /^-?\d+(?:\.\d+)?$/u.test(input.value) && Number.isFinite(value) : /^-?\d+$/u.test(input.value) && Number.isSafeInteger(value))
             && value >= min && value <= max;
           input.setCustomValidity(valid ? "" : text("InvalidResourceValue", "Enter a valid value within this resource's limits."));
         };

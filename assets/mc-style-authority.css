@@ -564,6 +564,29 @@
 }
 
 /* Keep the inventory-wide Slots value readable over native definition-list styles. */
+.mc-mobile-app[data-mc-style-authority] .mc-profile-section-full-width dl { grid-template-columns: minmax(0, 1fr) !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-checkbox-row .mc-profile-section-tooltip-trigger { width: 100% !important; min-width: 0 !important; max-width: 100% !important; height: auto !important; white-space: normal !important; overflow-wrap: anywhere !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-section-actions dl { grid-template-columns: minmax(0, 1fr) !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-section-actions .mc-profile-row { display: block !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-section-actions dt, .mc-mobile-app[data-mc-style-authority] .mc-profile-section-actions .mc-profile-action { width: 100% !important; min-width: 0 !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-section-actions .mc-profile-action { display: flex !important; justify-content: space-between !important; height: auto !important; min-height: 44px !important; white-space: normal !important; text-align: start !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-row.mc-profile-checkbox-row { grid-template-columns: minmax(0, 1fr) 44px !important; align-items: center !important; }
+.mc-mobile-app[data-mc-style-authority] [data-profile-field="conviction"] dt:has(.mc-profile-secondary-action) { display: grid !important; grid-template-columns: minmax(0, 1fr) 44px 44px !important; padding-inline: 0 !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-equipment-state select { min-width: 0 !important; width: 100% !important; min-height: 44px !important; font: inherit !important; color: var(--mc-text) !important; background: var(--mc-surface) !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-equipment-row:has(.mc-profile-equipment-state) { grid-template-columns: minmax(0, 1fr) max-content !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-equipment-row:has(.mc-profile-equipment-state) > .mc-profile-labelled-control { grid-column: 1 / -1 !important; grid-row: auto !important; width: 100% !important; justify-content: stretch !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-equipment-row .mc-profile-equipment-state { width: 100% !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-combat-initiative-label { max-width: 9rem !important; white-space: normal !important; overflow-wrap: anywhere !important; line-height: 1.3 !important; font-family: inherit !important; }
 .mc-mobile-app[data-mc-style-authority] [data-profile-section="slots"] .mc-profile-row dd {
   color: var(--mc-text) !important;
 }
+
+/* H+I lists keep long names readable without horizontal scrolling. */
+.mc-mobile-app[data-mc-style-authority] [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows .mc-profile-row { grid-template-columns: minmax(0, 1fr) max-content !important; overflow-x: visible !important; }
+.mc-mobile-app[data-mc-style-authority] [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows .mc-profile-row dt { grid-column: 1 !important; min-width: 0 !important; white-space: normal !important; overflow-wrap: anywhere !important; }
+.mc-mobile-app[data-mc-style-authority] [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows .mc-profile-row dd { grid-column: 2 !important; white-space: nowrap !important; }
+.mc-mobile-app[data-mc-style-authority] [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows :is(.mc-profile-action, .mc-profile-item-disclosure, summary) { white-space: normal !important; height: auto !important; min-height: 44px !important; max-width: 100% !important; overflow-wrap: anywhere !important; }
+.mc-mobile-app[data-mc-style-authority] [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows .mc-profile-description { grid-column: 1 / -1 !important; }
+
+.mc-mobile-app[data-mc-style-authority] [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows .mc-profile-spell-row > dd { position: static !important; grid-column: 2 !important; grid-row: 1 !important; }
+.mc-mobile-app[data-mc-style-authority] [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows .mc-profile-spell-description summary { padding-inline-end: 0 !important; }

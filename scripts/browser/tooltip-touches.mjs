@@ -175,3 +175,53 @@ export async function checkTooltipTouches(send, checks) {
   await tap(picker); await tap(picker);
   await check("condition picker: second touch closes without reopening", `!${menu}.matches(":popover-open")`);
 }
+
+/** SWADE names explain a status; only its separate checkbox changes it. */
+export async function checkSwadeConditionTouches(send, checks) {
+  const evaluate = async expression => {
+    const result = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
+    if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails));
+    return result.result.value;
+  };
+  const settle = () => evaluate("new Promise(resolve => setTimeout(resolve, 100))");
+  const check = async (label, expression) => {
+    if (!await evaluate(expression)) throw new Error(label);
+    checks.push(label);
+  };
+  const tap = async selector => {
+    const point = await evaluate(`(() => { const e = document.querySelector(${JSON.stringify(selector)});
+      e.scrollIntoView({block:'nearest',behavior:'instant'}); const r=e.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}; })()`);
+    await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
+    await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await settle();
+  };
+  const shaken = '[data-profile-condition-reference="shaken"]', berserk = '[data-profile-condition-reference="berserk"]';
+  const tip = 'document.querySelector(".mc-profile-condition-tooltip:popover-open")';
+  await tap(shaken);
+  await check("touch: condition name opens explanation without toggling", `${tip}?.textContent.includes('Spirit') && !game.user.character.statuses.has('shaken') && !document.querySelector('[data-profile-condition="shaken"]').checked`);
+  await tap(shaken);
+  await check("touch: retapping a condition name dismisses explanation", `!${tip}`);
+  await tap(shaken); await tap(berserk);
+  await check("touch: another condition name switches explanation", `${tip}?.textContent.includes('Toughness') && document.querySelectorAll('.mc-profile-condition-tooltip:popover-open').length===1 && !${tip}.querySelector('h3')`);
+  await check("touch: explanation stays within viewport", `(() => {const r=${tip}.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1;})()`);
+  if (await evaluate(`${tip}.scrollHeight > ${tip}.clientHeight + 1`)) {
+    const point = await evaluate(`(() => {const r=${tip}.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height*.8};})()`);
+    await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
+    for (let step = 1; step <= 8; step++) await send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: point.x, y: point.y - step * 10 }] });
+    await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] }); await settle();
+    await check("touch: long explanation scrolls while staying open", `${tip}?.scrollTop > 0`);
+    await evaluate(`(async()=>{let last=-1,stable=0;for(let i=0;i<30&&stable<3;i++){await new Promise(r=>setTimeout(r,50));const value=${tip}.scrollTop;stable=value===last?stable+1:0;last=value;}})()`);
+  }
+  await evaluate(`(() => {const r=${tip}.getBoundingClientRect();const point=[{x:44,y:32},{x:innerWidth-44,y:32},{x:44,y:innerHeight-32},{x:innerWidth-44,y:innerHeight-32}].find(p=>p.x<r.left-12||p.x>r.right+12||p.y<r.top-24||p.y>r.bottom+24);if(!point)throw Error('No outside touch point');const b=document.createElement('button');b.id='swade-outside-touch';b.style.cssText='position:fixed;z-index:2147483647;width:64px;height:44px';b.style.left=(point.x-32)+'px';b.style.top=(point.y-22)+'px';b.textContent='Outside';b.onclick=()=>b.dataset.tapped='true';document.querySelector('main').append(b);})()`);
+  await tap('#swade-outside-touch');
+  await check("touch: outside tap dismisses and activates the outside control", `!${tip} && document.querySelector('#swade-outside-touch').dataset.tapped==='true'`);
+  await evaluate("document.querySelector('#swade-outside-touch').remove()");
+  await tap(shaken);
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 }); await settle();
+  await check("touch: Escape dismisses the condition explanation", `!${tip}`);
+  await tap('[data-profile-condition="shaken"]');
+  await check("touch: checkbox still applies the native condition", `game.user.character.statuses.has('shaken') && document.querySelector('[data-profile-condition="shaken"]').checked`);
+  await tap(shaken);
+  await check("touch: reading an active condition preserves its checked state", `${tip} && game.user.character.statuses.has('shaken') && document.querySelector('[data-profile-condition="shaken"]').checked`);
+}

@@ -2,7 +2,7 @@
 
 A phone/tablet companion for in-person Foundry VTT: Character, Chat, Journals, Initiative and Settings. Initiative includes End Turn and GM encounter progression. No map, token, placement or light controls.
 
-Supports D&D5e, experimental Warhammer 4e/5e and Shadowdark PC panels, and native-sheet fallback. Based on [Silvestrae](https://github.com/Silvestrae); original license and author credits are preserved.
+Supports D&D5e, experimental Warhammer 4e/5e panels, PC panels for Shadowdark, SWADE and Honor + Intrigue, and native-sheet fallback. SWADE 6.0.4 and Honor + Intrigue 0.2.0 target Foundry 14. Based on [Silvestrae](https://github.com/Silvestrae); original license and author credits are preserved.
 
 ## Install
 

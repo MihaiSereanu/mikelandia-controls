@@ -36,8 +36,9 @@ export function createFoundryDamageGateway({
         if (!previous) return;
         if (previous.value !== next.value) onReset();
         // Count net resource loss; replenishment in the same update offsets loss.
-        const amount = previous.value + previous.temp - next.value - next.temp;
-        if (Number.isFinite(amount) && amount > 0) onDamage({ amount, noun: next.noun, down: previous.value > 0 && next.value <= 0 });
+        const amount = next.increasing ? next.value - previous.value : previous.value + previous.temp - next.value - next.temp;
+        if (Number.isFinite(amount) && amount > 0) onDamage({ amount, noun: next.noun,
+          down: next.increasing ? next.down === true && previous.down !== true : previous.value > 0 && next.value <= 0 });
       });
       scope.own(() => { baseline = null; onReset(); });
       refresh();
