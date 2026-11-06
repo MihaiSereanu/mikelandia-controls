@@ -1,5 +1,6 @@
 import { localizedText } from "../primitives/localized-text.mjs";
 import { icon, node } from "../primitives/dom.mjs";
+import { renderParty } from "../../features/party/presenter.mjs";
 import { renderCharacters } from "../../features/characters/presenter.mjs";
 import { renderJournals } from "../../features/journals/presenter.mjs";
 import { renderChat } from "../../features/chat/presenter.mjs";
@@ -17,6 +18,7 @@ import { createReconnectInteractionGuard } from "./reconnect-interactions.mjs";
 
 const SCREENS = Object.freeze({
   characters: renderCharacters,
+  party: renderParty,
   journals: renderJournals,
   chat: renderChat,
   combat: renderCombat,
@@ -73,7 +75,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
   const rotateSuggestion = tabletRotateSuggestion(commands.localize);
   const navSideToggle = node("button", { className: "mc-tablet-nav-side-toggle", attrs: { type: "button" }, children: [navSideIcon], on: { click: () => commands.toggleTabletNavSide() } }, scope);
   const combatControlsHost = node("div", { className: "mc-gm-combat-control-host", attrs: { hidden: true } });
-  const navItems = [["characters", "fa-user", "Character"], ["chat", "fa-comments", "Chat"], ["journals", "fa-book-open", "Journals"], ["combat", combatNavIcon, "Initiative"], ["settings", "fa-gear", "Settings"]];
+  const navItems = [["characters", "fa-user", "Character"], ["party", "fa-users", "Party"], ["chat", "fa-comments", "Chat"], ["journals", "fa-book-open", "Journals"], ["combat", combatNavIcon, "Initiative"], ["settings", "fa-gear", "Settings"]];
   const navButtons = new Map(navItems.map(([route, createIcon, label]) => {
     const button = node("button", { className: "mc-main-nav-item", attrs: { type: "button" }, dataset: { route }, on: { click: () => commands.navigate(route) }, children: [typeof createIcon === "function" ? createIcon() : icon(createIcon), node("span", { text: commands.localize?.(`MIKELANDIA_CONTROLS.Navigation.${label}`, label) ?? label })] }, scope);
     return [route, button];
@@ -122,6 +124,9 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     root.dataset.orientation = latestPolicy.orientation;
     root.dataset.navSide = tabletNavSide;
     root.dataset.route = state.route;
+    const partyAvailable = Boolean(state.snapshot?.party);
+    navButtons.get("party").hidden = !partyAvailable;
+    root.style.setProperty("--mc-route-count", partyAvailable ? "6" : "5");
     root.dataset.characterTheme = characterTheme;
     root.dataset.characterThemeBlend = themeProfile.multiclass ? "multiclass" : "single";
     const artworkOpacity = Number(settings.headerArtworkOpacity);
@@ -187,6 +192,13 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     // must never tear it down or replace its focused native textarea.
     if (renderedState?.route === state.route && state.status === "ready" && state.snapshot && ["chat", "settings"].includes(state.route)) {
       if (state.route === "settings") viewport.firstElementChild?.syncOverlayHost?.(null);
+      renderedState = screenState(state, layoutKey);
+      return;
+    }
+
+    if (sameScreen && state.status === "ready" && state.route === "party"
+      && viewport.firstElementChild?.updateParty) {
+      viewport.firstElementChild.updateParty(state.snapshot?.party);
       renderedState = screenState(state, layoutKey);
       return;
     }
@@ -590,6 +602,7 @@ export function snapshotPresentationChangedForRoute(previous, current) {
     return previous.snapshot.selectedActor !== current.snapshot.selectedActor
       || actorMenuSignature(previous.snapshot.actors) !== actorMenuSignature(current.snapshot.actors);
   }
+  if (current.route === "party") return previous.snapshot.party !== current.snapshot.party;
   if (current.route === "combat") return previous.snapshot.combat !== current.snapshot.combat || previous.targeting !== current.targeting;
   if (current.route === "journals") return previous.snapshot.journals !== current.snapshot.journals;
   return false;

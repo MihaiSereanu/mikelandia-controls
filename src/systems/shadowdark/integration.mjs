@@ -1,4 +1,5 @@
 import { shadowdarkNotes } from "../actor-notes.mjs";
+import { shadowdarkParty } from "./party.mjs";
 import { readCombatHealth } from "../combat-health.mjs";
 import { readDamageHealth } from "../damage-health.mjs";
 import { fallbackIntegration } from "../fallback/integration.mjs";
@@ -11,6 +12,7 @@ import { shadowdarkBio, watchBio } from "./bio.mjs";
 
 export const shadowdarkIntegration = Object.freeze({
   ...fallbackIntegration,
+  party: shadowdarkParty,
   id: "shadowdark",
   readDamageHealth: actor => readDamageHealth(actor, "Player", "system.attributes.hp.value"),
   readCombatHealth: actor => readCombatHealth(actor, "system.attributes.hp", "SHADOWDARK.sheet.actor.hp", "HP"),

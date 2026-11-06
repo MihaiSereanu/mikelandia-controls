@@ -11,6 +11,10 @@ export function readCombatHealth(actor, path, labelKey, label) {
   } catch { return null; }
 }
 
+export function healthStatus(health) {
+  return health.value <= health.max * .1 ? "Critical" : health.value <= health.max * .5 ? "Bloodied" : "Healthy";
+}
+
 /** Visible combat rows share the same disposition and remaining-health rules. */
 export function projectCombatHealth(integration, token) {
   if (!token || typeof token.disposition !== "number" || !Number.isFinite(token.disposition)) return null;
@@ -23,7 +27,7 @@ export function projectCombatHealth(integration, token) {
       return visible;
     }
     return {
-      status: health.status ?? (health.value <= health.max * .1 ? "Critical" : health.value <= health.max * .5 ? "Bloodied" : "Healthy")
+      status: health.status ?? healthStatus(health)
     };
   } catch { return null; }
 }

@@ -1,3 +1,45 @@
+/** Party explanations use the same native popover behavior as Character. */
+export async function checkPartyConditionTouches(send, checks) {
+  const evaluate = async expression => {
+    const response = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
+    if (response.exceptionDetails) throw new Error(JSON.stringify(response.exceptionDetails));
+    return response.result.value;
+  };
+  const settle = () => evaluate("new Promise(resolve => setTimeout(resolve, 100))");
+  const tap = async selector => {
+    const point = await evaluate(`(() => {
+      const element = document.querySelector(${JSON.stringify(selector)});
+      element.scrollIntoView({block: "nearest", behavior: "instant"});
+      const r = element.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + r.height / 2};
+    })()`);
+    await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
+    await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await settle();
+  };
+  const check = async (name, expression) => {
+    if (!await evaluate(expression)) throw new Error(name);
+    checks.push(name);
+  };
+  const bleeding = '[data-party-actor="second"] [data-party-condition="bleeding"]';
+  const prone = '[data-party-actor="second"] [data-party-condition="prone"]';
+  const open = 'document.querySelector(".mc-party-screen [role=tooltip]:popover-open")';
+  await tap(bleeding);
+  await check("Party touch: condition name opens explanation", `${open}?.getAttribute('aria-label') === 'Bleeding'`);
+  await check("Party touch: explanation fits the viewport", `(() => { const r=${open}.getBoundingClientRect(); return r.left>=0&&r.right<=innerWidth+1&&r.top>=0&&r.bottom<=innerHeight+1; })()`);
+  await tap(bleeding);
+  await check("Party touch: retap dismisses explanation", `!${open}`);
+  await tap(bleeding); await tap(prone);
+  await check("Party touch: another condition switches explanation", `${open}?.getAttribute('aria-label') === 'Prone' && document.querySelectorAll('.mc-party-screen [role=tooltip]:popover-open').length === 1`);
+  await tap('.mc-main-nav-item[data-route="party"]');
+  await check("Party touch: outside navigation tap dismisses explanation", `!${open} && document.querySelector('.mc-mobile-app').dataset.route === 'party'`);
+  await tap(bleeding);
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await settle();
+  await check("Party touch: Escape dismisses explanation", `!${open}`);
+  await tap(bleeding);
+}
+
 /** Exercise UUID navigation with trusted touches and native light dismissal. */
 export async function checkDescriptionTouches(send, checks) {
   const evaluate = async expression => {

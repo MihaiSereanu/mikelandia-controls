@@ -7,11 +7,11 @@ const conditionId = effect => effect?.conditionId ?? effect?.id;
 const safeId = id => typeof id === "string" && /^[a-zA-Z0-9_-]{1,64}$/u.test(id);
 
 /** Native edition configuration owns condition availability and stacking. */
-export function readWarhammerConditions(actor, game = globalThis.game) {
+export function readWarhammerConditions(actor, game = globalThis.game, { includeMarkers = false } = {}) {
   const use5e = readWarhammerContext(game)?.use5e;
   return values(game?.wfrp4e?.config?.statusEffects).flatMap(definition => {
     const id = conditionId(definition);
-    if (!safeId(id) || ["dead", "engaged"].includes(id)) return [];
+    if (!safeId(id) || (!includeMarkers && ["dead", "engaged"].includes(id))) return [];
     const effect = actor.hasCondition?.(id) || null;
     const numbered = Boolean(definition.system?.condition?.numbered);
     const count = effect ? Number(effect.conditionValue ?? effect.system?.condition?.value ?? 1) : 0;

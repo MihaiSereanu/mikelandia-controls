@@ -7,6 +7,7 @@ import { shadowdarkPlayerProfile } from "./profile.mjs";
 import { abilities, isShadowdarkPlayer, shadowdarkContext, ownedItem, knownSpell, isShadowdarkItemTracker } from "./context.mjs";
 import { shadowdarkResourceEdits, editShadowdarkResource } from "./resources.mjs";
 
+import { carriedSupplies, shadowdarkParty } from "./party.mjs";
 import { inventoryEdits, inventoryAvailable, executeInventory, equipmentEdits, editEquipment } from "./inventory.mjs";
 import { itemSpells, itemSpellRevision } from "./item-spells.mjs";
 
@@ -59,12 +60,21 @@ export function createShadowdarkCommands({ getGame = () => globalThis.game, getH
     // Native RollDialogSD uses one fixed DOM ID across actors and roll types.
     // Opening a second workflow would replace the first unresolved prompt.
     commandKey: name => name === ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION ? JSON.stringify([name, "shadowdark-native-roll"]) : undefined,
-    supportsCommand: name => [ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION, ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name),
+    supportsCommand: name => [ACTOR_COMMANDS.EDIT_PARTY_SUPPLY, ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION, ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name),
     capabilitiesForActor(actor, user) {
       const profileActions = actionsFor(actor, getGame(), getHooks(), user), profileEdits = [...shadowdarkResourceEdits(actor, getGame(), user), ...inventoryEdits(actor, getGame(), user), ...equipmentEdits(actor, getGame(), user)];
       return Object.freeze({ ...(inventoryAvailable(actor, getGame(), user) ? { profileInventory: true } : {}), ...(profileActions.length ? { profileActions } : {}), ...(profileEdits.length ? { profileEdits } : {}) });
     },
     async execute(name, payload, _expected, _observer, context) {
+      if (name === ACTOR_COMMANDS.EDIT_PARTY_SUPPLY) {
+        const assertCurrent = () => {
+          context.assertCurrent();
+          if (!shadowdarkParty.isPC(context.actor) || !carriedSupplies(context.actor)
+            .some(item => `quantity:${item.id}` === payload.resourceId)) throw unavailable();
+        };
+        assertCurrent();
+        return executeInventory(ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, payload, { ...context, assertCurrent }, getGame());
+      }
       if (name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION) return shadowdarkNotes.save(context.actor, payload, context.assertCurrent);
       if (name === ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE && payload.resourceId?.startsWith("equipped:")) return editEquipment(payload, context, getGame());
       if ([ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name)

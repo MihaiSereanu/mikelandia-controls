@@ -3,6 +3,7 @@ import { readJournalSearchText } from "../journals/journal-search-text.mjs";
 import { localizeFoundry } from "../settings/localization.mjs";
 import { ownMobileApplication } from "../presentation/mobile-ui-isolation.mjs";
 import { resolveSystemIntegration } from "../../systems/registry.mjs";
+import { readParty } from "../../systems/party.mjs";
 import { combatHealthChanged } from "../../systems/combat-health.mjs";
 import { actorSourceRecord, actorSourceUuid, resolveActorSource, validSourceUuid } from "../actors/character-source.mjs";
 
@@ -172,6 +173,7 @@ export function createFoundrySessionGateway({
         preferredActorId: preferredActorId(actors),
         preferredActorSourceUuid: preferredActorSourceUuid(actors),
         actors,
+        party: readParty(getSystemIntegration(), game.actors, user),
         selectedActorSourceUuid,
         selectedActor,
 
@@ -192,6 +194,7 @@ export function createFoundrySessionGateway({
     try {
       const next = { ...latestSnapshot, capturedAt: new Date().toISOString() };
       if (domains.has("actors")) {
+        next.party = readParty(getSystemIntegration(), game.actors, game.user);
         next.actors = fullActorRead ? readActors() : actorIds.size ? patchActors(latestSnapshot.actors, actorIds) : latestSnapshot.actors;
         next.preferredActorId = preferredActorId(next.actors);
         next.preferredActorSourceUuid = preferredActorSourceUuid(next.actors);
@@ -599,6 +602,7 @@ function snapshotDomainSignature(snapshot, domain) {
   if (domain === "actors") return JSON.stringify({
     preferredActorSourceUuid: snapshot?.preferredActorSourceUuid ?? "",
     actors: snapshot?.actors ?? [],
+    party: snapshot?.party ?? null,
     selectedActorSourceUuid: snapshot?.selectedActorSourceUuid ?? "",
     selectedActor: snapshot?.selectedActor ?? null
   });

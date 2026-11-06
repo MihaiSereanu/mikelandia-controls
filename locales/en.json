@@ -12,6 +12,20 @@
       "Invalid": "Invalid notes request.",
       "Changed": "Notes changed while being edited. Reopen the editor and try again."
     },
+    "Party": {
+      "Title": "Party",
+      "Inactive": "This Party view is no longer active.",
+      "Supplies": "Supplies",
+      "GearSlots": "Gear Slots",
+      "Rations": "Rations",
+      "Waterskins": "Waterskins",
+      "Conditions": "Conditions",
+      "Injuries": "Injuries",
+      "CriticalWounds": "Critical Wounds",
+      "None": "None",
+      "Empty": "No PCs available with Observer access.",
+      "HealthUnavailable": "Health unavailable"
+    },
     "Targets": {
       "Healthy": "Healthy",
       "Bloodied": "Bloodied",
@@ -110,6 +124,7 @@
       "UseSheet": "Use the native sheet for this operation."
     },
     "Navigation": {
+      "Party": "Party",
       "Character": "Character",
       "Chat": "Chat",
       "Journals": "Journals",

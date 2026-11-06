@@ -4,12 +4,17 @@ import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, resolve, relative, isAbsolute, join, extname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkTooltipTouches, checkDescriptionTouches, checkSwadeConditionTouches } from "./browser/tooltip-touches.mjs";
+import { checkTooltipTouches, checkDescriptionTouches, checkSwadeConditionTouches, checkPartyConditionTouches } from "./browser/tooltip-touches.mjs";
 import { serveNativeEditorAsset } from "./browser/native-editor-assets.mjs";
 import { checkEditorTouches } from "./browser/editor-touches.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ["party-shadowdark-supplies-narrow-large-text", 320, 844, "in-person", "party=true&system=shadowdark&layout=phone&supplies=true&large=true"],
+  ...[["phone", 390, 844], ["narrow", 320, 844], ["large-text", 390, 844], ["unprotected", 390, 844]].map(([layout, width, height]) =>
+    [`party-shadowdark-supplies-${layout}`, width, height, "in-person", `party=true&system=shadowdark&layout=phone&supplies=true${layout === "large-text" ? "&large=true" : ""}${layout === "unprotected" ? "&unprotected=true" : ""}`]),
+  ...["shadowdark", "wfrp4e", "wfrp5e"].flatMap(system => [["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844], ["large-text", 390, 844], ["unprotected", 390, 844]].map(([layout, width, height]) =>
+    [`party-${system}-${layout}`, width, height, "in-person", `party=true&system=${system === "shadowdark" ? system : "wfrp4e"}&edition=${system === "wfrp4e" ? "4e" : "5e"}&layout=${layout === "tablet" ? "tablet" : "phone"}${layout === "large-text" ? "&large=true" : ""}${layout === "unprotected" ? "&unprotected=true" : ""}`])),
   ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844], ["large-text", 390, 844]].map(([layout, width, height]) =>
     [`swade-wealth-${layout}`, width, height, "native-systems", `system=swade&wealth=true&layout=${layout === "tablet" ? "tablet" : "phone"}${layout === "large-text" ? "&large=true" : ""}`]),
   ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844]].map(([layout, width, height]) =>
@@ -281,6 +286,10 @@ try {
       try { report = JSON.parse(result.value); } catch {}
       if (report?.status) break;
       await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    if (report?.status === "passed" && /^party-wfrp5e/.test(name)) {
+      try { await checkPartyConditionTouches((method, params) => send(method, params, sessionId), report.checks); }
+      catch (error) { report.status = "failed"; report.error = error.stack; }
     }
     if (report?.status === "passed" && name.startsWith("tooltip-touch-")) {
       try { await checkTooltipTouches((method, params) => send(method, params, sessionId), report.checks); }

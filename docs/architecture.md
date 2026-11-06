@@ -9,7 +9,7 @@ The shared entry point installs system fixes and upgrade cleanup. Only active ph
 | Shared startup / mobile runtime | `src/entry.mjs`, `src/mobile-entry.mjs`, `src/kernel/app-kernel.mjs` |
 | Kernel responsibilities | `src/kernel/state/`, `lifecycle/`, `connection/`, `presentation/` |
 | Character UI | `src/features/characters/presenter.mjs`; `profile/`, `sheets/`, `appearance/` |
-| Other routes and help | `src/features/{chat,combat,journals,settings,help}/` |
+| Other routes and help | `src/features/{party,chat,combat,journals,settings,help}/` |
 | Foundry data and actions | `src/foundry/{actors,chat,combat,commands,journals,session}/` |
 | Foundry client behavior | `src/foundry/{presentation,settings,compatibility,media,diagnostics}/` |
 | Shared UI | `src/ui/{bootstrap,frame,help,media,navigation,primitives,timing}/` |
@@ -34,6 +34,7 @@ Paths are relative to `src/`; Node names are relative to `tests/` and end in `.t
 | [Theme / Momentum](#warhammer-resources) | `foundry/compatibility/wfrp-theme-policy.mjs`, `wfrp-opposed-momentum.mjs` in the same folder | `wfrp-theme-policy`, `wfrp-opposed-momentum` | `^(wfrp-theme-policy|shared-entry)-` |
 | [Shadowdark gear / counters / spells / Bio](#shadowdark-resources-and-gear) | `systems/shadowdark/` (Bio: `bio.mjs`) | `shadowdark`, `shadowdark-inventory`, `shadowdark-equipment` | `^(shadowdark|actor-notes)-` |
 | [SWADE / Honor + Intrigue PCs](#swade-and-honor--intrigue) | `systems/{swade,honor-and-intrigue}/`, `systems/native-profile.mjs`, shared profile controls | `swade`, `honor-and-intrigue`, `system-registry`, `profile-view`, `combat-health` | `^(swade|honor-and-intrigue)-` |
+| [Party roster / supplies](#party-roster-and-supplies) | `features/party/presenter.mjs`, `systems/party.mjs`, `systems/{shadowdark,wfrp4e}/party.mjs`, session gateway, app frame | `party`, `combat-health`, `session-integration` | `^party-` |
 | Journal content search | `features/journals/{search,search-controller,presenter}.mjs`, `foundry/journals/journal-search-text.mjs`, session gateway | `journal-search`, `journal-search-gateway` | `^journal-search-` |
 | [Notes](#scope-and-action-validation) / [journals](#journal-access) | `systems/actor-notes.mjs`, `foundry/actors/biography-gateway.mjs`, `foundry/session/session-gateway.mjs`, `foundry/journals/`, `features/journals/presenter.mjs`, `ui/primitives/{text-editor,text-line-breaks}.mjs`, `foundry/presentation/rich-text-editor.mjs` | `actor-notes`, `notes-markdown`, `warhammer-ambitions`, `journal-visibility`, `journal-editing` | `^(actor-notes|in-person|journal-editor)-` |
 | [Controls guide](#controls-guide) / descriptions | `features/help/`, `ui/help/`, `ui/primitives/{description,enriched-description,localized-text}.mjs`, `foundry/actors/description-gateway.mjs` | `in-person`, `profile-view`, `description-gateway` | `^(descriptions|in-person|tooltip-touch|warhammer)-` |
@@ -49,11 +50,19 @@ Foundry does not await package top-level async work before init. Mobile clients 
 
 Upgrade cleanup follows settings registration. Clients with historical receipts get a temporary pre-Canvas boundary restoring owned graphics/noCanvas and native theme. Carolingian's async registration gets a five-second wait without blocking canvas. Verify restoration before retiring receipts; failures retain recovery data and warn without blocking mobile startup. Successful restoration requiring reload waits for that reload.
 
+## Party roster and supplies
+
+Optional integration `party` mappings own PC eligibility and system details. The shared roster reads world Actors with Observer-or-higher permission, sorted by name, independently of the owned Character directory and selected Actor. Exclude Shadowdark's Group tracker, NPCs and synthetic token Actors. Show portrait/name, exact native remaining/max HP or Wounds and the shared Healthy (>50%), Bloodied (<=50%), Critical (<=10%, including zero) qualifier; health is read-only. Refresh on Actor, Item, Effect and user-permission hooks, including changes to unselected Observer PCs.
+
+WFRP 4e/5e lists active Conditions/counts (including native Dead/Engaged markers), Injuries and Critical Wounds read-only. 5e condition-name tooltips reuse the profile popover and existing curated explanations; 4e retains plain condition labels. Retap, outside touch and Escape dismiss; opening a tooltip never mutates a Condition. Missing descriptions leave plain labels. Shadowdark Supplies shows native `getSlotUsage().total` / `system.slots` and each identified, visible, carried Basic item stack named Ration, Rations or Waterskin (case-insensitive). Supplies keeps portrait/name and Gear Slots on one non-wrapping header row; ellipsize long names and retain their full text/title. Omit stashed items; show zero when a supply is absent. Waterskins count containers; no water-contents field is invented.
+
+Only Owner PCs, including native GM access, expose existing quantity controls. `EDIT_PARTY_SUPPLY` validates the current PC and carried supply before delegating to native inventory editing, including stale-value/revision checks and zero-quantity removal confirmation. Recheck supply identity, ownership, connection and Party navigation lifetime inside confirmation callbacks. Party edits never change Character selection. Health-only updates retain open supply drafts, focus and reading position. Other systems keep the five base routes until their integration supplies a Party mapping.
+
 ## Scope and action validation
 
 The client setting **Move to Chat after rolling** (`moveToChatAfterRoll`, default Off) appears under Settings > Action Results in Phone/Tablet modes. Only completed rolls launched through Mikelandia actor commands move to Chat; cancellation, errors, non-roll edits and intervening navigation keep the current route. Shadowdark completion uses a matching locally authored rolled chat message; WFRP marks completed native `test.roll()` calls; D&D uses returned rolls or matching action messages. Native desktop behavior stays unchanged.
 
-Five routes: Character, Chat, Journals, Initiative, Settings (internal route key: `combat`). Character selection never controls tokens. Synthetic Actor UUIDs support character data and chat provenance. Initiative retains End Turn and GM encounter progression with native permissions, stale-state checks, and end confirmation. Map/token/light controls, placement, scene overlays and graphics profiles are outside scope.
+Five base routes: Character, Chat, Journals, Initiative, Settings (internal route key: `combat`). Shadowdark and WFRP add Party immediately after Character. Character selection never controls tokens. Synthetic Actor UUIDs support character data and chat provenance. Initiative retains End Turn and GM encounter progression with native permissions, stale-state checks, and end confirmation. Map/token/light controls, placement, scene overlays and graphics profiles are outside scope.
 
 Resolve fresh Actor/Item state by UUID. Validate ownership, session/config revisions, and duplicate submissions; clean up pending actions on cancellation. Never accept arbitrary client paths or native method names. Refresh after native updates; system models own derived values. Share implementation while retaining each game's terminology/grouping. Unsupported systems get identity and native sheets; isolate D&D handlers.
 

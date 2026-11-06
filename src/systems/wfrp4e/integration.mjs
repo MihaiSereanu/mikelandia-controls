@@ -1,5 +1,6 @@
 import { warhammerNotes } from "../actor-notes.mjs";
 import { localizeFoundry } from "../../foundry/settings/localization.mjs";
+import { warhammerParty } from "./party.mjs";
 import { readCombatHealth } from "../combat-health.mjs";
 import { readDamageHealth } from "../damage-health.mjs";
 import { fallbackIntegration } from "../fallback/integration.mjs";
@@ -12,6 +13,7 @@ import { warhammerMount } from "./mount.mjs";
 
 export const warhammerIntegration = Object.freeze({
   ...fallbackIntegration,
+  party: warhammerParty,
   id: "wfrp4e",
   readDamageHealth: actor => readDamageHealth(actor, "character", "system.status.wounds.value", "wounds"),
   readCombatHealth: actor => readCombatHealth(actor, "system.status.wounds", "Wounds", "Wounds"),

@@ -1,4 +1,4 @@
-const ROUTES = new Set(["characters", "chat", "journals", "combat", "settings"]);
+const ROUTES = new Set(["characters", "party", "chat", "journals", "combat", "settings"]);
 const NAVIGATION_INTENTS = new Set(["navigate", "navigate-back", "return-to-character", "select-actor", "select-character-tab",
   "mode-transition-started", "reconnect-started", "action-navigation-invalidated"]);
 

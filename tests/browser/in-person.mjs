@@ -17,6 +17,7 @@ import { checkDamageFeedback } from "/tests/browser/damage-feedback.mjs";
 
 import { createAppFrame } from "/src/ui/frame/app-frame.mjs";
 import { checkReconnect } from "/tests/browser/reconnect.mjs";
+import { checkParty } from "/tests/browser/party.mjs";
 import { checkRollChat } from "/tests/browser/roll-chat.mjs";
 
 const checks = [];
@@ -109,7 +110,9 @@ try {
   kernel.reconcile(); await tick(); await tick();
   check("complete kernel starts without a canvas", kernel.active);
   const root = document.querySelector(".mc-mobile-app");
-  if (params.get("rollChat") === "true") {
+  if (params.get("party") === "true") {
+    await checkParty({ f, store, uiCommands, root, check, tick, params });
+  } else if (params.get("rollChat") === "true") {
     await checkRollChat({ f, store, commands, uiCommands, root, values, legacy, warhammer, check, tick });
   } else if (params.get("timing") === "true") {
     const samples = [];
@@ -128,7 +131,7 @@ try {
   } else {
   check("main Combat navigation is now Initiative", root.querySelector('[data-route="combat"]').textContent === "Initiative");
   check("application uses Mikelandia Controls name", root?.getAttribute("aria-label") === "Mikelandia Controls");
-  check("exactly five navigation screens remain", [...root.querySelectorAll(".mc-main-nav-item")].map(b => b.dataset.route).join(",") === "characters,chat,journals,combat,settings");
+  check("system navigation includes its supported routes", [...root.querySelectorAll(".mc-main-nav-item")].filter(b => !b.hidden).map(b => b.dataset.route).join(",") === (legacy ? "characters,chat,journals,combat,settings" : "characters,party,chat,journals,combat,settings"));
   const nav = root.querySelector(".mc-bottom-nav");
   const standalone = params.get("standalone") === "true";
   for (const protectedStyle of [false, true]) {
@@ -144,7 +147,7 @@ try {
   }
   root.style.removeProperty("--mc-safe-top");
   root.setAttribute("data-mc-style-authority", "");
-  check("bottom navigation has no empty sixth slot", nav.getBoundingClientRect().height > nav.getBoundingClientRect().width || getComputedStyle(nav).gridTemplateColumns.split(" ").length === 5);
+  check("bottom navigation has no empty slots", nav.getBoundingClientRect().height > nav.getBoundingClientRect().width || getComputedStyle(nav).gridTemplateColumns.split(" ").length === (legacy ? 5 : 6));
   check("character renders without token selection", !!root.querySelector(legacy ? ".mc-character-selector" : ".mc-profile-section"));
   check("no map or split viewport mounts", !root.querySelector(".mc-scene-screen, .mc-split-scene-viewport, .mc-tablet-split-toggle"));
   check("no light or token placement controls mount", !root.querySelector('[data-profile-action^="light:"], .mc-portrait-action-menu, .mc-portrait-token-ghost'));

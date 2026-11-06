@@ -353,6 +353,14 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
         || store.state.selectedActorSourceUuid !== sourceUuid) return Promise.reject(new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.TheSelectedBiographyIsNoLongerActive", "The selected biography is no longer active.")));
       return guardConnection((expected) => biographyGateway.roll(payload, expected));
     },
+    editPartySupply: payload => {
+      const owner = runtimeScope, revision = store.state.navigationRevision;
+      const isCurrent = () => activationCommitted && runtimeScope === owner && !owner?.disposed
+        && readPolicy().active && store.state.route === "party" && store.state.navigationRevision === revision
+        && !store.state.reconnect && !store.state.modeTransition;
+      if (!isCurrent()) return Promise.reject(new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Party.Inactive", "This Party view is no longer active.")));
+      return guardConnection(expected => commandGateway.execute(ACTOR_COMMANDS.EDIT_PARTY_SUPPLY, payload, { ...expected, isCurrent }));
+    },
     execute: (name, payload, observer) => {
       if (!activationCommitted || !runtimeScope || runtimeScope.disposed || !readPolicy().active
         || store.state.reconnect || store.state.modeTransition) return Promise.reject(new Error(localizedText(localize, "MIKELANDIA_CONTROLS.Interface.AppKernel.ThisActorActionIsNoLongerActive", "This Actor action is no longer active.")));
