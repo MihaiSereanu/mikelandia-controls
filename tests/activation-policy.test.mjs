@@ -14,12 +14,13 @@ for (const [name, navigator, mode] of [
   ["iPad desktop website", { userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X) Safari/605.1.15", platform: "MacIntel", maxTouchPoints: 5 }, "tablet"]
 ]) test(`Auto device detection: ${name}`, () => assert.equal(classifyRuntimeMode({ window: browser, navigator }), mode));
 
-test("desktop browsers stay native regardless of saved mobile preferences", () => {
+test("desktop Auto stays native while explicit Phone/Tablet choices activate", () => {
   const resolver = createActivationPolicyResolver({ getWindow: () => browser, getNavigator: () => ({ platform: "Win32", maxTouchPoints: 10 }) });
   for (const mode of ["auto", "phone", "tablet", "native", "desktop", "off"]) {
     const policy = resolver.resolve({ mode });
-    assert.equal(policy.active, false);
-    assert.equal(policy.runtimeMode, "native");
+    const active = mode === "phone" || mode === "tablet";
+    assert.equal(policy.active, active);
+    assert.equal(policy.runtimeMode, active ? mode : "native");
   }
 });
 

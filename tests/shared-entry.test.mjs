@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import { createGame, createHooks, installGlobals } from "./helpers/foundry.mjs";
 import { MOMENTUM_QUERY } from "../src/foundry/compatibility/wfrp-opposed-momentum.mjs";
 
-for (const mode of ["auto", "phone", "tablet", "native"]) {
+for (const mode of ["auto", "native"]) {
   test(`native desktop loads shared fixes without companion UI for saved ${mode}`, async t => {
     const f = fixture(t, mode);
     await import(`../src/entry.mjs?native=${mode}`);
-    assert.equal(f.Game.create, f.nativeCreate, "desktop creation has no mobile boundary");
-    f.hooks.emit("init"); f.hooks.emit("i18nInit"); f.hooks.emit("setup"); f.hooks.emit("ready");
+    await f.start();
+    assert.equal(f.mobileStyles.length, 0, "native desktop must not load mobile styles");
     await new Promise(resolve => setTimeout(resolve, 0));
     assert.equal(f.game.i18n.translations["Primary Arm"], "Right Arm");
     assert.equal(f.game.i18n.translations["Secondary Arm"], "Left Arm");
@@ -16,8 +16,11 @@ for (const mode of ["auto", "phone", "tablet", "native"]) {
     assert.notEqual(f.Actor.prototype.update, f.originalUpdate);
     assert.equal(f.game.initializeCanvas, f.initializeCanvas, "ordinary native startup has no mobile/cleanup boundary");
     assert.equal(f.game.modules.get("mikelandia-controls").api, undefined);
-    assert.equal([...f.registered.values()].some(s => s.config), false);
+    assert.deepEqual([...f.registered].filter(([, s]) => s.config).map(([key]) => key), ["mikelandia-controls.mode"]);
     assert.equal(f.menus.length, 0);
+    const reload = t.mock.method(f.window.location, "reload", () => {});
+    f.registered.get("mikelandia-controls.mode").onChange("tablet");
+    assert.equal(reload.mock.calls.length, 1, "selecting Tablet reloads native desktop into the chosen mode");
     f.window.dispatchEvent(new Event("pagehide"));
     assert.equal(f.config.queries[MOMENTUM_QUERY], undefined);
     assert.equal(f.Actor.prototype.update, f.originalUpdate);

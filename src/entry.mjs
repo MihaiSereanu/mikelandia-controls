@@ -2,7 +2,7 @@ import { migrateBrowserBranding, registerBrandingMigration, migrateWorldBranding
 import { installWfrpOpposedMomentum } from "./foundry/compatibility/wfrp-opposed-momentum.mjs";
 import { installClientUpgradeCleanup } from "./foundry/compatibility/client-upgrade-cleanup.mjs";
 import { createTaskScope } from "./kernel/lifecycle/task-scope.mjs";
-import { classifyRuntimeMode, createActivationPolicyResolver } from "./foundry/session/activation-policy.mjs";
+import { createActivationPolicyResolver } from "./foundry/session/activation-policy.mjs";
 import { readPreferences, registerModePreference, registerPreferences } from "./foundry/settings/preferences.mjs";
 
 if (/\/game\/?$/.test(window.location.pathname)) {
@@ -29,17 +29,16 @@ if (/\/game\/?$/.test(window.location.pathname)) {
     console.error("Mikelandia Controls | Browser preferences could not finish migrating; originals are retained.", error);
     Hooks.once("ready", () => ui.notifications?.error?.("Mikelandia Controls could not copy saved browser settings. Enable browser storage and reload; original settings are retained."));
   }
-  const mobileDevice = classifyRuntimeMode() !== "native";
   let upgradeCleanup;
   const installUpgradeHook = () => Hooks.once("init", () => {
     registerBrandingMigration();
     upgradeCleanup = installClientUpgradeCleanup(scope);
   });
   const registerNativeClient = () => Hooks.once("init", () => registerPreferences({
-    mobileDevice, isMobilePresentation: () => false,
+    isMobilePresentation: () => false,
     onPresentationChange: () => { if (game.ready) window.location.reload(); }
   }));
-  if (migrated && mobileDevice) {
+  if (migrated) {
     // libWrapper manages prototype initialize through accessors. Never assign
     // that property or capture its proxy and replace its underlying target.
     // Await native creation, then shadow initialize on this one instance.
@@ -66,7 +65,7 @@ if (/\/game\/?$/.test(window.location.pathname)) {
         try {
           // Native assigns global game after create resolves. Its registered
           // client mode is authoritative; the bootstrap cache is only a hint.
-          registerModePreference({ mobileDevice });
+          registerModePreference();
           if (createActivationPolicyResolver().resolve(readPreferences()).active) {
             const styles = document.createElement("link");
             styles.rel = "stylesheet";

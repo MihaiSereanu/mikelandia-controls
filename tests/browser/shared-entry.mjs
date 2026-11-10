@@ -6,8 +6,8 @@ try {
   const params = new URLSearchParams(location.search);
   const device = params.get("device") ?? "desktop";
   const mobile = device === "phone" || device === "tablet";
-  const full = params.has("full"), storedMode = params.get("stored") ?? (mobile ? "auto" : "phone");
-  const active = mobile && storedMode !== "native";
+  const full = params.has("full"), storedMode = params.get("stored") ?? "auto";
+  const active = storedMode === "phone" || storedMode === "tablet" || (mobile && storedMode === "auto");
   if (params.has("common-display")) {
     document.body.classList.add("hide-ui");
     const style = document.createElement("link");
@@ -70,6 +70,8 @@ try {
   globalThis.foundry = { Game };
   const nativeCreate = Game.create;
   localStorage.clear();
+  // Startup/navigation checks assume the first-run guide invitation was already seen.
+  localStorage.setItem(`mikelandia-controls:controls-invitation:v1:${encodeURIComponent(game.world.id)}:${encodeURIComponent(game.user.id)}`, "seen");
   if (upgradeCase) {
     localStorage.setItem("mikelandia-controls:module-compatibility:v1:crlngn-ui", upgradeCase === "invalid" ? "invalid json" : JSON.stringify({ version: 1, previousValue: true }));
     localStorage.setItem("crlngn-ui.disable-ui", "true");
@@ -78,11 +80,11 @@ try {
   // The fixture uses the actual /game entry guard, preserving the harness query.
   history.replaceState(null, "", `/game${location.search}`);
   await import("/src/entry.mjs");
-  check("desktop creation is untouched", mobile || Game.create === nativeCreate);
+  check("creation reads the authoritative preference before startup", Game.create !== nativeCreate);
   check("managed initialize accessor is untouched before instance construction", initializeSetterCalls === 0 && Game.prototype.initialize === managedInitialize);
   const created = await Game.create("game");
   globalThis.game = created;
-  if (mobile) {
+  {
     const initialization = created.initialize();
     await initialization;
     check("native initialization waits until client hooks are installed", initializeHooks === 2);
@@ -114,6 +116,14 @@ try {
     } else if (active) {
       check("full startup mounts the actual companion", Boolean(document.querySelector(".mc-mobile-app")));
       check("full startup exposes active companion API", game.modules.get("mikelandia-controls").api?.active === true);
+      check("active presentation exposes interface and theme settings", registered.get("mikelandia-controls.mode")?.config && registered.get("mikelandia-controls.theme")?.config);
+      const startupDeadline = performance.now() + 3000;
+      while (document.querySelector(".mc-mobile-bootstrap") && performance.now() < startupDeadline) await tick();
+      check("startup dismisses the loading overlay", !document.querySelector(".mc-mobile-bootstrap"));
+      if (!mobile) {
+        game.modules.get("mikelandia-controls").api.open("settings"); await tick();
+        check("desktop companion opens Settings", document.querySelector('.mc-mobile-app [data-route="settings"]').getAttribute("aria-current") === "page");
+      }
       if (upgradeCase) {
         const deadline = performance.now() + 2000;
         while (document.querySelector(".mc-mobile-bootstrap") && performance.now() < deadline) await tick();
@@ -134,7 +144,7 @@ try {
     } else check("opted-out phone does not create companion API", !game.modules.get("mikelandia-controls").api);
   } else if (!mobile) {
     hooks.emit("init"); hooks.emit("setup"); hooks.emit("ready"); await tick();
-    check("desktop exposes no module settings", ![...registered.values()].some(setting => setting.config));
+    check("native desktop exposes only the mode selector", [...registered].filter(([, setting]) => setting.config).map(([key]) => key).join() === "mikelandia-controls.mode");
     check("desktop has no companion API", game.modules.get("mikelandia-controls").api === undefined);
     check("desktop never imports mobile kernel", !resources.includes("/src/kernel/app-kernel.mjs"));
   }

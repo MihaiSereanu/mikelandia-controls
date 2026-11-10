@@ -34,6 +34,9 @@ const cases = [
   ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844]].map(([layout, width, height]) =>
     [`descriptions-${layout}`, width, height, "descriptions", ""]),
   ["shared-entry-desktop", 1280, 900, "shared-entry", "device=desktop"],
+  ["shared-entry-desktop-tablet", 1280, 900, "shared-entry", "device=desktop&stored=tablet&cached=native&full=true"],
+  ["shared-entry-desktop-phone", 1280, 900, "shared-entry", "device=desktop&stored=phone&cached=native&full=true"],
+  ["shared-entry-desktop-native", 1280, 900, "shared-entry", "device=desktop&stored=native&cached=tablet&full=true"],
   ["shared-entry-phone", 390, 844, "shared-entry", "device=phone"],
   ["shared-entry-tablet", 1024, 768, "shared-entry", "device=tablet"],
   ["shared-entry-stale-native-phone", 390, 844, "shared-entry", "device=phone&cached=native&full=true"],

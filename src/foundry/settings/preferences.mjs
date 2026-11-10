@@ -2,7 +2,6 @@ import { resolveSystemIntegration } from "../../systems/registry.mjs";
 import { supportsPreference, effectiveColorScheme, characterPresentation } from "../../systems/presentation-policy.mjs";
 import { COLOR_SCHEME_CHOICES } from "../../features/characters/appearance/character-theme.mjs";
 import { localizeFoundry } from "./localization.mjs";
-import { classifyRuntimeMode } from "../session/activation-policy.mjs";
 
 import { MODULE_ID } from "../compatibility/branding-migration.mjs";
 export { MODULE_ID };
@@ -77,11 +76,11 @@ const BOOTSTRAP_DEFAULTS = Object.freeze({
 });
 
 /** Register the client mode before Game.initialize so stored values are readable. */
-export function registerModePreference({ mobileDevice = classifyRuntimeMode() !== "native", onPresentationChange } = {}) {
+export function registerModePreference({ onPresentationChange } = {}) {
   game.settings.register(MODULE_ID, KEYS.MODE, {
     name: "MIKELANDIA_CONTROLS.Settings.Mode.Name",
     hint: "MIKELANDIA_CONTROLS.Settings.Mode.Hint",
-    scope: "client", config: mobileDevice, type: String,
+    scope: "client", config: true, type: String,
     choices: {
       auto: "MIKELANDIA_CONTROLS.Settings.Mode.Auto",
       phone: "MIKELANDIA_CONTROLS.Settings.Mode.Phone",
@@ -99,17 +98,16 @@ export function registerPreferences({
   onWakeChange,
   onVisualIsolationChange,
   isMobilePresentation = () => true,
-  mobileDevice = classifyRuntimeMode() !== "native",
   openControlsGuide,
   getSystemIntegration = () => resolveSystemIntegration(globalThis.game?.system?.id)
 } = {}) {
   const features = getSystemIntegration().features;
-  const mobileControls = mobileDevice && isMobilePresentation();
+  const mobileControls = isMobilePresentation();
   const changed = (key, notify) => (value) => {
     syncBootstrapPreferences();
     notify?.(Object.freeze({ key, value }));
   };
-  registerModePreference({ mobileDevice, onPresentationChange });
+  registerModePreference({ onPresentationChange });
   const storedMode = readSetting(KEYS.MODE, "auto");
   if (storedMode === "desktop" || storedMode === "off") {
     // Native Settings reads the stored value directly when selecting a choice.

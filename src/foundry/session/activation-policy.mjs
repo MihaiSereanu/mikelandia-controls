@@ -16,8 +16,7 @@ export function createActivationPolicyResolver({
       if (!resolvedAutoMode) {
         resolvedAutoMode = classifyRuntimeMode({ window, navigator });
       }
-      const runtimeMode = resolvedAutoMode === "native" || preference === "native"
-        ? "native" : preference === "auto" ? resolvedAutoMode : preference;
+      const runtimeMode = preference === "auto" ? resolvedAutoMode : preference;
       const width = Math.max(1, window.visualViewport?.width ?? window.innerWidth);
       const height = Math.max(1, window.visualViewport?.height ?? window.innerHeight);
       return Object.freeze({

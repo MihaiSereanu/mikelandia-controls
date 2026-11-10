@@ -44,7 +44,7 @@ Bio/Notes fixtures: `tests/browser/actor-notes.mjs`. Editors use native API doub
 
 ### Startup contract
 
-Physical desktops always use native Foundry, ignoring saved Phone/Tablet overrides; no companion UI, help, settings rewriting, module API or mobile styles load. Shared WFRP arm translations and opposed Momentum remain active. Mobile modes are Auto/Phone/Tablet/Use native Foundry; legacy `desktop`/`off` normalize to `native`. Opted-out clients expose only the native mode setting. Desktop-identified iPads remain tablets.
+The client interface selector is visible on every device: Auto/Phone/Tablet/Use native Foundry. Auto keeps physical desktops in native Foundry; explicit Phone/Tablet choices activate the complete companion interface and its settings on any device. Startup reads the registered client preference before loading companion code/styles; mode changes reload Foundry. Native clients expose only the mode selector and load no companion UI, help, module API or mobile styles. Shared WFRP arm translations and opposed Momentum remain active. Legacy `desktop`/`off` normalize to `native`. Desktop-identified iPads remain tablets.
 
 Foundry does not await package top-level async work before init. Mobile clients temporarily wrap `Game.create`, await its instance and install a one-use own `initialize` boundary. Never replace `Game.prototype.initialize`: calling a captured libWrapper proxy after replacing its target recurses. The instance boundary reads registered authoritative mode, conditionally imports runtime/styles and hooks, removes itself, then delegates once. Restore static creation after its first call; leave desktops untouched. Cached preferences cannot decide activation.
 

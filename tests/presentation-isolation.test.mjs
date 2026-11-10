@@ -17,7 +17,7 @@ function setup(t, system = "wfrp4e", initial = {}) {
     register(namespace, key, definition) { registered.set(`${namespace}.${key}`, { ...definition, namespace, key }); }
   };
   installGlobals(t, { game });
-  registerPreferences({ isMobilePresentation: () => true, mobileDevice: true });
+  registerPreferences({ isMobilePresentation: () => true });
   const gateway = createFoundryPreferencesGateway({ getGame: () => game, getNavigator: () => ({}) });
   return { game, gateway, writes, stored, registered };
 }
@@ -44,19 +44,29 @@ for (const system of ["shadowdark", "wfrp4e", "dnd5e"]) {
     assert.equal(f.gateway.moveToChatAfterRoll(), false);
   });
 }
-test("physical desktop registers no visible module controls or help menu", t => {
+test("native desktop exposes only the interface selector", t => {
   const f = setup(t, "dnd5e");
   const menus = [];
   f.game.settings.registerMenu = (...args) => menus.push(args);
-  registerPreferences({ mobileDevice: false, openControlsGuide: () => {} });
-  assert.equal([...f.registered.values()].some(field => field.config), false);
+  registerPreferences({ isMobilePresentation: () => false, openControlsGuide: () => {} });
+  assert.deepEqual([...f.registered.values()].filter(field => field.config).map(field => field.key), ["mode"]);
   assert.deepEqual(menus, []);
 });
+test("desktop Tablet mode exposes the same companion settings and help as mobile", t => {
+  const f = setup(t, "dnd5e");
+  const menus = [];
+  f.game.settings.registerMenu = (...args) => menus.push(args);
+  registerPreferences({ isMobilePresentation: () => true, openControlsGuide: () => {} });
+  assert.equal(f.registered.get("mikelandia-controls.mode").config, true);
+  assert.equal(f.registered.get("mikelandia-controls.theme").config, true);
+  assert.equal(menus.length, 1);
+});
+
 test("mobile native opt-out keeps only the native Foundry mode selector", t => {
   const f = setup(t, "dnd5e");
   const menus = [];
   f.game.settings.registerMenu = (...args) => menus.push(args);
-  registerPreferences({ mobileDevice: true, isMobilePresentation: () => false, openControlsGuide: () => {} });
+  registerPreferences({ isMobilePresentation: () => false, openControlsGuide: () => {} });
   assert.deepEqual([...f.registered.values()].filter(field => field.config).map(field => field.key), ["mode"]);
   assert.ok(Object.hasOwn(f.registered.get("mikelandia-controls.mode").choices, "native"));
   assert.deepEqual(menus, []);
