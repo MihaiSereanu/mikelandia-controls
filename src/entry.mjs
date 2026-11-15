@@ -1,12 +1,14 @@
 import { migrateBrowserBranding, registerBrandingMigration, migrateWorldBranding } from "./foundry/compatibility/branding-migration.mjs";
 import { installWfrpOpposedMomentum } from "./foundry/compatibility/wfrp-opposed-momentum.mjs";
 import { installClientUpgradeCleanup } from "./foundry/compatibility/client-upgrade-cleanup.mjs";
+import { installJournalExportControls } from "./foundry/journals/journal-export.mjs";
 import { createTaskScope } from "./kernel/lifecycle/task-scope.mjs";
 import { createActivationPolicyResolver } from "./foundry/session/activation-policy.mjs";
 import { readPreferences, registerModePreference, registerPreferences } from "./foundry/settings/preferences.mjs";
 
 if (/\/game\/?$/.test(window.location.pathname)) {
   const scope = createTaskScope("shared-compatibility");
+  installJournalExportControls(scope);
   scope.listen(window, "pagehide", () => scope.dispose(), { once: true });
   scope.hook("i18nInit", () => {
     if (game.system.id !== "wfrp4e") return;

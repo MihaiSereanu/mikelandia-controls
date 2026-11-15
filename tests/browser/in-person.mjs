@@ -1,3 +1,4 @@
+import { checkJournalExport } from "/tests/browser/journal-export.mjs";
 import { checkJournalSearch, journalSearchLayoutPreview, checkJournalSearchLayout } from "/tests/browser/journal-search.mjs";
 import { installRichEditorFixture, editorInput, prepareEditorGame } from "/tests/browser/rich-editor-fixture.mjs";
 import { createShadowdarkFixture } from "/tests/helpers/shadowdark.mjs";
@@ -158,6 +159,7 @@ try {
   root.querySelector(".mc-journal-entry").click(); await tick();
   check("permitted journal opens in mobile reader", root.querySelector(".mc-journal-rich-text")?.textContent.includes("A shared handout."));
   check("reader excludes private and sheet-hidden pages", !/Private page|Hidden page/.test(root.querySelector(".mc-journal-reader")?.textContent));
+  if (params.get("export") === "true") await checkJournalExport({ root, journal: handout, page: publicPage, check, tick });
   publicPage.text.content = "<p>First paragraph</p>\n\n<p>Second paragraph</p>\n<ul>\n<li>One</li>\n</ul>\n<table>\n<tbody><tr><td>Cell</td></tr></tbody>\n</table>";
   Hooks.emit("updateJournalEntryPage", { ...publicPage, parent: handout }, {}); await tick();
   const rich = root.querySelector(".mc-journal-rich-text");
@@ -319,6 +321,13 @@ try {
     journalSearchLayoutPreview(store, handout.id, publicPage.id);
     checkJournalSearchLayout({ root, check, label: "Final multi-result preview" });
 
+  }
+  if (params.get("preview") === "journal-export") {
+    root.querySelector('[data-route="journals"]').click(); await tick();
+    if (!root.querySelector(".mc-journal-reader")) { root.querySelector(".mc-journal-entry").click(); await tick(); }
+    root.toggleAttribute("data-mc-style-authority", !params.has("unprotected"));
+    if (params.has("large")) root.style.setProperty("font-size", "22px", "important");
+    check("export header stays within the viewport", root.querySelector('.mc-journal-export').getBoundingClientRect().right <= innerWidth && root.querySelector('.mc-viewport').scrollWidth <= root.querySelector('.mc-viewport').clientWidth + 1);
   }
   if (params.get("preview") === "journal-editor") {
     root.querySelector('[data-route="journals"]').click(); await tick();

@@ -139,6 +139,15 @@ function journalReader(state, commands, scope) {
     node("header", { children: [
       node("button", { attrs: { type: "button", "aria-label": localize("MIKELANDIA_CONTROLS.Journals.Back", "Back to journals") }, on: { click: commands.closeJournal }, children: [icon("fa-arrow-left")] }, scope),
       node("div", { children: [node("small", { text: localize("MIKELANDIA_CONTROLS.Journals.Journal", "Journal").toLocaleUpperCase() }), node("h2", { text: journal.name })] }),
+      node("button", { className: "mc-journal-export", attrs: { type: "button", title: localize("MIKELANDIA_CONTROLS.Journals.ExportMarkdown", "Export Markdown"), "aria-label": localize("MIKELANDIA_CONTROLS.Journals.ExportMarkdown", "Export Markdown") }, children: [icon("fa-file-export")], on: { click: async event => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        editStatus.hidden = true;
+        try { await commands.exportJournalMarkdown(journal.id); }
+        catch (error) {
+          if (!scope.disposed) { editStatus.textContent = error?.message ?? String(error); editStatus.hidden = false; }
+        } finally { if (!scope.disposed) button.disabled = false; }
+      } } }, scope),
       journal.canEdit && (!page || page.canEdit) ? node("button", { className: "mc-journal-native-edit", attrs: { type: "button" }, on: { click: event => void editCurrentPage(event.currentTarget) }, text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Journals.Edit", "Edit") }, scope) : null
     ].filter(Boolean) }),
     editStatus,

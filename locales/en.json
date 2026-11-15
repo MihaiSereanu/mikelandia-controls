@@ -851,6 +851,7 @@
       "ZoomIn": "Zoom in"
     },
     "Journals": {
+      "ExportMarkdown": "Export Markdown",
       "Search": "Search journals and pages",
       "ClearSearch": "Clear",
       "RetrySearch": "Retry search",

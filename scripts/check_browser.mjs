@@ -29,6 +29,8 @@ const cases = [
   ...["shadowdark", "dnd5e", "wfrp4e"].flatMap(system => [["phone", 390, 844], ["tablet", 1024, 768]].map(([layout, width, height]) =>
     [`roll-chat-${system}-${layout}`, width, height, "in-person", `layout=${layout}&system=${system}&rollChat=true`])),
   ["roll-chat-wfrp4e-4e-phone", 390, 844, "in-person", "layout=phone&system=wfrp4e&edition=4e&rollChat=true"],
+  ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844], ["large-text", 390, 844], ["unprotected", 390, 844]].map(([layout, width, height]) =>
+    [`journal-export-${layout}`, width, height, "in-person", `layout=${layout === "tablet" ? "tablet" : "phone"}&export=true&preview=journal-export${layout === "large-text" ? "&large=true" : ""}${layout === "unprotected" ? "&unprotected=true" : ""}`]),
   ["journal-search-phone", 390, 844, "in-person", "layout=phone&search=true"],
   ["journal-search-tablet", 1024, 768, "in-person", "layout=tablet&search=true"],
   ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844]].map(([layout, width, height]) =>

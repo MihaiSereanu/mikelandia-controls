@@ -1,4 +1,5 @@
 import { isJournalVisible, isJournalPageVisible } from "../journals/journal-visibility.mjs";
+import { downloadJournalMarkdown } from "../journals/journal-export.mjs";
 import { readJournalSearchText } from "../journals/journal-search-text.mjs";
 import { localizeFoundry } from "../settings/localization.mjs";
 import { ownMobileApplication } from "../presentation/mobile-ui-isolation.mjs";
@@ -358,6 +359,10 @@ export function createFoundrySessionGateway({
       latestSnapshot = read();
       latestDomainSignatures = snapshotDomainSignatures(latestSnapshot);
       return latestSnapshot;
+    },
+    exportJournalMarkdown(journalId, expectedSession = {}) {
+      assertSession(expectedSession);
+      return downloadJournalMarkdown(journalId);
     },
     async readJournalSearchIndex(expectedSession = {}) {
       assertSession(expectedSession);
