@@ -5,8 +5,11 @@ import { ACTOR_COMMANDS } from "../../../kernel/state/command-names.mjs";
 /** The integration supplies catalog data; the UI never reads native documents. */
 export function renderProfileInventory(actor, commands, scope) {
   const text = (key, fallback) => localizedText(commands.localize, `MIKELANDIA_CONTROLS.Inventory.${key}`, fallback);
+  const trapping = actor.profileInventoryKind === "trapping";
+  const customLabel = trapping ? "Add Trapping" : text("Custom", "Create custom item");
+  const catalogueLabel = trapping ? "Search Catalogue" : text("SearchCatalog", "Search catalog");
   const body = node("div", { className: "mc-profile-inventory-body mc-profile-inventory-tools" });
-  const open = node("button", { className: "mc-profile-add-item", children: [icon("fa-plus")], attrs: { type: "button", "aria-label": text("AddItem", "Add item"), title: text("AddItem", "Add item"), "data-profile-add-item": true }, on: { click: () => {
+  const open = node("button", { className: `mc-profile-add-item${trapping ? " mc-profile-add-item-wide" : ""}`, children: [trapping ? text("Add", "Add") : icon("fa-plus")], attrs: { type: "button", "aria-label": text("AddItem", "Add item"), title: text("AddItem", "Add item"), "data-profile-add-item": true }, on: { click: () => {
     if (scope.disposed || open.disabled || open.hidden) return;
     open.hidden = true;
     const formScope = scope.child("inventory-editor");
@@ -17,7 +20,7 @@ export function renderProfileInventory(actor, commands, scope) {
     const showEditor = mode => {
       const message = node("p", { attrs: { role: "status" } });
       let busy = false;
-      const controls = () => body.querySelectorAll("button, input, select");
+      const controls = () => body.querySelectorAll("button, input, select, textarea");
       const run = async payload => {
         if (busy || formScope.disposed) return;
         busy = true; for (const control of controls()) control.disabled = true;
@@ -30,6 +33,43 @@ export function renderProfileInventory(actor, commands, scope) {
       const cancel = node("button", { text: text("Cancel", "Cancel"), attrs: { type: "button", "data-profile-inventory-cancel": true }, on: { click: close } }, formScope);
       if (mode === "custom") {
         const name = node("input", { attrs: { type: "text", required: true, maxlength: 200, "aria-label": text("Name", "Item name") } });
+        if (trapping) {
+          const number = (id, label, value, step = 1) => {
+            const integer = step === 1;
+            const input = node("input", { attrs: { type: "text", required: true, value,
+              inputmode: integer ? "numeric" : "decimal", pattern: integer ? "[0-9]+" : "[0-9]+([.][0-9]+)?", "aria-label": label, "data-profile-trapping-field": id } });
+            const validate = () => {
+              const value = Number(input.value);
+              const valid = (integer ? /^\d+$/u.test(input.value) && Number.isSafeInteger(value) : /^\d+(?:\.\d+)?$/u.test(input.value) && Number.isFinite(value)) && value >= 0;
+              input.setCustomValidity(valid ? "" : text("InvalidNumber", "Enter a nonnegative number; quantities and coins must be whole numbers."));
+            };
+            formScope.listen(input, "input", validate);
+            formScope.listen(input, "focus", () => input.select());
+            formScope.listen(input, "click", () => input.select());
+            return { input, validate, label: node("label", { children: [label, input] }) };
+          };
+          const quantity = number("quantity", "Quantity", 1);
+          const encumbrance = number("encumbrance", "Encumbrance", 0, "any");
+          const coins = ["gc", "ss", "bp"].map(id => number(id, id.toUpperCase(), 0));
+          const description = node("textarea", { attrs: { "aria-label": "Description", maxlength: 100000, rows: 5 } });
+          const form = node("form", { className: "mc-profile-custom-item", children: [
+            node("label", { children: [text("Name", "Item name"), name] }),
+            node("div", { className: "mc-profile-trapping-grid", children: [quantity.label, encumbrance.label] }),
+            node("fieldset", { className: "mc-profile-trapping-price-group", children: [node("legend", { text: "Price" }),
+              node("div", { className: "mc-profile-trapping-grid mc-profile-trapping-price", children: coins.map(coin => coin.label) })] }),
+            node("label", { children: ["Description", description] }),
+            node("button", { text: "Save Trapping", attrs: { type: "submit" } })
+          ], on: { submit: event => {
+            event.preventDefault();
+            for (const field of [quantity, encumbrance, ...coins]) field.validate();
+            if (form.reportValidity()) void run({ name: name.value, quantity: Number(quantity.input.value), encumbrance: Number(encumbrance.input.value),
+              price: Object.fromEntries(coins.map((coin, index) => [["gc", "ss", "bp"][index], Number(coin.input.value)])),
+              description: description.value.replace(/[&<>"']/gu, character => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]).replace(/\n/gu, "<br>") });
+          } } }, formScope);
+          body.replaceChildren(node("h4", { text: customLabel }), form, cancel);
+          name.focus();
+          return;
+        }
         const weightInput = (id, label, min) => {
           const input = node("input", { attrs: { type: "text", inputmode: "numeric", pattern: "[0-9]*", required: true, value: 1,
             "aria-label": label, "data-profile-custom-weight": id } });
@@ -96,8 +136,8 @@ export function renderProfileInventory(actor, commands, scope) {
     let chooser;
     const choose = mode => { chooserScope.dispose(); showEditor(mode); };
     const choices = [
-      node("button", { text: text("Custom", "Create custom item"), attrs: { type: "button", "data-profile-item-mode": "custom" }, on: { click: () => choose("custom") } }, chooserScope),
-      node("button", { text: text("SearchCatalog", "Search catalog"), attrs: { type: "button", "data-profile-item-mode": "catalog" }, on: { click: () => choose("catalog") } }, chooserScope),
+      node("button", { text: customLabel, attrs: { type: "button", "data-profile-item-mode": "custom" }, on: { click: () => choose("custom") } }, chooserScope),
+      node("button", { text: catalogueLabel, attrs: { type: "button", "data-profile-item-mode": "catalog" }, on: { click: () => choose("catalog") } }, chooserScope),
       node("button", { text: text("Cancel", "Cancel"), attrs: { type: "button" }, on: { click: close } }, chooserScope)
     ];
     chooser = node("div", { className: "mc-profile-inventory-choice", attrs: { role: "dialog", "aria-modal": "true", "aria-label": text("AddItem", "Add item"), "data-mc-back-kind": "inventory-choice", "data-mc-back-dismissable": "true" }, children: [

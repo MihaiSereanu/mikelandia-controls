@@ -11395,8 +11395,19 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 .mc-profile-inventory-tools button, .mc-profile-inventory-tools input, .mc-profile-inventory-tools select { min-height: 44px; max-width: 100%; }
 .mc-profile-inventory-body { flex: 1 0 100%; min-width: 0; }
 .mc-profile-inventory-body:empty { display: none; }
+.mc-profile-add-item-wide { width: 100%; flex: 1 0 100%; text-align: center; }
+.mc-mobile-app button.mc-profile-add-item-wide[hidden] { display: none !important; }
 .mc-profile-custom-item { display: grid; gap: 8px; }
 .mc-profile-custom-item label { display: grid; gap: 4px; }
+.mc-profile-custom-item input, .mc-profile-custom-item textarea { box-sizing: border-box; width: 100%; min-width: 0; }
+.mc-profile-custom-item textarea { resize: vertical; }
+.mc-profile-trapping-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 8px; align-items: end; }
+.mc-profile-trapping-price { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mc-profile-trapping-price-group { border: 0; margin: 0; padding: 0; min-width: 0; }
+.mc-profile-trapping-price-group legend { padding: 0 0 4px; }
+.mc-profile-trapping-grid label { min-width: 0; overflow-wrap: anywhere; }
+.mc-profile-spell-details { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 0; }
+.mc-profile-spell-details span { border: 1px solid var(--mc-border); border-radius: 4px; padding: 3px 6px; overflow-wrap: anywhere; }
 .mc-profile-catalog-results { display: grid; grid-auto-rows: max-content; gap: 4px; min-height: 0; max-height: 40dvh; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
 .mc-profile-catalog-results button { white-space: normal; overflow-wrap: anywhere; text-align: start; }
 .mc-profile-row:has(> .mc-profile-quantity) { padding-right: 8px; }
@@ -11479,6 +11490,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: min(14rem, 100%);
 }
 .mc-profile-resource-form-stacked .mc-profile-resource-buttons button { min-width: 0; width: 100%; }
+[data-profile-id="wfrp4e-character"] [data-profile-section="money"] .mc-profile-resource-buttons { width: 100%; }
 
 /* Shadowdark tablets use matching three-column resource, stat and coin grids. */
 .mc-mobile-app[data-form-factor="tablet"] .mc-profile-content[aria-labelledby$="-tab-abilities"] .mc-profile-summary-triple:has(> [data-profile-section="hp"] .mc-profile-counter),

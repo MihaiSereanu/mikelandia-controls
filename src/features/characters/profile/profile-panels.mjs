@@ -16,7 +16,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
   const tabs = [...(actor.panels ?? []), ...(actor.notesAvailable && renderNotes ? [{ id: "notes", label: localizedText(commands.localize, `MIKELANDIA_CONTROLS.Character.Tabs.${notesLabel}`, notesLabel), sections: actor.notesSections ?? [] }] : [])];
   if (!tabs.length) return [];
   const active = tabs.find(tab => tab.id === state.characterTab) ?? tabs[0];
-  const inventory = actor.profileInventory && active.id === "inventory" ? renderProfileInventory(actor, commands, scope) : null;
+  const inventory = actor.profileInventory && active.id === (actor.profileInventoryTab ?? "inventory") ? renderProfileInventory(actor, commands, scope) : null;
   const prefix = `mc-profile-${actor.sourceUuid.replace(/[^a-zA-Z0-9_-]/gu, "-")}`;
   // Record explicit closures separately so default-open disclosures survive rerenders.
   const closedSections = presentation.closedSections ??= new Set();
@@ -168,6 +168,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
       });
       const disclosure = node("details", { className: "mc-profile-description mc-profile-spell-description", children: [
         node("summary", { children: [node(row.lost ? "s" : "span", { text: row.label })] }),
+        row.details?.length ? node("div", { className: "mc-profile-spell-details", children: row.details.map(text => node("span", { text })) }) : null,
         renderEnrichedDescription(row.description ?? "", "", descriptionOptions).content, lossControl
       ] });
       if (row.lossAction) bindSection(disclosure, disclosure.querySelector("summary"), descriptionKey);
@@ -224,7 +225,7 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
         continue;
       }
       const compact = !section.fullWidth && section.layout !== "table" && ["values", "counters"].includes(section.kind) && section.rows.length === 1;
-      const inventorySection = inventory && section.id === "gear";
+      const inventorySection = inventory && !actor.profileInventoryTab && section.id === "gear";
       const equipmentLabel = section.rows.find(row => row.equipment?.edit)?.equipment.label;
       const heading = [node("h3", { text: section.label }), ...(section.summary ?? []).map(row => node("span", {
         className: "mc-profile-section-metric", dataset: { profileMetric: row.id }, text: `${row.label} ${valueText(row)}`
@@ -287,6 +288,9 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
       on: { click: () => commands.selectCharacterTab(tab.id) }
     }, scope)) }),
     node("div", { className: "mc-profile-content", dataset: { profileId: actor.profileId }, attrs: { role: "tabpanel", id: `${prefix}-panel-${active.id}`,
-      "aria-labelledby": `${prefix}-tab-${active.id}` }, children: sections })
+      "aria-labelledby": `${prefix}-tab-${active.id}` }, children: [
+        inventory && actor.profileInventoryTab ? node("section", { className: "mc-profile-section mc-profile-inventory-tools", children: [inventory.button, inventory.body] }) : null,
+        ...sections
+      ] })
   ];
 }

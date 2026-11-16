@@ -604,7 +604,7 @@ try {
     "embedded chooser does not scroll the profile on mount",
     window.scrollY === 0,
   );
-  if (!params.has("layout-only")) {
+  if (!params.has("layout-only") && !params.has("profile-improvements")) {
     const characteristicButton = screen.querySelector(
       '[data-profile-action="characteristic:ws"]',
     );
@@ -2279,6 +2279,90 @@ try {
         game.messages.length === beforeRecovery.messages + 1 &&
         nativeWrites.length === beforeRecovery.writes,
     );
+  }
+  if (params.has("profile-improvements")) {
+    const coin = actor.items.find(item => item.type === "money") ?? { id: "coin", name: "Gold Crown", type: "money", parent: actor, system: { quantity: { value: 1 } } };
+    if (!actor.items.includes(coin)) actor.items.push(coin);
+    coin.update = async changes => { coin.system.quantity.value = changes["system.quantity.value"]; Hooks.emit("updateItem", coin, changes); return coin; };
+    const creations = [];
+    actor.createEmbeddedDocuments = async (type, data) => { creations.push(data[0]); return data; };
+    const pack = { documentName: "Item", visible: true, title: "Consumer's Guide", getIndex: async () => [{ _id: "rope", name: "Rope", type: "trapping" }],
+      getDocument: async id => ({ id, type: "trapping", toObject: () => ({ _id: id, name: "Rope", type: "trapping", system: { quantity: { value: 1 } } }) }) };
+    game.packs = new Map([["world.wfrp5-consumers-guide", pack]]);
+    Hooks.emit("updateActor", actor, {});
+    await tick();
+    await clickTab("trappings");
+    const money = screen.querySelector('[data-profile-section="money"]');
+    if (!money.open) money.querySelector("summary").click();
+    screen.querySelector('[data-profile-edit="quantity:coin"]').click();
+    const amount = screen.querySelector('[data-profile-resource-input="quantity:coin"]');
+    const moneyForm = amount.closest("form");
+    const moneyButtons = [...moneyForm.querySelectorAll("button")].map(button => button.getBoundingClientRect());
+    const moneyBounds = moneyForm.getBoundingClientRect();
+    check("Money Save and Cancel share a full-width row below the centered input", Math.abs(moneyButtons[0].top - moneyButtons[1].top) < 1 && Math.abs(moneyButtons[0].width - moneyButtons[1].width) < 1 && Math.abs(moneyButtons[0].left - moneyBounds.left) < 1 && Math.abs(moneyButtons[1].right - moneyBounds.right) < 1 && moneyButtons[0].top >= amount.getBoundingClientRect().bottom && Math.abs((amount.getBoundingClientRect().left + amount.getBoundingClientRect().right) / 2 - (moneyBounds.left + moneyBounds.right) / 2) < 1);
+    amount.value = "0";
+    amount.closest("form").requestSubmit();
+    await tick();
+    check("Money number saves zero without removing the denomination", coin.system.quantity.value === 0 && actor.items.includes(coin));
+    const add = () => screen.querySelector('[data-profile-add-item]');
+    check("Trappings Add is text and spans the toolbar row", add().textContent === "Add" && !add().querySelector("i") && add().getBoundingClientRect().width >= add().parentElement.clientWidth - 28);
+    add().click();
+    check("WFRP Add opens the requested trapping choices", document.querySelector('[data-profile-item-mode="custom"]').textContent === "Add Trapping" && document.querySelector('[data-profile-item-mode="catalog"]').textContent === "Search Catalogue");
+    document.querySelector('[data-profile-item-mode="custom"]').click();
+    const form = screen.querySelector(".mc-profile-custom-item");
+    check("Add is hidden while its trapping editor is open", !add().checkVisibility());
+    form.querySelector('[aria-label="Item name"]').value = "Travel lantern";
+    for (const [id, value] of [["quantity", "2"], ["encumbrance", "0.5"], ["ss", "3"]]) form.querySelector(`[data-profile-trapping-field="${id}"]`).value = value;
+    form.querySelector("textarea").value = "First line\nSecond line";
+    check("Custom trapping form fits the viewport", document.documentElement.scrollWidth <= innerWidth + 1);
+    check("Price has one heading above the three coin labels", form.querySelector("legend").textContent === "Price" && [...form.querySelectorAll("fieldset label")].map(label => label.textContent).join() === "GC,SS,BP");
+    for (const ids of [["quantity", "encumbrance"], ["gc", "ss", "bp"]]) {
+      const bounds = ids.map(id => form.querySelector(`[data-profile-trapping-field="${id}"]`).getBoundingClientRect());
+      check(`${ids.join("/")} inputs share one grid row`, bounds.every(rect => Math.abs(rect.top - bounds[0].top) < 1 && rect.right <= innerWidth + 1));
+    }
+    const trappingQuantity = form.querySelector('[data-profile-trapping-field="quantity"]');
+    trappingQuantity.value = "1.5"; trappingQuantity.dispatchEvent(new Event("input", { bubbles: true }));
+    check("Custom trapping quantities reject fractions", !trappingQuantity.checkValidity());
+    trappingQuantity.value = "2"; trappingQuantity.dispatchEvent(new Event("input", { bubbles: true }));
+    form.requestSubmit();
+    await tick();
+    check("Custom trapping saves every requested native field", creations[0]?.type === "trapping" && creations[0].system.quantity.value === 2 && creations[0].system.encumbrance.value === 0.5 && creations[0].system.price.ss === 3 && creations[0].system.description.value === "First line<br>Second line");
+    add().click();
+    document.querySelector('[data-profile-item-mode="catalog"]').click();
+    await tick();
+    const search = screen.querySelector('input[type="search"]');
+    search.value = "missing"; search.dispatchEvent(new Event("input", { bubbles: true }));
+    check("Catalogue search filters results", !screen.querySelector("[data-profile-catalog-item]"));
+    search.value = "rope"; search.dispatchEvent(new Event("input", { bubbles: true }));
+    screen.querySelector("[data-profile-catalog-item]").click();
+    await tick();
+    check("Catalogue selection copies the requested item", creations[1]?.name === "Rope" && creations[1]._id === undefined);
+    add().click();
+    document.querySelector('[data-profile-item-mode="custom"]').click();
+    screen.querySelector('[data-profile-inventory-cancel]').click();
+    check("Cancelling custom trapping creation performs no write", creations.length === 2 && !screen.querySelector(".mc-profile-custom-item"));
+    const spell = actor.items.find(item => item.id === "lore");
+    Object.assign(spell.system, { Range: "35 yards", Target: "1", Duration: "Instant", magicMissile: { value: true }, Damage: 3, description: { value: "<p>A magical bolt.</p>" } });
+    Hooks.emit("updateItem", spell, {});
+    await tick();
+    await clickTab("magic");
+    const details = screen.querySelector('[data-profile-field="lore"] details');
+    details.querySelector("summary").click();
+    check("Expanded spell includes native details beside description", details.open && ["Range: 35 yards", "Target: 1", "Duration: Instant", "Magic Missile: +3"].every(text => details.textContent.includes(text)));
+    check("Spell detail chips fit the viewport", document.documentElement.scrollWidth <= innerWidth + 1);
+    details.scrollIntoView({ block: "center" });
+    if (params.get("profile-improvements") === "custom") {
+      await clickTab("trappings"); add().click(); document.querySelector('[data-profile-item-mode="custom"]').click();
+      screen.querySelector('.mc-profile-custom-item input').value = "Travel lantern";
+      add().closest("section")?.scrollIntoView({ block: "start" });
+    }
+    if (params.get("profile-improvements") === "money") {
+      await clickTab("trappings");
+      const money = screen.querySelector('[data-profile-section="money"]');
+      if (!money.open) money.querySelector("summary").click();
+      screen.querySelector('[data-profile-edit="quantity:coin"]').click();
+      money.scrollIntoView({ block: "center" });
+    }
   }
   if (params.has("layout-only")) {
     await clickTab("effects");

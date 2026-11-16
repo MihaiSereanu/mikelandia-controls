@@ -50,7 +50,7 @@ export function renderProfileResourceEditor(row, actor, commands, scope) {
   const booleanCounter = counter && row.edit.kind === "boolean";
   const numeric = ["integer", "number"].includes(row.edit.kind) || booleanCounter;
   const decimal = row.edit.kind === "number";
-  const stacked = numeric && actor.numericEditorLayout === "stacked";
+  const stacked = numeric && (row.numericEditorLayout ?? actor.numericEditorLayout) === "stacked";
   const layoutClass = stacked ? " mc-profile-resource-stacked" : "";
   const value = booleanCounter ? Number(row.value) : row.value;
   const min = booleanCounter ? 0 : row.edit.min;

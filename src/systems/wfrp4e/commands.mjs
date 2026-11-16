@@ -11,6 +11,7 @@ import { ownedWarhammerItem, weaponForActor, warhammerWeaponMode } from "./items
 import { warhammerResourceEdits, editWarhammerResource } from "./resources.mjs";
 import { warhammerRestState } from "./rest.mjs";
 import { warhammerConditionActions, executeWarhammerCondition } from "./effects.mjs";
+import { warhammerInventoryAvailable, executeWarhammerInventory } from "./inventory.mjs";
 
 const allowedKeys = new Set(["actorSourceUuid", "actorId", "actionId", "actionRevision"]);
 const unavailable = () => new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Panels.ActionUnavailable", "This game action is no longer available."));
@@ -52,13 +53,14 @@ function availableActions(actor, game, user = game?.user) {
 /** Dispatch allowlisted native tests and resource edits without rules calculations. */
 export function createWarhammerCommands({ getGame = () => globalThis.game } = {}) {
   return Object.freeze({
-    supportsCommand: name => [ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION, ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE].includes(name),
+    supportsCommand: name => [ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION, ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name),
     capabilitiesForActor(actor, user) {
       const profileActions = availableActions(actor, getGame(), user);
       const profileEdits = warhammerResourceEdits(actor, getGame(), user);
-      return Object.freeze({ ...(profileActions.length ? { profileActions } : {}), ...(profileEdits.length ? { profileEdits } : {}) });
+      return Object.freeze({ ...(warhammerInventoryAvailable(actor, getGame(), user) ? { profileInventory: true } : {}), ...(profileActions.length ? { profileActions } : {}), ...(profileEdits.length ? { profileEdits } : {}) });
     },
     async execute(name, payload, _expected, _observer, context) {
+      if ([ACTOR_COMMANDS.LIST_PROFILE_ITEMS, ACTOR_COMMANDS.ADD_PROFILE_ITEM].includes(name)) return executeWarhammerInventory(name, payload, context, getGame());
       if (name === ACTOR_COMMANDS.UPDATE_BIOGRAPHY_SECTION) return warhammerNotes.save(context.actor, payload, context.assertCurrent, getGame());
       const { actor, assertCurrent, sourceUuid } = context;
       if (name === ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE) return editWarhammerResource(payload, context, getGame());

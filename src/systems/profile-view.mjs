@@ -112,6 +112,8 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
           seen.add(id);
           const properties = typeof entry.readProperties === "function" ? entry.readProperties(item, context, actor) : [];
           projected.push(Object.freeze({ id, label: name, value, format: entry.format ?? "number",
+            ...(entry.numericEditorLayout === "stacked" ? { numericEditorLayout: "stacked" } : {}),
+            ...(typeof entry.readDetails === "function" ? { details: Object.freeze(entry.readDetails(item, context, actor).filter(value => typeof value === "string")) } : {}),
             ...(entry.editControl === "checkbox" && entry.format === "boolean" ? { editControl: "checkbox" } : {}),
             ...(entry.readLost ? { lost: entry.readLost(item) === true } : {}),
             ...(entry.showCastButton === true ? { showCastButton: true } : {}),

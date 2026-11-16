@@ -1,5 +1,5 @@
 import { warhammerWeaponMode, ownedWarhammerItem } from "./items.mjs";
-import { spellForActor, magicWinds } from "./magic.mjs";
+import { spellForActor, magicWinds, warhammerSpellDetails } from "./magic.mjs";
 import { localizeFoundry } from "../../foundry/settings/localization.mjs";
 import { warhammerItemProperties } from "./item-properties.mjs";
 import { warhammerMount } from "./mount.mjs";
@@ -137,12 +137,14 @@ export function createWarhammerCharacterProfile(actor, context) {
     labelKey: petty ? "SHEET.PettySpell" : "SHEET.LoreSpell", label: petty ? "Petty Spell" : "Lore Spell",
     collectionPath: "items", itemTypes: ["spell"], actionIdPrefix: "spell",
     descriptionPath: "system.description.value", descriptionToggle: "name",
+    readDetails: warhammerSpellDetails,
     ...(!petty ? { valuePath: "system.cn.value", valueLabelKey: "CN", valueLabel: "CN" } : {}),
     include: (item, _context, owner) => spellForActor(owner, String(item.id), context) === item
       && (item.system.lore.value == "petty") === petty
   });
   const inventory = (id, labelKey, label, types) => ({ id, kind: "items", labelKey, label, collectionPath: "items", itemTypes: types,
-    equipmentEditable: true, collapsible: true,
+    equipmentEditable: true, collapsible: true, quantityEditable: id === "money",
+    ...(id === "money" ? { numericEditorLayout: "stacked" } : {}),
     valuePath: "system.quantity.value", descriptionPath: "system.description.value",
     include: (item, _context, owner) => ownedWarhammerItem(owner, String(item.id), item.type) === item });
   return { tabs: [...warhammerCharacterProfile.tabs,

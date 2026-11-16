@@ -45,7 +45,8 @@ export const warhammerIntegration = Object.freeze({
     const panels = [...basePanels.filter(tab => tab.id !== "effects"), { id: "effects", label: localizeFoundry("Effects", "Effects"),
       sections: [conditionSection(actor, capabilities?.profileActions), ...(effects?.sections ?? []), ...sections] }];
     return panels.length ? Object.freeze({ ...identity, presentation: "profile", profileId: "wfrp4e-character",
-      edition: context.revision, notesAvailable: warhammerNotes.available(actor), notesFields,
+      edition: context.revision, profileInventory: capabilities?.profileInventory === true,
+      profileInventoryTab: "trappings", profileInventoryKind: "trapping", notesAvailable: warhammerNotes.available(actor), notesFields,
       notesRevision: JSON.stringify([warhammerNotes.available(actor) ? warhammerNotes.read(actor) : "", notesFields]), capabilities: { editBiography: true }, panels }) : identity;
   }
 });

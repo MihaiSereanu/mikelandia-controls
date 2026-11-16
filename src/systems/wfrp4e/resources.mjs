@@ -53,7 +53,15 @@ export function warhammerResourceEdits(actor, game, user = game?.user) {
   return Object.freeze(resources.flatMap(resource => {
     try { const state = resourceState(actor, game, resource, context); return state ? [state] : []; }
     catch { return []; }
-  }).concat(equipmentEdits(actor, context), mountedEdit(actor, context)));
+  }).concat(equipmentEdits(actor, context), moneyEdits(actor, context), mountedEdit(actor, context)));
+}
+
+function moneyEdits(actor, context) {
+  return Array.from(actor.items?.contents ?? actor.items ?? []).flatMap(item => {
+    if (ownedWarhammerItem(actor, String(item.id), "money") !== item || typeof item.update !== "function" || !integer(item.system?.quantity?.value)) return [];
+    return [{ id: `quantity:${item.id}`, label: item.name, kind: "integer", min: 0, value: item.system.quantity.value,
+      revision: JSON.stringify([context.revision, item.uuid ?? item.id, item._stats?.modifiedTime ?? null]) }];
+  });
 }
 
 function equipmentEdits(actor, context) {
@@ -92,6 +100,11 @@ export async function editWarhammerResource(payload, { actor, assertCurrent, sou
   if (!valid) throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Panels.InvalidResourceValue", "Enter a valid value within this resource's limits."));
   assertCurrent();
   if (payload.value === edit.value) return Object.freeze({ ok: true, actorId: String(actor.id), actorSourceUuid: sourceUuid, unchanged: true });
+  if (edit.id.startsWith("quantity:")) {
+    const item = ownedWarhammerItem(actor, edit.id.slice("quantity:".length), "money");
+    const updated = await item.update({ "system.quantity.value": payload.value });
+    return Object.freeze({ ok: true, actorSourceUuid: sourceUuid, ...(!updated ? { cancelled: true } : {}) });
+  }
   if (edit.id.startsWith("equipped:")) {
     const id = edit.id.slice("equipped:".length);
     const item = Array.from(actor.items?.contents ?? actor.items ?? []).find(item => String(item.id) === id);

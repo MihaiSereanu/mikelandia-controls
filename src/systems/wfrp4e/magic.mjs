@@ -1,4 +1,15 @@
 import { ownedWarhammerItem } from "./items.mjs";
+import { localizeFoundry } from "../../foundry/settings/localization.mjs";
+
+/** Use the same prepared getters as the native spell expansion. */
+export function warhammerSpellDetails(item) {
+  const model = item.system;
+  const details = [["Range", model.Range], ["Target", model.Target], ["Duration", model.Duration]];
+  if (model.magicMissile?.value) details.push(["Magic Missile", `+${model.Damage}`]);
+  else if (model.damage?.value || model.damage?.dice) details.push(["Damage", `${model.Damage ?? model.DamageString ?? ""}${model.damage.dice ? ` + ${model.damage.dice}` : ""}`]);
+  return details.filter(([, value]) => value !== undefined && value !== null && String(value).trim())
+    .map(([label, value]) => `${localizeFoundry(label, label)}: ${value}`);
+}
 
 /** Native 10.1.2 lore is an array in both editions; templates coerce single entries. */
 export function spellForActor(actor, id, context) {
