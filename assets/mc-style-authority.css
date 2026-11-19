@@ -590,3 +590,11 @@
 
 .mc-mobile-app[data-mc-style-authority] [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows .mc-profile-spell-row > dd { position: static !important; grid-column: 2 !important; grid-row: 1 !important; }
 .mc-mobile-app[data-mc-style-authority] [data-profile-id="honor-and-intrigue-hero"] .mc-profile-section-rows .mc-profile-spell-description summary { padding-inline-end: 0 !important; }
+
+.mc-mobile-app[data-mc-style-authority] .mc-profile-ingredient-trigger { display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 4px !important; min-width: 44px !important; min-height: 44px !important; padding: 4px !important; color: var(--mc-text) !important; font: inherit !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-ingredient-trigger svg { width: 16px !important; height: 20px !important; flex: 0 0 16px !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-ingredient-trigger span { font-size: 0.75em !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-spell-row:has(.mc-profile-ingredient-trigger) .mc-profile-spell-description summary { padding-inline-end: 172px !important; white-space: nowrap !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-spell-row:has(.mc-profile-ingredient-trigger) .mc-profile-spell-description summary > span { display: inline-block !important; max-width: calc(100% - 20px) !important; overflow: hidden !important; text-overflow: ellipsis !important; vertical-align: middle !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-ingredient-picker { width: min(360px, calc(100vw - 16px)) !important; }
+.mc-mobile-app[data-mc-style-authority] .mc-profile-ingredient-picker .mc-profile-resource-editor { display: block !important; width: 100% !important; margin: 8px 0 0 !important; }

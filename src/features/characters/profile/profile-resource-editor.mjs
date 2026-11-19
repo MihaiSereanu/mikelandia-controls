@@ -16,7 +16,7 @@ export function renderProfileResourceEditor(row, actor, commands, scope) {
         select.setAttribute("aria-busy", "true");
         try {
           await commands.execute(ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, { actorSourceUuid: actor.sourceUuid,
-            resourceId: row.edit.id, resourceRevision: row.edit.revision, expectedValue: row.value, value: Number(select.value) });
+            resourceId: row.edit.id, resourceRevision: row.edit.revision, expectedValue: row.value, value: row.edit.kind === "choice" ? select.value : Number(select.value) });
         } catch (error) { if (!scope.disposed) commands.reportCharacterMutationError?.(error); }
         finally { if (!scope.disposed) { select.value = String(row.value); select.disabled = false; select.setAttribute("aria-busy", "false"); } }
       } } }, scope);

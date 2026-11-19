@@ -6,7 +6,7 @@ import { createProfilePanels } from "../profile-view.mjs";
 import { fallbackIntegration } from "../fallback/integration.mjs";
 import { readWarhammerContext } from "./context.mjs";
 import { createWarhammerCharacterProfile } from "./profile.mjs";
-import { spellForActor, castChannelSheet, cancellableCastOrChannel, magicWinds } from "./magic.mjs";
+import { spellForActor, castChannelSheet, cancellableCastOrChannel, magicWinds, selectedIngredient, consumeCastIngredient } from "./magic.mjs";
 import { ownedWarhammerItem, weaponForActor, warhammerWeaponMode } from "./items.mjs";
 import { warhammerResourceEdits, editWarhammerResource } from "./resources.mjs";
 import { warhammerRestState } from "./rest.mjs";
@@ -137,7 +137,13 @@ export function createWarhammerCommands({ getGame = () => globalThis.game } = {}
       }
       if (kind === "wind" && test.context?.wind !== undefined && test.context.wind !== id) throw unavailable();
       if (typeof test.roll !== "function") throw unavailable();
+      const ingredient = spell && magicContext.use5e ? selectedIngredient(actor, spell) : null;
+      const captured = ingredient ? { item: ingredient, quantity: ingredient.system.quantity.value } : null;
       await test.roll();
+      if (captured) await consumeCastIngredient(actor, spell, captured, test, () => {
+        assertCurrent();
+        if (readWarhammerContext(getGame())?.revision !== magicContext.revision) throw unavailable();
+      });
       return Object.freeze({ ok: true, rolled: true, command: name, actorId: String(actor.id), actorSourceUuid: sourceUuid });
     }
   });

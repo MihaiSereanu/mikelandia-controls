@@ -48,6 +48,7 @@ try {
     document.head.append(style);
   }
   let use5e = initial5e;
+  if (params.has("unprotected")) document.querySelector("main").removeAttribute("data-mc-style-authority");
   document.querySelector("main").dataset.formFactor =
     params.get("layout") ?? "phone";
   if (params.has("large"))
@@ -2343,9 +2344,72 @@ try {
     check("Cancelling custom trapping creation performs no write", creations.length === 2 && !screen.querySelector(".mc-profile-custom-item"));
     const spell = actor.items.find(item => item.id === "lore");
     Object.assign(spell.system, { Range: "35 yards", Target: "1", Duration: "Instant", magicMissile: { value: true }, Damage: 3, description: { value: "<p>A magical bolt.</p>" } });
+    spell.system.currentIng = { value: "" };
+    spell.update = async changes => { spell.system.currentIng.value = changes["system.currentIng.value"]; Hooks.emit("updateItem", spell, changes); return spell; };
+    const ingredient = { id: "ash", name: "Fine ash from an ancient oak", type: "trapping", parent: actor,
+      system: { trappingType: { value: "ingredient" }, spellIngredient: { value: spell.id }, quantity: { value: 2 } } };
+    ingredient.update = async changes => { ingredient.system.quantity.value = changes["system.quantity.value"]; Hooks.emit("updateItem", ingredient, changes); return ingredient; };
+    actor.items.push(ingredient);
     Hooks.emit("updateItem", spell, {});
     await tick();
     await clickTab("magic");
+    const ingredientSelect = () => screen.querySelector('[data-profile-resource-input="ingredient:lore"]');
+    check("Ingredient selector offers None and linked quantities", ingredientSelect().value === "" && ingredientSelect().options[0].textContent === "None" && ingredientSelect().options[1].textContent.endsWith("(2)"));
+    check("Petty spells have no ingredient selector", !screen.querySelector('[data-profile-field="petty"] select'));
+    const ingredientButton = () => screen.querySelector('[data-profile-ingredient="lore"]');
+    const picker = () => screen.querySelector('.mc-profile-ingredient-picker');
+    check("Ingredient picker starts closed and button shows None", !picker().matches(":popover-open") && ingredientButton().textContent === "\u2013");
+    ingredientButton().click();
+    await tick();
+    check("Ingredient button opens a picker without expanding the spell", picker().matches(":popover-open") && !screen.querySelector('[data-profile-field="lore"] details').open);
+    const pickerBounds = picker().getBoundingClientRect();
+    check("Ingredient picker fits viewport", pickerBounds.left >= 0 && pickerBounds.right <= innerWidth + 1 && pickerBounds.top >= 0 && pickerBounds.bottom <= innerHeight + 1);
+    ingredientButton().click();
+    check("Retapping ingredient button closes picker", !picker().matches(":popover-open"));
+    ingredientButton().click();
+    ingredientSelect().value = "ash";
+    ingredientSelect().dispatchEvent(new Event("change", { bubbles: true }));
+    await tick();
+    check("Selecting an ingredient persists native spell assignment", spell.system.currentIng.value === "ash" && ingredientSelect().value === "ash");
+    check("Selected ingredient quantity appears on button and picker closes", ingredientButton().textContent === "2" && !picker().matches(":popover-open"));
+    screen.querySelector('[data-profile-action="spell:lore"]').click();
+    await tick();
+    if (!use5e) { nativeDialog.element.querySelector('[data-choice="cast"]').click(); await tick(); }
+    nativeDialog.element.querySelector("[data-native-cancel]").click();
+    await tick();
+    check("Cancel preserves selected ingredient quantity", ingredient.system.quantity.value === 2);
+    if (use5e) {
+      screen.querySelector('[data-profile-action="spell:lore"]').click();
+      await tick();
+      nativeDialog.element.querySelector("[data-native-roll]").click();
+      await tick();
+      check("Completed 5e cast consumes one ingredient and refreshes label", ingredient.system.quantity.value === 1 && ingredientSelect().options[1].textContent.endsWith("(1)"));
+    }
+    ingredientButton().click();
+    ingredientSelect().value = "";
+    ingredientSelect().dispatchEvent(new Event("change", { bubbles: true }));
+    await tick();
+    check("None saves without spending ingredients", spell.system.currentIng.value === "" && ingredient.system.quantity.value === (use5e ? 1 : 2));
+    ingredientButton().click();
+    ingredientSelect().value = "ash";
+    ingredientSelect().dispatchEvent(new Event("change", { bubbles: true }));
+    await tick();
+    const buttonBounds = ingredientButton().getBoundingClientRect();
+    const spellBounds = screen.querySelector('[data-profile-field="lore"]').getBoundingClientRect();
+    const summaryBounds = screen.querySelector('[data-profile-field="lore"] summary').getBoundingClientRect();
+    const rollBounds = screen.querySelector('[data-profile-action="spell:lore"]').getBoundingClientRect();
+    check("Ingredient button shares spell and roll row with touch-sized target", buttonBounds.left >= spellBounds.left && buttonBounds.right <= rollBounds.left && buttonBounds.height >= 44 && buttonBounds.width >= 44 && Math.abs(buttonBounds.top - rollBounds.top) < 2 && Math.abs(buttonBounds.top - summaryBounds.top) < 2 && document.documentElement.scrollWidth <= innerWidth + 1);
+    const spellName = spell.name;
+    spell.name = "The exceptionally lengthy name of a magical spell";
+    Hooks.emit("updateItem", spell, {});
+    await tick();
+    const longSummary = screen.querySelector('[data-profile-field="lore"] summary');
+    const longLabel = longSummary.querySelector("span");
+    const longControls = screen.querySelector('[data-profile-field="lore"] dd').getBoundingClientRect();
+    check("Long spell names ellipsize and retain their full title without overlapping controls", longSummary.title === spell.name && getComputedStyle(longLabel).textOverflow === "ellipsis" && longLabel.getBoundingClientRect().right <= longControls.left + 1 && document.documentElement.scrollWidth <= innerWidth + 1);
+    spell.name = spellName;
+    Hooks.emit("updateItem", spell, {});
+    await tick();
     const details = screen.querySelector('[data-profile-field="lore"] details');
     details.querySelector("summary").click();
     check("Expanded spell includes native details beside description", details.open && ["Range: 35 yards", "Target: 1", "Duration: Instant", "Magic Missile: +3"].every(text => details.textContent.includes(text)));

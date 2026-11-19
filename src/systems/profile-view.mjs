@@ -20,13 +20,13 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
   const actionFor = id => actions.has(id) ? { action: Object.freeze({ id, revision: actions.get(id).revision,
     ...(typeof actions.get(id).active === "boolean" ? { active: actions.get(id).active } : {}),
     ...(actions.get(id).icon === "fa-lightbulb" ? { icon: "fa-lightbulb" } : {}) }) } : {};
-  const edits = new Map((Array.isArray(context.edits) ? context.edits : []).filter(edit => edit && typeof edit.id === "string" && /^(?:[a-z][a-z0-9-]{0,63}|(?:quantity|equipped):[a-zA-Z0-9_-]{1,128})$/u.test(edit.id)
-    && typeof edit.revision === "string" && ["integer", "number", "boolean"].includes(edit.kind)).map(edit => [edit.id, edit]));
+  const edits = new Map((Array.isArray(context.edits) ? context.edits : []).filter(edit => edit && typeof edit.id === "string" && /^(?:[a-z][a-z0-9-]{0,63}|(?:quantity|equipped|ingredient):[a-zA-Z0-9_-]{1,128})$/u.test(edit.id)
+    && typeof edit.revision === "string" && ["integer", "number", "boolean", "choice"].includes(edit.kind)).map(edit => [edit.id, edit]));
   const editFor = (id, value) => {
     const edit = edits.get(id);
     if (!edit || edit.value !== value) return {};
     return { edit: Object.freeze({ id, revision: edit.revision, kind: edit.kind,
-      ...(["integer", "number"].includes(edit.kind) ? { min: edit.min, ...(edit.max !== undefined ? { max: edit.max } : {}),
+      ...(["integer", "number", "choice"].includes(edit.kind) ? { min: edit.min, ...(edit.max !== undefined ? { max: edit.max } : {}),
         ...(Array.isArray(edit.choices) ? { choices: Object.freeze(edit.choices.map(choice => Object.freeze({ value: choice.value, label: String(choice.label) }))) } : {}) } : {}) }) };
   };
   const label = entry => typeof entry.label === "string" && entry.label.trim()
@@ -130,6 +130,11 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
             ...(entry.descriptionDisplay === "tooltip" ? { descriptionDisplay: "tooltip" } : {}),
             ...(typeof entry.valueLabel === "string" && entry.valueLabel.trim() ? { valueLabel: localizedText(localize, entry.valueLabelKey ?? entry.valueLabel, entry.valueLabel) } : {}),
             ...(typeof entry.valuePrefix === "string" ? { valuePrefix: entry.valuePrefix } : {}),
+            ...(entry.ingredientEditable && edits.has(`ingredient:${id}`) ? { ingredient: Object.freeze({
+              label: localizedText(localize, "Ingredient", "Ingredient"), value: edits.get(`ingredient:${id}`).value,
+              quantity: edits.get(`ingredient:${id}`).quantity,
+              ...editFor(`ingredient:${id}`, edits.get(`ingredient:${id}`).value)
+            }) } : {}),
             ...(entry.quantityEditable ? editFor(`quantity:${id}`, value) : {}),
             ...(entry.equipmentEditable && edits.has(`equipped:${id}`) ? { equipment: Object.freeze({
               id: `equipped:${id}`, label: edits.get(`equipped:${id}`).choices ? localizedText(localize, "Equipment", "Equipment") : localizedText(localize, "Equipped", "Equipped"), value: edits.get(`equipped:${id}`).value,

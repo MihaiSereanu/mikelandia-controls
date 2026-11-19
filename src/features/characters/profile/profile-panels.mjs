@@ -1,4 +1,4 @@
-import { node, icon } from "../../../ui/primitives/dom.mjs";
+import { node, icon, vectorIcon } from "../../../ui/primitives/dom.mjs";
 import { localizedNumber, localizedText } from "../../../ui/primitives/localized-text.mjs";
 import { ACTOR_COMMANDS } from "../../../kernel/state/command-names.mjs";
 import { renderProfileInventory } from "./profile-inventory.mjs";
@@ -140,6 +140,29 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
     const equipment = row.equipment?.edit ? node("div", { className: "mc-profile-labelled-control", children: [
       renderProfileResourceEditor({ ...row.equipment, label: `${row.equipment.label}: ${row.label}` }, actor, commands, scope)
     ] }) : null;
+    let ingredient;
+    if (row.ingredient?.edit) {
+      const selected = row.ingredient.edit.choices.find(choice => choice.value === row.ingredient.value);
+      const label = `${row.ingredient.label}: ${row.label}`;
+      const picker = renderProfileTooltip({ label, tooltip: [{ label, bullets: [] }] }, `${prefix}-ingredient-${row.id}`, scope);
+      picker.tooltip.setAttribute("role", "dialog");
+      picker.tooltip.classList.add("mc-profile-ingredient-picker");
+      picker.tooltip.replaceChildren(node("strong", { text: label }),
+        renderProfileResourceEditor({ ...row.ingredient, label }, actor, commands, scope));
+      picker.tooltip.querySelector("select").autofocus = true;
+      picker.trigger.className = "mc-profile-ingredient-trigger";
+      picker.trigger.dataset.profileIngredient = row.id;
+      picker.trigger.setAttribute("aria-label", `${label}: ${selected?.label ?? localizedText(commands.localize, "None", "None")}`);
+      picker.trigger.setAttribute("title", picker.trigger.getAttribute("aria-label"));
+      picker.trigger.setAttribute("aria-haspopup", "dialog");
+      picker.trigger.setAttribute("aria-controls", picker.tooltip.id);
+      picker.trigger.removeAttribute("aria-describedby");
+      picker.trigger.replaceChildren(vectorIcon("0 0 24 24", [
+        { tag: "path", attrs: { d: "M9 3h6m-5 0v6l-6 10a1.3 1.3 0 0 0 1 2h14a1.3 1.3 0 0 0 1-2L14 9V3M7 15h10", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round" } }
+      ]), node("span", { text: row.ingredient.quantity ?? "–" }));
+      scope.listen(picker.tooltip.querySelector("select"), "change", () => picker.tooltip.hidePopover());
+      ingredient = picker;
+    }
     if (row.descriptionToggle === "name") {
       const descriptionKey = `${active.id}:spell-description:${row.id}`;
       const lostLabel = localizedText(commands.localize, "MIKELANDIA_CONTROLS.Panels.Lost", "Lost");
@@ -167,14 +190,14 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
         children: [icon("fa-dice")]
       });
       const disclosure = node("details", { className: "mc-profile-description mc-profile-spell-description", children: [
-        node("summary", { children: [node(row.lost ? "s" : "span", { text: row.label })] }),
+        node("summary", { attrs: { title: row.label }, children: [node(row.lost ? "s" : "span", { text: row.label })] }),
         row.details?.length ? node("div", { className: "mc-profile-spell-details", children: row.details.map(text => node("span", { text })) }) : null,
         renderEnrichedDescription(row.description ?? "", "", descriptionOptions).content, lossControl
       ] });
       if (row.lossAction) bindSection(disclosure, disclosure.querySelector("summary"), descriptionKey);
       return node("div", { className: `mc-profile-row mc-profile-spell-row${grouped || row.value === undefined ? " mc-profile-spell-no-value" : ""}`, dataset: { profileField: row.id }, children: [
         node("dt", { children: [disclosure, row.sourceLabel ? node("span", { className: "mc-profile-spell-source", text: row.sourceLabel }) : null] }),
-        node("dd", { children: [grouped || row.value === undefined ? null : node("span", { text: `${row.valueLabel ?? ""} ${valueText(row)}`.trim() }), row.action || row.showCastButton ? label : null] })
+        node("dd", { children: [grouped || row.value === undefined ? null : node("span", { text: `${row.valueLabel ?? ""} ${valueText(row)}`.trim() }), ingredient?.trigger, row.action || row.showCastButton ? label : null] }), ingredient?.tooltip
       ] });
     }
     const properties = row.properties?.length ? node("details", { className: "mc-profile-description mc-profile-properties", children: [

@@ -137,7 +137,7 @@ export function createWarhammerCharacterProfile(actor, context) {
     labelKey: petty ? "SHEET.PettySpell" : "SHEET.LoreSpell", label: petty ? "Petty Spell" : "Lore Spell",
     collectionPath: "items", itemTypes: ["spell"], actionIdPrefix: "spell",
     descriptionPath: "system.description.value", descriptionToggle: "name",
-    readDetails: warhammerSpellDetails,
+    readDetails: warhammerSpellDetails, ingredientEditable: !petty,
     ...(!petty ? { valuePath: "system.cn.value", valueLabelKey: "CN", valueLabel: "CN" } : {}),
     include: (item, _context, owner) => spellForActor(owner, String(item.id), context) === item
       && (item.system.lore.value == "petty") === petty

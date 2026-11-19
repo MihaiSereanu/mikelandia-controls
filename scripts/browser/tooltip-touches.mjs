@@ -267,3 +267,39 @@ export async function checkSwadeConditionTouches(send, checks) {
   await tap(shaken);
   await check("touch: reading an active condition preserves its checked state", `${tip} && game.user.character.statuses.has('shaken') && document.querySelector('[data-profile-condition="shaken"]').checked`);
 }
+
+/** Same-row ingredient picker preserves native light dismissal under trusted input. */
+export async function checkIngredientTouches(send, checks) {
+  const evaluate = async expression => {
+    const response = await send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true });
+    if (response.exceptionDetails) throw new Error(JSON.stringify(response.exceptionDetails));
+    return response.result.value;
+  };
+  const tap = async selector => {
+    const point = await evaluate(`(() => {
+      const element = document.querySelector(${JSON.stringify(selector)});
+      element.scrollIntoView({block: "nearest", behavior: "instant"});
+      const r = element.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + r.height / 2};
+    })()`);
+    await send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [point] });
+    await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await evaluate("new Promise(resolve => setTimeout(resolve, 80))");
+  };
+  const check = async (name, expression) => {
+    if (!await evaluate(expression)) throw new Error(name);
+    checks.push(name);
+  };
+  const trigger = '[data-profile-ingredient="lore"]';
+  const open = 'document.querySelector(".mc-profile-ingredient-picker").matches(":popover-open")';
+  await tap(trigger);
+  await check("Ingredient touch: opens picker", open);
+  await tap(trigger);
+  await check("Ingredient touch: retap dismisses picker", `!(${open})`);
+  await tap(trigger);
+  await tap('[data-profile-section="petty-spells"] h3');
+  await check("Ingredient touch: outside tap dismisses picker", `!(${open})`);
+  await tap(trigger);
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await check("Ingredient keyboard: Escape dismisses picker", `!(${open})`);
+}

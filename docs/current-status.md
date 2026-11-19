@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-16. [Task map and contracts](architecture.md#task-map); [PWA operations](mobile-login.md); [migration](migration.md).
+Updated 2026-11-20. [Task map and contracts](architecture.md#task-map); [PWA operations](mobile-login.md); [migration](migration.md).
 
 ## Deployment
 
@@ -12,6 +12,8 @@ Deployments apply only to their recorded revisions. Installation and fixtures do
 - Static PWA: six `/mobile/` files deployed 2026-10-29; public HTTPS hashes matched and native routes returned HTTP 200. Receipt: `dist/pwa-gold-live-deployment.json`. [Rollback](mobile-login.md#rollback); installed-app review pending.
 
 ## Open issues and verification
+
+- WFRP ingredient selection and companion 5e ingredient consumption are checkout-only. Native installed-world persistence, real casting/scripts and physical-device behavior remain unverified.
 
 - WFRP money editors, expanded spell details and Trappings acquisition are checkout-only. Actual catalogue contents/access, native Item creation and money saves in installed worlds, and physical-device keyboard behavior remain unverified.
 
@@ -35,6 +37,7 @@ Results apply to recorded revisions. Unless named otherwise, environments are ch
 
 | Scope | Evidence and limits | Essential artifacts |
 |---|---|---|
+| WFRP optional ingredients | 634 Node tests passed. Five native-asset Magic/profile browser scenarios / 287 checks passed across 4e/5e, phone/tablet, 320px enlarged text and styling protection off. Five neighboring WFRP equipment/Magic and Shadowdark spell scenarios / 1,386 checks passed. Covers the same-row ingredient icon/quantity, full-name picker, long-name ellipsis, trusted-touch open/retap/outside/Escape dismissal, linked ingredient choices/quantities, None, stale/hidden choices, cancellation, successful/failed 5e casts, last/exhausted stacks, rerolls/edits, existing native/script reductions and post-cast mutation failures. Fresh narrow/tablet captures reviewed. 4e consumption stays native; added 5e consumption applies only to original companion casts. No installation or publication; native-world/device validation remains pending. | `dist/wfrp-ingredients-node.txt`, `dist/warhammer-profile-magic-{phone,tablet,narrow-large-text}.png`, `dist/warhammer-profile-4e-phone.png` |
 | WFRP money, spell details and Trappings acquisition | 613 Node tests passed. Ten native-asset browser scenarios / 419 checks passed for both editions, phone/tablet and 320px with enlarged text, including trusted touch/typing replacement after tapping and retapping all five numeric Trapping fields. Four neighboring native-asset WFRP/Shadowdark inventory scenarios / 1,082 checks passed; earlier magic regression passed. Covers zero/stale money edits, centered input and full-row Save/Cancel, prepared spell badges, full-width Add text button, scoped catalogue copies/access revocation, custom native trapping fields, cancellation and numeric validation. Quantity/Encumbrance share a row; GC/SS/BP share a row beneath one Price heading. Fresh phone/tablet/narrow captures reviewed. Actual installed-world catalogue, native persistence and devices remain unverified; no installation or publication. | `dist/wfrp-inventory-node.txt`, `dist/warhammer-profile-*.png` |
 | Per-Journal Markdown export | 603 Node tests passed. Five native-source browser export scenarios / 400 checks passed for phone, tablet, 320px, large text and styling protection off; five neighboring search/editor/desktop-startup scenarios / 345 checks passed. Uses installed Showdown for HTML/Markdown conversion; checks page access, secret visibility, revoked rights, table cells, authored references, media URLs and both export actions. Narrow/tablet captures reviewed; local package build passed (228 files). Native header callback is fixture-tested against the inspected v14 contract; actual Foundry sheets/downloads, v13, Notion import and devices remain unverified. | `dist/journal-export-node.txt`, `dist/journal-export-*.png` |
 | Desktop interface selection | Full Node suite passed; two neighboring Phone/Tablet navigation scenarios / 126 checks and 14 startup browser scenarios / 241 checks passed across desktop Auto/native/Phone/Tablet, phone/tablet defaults, stale mode caches, startup recovery and upgrade cleanup. Covers full companion startup, desktop Settings navigation and settings visibility; native desktop mode changes request reload. Fresh desktop captures reviewed. The Common Display fixture now waits for the loading overlay and marks the first-run guide invitation seen before testing route Back; its previous failure also reproduced on unchanged HEAD. No installation or publication. | `dist/shared-entry-desktop*.png`, `dist/desktop-mode-baseline.txt` |

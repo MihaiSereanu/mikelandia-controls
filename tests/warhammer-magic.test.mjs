@@ -197,3 +197,85 @@ for (const change of ["hidden-spell", "replaced-spell", "wind-removed", "wrong-t
     assert.equal(rolls, 0);
   });
 }
+
+function ingredients(actor) {
+  const spell = actor.items.find(item => item.id === "lore");
+  spell.system.currentIng = { value: "ash" };
+  spell.update = async change => { spell.system.currentIng.value = change["system.currentIng.value"]; return spell; };
+  const item = { id: "ash", name: "Ash", type: "trapping", parent: actor,
+    system: { trappingType: { value: "ingredient" }, spellIngredient: { value: "lore" }, quantity: { value: 2 } } };
+  item.update = async change => { item.system.quantity.value = change["system.quantity.value"]; return item; };
+  actor.items.push(item);
+  return { spell, item };
+}
+
+for (const use5e of [false, true]) {
+  test(`${use5e ? "5e" : "4e"} ingredient choices save native spell links and allow None`, async t => {
+    const { actor, gateway, view } = setup(t, use5e);
+    const { spell, item } = ingredients(actor);
+    actor.items.push({ ...item, id: "hidden-ingredient", visible: false,
+      get name() { throw new Error("Hidden ingredient name exposed"); } });
+    const row = () => view().panels.find(tab => tab.id === "magic").sections.find(section => section.id === "lore-spells").rows[0];
+    const edit = () => gateway.capabilitiesForActor(actor).profileEdits.find(edit => edit.id === "ingredient:lore");
+    assert.equal(row().ingredient.quantity, 2);
+    assert.deepEqual(row().ingredient.edit.choices, [{ value: "", label: "None" }, { value: "ash", label: "Ash (2)" }]);
+    const save = (value, state = edit()) => gateway.execute(ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, { actorSourceUuid: actor.uuid,
+      resourceId: state.id, resourceRevision: state.revision, expectedValue: state.value, value });
+    await assert.rejects(save("hidden-ingredient"), { code: "INVALID_INPUT" });
+    await save("");
+    assert.equal(spell.system.currentIng.value, "");
+    assert.equal(row().ingredient.quantity, null);
+    await save("ash");
+    const stale = edit();
+    item.system.quantity.value = 0;
+    await assert.rejects(save("", stale), { code: "STALE_STATE" });
+    assert.equal(row().ingredient.edit.choices[1].label, "Ash (0)");
+    await save("");
+    actor.testUserPermission = () => false;
+    await assert.rejects(save("ash", stale), { code: "FORBIDDEN" });
+  });
+}
+
+for (const outcome of ["success", "failure", "cancel", "error", "reroll", "edited", "native-spent", "zero", "none", "removed", "quantity-increased", "write-failed", "permission", "spell-removed", "selection-changed", "link-changed", "edition", "last"]) {
+  test(`5e ingredient consumption: ${outcome}`, async t => {
+    const { actor, gateway, game } = setup(t, true);
+    const { spell, item } = ingredients(actor);
+    let writes = 0, rolls = 0;
+    const update = item.update;
+    item.update = async change => { writes++; if (outcome === "write-failed") throw new Error("Rejected"); return update(change); };
+    if (outcome === "zero") item.system.quantity.value = 0;
+    if (outcome === "last") item.system.quantity.value = 1;
+    if (outcome === "none") spell.system.currentIng.value = "";
+    actor.setupCast = async () => outcome === "cancel" ? undefined : { actor, item: spell,
+      context: { reroll: outcome === "reroll", edited: outcome === "edited" }, result: { castSuccess: outcome === "success" },
+      async roll() {
+        rolls++;
+        if (outcome === "error") throw new Error("Roll failed");
+        if (outcome === "native-spent") item.system.quantity.value--;
+        if (outcome === "quantity-increased") item.system.quantity.value++;
+        if (outcome === "removed") actor.items.splice(actor.items.indexOf(item), 1);
+        if (outcome === "permission") actor.testUserPermission = () => false;
+        if (outcome === "spell-removed") actor.items.splice(actor.items.indexOf(spell), 1);
+        if (outcome === "selection-changed") spell.system.currentIng.value = "";
+        if (outcome === "link-changed") item.system.spellIngredient.value = "other";
+        if (outcome === "edition") game.settings.get = () => ({ use5e: false });
+      } };
+    if (["removed", "quantity-increased", "write-failed", "permission", "spell-removed", "selection-changed", "link-changed", "edition"].includes(outcome)) {
+      await assert.rejects(gateway.execute(command, request(true)), error => error.code === "INGREDIENT_NOT_SPENT" && error.message.includes("cast completed"));
+      assert.equal(rolls, 1);
+      return;
+    }
+    if (outcome === "error") await assert.rejects(gateway.execute(command, request(true)), /Roll failed/);
+    else await gateway.execute(command, request(true));
+    assert.equal(writes, ["success", "failure", "last"].includes(outcome) ? 1 : 0);
+    assert.equal(item.system.quantity.value, ["success", "failure", "native-spent"].includes(outcome) ? 1 : ["zero", "last"].includes(outcome) ? 0 : 2);
+  });
+}
+
+test("4e ingredient consumption stays native", async t => {
+  const { actor, gateway } = setup(t, false);
+  const { item } = ingredients(actor);
+  item.update = () => { throw new Error("Companion must not consume native 4e ingredients"); };
+  await gateway.execute(command, request(false));
+  assert.equal(item.system.quantity.value, 2);
+});

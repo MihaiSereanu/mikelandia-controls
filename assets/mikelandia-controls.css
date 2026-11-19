@@ -11653,3 +11653,11 @@ body.mc-mobile-running .swade.roll-dialog.mc-mobile-admitted-app .window-header 
 .mc-party-conditions { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; font-size: .9rem; line-height: 1.5; }
 .mc-party-condition-reference { min-width: 0; }
 .mc-party-conditions .mc-profile-section-tooltip-trigger { max-width: 100%; height: auto; white-space: normal; overflow-wrap: anywhere; }
+
+.mc-mobile-app .mc-profile-ingredient-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 44px; min-height: 44px; padding: 4px; color: var(--mc-text); font: inherit; }
+.mc-mobile-app .mc-profile-ingredient-trigger svg { width: 16px; height: 20px; flex: 0 0 16px; }
+.mc-mobile-app .mc-profile-ingredient-trigger span { font-size: 0.75em; }
+.mc-mobile-app .mc-profile-spell-row:has(.mc-profile-ingredient-trigger) .mc-profile-spell-description summary { padding-inline-end: 172px; white-space: nowrap; }
+.mc-mobile-app .mc-profile-spell-row:has(.mc-profile-ingredient-trigger) .mc-profile-spell-description summary > span { display: inline-block; max-width: calc(100% - 20px); overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
+.mc-mobile-app .mc-profile-ingredient-picker { width: min(360px, calc(100vw - 16px)); }
+.mc-mobile-app .mc-profile-ingredient-picker .mc-profile-resource-editor { display: block; width: 100%; margin: 8px 0 0; }

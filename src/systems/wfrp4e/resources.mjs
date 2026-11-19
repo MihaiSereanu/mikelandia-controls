@@ -4,6 +4,7 @@ import { CommandError } from "../../foundry/commands/command-error.mjs";
 import { readWarhammerContext } from "./context.mjs";
 import { fallbackIntegration } from "../fallback/integration.mjs";
 import { ownedWarhammerItem } from "./items.mjs";
+import { ingredientEdits } from "./magic.mjs";
 import { warhammerMount, mountRevision } from "./mount.mjs";
 
 // Paths and operations come from the installed native sheet/model, never requests.
@@ -53,7 +54,7 @@ export function warhammerResourceEdits(actor, game, user = game?.user) {
   return Object.freeze(resources.flatMap(resource => {
     try { const state = resourceState(actor, game, resource, context); return state ? [state] : []; }
     catch { return []; }
-  }).concat(equipmentEdits(actor, context), moneyEdits(actor, context), mountedEdit(actor, context)));
+  }).concat(equipmentEdits(actor, context), moneyEdits(actor, context), ingredientEdits(actor, context), mountedEdit(actor, context)));
 }
 
 function moneyEdits(actor, context) {
@@ -95,11 +96,17 @@ export async function editWarhammerResource(payload, { actor, assertCurrent, sou
   const edit = edits.find(edit => edit.id === payload.resourceId);
   if (!edit) throw unavailable();
   if (edit.revision !== payload.resourceRevision || edit.value !== payload.expectedValue) throw stale();
-  const valid = edit.kind === "boolean" ? typeof payload.value === "boolean"
+  const valid = edit.kind === "choice" ? edit.choices.some(choice => choice.value === payload.value)
+    : edit.kind === "boolean" ? typeof payload.value === "boolean"
     : integer(payload.value) && payload.value >= edit.min && (edit.max === undefined || payload.value <= edit.max);
   if (!valid) throw new CommandError("INVALID_INPUT", localizeFoundry("MIKELANDIA_CONTROLS.Panels.InvalidResourceValue", "Enter a valid value within this resource's limits."));
   assertCurrent();
   if (payload.value === edit.value) return Object.freeze({ ok: true, actorId: String(actor.id), actorSourceUuid: sourceUuid, unchanged: true });
+  if (edit.id.startsWith("ingredient:")) {
+    const spell = ownedWarhammerItem(actor, edit.id.slice("ingredient:".length), "spell");
+    const updated = await spell.update({ "system.currentIng.value": payload.value });
+    return Object.freeze({ ok: true, actorSourceUuid: sourceUuid, ...(!updated ? { cancelled: true } : {}) });
+  }
   if (edit.id.startsWith("quantity:")) {
     const item = ownedWarhammerItem(actor, edit.id.slice("quantity:".length), "money");
     const updated = await item.update({ "system.quantity.value": payload.value });

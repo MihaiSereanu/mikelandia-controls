@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, resolve, relative, isAbsolute, join, extname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkTooltipTouches, checkDescriptionTouches, checkSwadeConditionTouches, checkPartyConditionTouches } from "./browser/tooltip-touches.mjs";
+import { checkIngredientTouches, checkTooltipTouches, checkDescriptionTouches, checkSwadeConditionTouches, checkPartyConditionTouches } from "./browser/tooltip-touches.mjs";
 import { checkTrappingInputs } from "./browser/trapping-inputs.mjs";
 import { serveNativeEditorAsset } from "./browser/native-editor-assets.mjs";
 import { checkEditorTouches } from "./browser/editor-touches.mjs";
@@ -118,6 +118,7 @@ const cases = [
   ["warhammer-magic-phone", 390, 844, "warhammer", "layout=phone&edition=5e&preview=magic"],
   ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow-large-text", 320, 844]].flatMap(([layout, width, height]) =>
     ["magic", "custom", "money"].map(preview => [`warhammer-profile-${preview}-${layout}`, width, height, "warhammer", `layout=${layout === "tablet" ? "tablet" : "phone"}&edition=5e&profile-improvements=${preview}${layout === "narrow-large-text" ? "&large=true" : ""}`])),
+  ["warhammer-profile-magic-unprotected", 390, 844, "warhammer", "layout=phone&edition=5e&profile-improvements=magic&unprotected=true"],
   ["warhammer-profile-4e-phone", 390, 844, "warhammer", "layout=phone&edition=4e&profile-improvements=magic"],
   ["warhammer-4e-tablet", 1024, 768, "warhammer", "layout=tablet&edition=4e"],
   ["warhammer-5e-tablet", 1024, 768, "warhammer", "layout=tablet&edition=5e"],
@@ -295,6 +296,10 @@ try {
       try { report = JSON.parse(result.value); } catch {}
       if (report?.status) break;
       await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    if (report?.status === "passed" && /^warhammer-profile-(magic-|4e-)/u.test(name)) {
+      try { await checkIngredientTouches((method, params) => send(method, params, sessionId), report.checks); }
+      catch (error) { report.status = "failed"; report.error = error.stack; }
     }
     if (report?.status === "passed" && name.startsWith("warhammer-profile-custom-")) {
       try { await checkTrappingInputs((method, params) => send(method, params, sessionId), report.checks); }
