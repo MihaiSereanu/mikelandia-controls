@@ -5,8 +5,51 @@ import { createTaskScope } from "../src/kernel/lifecycle/task-scope.mjs";
 import { resolveSystemIntegration } from "../src/systems/registry.mjs";
 import { createActor, createGame, createHooks, installGlobals } from "./helpers/foundry.mjs";
 import { createFoundryCombatGateway } from "../src/foundry/combat/combat-gateway.mjs";
+import { createWarhammerActor, createWarhammerGame } from "./helpers/warhammer.mjs";
 
 const dnd5e = resolveSystemIntegration("dnd5e");
+
+for (const use5e of [false, true]) test(`WFRP ${use5e ? "5e" : "4e"} remote updates retain an unchanged selected character`, async t => {
+  const actor = createWarhammerActor();
+  const other = createWarhammerActor({ id: "other", uuid: "Actor.other" });
+  const game = createWarhammerGame([actor, other], { use5e });
+  game.user.character = actor;
+  const hooks = createHooks(), updates = [], errors = [];
+  installGlobals(t, { game, Hooks: hooks,
+    document: { createElement: () => ({ set innerHTML(value) { this.textContent = value; } }) } });
+  const scope = createTaskScope("cross-client-refresh");
+  t.after(() => scope.dispose());
+  let initiative = 0;
+  const gateway = createFoundrySessionGateway({ combatForSnapshot: () => ({ initiative }) });
+  const initial = gateway.watch(scope, snapshot => updates.push(snapshot), error => errors.push(error));
+  initiative = 42;
+  hooks.emit("updateCombatant", { id: "other-combatant" }, { initiative }, {}, "other-player");
+  await Promise.resolve();
+  assert.equal(updates.at(-1).combat.initiative, 42);
+  assert.equal(updates.at(-1).selectedActor, initial.selectedActor);
+
+  // A remote user's update forces a full actor read while their roll reaches Chat.
+  const message = { id: "remote-roll", user: "other-player", speaker: { actor: other.id }, content: "42", visible: true };
+  game.messages.push(message);
+  hooks.emit("updateUser", { id: "other-player" }, { name: "Other Player" });
+  hooks.emit("createChatMessage", message, {}, "other-player");
+  await Promise.resolve();
+  assert.equal(updates.at(-1).chat.at(-1).id, message.id);
+  assert.equal(updates.at(-1).selectedActor, initial.selectedActor);
+
+  // Even a changed party member must not replace the selected character's pane.
+  other.system.status.wounds.value--;
+  hooks.emit("updateActor", other, { "system.status.wounds.value": other.system.status.wounds.value });
+  hooks.emit("updateUser", { id: "other-player" }, {});
+  await Promise.resolve();
+  assert.equal(updates.at(-1).selectedActor, initial.selectedActor);
+
+  actor.system.status.wounds.value--;
+  hooks.emit("updateActor", actor, { "system.status.wounds.value": actor.system.status.wounds.value });
+  await Promise.resolve();
+  assert.notEqual(updates.at(-1).selectedActor, initial.selectedActor);
+  assert.deepEqual(errors, []);
+});
 
 test("D&D discovery preserves observer and NPC ownership policies", () => {
   const observer = { id: "observer", isGM: false };

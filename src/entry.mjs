@@ -1,4 +1,5 @@
 import { migrateBrowserBranding, registerBrandingMigration, migrateWorldBranding } from "./foundry/compatibility/branding-migration.mjs";
+import { installWfrpHitLocation, registerWfrpHitLocationSetting } from "./foundry/compatibility/wfrp-hit-location.mjs";
 import { installWfrpOpposedMomentum } from "./foundry/compatibility/wfrp-opposed-momentum.mjs";
 import { installClientUpgradeCleanup } from "./foundry/compatibility/client-upgrade-cleanup.mjs";
 import { installJournalExportControls } from "./foundry/journals/journal-export.mjs";
@@ -15,7 +16,10 @@ if (/\/game\/?$/.test(window.location.pathname)) {
     game.i18n.translations["Primary Arm"] = "Right Arm";
     game.i18n.translations["Secondary Arm"] = "Left Arm";
   });
-  Hooks.once("setup", () => installWfrpOpposedMomentum(scope));
+  Hooks.once("setup", () => {
+    installWfrpOpposedMomentum(scope);
+    installWfrpHitLocation(scope);
+  });
   const sharedReady = new Promise(resolve => Hooks.once("ready", async () => {
     try { await migrateWorldBranding(game); }
     catch (error) {
@@ -33,6 +37,7 @@ if (/\/game\/?$/.test(window.location.pathname)) {
   }
   let upgradeCleanup;
   const installUpgradeHook = () => Hooks.once("init", () => {
+    registerWfrpHitLocationSetting();
     registerBrandingMigration();
     upgradeCleanup = installClientUpgradeCleanup(scope);
   });

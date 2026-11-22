@@ -31,7 +31,7 @@ Paths are relative to `src/`; Node names are relative to `tests/` and end in `.t
 | [Damage feedback](#mobile-frame-and-upgrades) | `foundry/actors/damage-gateway.mjs`, `systems/damage-health.mjs`, `ui/media/damage-feedback.mjs` | `damage-feedback` | `^damage-` |
 | [Native sheets / roll dialogs](#native-applications-and-rolls) | `features/characters/sheets/`, `foundry/presentation/native-roll-presentation.mjs`, `systems/{shadowdark,wfrp4e}/commands.mjs` | `native-sheet-gateway`, `native-close-animation`, `warhammer-actions`, `shadowdark` | `^(fallback|roll-dialogs|roll-chat)-` |
 | [Warhammer panels / actions](#warhammer-resources) | `systems/wfrp4e/`, `features/characters/profile/` | `warhammer-{profile,resources,inventory,equipment,effects,magic,weapons,rest,ambitions,actions}` | `^warhammer-` |
-| [Theme / Momentum](#warhammer-resources) | `foundry/compatibility/wfrp-theme-policy.mjs`, `wfrp-opposed-momentum.mjs` in the same folder | `wfrp-theme-policy`, `wfrp-opposed-momentum` | `^(wfrp-theme-policy|shared-entry)-` |
+| [Theme / Momentum / hit locations](#warhammer-resources) | `foundry/compatibility/{wfrp-theme-policy,wfrp-opposed-momentum,wfrp-hit-location}.mjs` | `wfrp-theme-policy`, `wfrp-opposed-momentum`, `wfrp-hit-location` | `^(wfrp-theme-policy|shared-entry)-` |
 | [Shadowdark gear / counters / spells / Bio](#shadowdark-resources-and-gear) | `systems/shadowdark/` (Bio: `bio.mjs`) | `shadowdark`, `shadowdark-inventory`, `shadowdark-equipment` | `^(shadowdark|actor-notes)-` |
 | [SWADE / Honor + Intrigue PCs](#swade-and-honor--intrigue) | `systems/{swade,honor-and-intrigue}/`, `systems/native-profile.mjs`, shared profile controls | `swade`, `honor-and-intrigue`, `system-registry`, `profile-view`, `combat-health` | `^(swade|honor-and-intrigue)-` |
 | [Party roster / supplies](#party-roster-and-supplies) | `features/party/presenter.mjs`, `systems/party.mjs`, `systems/{shadowdark,wfrp4e}/party.mjs`, session gateway, app frame | `party`, `combat-health`, `session-integration` | `^party-` |
@@ -100,6 +100,8 @@ Targets and Initiative share health formatting beside names, wrapping on narrow 
 Expanded, visible Targets refreshes distances at most once per animation frame on relevant native `refreshToken` position/size events. Suppress equal snapshots, patch distance text, rerender structural changes and cancel queued frames on disposal. Square/hex grids use minimum native occupied-space distance without elevation: v14 needs `{level:null,elevation:0,depth:1}` to bypass wall/surface filtering; v13 uses its unconstrained API. Gridless uses nearest footprint edges. Preserve scene scale/units/rules; failed measurement is unavailable. Add no range enforcement or roll metadata. WFRP consumes native targets; Shadowdark retains its targeting setting and first-target semantics.
 
 ## Mobile frame and upgrades
+
+Session publication retains the selected-Actor record identity when its serialized projection is unchanged, including Combat/User refreshes and changes to other party members. Incoming rolls must not rebuild an unchanged Character pane or discard its drafts. Journal search/reader presentation changes invalidate only the Journals route. Real selected-Actor changes still publish normally; roll completion and navigation remain scoped to the initiating local command.
 
 Damage feedback follows the exact selected owned PC across routes: D&D 5e characters (including temporary HP), Shadowdark Players, WFRP/SWADE characters and H+I Heroes. Read raw native updates before snapshots coalesce. Remaining HP/Wounds and H+I Lifeblood decrease on damage; SWADE Wounds increase. H+I retains its native negative Lifeblood minimum. Ignore healing, initial load, maximum-only changes, NPCs, unsupported systems and observer Actors.
 
@@ -170,7 +172,11 @@ Initiative preserves native `combat.turns` and actions. SWADE's optional `initia
 ## Warhammer resources
 
 
-WFRP 4e/5e share `wfrp4e`. At `i18nInit`, every client overrides Primary/Secondary Arm with fixed English Right/Left Arm labels. Localization changes only; native handedness/hit-location calculations remain.
+WFRP 4e/5e share `wfrp4e`. At `i18nInit`, every client overrides Primary/Secondary Arm with fixed English Right/Left Arm labels. This localization override does not change native handedness or hit-location calculations.
+
+### Hit-location compatibility
+
+`wfrp-hit-location.mjs` registers **Fix WFRP5 hit locations**, a GM-controlled world Boolean enabled by default. The shared entry installs it on every client, including native desktops. It wraps only `rolls5e.TestWFRP5e.computeHitLocation`, supplying `_reverseDice(result.roll)` to the native lookup for automatic locations; final Advantage/Disadvantage results, configured tables, native labels, target-anatomy remapping and subsequent system scripts retain their native paths. A serialized `testData.hitLocation.mikelandiaAutomaticRoll` marker identifies module-calculated locations for recalculation after rerolls and reversal changes. Changed numeric overrides and unmarked existing chat locations remain native; called shots are untouched. Disabling the setting immediately delegates without changing inputs, allowing the GM to retire the workaround after a system update. No system files are modified. Regression fixture methods come from installed WFRP 10.1.2; live-world validation remains separate.
 
 ### Opposed Momentum compatibility
 

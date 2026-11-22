@@ -14,9 +14,10 @@ for (const mode of ["auto", "native"]) {
     assert.equal(f.game.i18n.translations["Secondary Arm"], "Left Arm");
     assert.equal(typeof f.config.queries[MOMENTUM_QUERY], "function", "desktop GM can serve mobile Momentum requests");
     assert.notEqual(f.Actor.prototype.update, f.originalUpdate);
+    assert.notEqual(f.game.wfrp4e.rolls5e.TestWFRP5e.prototype.computeHitLocation, f.originalHitLocation);
     assert.equal(f.game.initializeCanvas, f.initializeCanvas, "ordinary native startup has no mobile/cleanup boundary");
     assert.equal(f.game.modules.get("mikelandia-controls").api, undefined);
-    assert.deepEqual([...f.registered].filter(([, s]) => s.config).map(([key]) => key), ["mikelandia-controls.mode"]);
+    assert.deepEqual([...f.registered].filter(([, s]) => s.config).map(([key]) => key), ["mikelandia-controls.mode", "mikelandia-controls.fixWfrp5HitLocations"]);
     assert.equal(f.menus.length, 0);
     const reload = t.mock.method(f.window.location, "reload", () => {});
     f.registered.get("mikelandia-controls.mode").onChange("tablet");
@@ -24,6 +25,7 @@ for (const mode of ["auto", "native"]) {
     f.window.dispatchEvent(new Event("pagehide"));
     assert.equal(f.config.queries[MOMENTUM_QUERY], undefined);
     assert.equal(f.Actor.prototype.update, f.originalUpdate);
+    assert.equal(f.game.wfrp4e.rolls5e.TestWFRP5e.prototype.computeHitLocation, f.originalHitLocation);
   });
 }
 
@@ -31,7 +33,7 @@ test("opted-out phone uses native Foundry with only a mode selector and shared f
   const f = fixture(t, "native", { userAgent: "iPhone Mobile", platform: "iPhone" });
   await import("../src/entry.mjs?native-phone");
   await f.start();
-  assert.deepEqual([...f.registered].filter(([, s]) => s.config).map(([key]) => key), ["mikelandia-controls.mode"]);
+  assert.deepEqual([...f.registered].filter(([, s]) => s.config).map(([key]) => key), ["mikelandia-controls.mode", "mikelandia-controls.fixWfrp5HitLocations"]);
   assert.equal(typeof f.config.queries[MOMENTUM_QUERY], "function");
   assert.equal(f.game.modules.get("mikelandia-controls").api, undefined);
   f.window.dispatchEvent(new Event("pagehide"));
@@ -66,7 +68,7 @@ for (const storedMode of ["native", "off", "desktop"]) {
     await f.start();
     assert.equal(f.mobileStyles.length, 0);
     assert.equal(f.game.modules.get("mikelandia-controls").api, undefined);
-    assert.deepEqual([...f.registered].filter(([, s]) => s.config).map(([key]) => key), ["mikelandia-controls.mode"]);
+    assert.deepEqual([...f.registered].filter(([, s]) => s.config).map(([key]) => key), ["mikelandia-controls.mode", "mikelandia-controls.fixWfrp5HitLocations"]);
     assert.equal(f.game.i18n.translations["Secondary Arm"], "Left Arm");
     assert.equal(typeof f.config.queries[MOMENTUM_QUERY], "function");
     f.window.dispatchEvent(new Event("pagehide"));
@@ -86,7 +88,9 @@ function fixture(t, mode, navigator = { userAgent: "Windows NT 10.0", platform: 
     async set(ns, key, value) { stored.set(`${ns}.${key}`, value); return value; } };
   class Actor { async update() {} }
   class Handler { async computeOpposeResult() {} }
-  game.wfrp4e = { opposedHandler: Handler, documents: { ActorWFRP4e: Actor } };
+  class TestWFRP5e { async computeHitLocation() {} _reverseDice(roll) { return roll; } }
+  const originalHitLocation = TestWFRP5e.prototype.computeHitLocation;
+  game.wfrp4e = { opposedHandler: Handler, documents: { ActorWFRP4e: Actor }, rolls5e: { TestWFRP5e } };
   game.i18n = { translations: {}, localize: key => key, lang: "en" };
   game.modules.set("mikelandia-controls", { version: "1.1.0" });
   const initializeCanvas = game.initializeCanvas = async () => {};
@@ -133,5 +137,5 @@ function fixture(t, mode, navigator = { userAgent: "Windows NT 10.0", platform: 
     assert.equal(Object.hasOwn(created, "initialize"), false, "one-use instance boundary is removed before native startup");
     assert.equal(Game.create, nativeCreate, "one-use creation boundary restores native create");
   };
-  return { game, hooks, registered, menus, config, window, Actor, originalUpdate: Actor.prototype.update, initializeCanvas, values, mobileStyles, notifications, Game, nativeCreate, start };
+  return { originalHitLocation, game, hooks, registered, menus, config, window, Actor, originalUpdate: Actor.prototype.update, initializeCanvas, values, mobileStyles, notifications, Game, nativeCreate, start };
 }

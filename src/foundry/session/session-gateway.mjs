@@ -309,6 +309,11 @@ export function createFoundrySessionGateway({
               if (!changedDomains.has(key)) published[key] = latestSnapshot[key];
             }
             if (domains.has("actors") && !changedDomains.has("actors")) published.preferredActorId = latestSnapshot.preferredActorId;
+            // Combat/User refreshes can reproject an unchanged character; retain its pane and drafts.
+            if (snapshot.selectedActor !== latestSnapshot.selectedActor
+              && JSON.stringify(snapshot.selectedActor) === JSON.stringify(latestSnapshot.selectedActor)) {
+              published.selectedActor = latestSnapshot.selectedActor;
+            }
             latestSnapshot = Object.freeze(published);
             latestDomainSignatures = Object.freeze({
               ...latestDomainSignatures,

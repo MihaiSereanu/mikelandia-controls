@@ -35,6 +35,32 @@ export async function checkRollChat({ f, store, commands, uiCommands, root, valu
   toggle.click(); await tick();
   check("setting toggle saves On", values.get(key) === true);
   uiCommands.navigate("characters"); await tick();
+  if (warhammer) {
+    f.actor.update = async () => f.actor;
+    f.actor.setWounds = async () => f.actor;
+    f.hooks.emit("updateActor", f.actor, {});
+    await tick();
+    root.querySelector('[data-profile-counter-lock="wounds"]').click();
+    root.querySelector('[data-profile-edit="wounds"]').click();
+    const input = root.querySelector('[data-profile-resource-input="wounds"]');
+    input.value = "8";
+    input.focus();
+    const tab = store.state.characterTab;
+    const message = { id: "remote-roll", user: { id: "other-player" }, speaker: { actor: "other-actor" },
+      rolls: [{ total: 42 }], content: "Other player's roll", visible: true };
+    game.messages.push(message);
+    f.hooks.emit("createChatMessage", message, {}, "other-player");
+    await tick();
+    check("another player's roll preserves the open draft and tab", input.isConnected && input.value === "8"
+      && document.activeElement === input && store.state.route === "characters" && store.state.characterTab === tab);
+    f.hooks.emit("updateUser", { id: "other-player" }, { name: "Other Player" });
+    game.combat.combatant.initiative = 42;
+    f.hooks.emit("updateCombatant", game.combat.combatant, { initiative: 42 }, {}, "other-player");
+    await tick();
+    check("roll-related combat updates preserve the open draft and tab", input.isConnected && input.value === "8"
+      && document.activeElement === input && store.state.route === "characters" && store.state.characterTab === tab);
+    root.querySelector('[data-profile-resource-cancel]').click();
+  }
   mode = "cancel";
   await roll();
   check("cancellation preserves Character", store.state.route === "characters");
@@ -48,7 +74,20 @@ export async function checkRollChat({ f, store, commands, uiCommands, root, valu
   check("completed roll moves to Chat, including an unsuccessful check", store.state.route === "chat");
   uiCommands.navigate("characters"); await tick();
   mode = "wait";
-  const pending = roll(); await tick();
+  let completed = false;
+  const pending = roll().then(outcome => { completed = true; return outcome; }); await tick();
+  if (warhammer) {
+    const tab = store.state.characterTab;
+    const message = { id: "remote-during-dialog", user: { id: "other-player" }, speaker: { actor: "other-actor" },
+      rolls: [{ total: 12 }], content: "Other player's second roll", visible: true };
+    game.messages.push(message);
+    f.hooks.emit("createChatMessage", message, {}, "other-player");
+    game.combat.combatant.initiative = 12;
+    f.hooks.emit("updateCombatant", game.combat.combatant, { initiative: 12 }, {}, "other-player");
+    await tick();
+    check("another player's roll cannot complete the pending local roll or change tabs", !completed
+      && store.state.route === "characters" && store.state.characterTab === tab);
+  }
   uiCommands.navigate("journals");
   uiCommands.navigate("characters");
   mode = "roll"; release();

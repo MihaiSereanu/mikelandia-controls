@@ -134,6 +134,10 @@
       "MoveRight": "Move navigation to right side"
     },
     "Settings": {
+      "WfrpHitLocation": {
+        "Name": "Fix WFRP5 hit locations",
+        "Hint": "Reverse the final attack result for automatic hit locations, using the system-selected table. Applies to everyone, including desktop users. Preserves called shots and manual location overrides. Turn off to use native system behavior after an upstream fix."
+      },
       "Mode": {
         "Name": "Mobile Mode",
         "Hint": "Choose when Mikelandia Controls takes over Foundry in this browser. Changing this setting reloads Foundry.",

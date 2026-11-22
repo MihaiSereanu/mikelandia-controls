@@ -186,7 +186,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
     const spellSlotEditorChanged = renderedState?.spellSlotEditor !== state.spellSlotEditor;
     const xpEditorChanged = renderedState?.xpEditor !== state.xpEditor;
     const portraitImageChanged = renderedState?.portraitImage !== state.portraitImage;
-    const journalChanged = journalPresentationChanged(renderedState, state);
+    const journalChanged = state.route === "journals" && journalPresentationChanged(renderedState, state);
     const viewChanged = renderedState?.viewRevision !== state.viewRevision;
     // Foundry owns and incrementally updates the live ChatLog. Snapshot hooks
     // must never tear it down or replace its focused native textarea.
