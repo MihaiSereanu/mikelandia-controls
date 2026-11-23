@@ -30,6 +30,16 @@ test("enrichment reads the current Item description and supplies exact relative/
     custom: true, embeds: false, relativeTo: f.item, rollData: { bonus: 7 } });
 });
 
+test("offline capture enriches descriptions and direct previews without evaluating inline rolls", async () => {
+  const f = fixture();
+  await f.gateway.enrich({ uuid: f.item.uuid, readOnly: true });
+  await f.gateway.preview({ uuid: f.item.uuid, readOnly: true });
+  const enrichments = f.calls.filter(call => "content" in call);
+  assert.equal(enrichments.length, 2);
+  assert.ok(enrichments.every(call => call.options.rolls === false && call.options.embeds === false));
+  assert.equal(f.messages.length, 0);
+});
+
 test("Shadowdark string descriptions and Active Effect descriptions use their native sources", async () => {
   const f = fixture();
   f.item.system.description = "Shadowdark spell";

@@ -9,9 +9,16 @@ import { checkTrappingInputs } from "./browser/trapping-inputs.mjs";
 import { serveNativeEditorAsset } from "./browser/native-editor-assets.mjs";
 import { checkEditorTouches } from "./browser/editor-touches.mjs";
 import { checkRollDialogScrolling } from "./browser/roll-dialog-scroll.mjs";
+import { checkOfflineReload } from "./browser/offline-reload.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ["offline-library-phone", 390, 844, "offline-library", ""],
+  ["offline-library-narrow", 320, 568, "offline-library", ""],
+  ["offline-library-tablet", 1024, 768, "offline-library", ""],
+  ["offline-library-network-offline", 390, 844, "offline-library", ""],
+  ["offline-library-large-text", 320, 568, "offline-library", "large=true"],
+  ...["shadowdark", "swade", "honor-and-intrigue", "dnd5e"].map(system => [`offline-library-${system}-phone`, 390, 844, "offline-library", `system=${system}`]),
   ...["shadowdark", "5e", "dnd5e", "swade", "hi", "hi-protection"].flatMap(system =>
     [["phone", 320, 568], ["tablet", 1024, 768], ["keyboard", 390, 844]].map(([layout, width, height]) =>
       [`roll-dialogs-scroll-${system}-${layout}`, width, height, "roll-dialogs", `system=${system}&theme=dark&layout=${layout === "tablet" ? "tablet" : "phone"}&scroll=true${layout === "keyboard" ? "&keyboard=true" : ""}`])),
@@ -194,12 +201,16 @@ const candidates = [process.env.CHROME_PATH, "C:/Program Files/Google/Chrome/App
 let browser;
 for (const path of candidates) { try { await access(path); browser = path; break; } catch {} }
 if (!browser) throw new Error("Set CHROME_PATH to a Chromium browser executable to run these checks.");
-const contentTypes = { ".html": "text/html", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".webp": "image/webp", ".png": "image/png" };
+const contentTypes = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".webp": "image/webp", ".png": "image/png" };
 let simulateStandalone = false;
 const server = createServer(async (request, response) => {
   try {
     const pathname = new URL(request.url, "http://localhost").pathname;
     const app = process.env.FOUNDRY_APP_PATH ?? "C:/Program Files/Foundry Virtual Tabletop/resources/app";
+    if (nativeAssets && /^\/fonts\/fontawesome\/(?:css\/all\.min\.css|webfonts\/[a-z0-9.-]+\.woff2)$/u.test(pathname)) {
+      const font = await readFile(join(app, "public", pathname.slice(1)));
+      response.writeHead(200, { "Content-Type": pathname.endsWith(".css") ? "text/css" : "font/woff2" }).end(font); return;
+    }
     if (nativeAssets && await serveNativeEditorAsset(pathname, response, app)) return;
     const nativeFiles = {
       "/native-fixture/fa-solid-900.woff2": ["public/fonts/fontawesome/webfonts/fa-solid-900.woff2", "font/woff2"],
@@ -217,7 +228,8 @@ const server = createServer(async (request, response) => {
       response.writeHead(200, { "Content-Type": nativeFile[1] }).end(content);
       return;
     }
-    const path = resolve(root, `.${decodeURIComponent(new URL(request.url, "http://localhost").pathname)}`);
+    const decodedPath = decodeURIComponent(pathname).replace(/^\/modules\/mikelandia-controls\//u, "/").replace(/^\/mobile\//u, "/mobile-login/");
+    const path = resolve(root, `.${decodedPath.endsWith("/") ? decodedPath + "index.html" : decodedPath}`);
     const rel = relative(root, path);
     if (rel.startsWith("..") || isAbsolute(rel)) { response.writeHead(403).end(); return; }
     let content = await readFile(path);
@@ -357,6 +369,10 @@ try {
         report.checks.push("compact synchronization status remains visible after touch scrolling");
         report.checks.push("trusted Chromium touch gesture scrolls the reading pane during synchronization");
       } catch (error) { report.status = "failed"; report.error = error.stack; }
+    }
+    if (report?.status === "passed" && name === "offline-library-network-offline") {
+      try { await checkOfflineReload((method, params) => send(method, params, sessionId), `http://127.0.0.1:${server.address().port}`, report.checks); }
+      catch (error) { report.status = "failed"; report.error = error.stack; }
     }
     if (report?.status === "passed" && report.timings) await writeFile(join(root, "dist", `${name}-timings.json`), JSON.stringify(report.timings, null, 2) + "\n");
     if (report?.status !== "passed" || report.width !== width || report.height !== height) {

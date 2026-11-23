@@ -2,6 +2,7 @@ import { createSystemIntegrationResolver } from "./systems/registry.mjs";
 import { localizeFoundry } from "./foundry/settings/localization.mjs";
 import { createControlsGuideGateway } from "./foundry/settings/controls-guide-gateway.mjs";
 import { createAppKernel } from "./kernel/app-kernel.mjs";
+import { createOfflineController } from "./offline/controller.mjs";
 import { createSignalStore } from "./kernel/state/signal-store.mjs";
 import { initialAppState, reduceAppState } from "./kernel/state/app-state.mjs";
 import { createActivationPolicyResolver } from "./foundry/session/activation-policy.mjs";
@@ -314,9 +315,14 @@ export function installMobileClient({ getUpgradeCleanup, whenSharedReady }) {
     }
   };
   let kernel;
+  const offlineLibrary = createOfflineController({ session, biographyGateway,
+    getTargeting: () => store.state.targeting,
+    getPreferences: () => ({ frame: preferencesGateway.frame(), character: preferencesGateway.character(), settings: preferencesGateway.snapshot(), theme: readPolicy().theme }),
+    isConnected: () => game.socket?.connected === true && !store.state.reconnect && !store.state.modeTransition });
   kernel = createAppKernel({
     store,
     session,
+    offlineLibrary,
     commandGateway,
     actorEditorGateway,
     biographyGateway,

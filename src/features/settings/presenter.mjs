@@ -123,6 +123,7 @@ function settingsContent({
             ],
           }),
           sessionStatusPanel(commands, scope, labels),
+          offlineLibraryPanel(commands, scope),
         ],
       }),
       node("div", {
@@ -958,6 +959,31 @@ function rangeLabel(value, suffix, step = 1, locale = "en") {
     return `${localizedNumber(Math.round(Number(value) * 100), locale)}%`;
   const decimals = String(step).split(".")[1]?.length ?? 0;
   return `${localizedNumber(Number(value), locale, decimals)} ${suffix}`;
+}
+
+function offlineLibraryPanel(commands, scope) {
+  const library = commands.offlineLibrary;
+  if (!library) return null;
+  const status = node("p", { attrs: { role: "status", "aria-live": "polite" } });
+  const input = node("input", { attrs: { type: "checkbox", id: "mc-remember-device" } });
+  const label = node("label", { attrs: { for: "mc-remember-device" }, children: [input, " Remember on this device"] });
+  let busy = false;
+  scope.listen(input, "change", async () => {
+    busy = true; input.disabled = true;
+    try { await library.setEnabled(input.checked); }
+    catch (error) { status.textContent = error.message; input.checked = library.snapshot().enabled; }
+    finally { busy = false; input.disabled = !library.snapshot().available; }
+  });
+  library.watch(scope, state => {
+    input.checked = state.enabled; input.disabled = busy || !state.available;
+    status.textContent = `${state.message}${state.savedAt ? ` Last saved ${new Date(state.savedAt).toLocaleString()}.` : ""}`;
+    label.hidden = !state.available;
+  });
+  return node("section", { className: "mc-offline-settings", children: [
+    node("h3", { text: "Offline library" }), label,
+    node("p", { text: "Automatically save this game/player’s characters, Journals and Party for reading at /mobile/. Anyone using this browser profile can read them. Turning this off deletes these saved copies." }),
+    status,
+  ] });
 }
 
 function safeId(value) {

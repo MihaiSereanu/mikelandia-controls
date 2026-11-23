@@ -227,6 +227,28 @@ export function createFoundrySessionGateway({
 
   return Object.freeze({
     read,
+    readOfflineActor(sourceUuid, expectedSession = {}) {
+      assertSession(expectedSession);
+      if (game.user?.isGM) throw new Error("GM sessions cannot populate the player offline library.");
+      const actor = resolveActorSource(validSourceUuid(sourceUuid));
+      if (!actor || !actorEligible(actor, game.user)) throw new Error("This character is no longer available.");
+      // Do not change selection, projection dependencies or the active session snapshot.
+      return { ...getSystemIntegration().createActorViewRecord(actor, game.user, capabilitiesForActor, game.users), sourceUuid };
+    },
+    async readOfflineJournalStamp(journalId, expectedSession = {}) {
+      assertSession(expectedSession);
+      if (game.user?.isGM) throw new Error("GM sessions cannot populate the player offline library.");
+      const user = game.user, journal = game.journal?.get?.(journalId);
+      if (!isJournalVisible(journal, user)) throw new Error("This Journal is no longer available.");
+      const signature = JSON.stringify([journal.name, canOwn(journal, user), Array.from(journal.pages ?? [])
+        .filter(page => isJournalPageVisible(page, journal, user)).map(page => [page.id, page.name, page.type,
+          page.sort, page.src, page.image?.caption, canOwn(page, user), page.text?.format, page.text?.content, page.text?.markdown])]);
+      // Only a digest leaves this boundary; source markup is never persisted as an access receipt.
+      const digest = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(signature));
+      assertSession(expectedSession);
+      if (game.user !== user || game.journal?.get?.(journalId) !== journal || !isJournalVisible(journal, user)) throw new Error("This Journal is no longer available.");
+      return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+    },
     adopt(snapshot) {
       if (!snapshot) return;
       latestSnapshot = snapshot;

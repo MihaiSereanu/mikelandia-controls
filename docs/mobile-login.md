@@ -14,9 +14,23 @@ Latest deployed evidence and pending phone checks: [current status](current-stat
 
 The collapsed **Install Mikelandia Controls** section detects Android, iPhone/iPad (including desktop-identified iPads) and other browsers. Android Chrome: **Install and create shortcut > Install**, **Add to home screen > Install**, or **Install app**, depending on version. iOS Safari: **Share > Add to Home Screen**, keeping **Open as Web App** on if shown. Open Mikelandia from the home screen. Regular tabs retain browser controls.
 
-Manifest: standalone display, start `./`, scope `../` relative to `/mobile/manifest.webmanifest`, covering login and `/game`; route prefixes work. OS bars remain device-controlled. Installation controls hide when installed/standalone and work independently of Foundry availability. No service worker or offline game cache.
+Manifest: standalone display, start `./`, scope `../` relative to `/mobile/manifest.webmanifest`, covering login and `/game`; route prefixes work. OS bars remain device-controlled. Installation controls hide when installed/standalone and work independently of Foundry availability. A service worker scoped to `/mobile/` keeps the login shell and previously prepared companion assets available offline; it never controls native `/game` navigation.
 
 [Standalone spacing](architecture.md#mobile-frame-and-upgrades) fixtures explicitly activate the CSS branch: CDP display-mode emulation cannot establish standalone context. Review installed apps physically.
+
+## Offline player library
+
+In companion **Settings > Session > Offline library**, enable **Remember on this device** for the current game/player. Saving remains enabled across visits until turned off. Turning it off, or forgetting that game/player from `/mobile/`, deletes its saved documents and media. GM sessions cannot populate the player library. Anyone using the same browser profile can read saved content before login; Foundry passwords and sessions are not saved.
+
+**Saved Characters** opens a game/player catalogue on `/mobile/`, including when another world is running, Foundry is stopped, or the browser has no network. Saved games use the existing companion frame, character chooser, system sheets, tabs, descriptions, Notes, Journal reader, Party and last Initiative state. Chat is disabled. Sheet edits, rolls, target changes and other server actions are rejected; reading and navigation remain local. The saved-time banner distinguishes these copies from live play. Opening the host again does not automatically leave the reader.
+
+The first authenticated save prepares every eligible character and readable Journal, including unopened content. Later document changes refresh automatically. Access receipts are digests of current permitted projections/page state; changed or revoked content is removed before asynchronous refresh work. Unchanged permitted copies survive a failed refresh. Access changes in a stopped world cannot be learned until the same player reconnects to that world. Browser storage can be cleared or evicted; this is a convenience copy, not a backup.
+
+Images and directly linked permitted rules previews are saved. Images are limited to 8 MiB each and 128 MiB per game/player; missing, blocked or oversized media is unavailable offline. PDFs, audio, video and deeper unsaved links require an online game. Direct previews do not recursively download compendiums. SVG images are sanitized before storage. Secrets are included only when the online reader grants access; raw editor sources and document data are excluded.
+
+Both the updated module and static login package are required. The static package contains no copied companion sources or styles. While authenticated, the module caches its existing import graph, styles, icons/fonts and applicable header artwork at their original URLs. The `/mobile/` worker serves only those static resources and its own shell, never native login/game/API responses. A complete runtime cache is published atomically; failed preparation keeps the prior runtime available. Document/media copies live in IndexedDB, separated by server path, world, system and player.
+
+Checks: `node --test --test-reporter=dot tests/offline-library.test.mjs`; list then run `node scripts/check_browser.mjs --list --filter "^offline-library-" --native-assets`. The network-offline case reloads the actual `/mobile/` shell with Chromium networking disabled. Installed-world and physical Android/iPhone checks remain necessary before claiming live-device support.
 
 ## Hosting and updates
 

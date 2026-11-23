@@ -1,5 +1,6 @@
 import { journalMatchRanges, journalSearchWords } from "./search.mjs";
 import { preserveTextLineBreaks } from "../../ui/primitives/text-line-breaks.mjs";
+import { renderEnrichedDescription } from "../../ui/primitives/enriched-description.mjs";
 import { openTextEditor } from "../../ui/primitives/text-editor.mjs";
 import { localizedText, localizedCount } from "../../ui/primitives/localized-text.mjs";
 import { icon, node } from "../../ui/primitives/dom.mjs";
@@ -164,9 +165,11 @@ function journalReader(state, commands, scope) {
 }
 
 function journalPage(page, selectedHeading, commands, scope) {
+  if (commands.readOnly && !["text", "image"].includes(page.type)) return node("div", { className: "mc-journal-page", children: [node("h3", { text: page.name }), node("p", { text: "This file is available only in the online game." })] });
   if (page.type === "text") {
     const content = node("article", { className: "mc-journal-rich-text" });
-    content.innerHTML = String(page.html ?? "");
+    if (commands.readOnly) content.append(renderEnrichedDescription(page.html, "", { gateway: commands.descriptions, uuid: page.sourceUuid, scope }).content);
+    else content.innerHTML = String(page.html ?? "");
     preserveTextLineBreaks(content);
     if (selectedHeading) queueMicrotask(() => {
       if (scope.disposed || !content.isConnected) return;

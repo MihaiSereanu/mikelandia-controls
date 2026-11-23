@@ -4,6 +4,17 @@ import { createFoundryBiographyGateway } from "../src/foundry/actors/biography-g
 import { createFoundryCommandGateway, ACTOR_COMMANDS } from "../src/foundry/commands/command-gateway.mjs";
 import { createActor, createGame, installGlobals } from "./helpers/foundry.mjs";
 
+test("offline biography capture disables inline evaluation and embeds", async t => {
+  const actor = createActor({ system: { details: { biography: { value: "Player notes [[1d20]]" } } } });
+  const game = createGame([actor]); let options;
+  installGlobals(t, { game });
+  const gateway = createFoundryBiographyGateway({ getGame: () => game,
+    getTextEditor: () => ({ decodeHTML: value => value, enrichHTML: async (content, value) => { options = value; return content; } }),
+    getCleanHtml: () => value => value });
+  await gateway.read({ actorSourceUuid: actor.uuid, readOnly: true });
+  assert.equal(options.rolls, false); assert.equal(options.embeds, false);
+});
+
 test("unsupported Warhammer actor types cannot read notes or enter the roll pipeline", async t => {
   let rollCalls = 0;
   const actor = createActor({ type: "npc" });

@@ -4543,7 +4543,8 @@ function biographyPanel(
         return;
       description.classList.remove("is-loading");
       description.removeAttribute("aria-busy");
-      if (result.html) description.innerHTML = result.html;
+      if (result.html && commands.readOnly) description.replaceChildren(renderEnrichedDescription(result.html, "", { gateway: commands.descriptions, uuid: sourceUuid, scope }).content);
+      else if (result.html) description.innerHTML = result.html;
       else
         description.replaceChildren(
           node("p", {

@@ -26,6 +26,7 @@ jobs:
           VERSION="$(python3 -c 'import json,os; m=json.load(open("module.json")); print(".".join(m["version"].split(".")[:2])+"."+os.environ["GITHUB_RUN_NUMBER"])')"
           RELEASE="https://github.com/${GITHUB_REPOSITORY}/releases/download/latest"
           python3 scripts/build_release.py --version "$VERSION" --manifest-url "$RELEASE/module.json" --download-url "$RELEASE/mikelandia-controls.zip"
+          python3 scripts/build_mobile_login.py
           echo "RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
       - name: Publish rolling latest release
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
@@ -46,13 +47,16 @@ jobs:
 
           Automated source/browser checks do not establish physical-device or live-world compatibility for this revision.
           Existing native WFRP ammunition behavior is unchanged.
+
+          Offline player access reuses the companion sheets and tabs with read-only data and disabled Chat/rolls.
+          Update the module and deploy mobile-login.zip to the separately hosted /mobile/ directory before testing offline access.
           EOF
           if gh release view latest >/dev/null 2>&1; then
             gh release edit latest --title "Latest Build" --notes-file dist/release-notes.md --latest
           else
             gh release create latest --verify-tag --title "Latest Build" --notes-file dist/release-notes.md --latest
           fi
-          gh release upload latest dist/module.json dist/mikelandia-controls.zip --clobber
+          gh release upload latest dist/module.json dist/mikelandia-controls.zip dist/mobile-login.zip --clobber
           python3 scripts/retire_legacy_assets.py --tag latest
       - name: Verify public Foundry installation files
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'

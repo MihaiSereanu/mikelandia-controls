@@ -49,33 +49,33 @@ export function createFoundryDescriptionGateway({
     if (await resolve(doc.uuid) !== doc) throw new Error("This description is no longer available.");
     check(session, doc);
   };
-  const enrich = async (doc, content, session) => {
+  const enrich = async (doc, content, session, readOnly = false) => {
     check(session, doc);
     const editor = getEditor();
     if (typeof editor?.enrichHTML !== "function") throw new Error("Foundry text enrichment is unavailable.");
     const html = String(await editor.enrichHTML(stripPrivateContent(content), {
-      secrets: false, documents: true, links: true, rolls: true, custom: true, embeds: false,
+      secrets: false, documents: true, links: true, rolls: !readOnly, custom: true, embeds: false,
       relativeTo: doc, rollData: rollData(doc)
     }));
     await verify(doc, session);
     return { html, uuid: doc.uuid, name: String(doc.name ?? "Description") };
   };
   return Object.freeze({
-    async enrich({ uuid, content, fragment = false }) {
+    async enrich({ uuid, content, fragment = false, readOnly = false }) {
       const session = begin();
       const doc = await load(uuid, session);
       const source = descriptionSource(doc, session);
       if (fragment && doc.system?.identified === false) throw new Error("This description is unavailable.");
-      const result = await enrich(doc, fragment ? String(content ?? "") : source, session);
+      const result = await enrich(doc, fragment ? String(content ?? "") : source, session, readOnly);
       if (descriptionSource(doc, session) !== source) throw new Error("The description changed. Open it again.");
       return result;
     },
-    async preview({ uuid, relativeUuid }) {
+    async preview({ uuid, relativeUuid, readOnly = false }) {
       const session = begin();
       const relative = relativeUuid ? await load(relativeUuid, session) : undefined;
       const doc = await load(uuid, session, relative);
       const content = descriptionSource(doc, session);
-      const result = await enrich(doc, content || "No description is available for this document.", session);
+      const result = await enrich(doc, content || "No description is available for this document.", session, readOnly);
       if (relative) await verify(relative, session);
       // A field or identification change during enrichment must never reveal stale content.
       if (descriptionSource(doc, session) !== content) throw new Error("The description changed. Open the reference again.");

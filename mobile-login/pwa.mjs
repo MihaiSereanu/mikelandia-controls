@@ -50,4 +50,10 @@ export function mountInstall({ window, document, navigator }) {
   update();
 }
 
-if (typeof window !== "undefined" && document.getElementById("app-install")) mountInstall({ window, document, navigator });
+if (typeof window !== "undefined" && document.getElementById("app-install")) {
+  mountInstall({ window, document, navigator });
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    navigator.serviceWorker.register(new URL("./sw.js", import.meta.url), { scope: "./", updateViaCache: "none" })
+      .catch(() => { /* Live login remains usable when offline installation fails. */ });
+  }
+}

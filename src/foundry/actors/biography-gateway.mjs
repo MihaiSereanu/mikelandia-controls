@@ -20,7 +20,7 @@ export function createFoundryBiographyGateway({
     ?? globalThis.ChatMessage
 } = {}) {
   return Object.freeze({
-    async read({ actorSourceUuid }, expectedSession = {}) {
+    async read({ actorSourceUuid, readOnly = false }, expectedSession = {}) {
       const game = getGame();
       assertSession(game, expectedSession, getConnectionGeneration);
       if (!getSystemIntegration().features.biography) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.NativeSheet.UseSheet", "Use the character sheet for this operation."));
@@ -42,8 +42,8 @@ export function createFoundryBiographyGateway({
         secrets: owner,
         documents: true,
         links: true,
-        embeds: true,
-        rolls: true,
+        embeds: !readOnly,
+        rolls: !readOnly,
         custom: true,
         relativeTo: actor,
         rollData

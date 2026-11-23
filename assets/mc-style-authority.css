@@ -9,6 +9,7 @@
 }
 
 @layer mc-mobile-ui-isolation {
+  body.mc-mobile-running .mc-mobile-app [hidden] { display: none !important; }
   body.mc-mobile-running [data-mc-mobile-ui-state="blocked"] {
     display: none !important;
     visibility: hidden !important;

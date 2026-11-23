@@ -5,7 +5,7 @@ let nextId = 0;
 
 /** Keep the safe initial content while Foundry enriches it in its exact document context. */
 export function renderEnrichedDescription(source, className = "", { gateway, uuid, scope, fragment = false } = {}) {
-  const result = renderDescription(source, className);
+  const result = renderDescription(source, className, { enriched: gateway?.readOnly === true, allowBlobImages: gateway?.readOnly === true });
   if (!gateway || !uuid || !scope) return result;
   const { content } = result;
   content.dataset.descriptionUuid = uuid;
@@ -27,7 +27,7 @@ export function renderEnrichedDescription(source, className = "", { gateway, uui
     try {
       const preview = await gateway.preview(target);
       if (!alive() || request !== ticket) return;
-      const rendered = renderDescription(preview.html, "", { enriched: true }).content;
+      const rendered = renderDescription(preview.html, "", { enriched: true, allowBlobImages: gateway?.readOnly === true }).content;
       rendered.dataset.descriptionUuid = preview.uuid;
       body.replaceChildren(rendered);
       heading.textContent = preview.name;
@@ -100,7 +100,7 @@ export function renderEnrichedDescription(source, className = "", { gateway, uui
   // The pre-enrichment sanitizer strips secrets and source-provided native action attributes.
   result.ready = gateway.enrich({ uuid, content: content.innerHTML, fragment }).then(enriched => {
     if (!alive()) return result;
-    const rendered = renderDescription(enriched.html, className, { enriched: true });
+    const rendered = renderDescription(enriched.html, className, { enriched: true, allowBlobImages: gateway?.readOnly === true });
     content.classList.toggle("is-plain-text", rendered.content.classList.contains("is-plain-text"));
     content.replaceChildren(...rendered.content.childNodes);
     return rendered;

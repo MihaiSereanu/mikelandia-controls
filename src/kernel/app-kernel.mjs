@@ -12,7 +12,7 @@ import { ACTOR_COMMANDS } from "./state/command-names.mjs";
 
 import { createModeTransitionCoordinator, presentationLabel } from "./presentation/mode-transition.mjs";
 
-export function createAppKernel({ store, session, commandGateway, biographyGateway, actorEditorGateway = null, combatGateway, targetingGateway = null, authoritativeGateway, loadTimingGateway = null, reloadApplication = () => globalThis.window?.location?.reload?.(), connectionGeneration, nativeChatGateway, armorClassGateway = null, activeEffectContextGateway, actionSessionGateway, preferencesGateway, settingsCompatibilityGateway, sessionStatusGateway, controlsGuideGateway = null, isControlsUiReady = () => false, themeGateway, mobileBackGateway = null, diagnostics, performanceObserver = null, wakeLockController, readPolicy, disable, preparePresentation = () => {}, createFrame = createAppFrame }) {
+export function createAppKernel({ store, session, offlineLibrary = null, commandGateway, biographyGateway, actorEditorGateway = null, combatGateway, targetingGateway = null, authoritativeGateway, loadTimingGateway = null, reloadApplication = () => globalThis.window?.location?.reload?.(), connectionGeneration, nativeChatGateway, armorClassGateway = null, activeEffectContextGateway, actionSessionGateway, preferencesGateway, settingsCompatibilityGateway, sessionStatusGateway, controlsGuideGateway = null, isControlsUiReady = () => false, themeGateway, mobileBackGateway = null, diagnostics, performanceObserver = null, wakeLockController, readPolicy, disable, preparePresentation = () => {}, createFrame = createAppFrame }) {
   const localize = (key, fallback, data) => localizedText((id, _fallback, values) => preferencesGateway?.localize?.(id, values), key, fallback, data);
   let runtimeScope = null;
   let activationCommitted = false;
@@ -73,6 +73,7 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
   };
   const descriptionGateway = createFoundryDescriptionGateway();
   const commands = Object.freeze({
+    offlineLibrary,
     navigate: (route) => dispatchNavigation({ type: "navigate", route }),
     navigateBack: () => dispatchNavigation({ type: "navigate-back" }),
     returnToCharacter: () => dispatchNavigation({ type: "return-to-character" }),
@@ -548,6 +549,16 @@ export function createAppKernel({ store, session, commandGateway, biographyGatew
       } });
       assertCurrent();
       if (initialSnapshot) store.dispatch({ type: "session-loaded", snapshot: initialSnapshot });
+      offlineLibrary?.start(runtimeScope.child("offline-library"));
+      let offlineBlocked = Boolean(store.state.reconnect || store.state.modeTransition);
+      let offlinePresentation = `${store.state.selectedActorSourceUuid}:${store.state.formFactor}:${store.state.viewRevision}`;
+      runtimeScope.own(store.subscribe(state => {
+        const blocked = Boolean(state.reconnect || state.modeTransition);
+        const presentation = `${state.selectedActorSourceUuid}:${state.formFactor}:${state.viewRevision}`;
+        if (blocked !== offlineBlocked || presentation !== offlinePresentation) {
+          offlineBlocked = blocked; offlinePresentation = presentation; offlineLibrary?.refresh();
+        }
+      }, { immediate: false }));
       const damageWatcher = createFoundryDamageGateway().watch(runtimeScope, {
         getSource: () => store.state.selectedActorSourceUuid,
         isActive: () => readPolicy().active && !store.state.reconnect && !store.state.modeTransition,

@@ -78,6 +78,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
   const navItems = [["characters", "fa-user", "Character"], ["party", "fa-users", "Party"], ["chat", "fa-comments", "Chat"], ["journals", "fa-book-open", "Journals"], ["combat", combatNavIcon, "Initiative"], ["settings", "fa-gear", "Settings"]];
   const navButtons = new Map(navItems.map(([route, createIcon, label]) => {
     const button = node("button", { className: "mc-main-nav-item", attrs: { type: "button" }, dataset: { route }, on: { click: () => commands.navigate(route) }, children: [typeof createIcon === "function" ? createIcon() : icon(createIcon), node("span", { text: commands.localize?.(`MIKELANDIA_CONTROLS.Navigation.${label}`, label) ?? label })] }, scope);
+    if (commands.readOnly && route === "chat") { button.disabled = true; button.title = "Chat is unavailable in saved copies."; }
     return [route, button];
   }));
   nav.append(reconnectBlocker.element, rotateSuggestion, node("div", { className: "mc-nav-routes", children: [...navButtons.values()] }), navSideToggle);

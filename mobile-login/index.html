@@ -9,11 +9,13 @@
   <meta name="apple-mobile-web-app-title" content="Mikelandia Controls">
   <title>Mikelandia · Join your game</title>
   <link rel="stylesheet" href="./login.css">
+  <link rel="stylesheet" href="./offline.css">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" type="image/png" href="./icons/mc-192.png?v=4">
   <link rel="apple-touch-icon" href="./icons/mc-180.png?v=4">
   <script type="module" src="./pwa.mjs"></script>
   <script type="module" src="./main.mjs"></script>
+  <script type="module" src="./library.mjs"></script>
 </head>
 <body>
   <main class="login-card" aria-labelledby="world-title">
@@ -34,6 +36,7 @@
     <p id="error" role="alert" hidden></p>
     <a id="standard-login" href="../join" hidden>Open Foundry login</a>
     <button id="retry" class="secondary" type="button" hidden>Try again</button>
+    <button id="saved-characters" class="secondary" type="button">Saved Characters</button>
     <footer>
       <details id="app-install">
         <summary>Install Mikelandia Controls</summary>
@@ -51,5 +54,6 @@
     </footer>
     <noscript><p>JavaScript is needed for mobile login. <a href="../join">Open Foundry login</a>.</p></noscript>
   </main>
+  <main id="offline-library" class="offline-library" tabindex="-1" hidden aria-label="Saved Characters"></main>
 </body>
 </html>

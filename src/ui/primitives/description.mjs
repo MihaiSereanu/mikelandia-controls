@@ -3,7 +3,7 @@ import { node } from "./dom.mjs";
 const FORMATTING = new Set("p div span br hr strong b em i u s strike del ins sub sup h1 h2 h3 h4 h5 h6 ul ol li dl dt dd blockquote pre code table caption colgroup col thead tbody tfoot tr th td a img".split(" "));
 
 /** Copy description formatting without native controls, secrets or executable markup. */
-export function renderDescription(source, className = "", { enriched = false } = {}) {
+export function renderDescription(source, className = "", { enriched = false, allowBlobImages = false } = {}) {
   const template = document.createElement("template");
   template.innerHTML = String(source ?? "");
   template.content.querySelectorAll("script, style, iframe, object, embed, template, svg, math, form, input, button, select, textarea, .secret").forEach(element => element.remove());
@@ -36,7 +36,7 @@ export function renderDescription(source, className = "", { enriched = false } =
         if (!value) continue;
         try {
           const url = new URL(value, document.baseURI);
-          if (["http:", "https:", ...(name === "href" ? ["mailto:"] : [])].includes(url.protocol)) element.setAttribute(name, value);
+          if (["http:", "https:", ...(name === "href" ? ["mailto:"] : []), ...(allowBlobImages && tag === "img" && name === "src" && url.origin === location.origin ? ["blob:"] : [])].includes(url.protocol)) element.setAttribute(name, value);
         } catch { /* Invalid URLs remain inactive. */ }
       }
       for (const name of ["colspan", "rowspan", "start", "reversed", "scope", "alt", "title"]) {

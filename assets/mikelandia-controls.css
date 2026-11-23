@@ -3316,7 +3316,7 @@ body.mc-mobile-running #pause {
 }
 
 .mc-native-sheet-identity > div { min-width: 0; flex: 1; }
-.mc-native-sheet-identity > .mc-character-select-trigger { flex-shrink: 0; }
+.mc-native-sheet-identity > .mc-character-select-trigger { position: static; flex-shrink: 0; align-self: flex-start; }
 
 .mc-native-sheet-identity h2 {
   margin: 0;

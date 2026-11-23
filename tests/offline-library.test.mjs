@@ -1,0 +1,80 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { libraryIdentity, createOfflineStorage } from "../src/offline/storage.mjs";
+import { actorDocument, pruneLibrary, safeUrl } from "../src/offline/content.mjs";
+import { createFoundrySessionGateway } from "../src/foundry/session/session-gateway.mjs";
+import { createActor, createGame, installGlobals } from "./helpers/foundry.mjs";
+import { createNativeSystemFixture } from "./helpers/native-systems.mjs";
+import { createShadowdarkFixture } from "./helpers/shadowdark.mjs";
+import { createWarhammerActor, createWarhammerGame } from "./helpers/warhammer.mjs";
+
+test("library identity separates hosts, prefixes, worlds, systems and players, retaining system upgrades", () => {
+  const world = { id: "same", systemId: "swade", systemVersion: "1" }, user = { id: "same" };
+  const key = (base = "https://example.test/", w = world, u = user) => libraryIdentity(base, w, u).id;
+  const original = key();
+  for (const other of [key("https://other.test/"), key("https://example.test/foundry/"), key(undefined, { ...world, id: "other" }),
+    key(undefined, { ...world, systemId: "dnd5e" }), key(undefined, world, { id: "other" })]) assert.notEqual(other, original);
+  assert.equal(key(undefined, { ...world, systemVersion: "2" }), original);
+  assert.throws(() => key(undefined, world, { ...user, isGM: true }));
+});
+
+test("revocation removes actors/pages/previews/media while retaining other permitted text", () => {
+  const data = { actors: [{ id: "Actor.a" }, { id: "Actor.b" }], journals: [{ id: "j", pages: [{ id: "yes" }, { id: "no" }] }, { id: "gone", pages: [] }],
+    references: ["private"], media: ["private"], party: {}, savedAt: "yesterday" };
+  const result = pruneLibrary(data, { actors: [{ sourceUuid: "Actor.a" }], journals: [{ id: "j", pages: [{ id: "yes" }] }] });
+  assert.deepEqual(result.actors, [{ id: "Actor.a" }]);
+  assert.deepEqual(result.journals, [{ id: "j", pages: [{ id: "yes" }] }]);
+  assert.deepEqual(result.references, []); assert.deepEqual(result.media, []); assert.equal(result.party, null);
+  assert.equal(data.actors.length, 2);
+});
+
+test("prepared projection omits executable metadata, enriches exact document descriptions and preserves false/zero", async () => {
+  const calls = [];
+  const result = await actorDocument({ sourceUuid: "Actor.a", name: "Elsa", panels: [{ label: "Main", sections: [{ label: "Stats", rows: [
+    { label: "Wounds", value: 0, max: 12, action: { id: "roll-me" }, edit: { path: "secret" } },
+    { label: "Equipped", value: false }, { label: "Spell", descriptionUuid: "Actor.a.Item.spell", description: "source", showCastButton: true }
+  ] }] }], notesRevision: "never persist", capabilities: { method: "execute" } }, {
+    html: text => `safe:${text}`, enrich: async (...args) => { calls.push(args); return "permitted"; }
+  });
+  const text = JSON.stringify(result);
+  assert.ok(text.includes('"value":0')); assert.ok(text.includes('"value":false'));
+  assert.ok(text.includes("safe:permitted"));
+  for (const denied of ["secret", "never persist", "execute"]) assert.ok(!text.includes(denied));
+  assert.equal(result.view.panels[0].sections[0].rows[0].action.revision, "offline");
+  assert.equal(calls[0][0], "Actor.a.Item.spell"); assert.equal(calls[0][2].fragment, false);
+});
+
+for (const system of ["dnd5e", "shadowdark", "wfrp4e", "swade", "honor-and-intrigue"]) test(`${system}: offline projection reads unopened characters without changing current selection`, async t => {
+  const fixture = system === "shadowdark" ? createShadowdarkFixture() : ["swade", "honor-and-intrigue"].includes(system) ? createNativeSystemFixture(system) : null;
+  const actor = fixture?.actor ?? (system === "wfrp4e" ? createWarhammerActor() : createActor());
+  const game = fixture?.game ?? (system === "wfrp4e" ? createWarhammerGame([actor]) : createGame([actor]));
+  installGlobals(t, { game, CONFIG: { statusEffects: {} }, document: { createElement: () => ({ set innerHTML(value) { this.textContent = value; } }) } });
+  const gateway = createFoundrySessionGateway({ capabilitiesForActor: () => ({}) });
+  const first = gateway.read(); gateway.adopt(first);
+  const record = gateway.readOfflineActor(actor.uuid);
+  const result = await actorDocument(record, { html: text => text, enrich: async () => "safe description" });
+  assert.equal(result.name, actor.name); assert.ok(result.view.panels?.length > 0 || result.view.abilities?.length > 0);
+  assert.equal(gateway.read().selectedActorSourceUuid, first.selectedActorSourceUuid);
+  actor.testUserPermission = () => false;
+  assert.throws(() => gateway.readOfflineActor(actor.uuid), /no longer available/);
+  game.user.isGM = true; assert.throws(() => gateway.readOfflineActor(actor.uuid), /GM sessions/);
+});
+
+test("offline resources reject executable, credential-bearing and empty URLs", () => {
+  for (const value of ["", "javascript:alert(1)", "data:image/svg+xml,bad", "https://user:pass@example.test/image"]) assert.equal(safeUrl(value, "https://example.test/"), "");
+  assert.equal(safeUrl("images/a.webp", "https://example.test/foundry/"), "https://example.test/foundry/images/a.webp");
+});
+
+test("an access change within a still-visible document removes its old contents and media", () => {
+  const data = { actors: [{ id: "Actor.a", access: "old", img: "private.png" }, { id: "Actor.b", access: "same", img: "public.png" }],
+    journals: [{ id: "j", access: "old-owner", pages: [{ id: "p", html: "old secret" }] }], media: [{ url: "private.png" }, { url: "public.png" }] };
+  const result = pruneLibrary(data, { actors: [{ sourceUuid: "Actor.a" }, { sourceUuid: "Actor.b" }], journals: [{ id: "j", pages: [{ id: "p" }] }] },
+    new Map([["Actor.a", "new-unidentified"], ["Actor.b", "same"]]), new Map([["j", "observer"]]));
+  assert.deepEqual(result.actors.map(actor => actor.id), ["Actor.b"]);
+  assert.deepEqual(result.journals, []);
+  assert.deepEqual(result.media, [{ url: "public.png" }]);
+});
+
+test("unavailable browser storage rejects cleanly", async () => {
+  await assert.rejects(createOfflineStorage({ indexedDB: null }).list(), /unavailable/);
+});
