@@ -8,9 +8,13 @@ import { checkIngredientTouches, checkTooltipTouches, checkDescriptionTouches, c
 import { checkTrappingInputs } from "./browser/trapping-inputs.mjs";
 import { serveNativeEditorAsset } from "./browser/native-editor-assets.mjs";
 import { checkEditorTouches } from "./browser/editor-touches.mjs";
+import { checkRollDialogScrolling } from "./browser/roll-dialog-scroll.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ...["shadowdark", "5e", "dnd5e", "swade", "hi", "hi-protection"].flatMap(system =>
+    [["phone", 320, 568], ["tablet", 1024, 768], ["keyboard", 390, 844]].map(([layout, width, height]) =>
+      [`roll-dialogs-scroll-${system}-${layout}`, width, height, "roll-dialogs", `system=${system}&theme=dark&layout=${layout === "tablet" ? "tablet" : "phone"}&scroll=true${layout === "keyboard" ? "&keyboard=true" : ""}`])),
   ["party-shadowdark-supplies-narrow-large-text", 320, 844, "in-person", "party=true&system=shadowdark&layout=phone&supplies=true&large=true"],
   ...[["phone", 390, 844], ["narrow", 320, 844], ["large-text", 390, 844], ["unprotected", 390, 844]].map(([layout, width, height]) =>
     [`party-shadowdark-supplies-${layout}`, width, height, "in-person", `party=true&system=shadowdark&layout=phone&supplies=true${layout === "large-text" ? "&large=true" : ""}${layout === "unprotected" ? "&unprotected=true" : ""}`]),
@@ -296,6 +300,10 @@ try {
       try { report = JSON.parse(result.value); } catch {}
       if (report?.status) break;
       await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    if (report?.status === "passed" && name.startsWith("roll-dialogs-scroll-")) {
+      try { await checkRollDialogScrolling((method, params) => send(method, params, sessionId), report.checks); }
+      catch (error) { report.status = "failed"; report.error = error.stack; }
     }
     if (report?.status === "passed" && /^warhammer-profile-magic-/u.test(name)) {
       try { await checkIngredientTouches((method, params) => send(method, params, sessionId), report.checks); }

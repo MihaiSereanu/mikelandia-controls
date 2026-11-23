@@ -1422,6 +1422,11 @@ body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.ro
   display: none !important;
 }
 body.mc-mobile-running :is(#sd-roll-dialog, .warhammer.roll-dialog-v2, .swade.roll-dialog, .honor-intrigue.roll-dialog, .roll-configuration).mc-compact-roll.mc-mobile-admitted-app :is(.window-content, .application-content) {
+  /* Native content clipping must not hide expanded options inside the fixed frame. */
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow: hidden auto !important;
+  touch-action: pan-y pinch-zoom;
   padding: 8px 12px !important;
   gap: 6px;
 }

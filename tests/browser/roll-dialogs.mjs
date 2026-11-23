@@ -41,6 +41,8 @@ try {
   Object.freeze(application.options);
   const admissions = createMobileApplicationAdmissions(document.body);
   const content = root.querySelector(".window-content");
+  // Retained native inline clipping must yield to the mobile scroll container.
+  if (params.has("scroll")) content.style.overflow = "hidden";
   const originalNodes = [...root.querySelectorAll("input, select, textarea, button")];
   let submitted;
   root.addEventListener("submit", event => { event.preventDefault(); submitted = new FormData(isDND ? content : root); });
@@ -74,6 +76,13 @@ try {
     details.querySelector("summary").click(); await frame();
     check("More options expands", details.open);
     check("secondary fields remain accessible", details.getBoundingClientRect().height > 44);
+    const lastOption = [...details.querySelectorAll("input, select, .modifier:not(.hidden), .tooltips, li")].filter(node => node.getBoundingClientRect().height).at(-1);
+    content.scrollTop = content.scrollHeight;
+    await frame();
+    const optionBounds = lastOption.getBoundingClientRect();
+    check("expanded options scroll to their final field", optionBounds.top >= content.getBoundingClientRect().top && optionBounds.bottom <= submit.getBoundingClientRect().top + 1);
+    content.scrollTop = 0;
+
     const checkbox = details.querySelector('input[type="checkbox"]');
     if (checkbox) { checkbox.click(); check("native modifier checkbox works", !checkbox.checked); }
     const effect = details.querySelector('.modifier[data-index="0"]');
