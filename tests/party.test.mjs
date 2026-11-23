@@ -144,7 +144,7 @@ test("Unselected observer HP, supplies and permission hooks publish Party change
   assert.deepEqual(published.at(-1).party.members.map(member => member.id), [f.actor.id]);
 });
 
-for (const use5e of [false, true]) test(`WFRP ${use5e ? "5e" : "4e"} Observer Party includes conditions, Injuries and Critical Wounds`, async t => {
+for (const use5e of [true]) test(`WFRP 5e Observer Party includes conditions, Injuries and Critical Wounds`, async t => {
   const actor = createWarhammerActor(), game = createWarhammerGame([actor], { use5e });
   const hooks = createHooks();
   installGlobals(t, { game, Hooks: hooks });
@@ -158,11 +158,9 @@ for (const use5e of [false, true]) test(`WFRP ${use5e ? "5e" : "4e"} Observer Pa
   assert.deepEqual(party.members[0].conditions.map(condition => [condition.label, condition.value]), [["Bleeding", 3], ["Prone", 1], ["Dead", 1]]);
   assert.equal(party.members[0].health.label, "Wounds");
   const bleedingReference = party.members[0].conditions.find(condition => condition.id === "bleeding");
-  if (use5e) {
+
     assert.ok(bleedingReference.description.some(line => line.includes("Challenging")));
-  } else {
-    assert.equal(bleedingReference.description, undefined);
-  }
+
   const session = createFoundrySessionGateway(), scope = createTaskScope("wfrp-party"), snapshots = [];
   t.after(() => scope.dispose());
   session.watch(scope, snapshot => snapshots.push(snapshot), error => { throw error; });

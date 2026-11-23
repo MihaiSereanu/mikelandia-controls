@@ -5,7 +5,7 @@ import { resolveSystemIntegration } from "../src/systems/registry.mjs";
 import { installGlobals } from "./helpers/foundry.mjs";
 import { createWarhammerActor, createWarhammerGame, addWarhammerConditions } from "./helpers/warhammer.mjs";
 
-for (const use5e of [false, true]) test(`WFRP ${use5e ? "5e" : "4e"} conditions retain native actions, ownership and stale checks`, async t => {
+for (const use5e of [true]) test(`WFRP 5e conditions retain native actions, ownership and stale checks`, async t => {
   const actor = createWarhammerActor();
   const game = createWarhammerGame([actor], { use5e });
   installGlobals(t, { game });
@@ -15,11 +15,11 @@ for (const use5e of [false, true]) test(`WFRP ${use5e ? "5e" : "4e"} conditions 
   const conditions = resolveSystemIntegration("wfrp4e").createActorViewRecord(actor, game.user, gateway.capabilitiesForActor)
     .panels.find(tab => tab.id === "effects").sections[0].conditions;
   assert.equal(conditions.length, 14);
-  assert.equal(conditions.every(condition => Array.isArray(condition.description)), use5e, "5e quick references must not override 4e rules");
-  if (use5e) {
+  assert.equal(conditions.every(condition => Array.isArray(condition.description)), use5e, "5e quick references remain available");
+
     assert.match(conditions.find(condition => condition.id === "grappling").description.join(" "), /Opposed Strength Test/u);
     assert.doesNotMatch(conditions.find(condition => condition.id === "grappling").description.join(" "), /higher Advantage/u);
-  }
+
   const payload = action => ({ actorSourceUuid: actor.uuid, actionId: action.id, actionRevision: action.revision });
   const run = id => gateway.execute(ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION, payload(actions().find(action => action.id === id)));
   assert.equal(actions().some(action => action.id.includes("dead")), false);

@@ -283,3 +283,139 @@ body:not(.no-theme):not(.theme-light) .warhammer.application.roll-dialog-v2 .sta
 .warhammer.roll-dialog-v2 .dialog-modifiers .modifier.active {
   background: var(--modifier-bg);
 }
+
+/* Installed SWADE 6.0.4 roll layout. */
+.roll-dialog {
+  overflow: visible;
+}
+.roll-dialog .window-content {
+  overflow: visible;
+}
+.roll-dialog .modifiers {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.roll-dialog .modifier-entry {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr;
+}
+.roll-dialog .modifier-entry:not(:first-of-type) {
+  border-top: 1px solid var(--color-border);
+}
+.roll-dialog .modifier-entry input[type=checkbox] {
+  margin: auto;
+}
+.roll-dialog .new-modifier-value,
+.roll-dialog .new-modifier-label {
+  padding-right: 0;
+}
+.roll-dialog .no-modifiers,
+.roll-dialog .modifier-entry {
+  text-align: center;
+  font-weight: bold;
+  padding: 0.25em;
+}
+.roll-dialog .no-modifiers.footer,
+.roll-dialog .modifier-entry.footer {
+  padding: 0;
+  -moz-column-gap: 0.25rem;
+       column-gap: 0.25rem;
+}
+.roll-dialog .presets .toggle-list {
+  display: block;
+  text-align: left;
+  height: calc(var(--input-height) + 1px);
+  width: 100%;
+  padding: 0 3px;
+}
+.roll-dialog .presets .toggle-list .fa-solid {
+  margin: 0 0.2rem;
+  transition: rotate 250ms ease;
+}
+.roll-dialog .presets .toggle-list .rotate {
+  rotate: 90deg;
+}
+.roll-dialog .presets .dropdown {
+  position: absolute;
+  padding: 0.25em;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--background);
+  backdrop-filter: blur(4px);
+  transition: height 200ms ease;
+  overflow: hidden;
+}
+.roll-dialog .presets .dropdown.collapsed {
+  border: none;
+  height: 0px;
+  padding: 0;
+}
+.roll-dialog .presets .searchBox {
+  margin-bottom: 0.5em;
+}
+.roll-dialog .presets .selections {
+  padding: 0;
+  margin: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+/* Installed H+I 0.2.0 roll layout (native CSS nesting). */
+.honor-intrigue.roll-dialog{& .modifiers-table{grid-template-rows:auto 1fr;grid-template-columns:1fr 1fr;place-items:center start;gap:1rem;padding:0 1rem;display:grid;& .modifiers-table-header{grid-area:1/1/auto/span 2;justify-self:stretch;margin-bottom:.5rem;font-weight:700;& .label-bar{&>span{align-self:center;padding-left:0}}}& .modifiers-table-items{grid-area:2/1/auto/span 2;display:contents}& .modifiers-table-item{display:contents;&>span,&>label{font-family:var(--font-bold);font-size:var(--font-size-18)}& :first-child{grid-column:1}& :nth-child(2){grid-column:2;justify-self:end}& select[data-dtype=String]{text-overflow:ellipsis;white-space-collapse:collapse}& .modifiers-table-item-group{gap:.1rem;display:flex;& input{text-align:center}& select{min-width:60px}& button{&.toggled{background:light-dark(var(--color-navy),var(--color-gold-dull));color:light-dark(var(--color-gold),var(--color-navy))}}}}}& .protection-options{grid-template-columns:2fr 1fr 60px;align-items:center;display:grid;& .protection-option-item{display:contents;&:not(.toggled){&>p{font-style:italic;text-decoration:line-through}}}}& footer{justify-content:center;gap:5px;margin-top:5px;display:flex;& .roll-mode-buttons{& button{border-color:light-dark(var(--color-navy),var(--color-gold-dull))}& button.selected{background:light-dark(var(--color-navy),var(--color-gold));color:light-dark(var(--color-gold),var(--color-navy))}}}}
+
+/* D&D5e 6.0.6 roll layout from the isolated native test copy. */
+.dnd5e2.application.roll-configuration .rolls .dice {
+  margin-top: 6px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.dnd5e2.application.roll-configuration .rolls .dice li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.dnd5e2.application.roll-configuration .rolls .dice img {
+  border: none;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  object-position: bottom;
+}
+.dnd5e2.application.roll-configuration .rolls .dice .label {
+  display: block;
+  width: 50%;
+  text-align: center;
+  margin-top: -6px;
+  color: var(--dnd5e-color-gold);
+  padding: 2px 0;
+  background: var(--dnd5e-color-black);
+  border-radius: 3px;
+}
+.dnd5e2.application.roll-configuration .rolls .formulas {
+  padding: 6px;
+}
+.dnd5e2.application.roll-configuration .rolls .formulas li .formula-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dnd5e2.application.roll-configuration .rolls .formulas .formula {
+  font-family: var(--dnd5e-font-roboto-slab);
+  font-weight: bold;
+}
+.dnd5e2.application.roll-configuration .rolls .formulas .label {
+  --icon-size: 20px;
+  --icon-fill: var(--activity-icon-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  font-size: var(--font-size-12);
+}
+.dnd5e2.application.roll-configuration .dialog-buttons {
+  gap: 6px;
+}

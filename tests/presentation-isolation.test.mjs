@@ -147,7 +147,7 @@ test("D&D guide retains its existing character gestures", () => {
   assert.equal(vehicleKeys.includes("Members"), false);
 });
 test("profile guide follows available tabs, Notes and Warhammer edition", () => {
-  for (const edition of ["4e", "5e"]) {
+  for (const edition of ["5e"]) {
     const sections = controlsGuideSections({ systemId: "wfrp4e", characterPresentation: "profile", edition,
       profileTabs: ["main", "combat", "effects"], notesAvailable: false });
     const keys = sections.flatMap(section => section.entries);

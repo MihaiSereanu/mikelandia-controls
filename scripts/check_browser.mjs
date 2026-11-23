@@ -14,8 +14,8 @@ const cases = [
   ["party-shadowdark-supplies-narrow-large-text", 320, 844, "in-person", "party=true&system=shadowdark&layout=phone&supplies=true&large=true"],
   ...[["phone", 390, 844], ["narrow", 320, 844], ["large-text", 390, 844], ["unprotected", 390, 844]].map(([layout, width, height]) =>
     [`party-shadowdark-supplies-${layout}`, width, height, "in-person", `party=true&system=shadowdark&layout=phone&supplies=true${layout === "large-text" ? "&large=true" : ""}${layout === "unprotected" ? "&unprotected=true" : ""}`]),
-  ...["shadowdark", "wfrp4e", "wfrp5e"].flatMap(system => [["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844], ["large-text", 390, 844], ["unprotected", 390, 844]].map(([layout, width, height]) =>
-    [`party-${system}-${layout}`, width, height, "in-person", `party=true&system=${system === "shadowdark" ? system : "wfrp4e"}&edition=${system === "wfrp4e" ? "4e" : "5e"}&layout=${layout === "tablet" ? "tablet" : "phone"}${layout === "large-text" ? "&large=true" : ""}${layout === "unprotected" ? "&unprotected=true" : ""}`])),
+  ...["shadowdark", "wfrp5e"].flatMap(system => [["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844], ["large-text", 390, 844], ["unprotected", 390, 844]].map(([layout, width, height]) =>
+    [`party-${system}-${layout}`, width, height, "in-person", `party=true&system=${system === "shadowdark" ? system : "wfrp4e"}&edition=${"5e"}&layout=${layout === "tablet" ? "tablet" : "phone"}${layout === "large-text" ? "&large=true" : ""}${layout === "unprotected" ? "&unprotected=true" : ""}`])),
   ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844], ["large-text", 390, 844]].map(([layout, width, height]) =>
     [`swade-wealth-${layout}`, width, height, "native-systems", `system=swade&wealth=true&layout=${layout === "tablet" ? "tablet" : "phone"}${layout === "large-text" ? "&large=true" : ""}`]),
   ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844]].map(([layout, width, height]) =>
@@ -29,7 +29,6 @@ const cases = [
     [`${system}-${layout}`, width, height, "native-systems", `system=${system}&layout=${layout === "tablet" ? "tablet" : "phone"}${layout === "large-text" ? "&large=true" : ""}`])),
   ...["shadowdark", "dnd5e", "wfrp4e"].flatMap(system => [["phone", 390, 844], ["tablet", 1024, 768]].map(([layout, width, height]) =>
     [`roll-chat-${system}-${layout}`, width, height, "in-person", `layout=${layout}&system=${system}&rollChat=true`])),
-  ["roll-chat-wfrp4e-4e-phone", 390, 844, "in-person", "layout=phone&system=wfrp4e&edition=4e&rollChat=true"],
   ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844], ["large-text", 390, 844], ["unprotected", 390, 844]].map(([layout, width, height]) =>
     [`journal-export-${layout}`, width, height, "in-person", `layout=${layout === "tablet" ? "tablet" : "phone"}&export=true&preview=journal-export${layout === "large-text" ? "&large=true" : ""}${layout === "unprotected" ? "&unprotected=true" : ""}`]),
   ["journal-search-phone", 390, 844, "in-person", "layout=phone&search=true"],
@@ -52,7 +51,7 @@ const cases = [
   ["shared-entry-stale-phone-native", 390, 844, "shared-entry", "device=phone&cached=phone&stored=native&full=true"],
   ["bootstrap-common-display-phone", 390, 844, "bootstrap", "theme=dark&common-display=true"],
   ["bootstrap-common-display-standalone-phone", 390, 844, "bootstrap", "theme=dark&common-display=true&standalone=true"],
-  ...[["shadowdark", ""], ["dnd5e", "&system=dnd5e"], ["wfrp4e", "&system=wfrp4e&edition=4e"], ["wfrp5e", "&system=wfrp4e&edition=5e"]].flatMap(([system, query]) =>
+  ...[["shadowdark", ""], ["dnd5e", "&system=dnd5e"], ["wfrp5e", "&system=wfrp4e&edition=5e"]].flatMap(([system, query]) =>
     [["phone", 390, 844], ["tablet", 1024, 768]].map(([layout, width, height]) =>
       [`damage-${system}-${layout}`, width, height, "in-person", `layout=${layout}&damage=true${query}`])),
   ["wfrp-theme-policy-phone", 390, 844, "wfrp-theme-policy", "layout=phone"],
@@ -60,12 +59,16 @@ const cases = [
   ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow", 320, 844]].map(([layout, width, height]) =>
     [`tooltip-touch-${layout}`, width, height, "warhammer", `layout=${layout === "tablet" ? "tablet" : "phone"}&edition=5e&preview=effects`]),
   ["control-contrast-native", 390, 844, "control-contrast", "native-forms=true"],
-  ...["shadowdark", "4e", "5e"].flatMap(system => ["dark", "light"].flatMap(theme => [
+  ...["shadowdark", "5e", "dnd5e", "dnd5e-damage", "swade", "swade-damage", "hi", "hi-damage", "hi-protection"].flatMap(system => ["dark", "light"].flatMap(theme => [
     [`roll-dialogs-${system}-${theme}-phone`, 390, 844, "roll-dialogs", `system=${system}&theme=${theme}&layout=phone`],
     [`roll-dialogs-${system}-${theme}-tablet`, 1024, 768, "roll-dialogs", `system=${system}&theme=${theme}&layout=tablet`],
     [`roll-dialogs-${system}-${theme}-narrow`, 320, 844, "roll-dialogs", `system=${system}&theme=${theme}&layout=phone`],
     [`roll-dialogs-${system}-${theme}-large-text`, 390, 844, "roll-dialogs", `system=${system}&theme=${theme}&layout=phone&large=true`]
   ])),
+  ...["shadowdark", "5e", "dnd5e", "dnd5e-damage", "swade", "swade-damage", "hi", "hi-damage", "hi-protection"].flatMap(system => [
+    [`roll-dialogs-${system}-short`, 320, 568, "roll-dialogs", `system=${system}&theme=dark&layout=phone`],
+    [`roll-dialogs-${system}-keyboard`, 390, 844, "roll-dialogs", `system=${system}&theme=dark&layout=phone&keyboard=true`]
+  ]),
   ["targeting-phone", 390, 844, "targeting", "layout=phone"],
   ["targeting-tablet", 1024, 768, "targeting", "layout=tablet"],
   ["targeting-narrow", 320, 844, "targeting", "layout=phone"],
@@ -105,7 +108,6 @@ const cases = [
   ["fallback-common-display-v2", 393, 851, "fallback", "layout=phone&application=v2&common-display=true"],
   ["fallback-tablet-v1", 1024, 768, "fallback", "layout=tablet&application=v1"],
   ["fallback-tablet-v2", 1024, 768, "fallback", "layout=tablet&application=v2"],
-  ["warhammer-4e-phone", 390, 844, "warhammer", "layout=phone&edition=4e"],
   ["warhammer-5e-phone", 390, 844, "warhammer", "layout=phone&edition=5e"],
   ["warhammer-armour-phone", 390, 844, "warhammer", "layout=phone&edition=5e&preview=armour"],
   ["warhammer-armour-tablet", 1024, 768, "warhammer", "layout=tablet&edition=5e&preview=armour"],
@@ -119,8 +121,6 @@ const cases = [
   ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow-large-text", 320, 844]].flatMap(([layout, width, height]) =>
     ["magic", "custom", "money"].map(preview => [`warhammer-profile-${preview}-${layout}`, width, height, "warhammer", `layout=${layout === "tablet" ? "tablet" : "phone"}&edition=5e&profile-improvements=${preview}${layout === "narrow-large-text" ? "&large=true" : ""}`])),
   ["warhammer-profile-magic-unprotected", 390, 844, "warhammer", "layout=phone&edition=5e&profile-improvements=magic&unprotected=true"],
-  ["warhammer-profile-4e-phone", 390, 844, "warhammer", "layout=phone&edition=4e&profile-improvements=magic"],
-  ["warhammer-4e-tablet", 1024, 768, "warhammer", "layout=tablet&edition=4e"],
   ["warhammer-5e-tablet", 1024, 768, "warhammer", "layout=tablet&edition=5e"],
   ["warhammer-5e-narrow", 320, 844, "warhammer", "layout=phone&edition=5e"],
   ["warhammer-5e-large-text", 390, 844, "warhammer", "layout=phone&edition=5e&large=true"],
@@ -297,7 +297,7 @@ try {
       if (report?.status) break;
       await new Promise(resolve => setTimeout(resolve, 50));
     }
-    if (report?.status === "passed" && /^warhammer-profile-(magic-|4e-)/u.test(name)) {
+    if (report?.status === "passed" && /^warhammer-profile-magic-/u.test(name)) {
       try { await checkIngredientTouches((method, params) => send(method, params, sessionId), report.checks); }
       catch (error) { report.status = "failed"; report.error = error.stack; }
     }

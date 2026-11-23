@@ -43,7 +43,7 @@ try {
       Hooks.emit("updateActor", actor, changes);
     };
     globalThis.game = fixture?.game ?? createWarhammerGame([actor]);
-    let use5e = false;
+    let use5e = true;
     if (!fixture) {
       const getSetting = game.settings.get;
       game.settings.get = (namespace, key) => namespace === "wfrp4e" && key === "editionSettings" ? { use5e } : getSetting(namespace, key);
@@ -182,8 +182,6 @@ try {
           && rect.right <= bounds.right - horizontal + 0.5 && rect.top >= bounds.top + vertical - 0.5)
           && paragraph.scrollWidth <= paragraph.clientWidth;
       });
-      check("WFRP4e shows personal and party short/long ambitions", main.querySelectorAll("[data-notes-field]").length === 4 && field("personal-short").textContent.includes("Keep short") && field("party-short").textContent.includes("Keep party short"));
-      check("4e short and long ambition text has Biography body insets", paddedAmbitions());
       use5e = true; Hooks.emit("updateSetting", { key: "wfrp4e.editionSettings" }, {}); await tick();
       check("WFRP5e shows two editable empty long-term ambition fields", main.querySelectorAll("[data-notes-field]").length === 2 && !field("personal-short") && field("personal-long").textContent.includes("Not recorded.") && !!field("party-long").querySelector("button"));
       check("5e empty ambition placeholders have Biography body insets", paddedAmbitions());
@@ -211,10 +209,8 @@ try {
       field("party-long").querySelector("button").click();
       editorInput(main).value = "Edition draft";
       use5e = false; Hooks.emit("updateSetting", { key: "wfrp4e.editionSettings" }, {}); await tick();
-      check("4e grouped ambitions keep body insets after live edition switch", paddedAmbitions());
-      main.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
-      check("edition switch preserves ambition draft and rejects stale edition save", editorInput(main).value === "Edition draft" && main.querySelector(".mc-biography-editor-status").textContent.includes("edition changed"));
-      main.querySelector(".mc-modal-button.is-secondary").click();
+      check("unsupported edition removes companion ambition editing without writing", !editorInput(main) && actor.system.details["party-ambitions"]["long-term"] === "External party goal");
+      use5e = true; Hooks.emit("updateSetting", { key: "wfrp4e.editionSettings" }, {}); await tick();
       field("party-long").querySelector("button").click();
       editorInput(main).value = "Find a safe home";
       writeMode = "rejected";

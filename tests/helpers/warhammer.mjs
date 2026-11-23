@@ -31,10 +31,10 @@ export function createWarhammerActor(overrides = {}) {
   return actor;
 }
 
-export function createWarhammerGame(actors, { use5e = false, groupAdvantage = false } = {}) {
+export function createWarhammerGame(actors, { use5e = true } = {}) {
   const game = createGame(actors, "wfrp4e");
   game.settings.get = (namespace, key) => namespace === "wfrp4e"
-    ? key === "editionSettings" ? { use5e } : key === "useGroupAdvantage" ? groupAdvantage : undefined
+    ? key === "editionSettings" ? { use5e } : undefined
     : undefined;
   return game;
 }

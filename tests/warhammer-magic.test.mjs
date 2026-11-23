@@ -6,7 +6,7 @@ import { installGlobals, collection } from "./helpers/foundry.mjs";
 import { createWarhammerActor, createWarhammerGame, addWarhammerMagic } from "./helpers/warhammer.mjs";
 
 const command = ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION;
-const request = (use5e, id = "spell:lore") => ({ actorSourceUuid: "Actor.hero", actionId: id, actionRevision: use5e ? "5e" : "4e" });
+const request = (use5e, id = "spell:lore") => ({ actorSourceUuid: "Actor.hero", actionId: id, actionRevision: "5e" });
 
 
 function setup(t, use5e) {
@@ -16,20 +16,16 @@ function setup(t, use5e) {
   const native = kind => async (...args) => { calls.push([kind, ...args]); return { actor, ...(typeof args[0] === "object" ? { item: args[0] } : { context: { wind: args[0] } }),
     roll: async () => { calls.push(["roll"]); } }; };
   actor.setupCast = native("cast");
-  actor.setupChannell = native("channel-spell");
   actor.setupChannelling = native("channel-wind");
-  let choice = "cast";
-  actor.sheet = { actor, castOrChannelPrompt(spell) { calls.push(["prompt", spell]); return spell.system.lore.value == "petty" || choice === "cast"
-    ? actor.setupCast(spell) : choice === "channel" ? actor.setupChannell(spell) : undefined; } };
   const game = createWarhammerGame([actor], { use5e });
   installGlobals(t, { game });
   const gateway = createFoundryCommandGateway({ getHooks: () => { throw new Error("D&D orchestration used"); } });
   const view = () => resolveSystemIntegration("wfrp4e").createActorViewRecord(actor, game.user, gateway.capabilitiesForActor);
-  return { actor, game, gateway, calls, view, choose: value => { choice = value; } };
+  return { actor, game, gateway, calls, view };
 }
 
-for (const use5e of [false, true]) {
-  test(`${use5e ? "5e" : "4e"} spells use native edition workflow and exactly one native roll`, async t => {
+for (const use5e of [true]) {
+  test(`5e spells use native edition workflow and exactly one native roll`, async t => {
     const { actor, game, gateway, calls } = setup(t, use5e);
     Object.defineProperty(game, "messages", { get() { throw new Error("Mikelandia Controls must not parse magic results"); } });
     actor.update = () => { throw new Error("Mikelandia Controls must not write channelled power"); };
@@ -38,13 +34,13 @@ for (const use5e of [false, true]) {
       calls.length = 0;
       const outcome = await gateway.execute(command, request(use5e, `spell:${id}`));
       const spell = actor.items.find(item => item.id === id);
-      assert.deepEqual(calls, [...(!use5e ? [["prompt", spell]] : []), ["cast", spell, ...(use5e ? [{}, { resolveClose: true }] : [])], ["roll"]]);
+      assert.deepEqual(calls, [["cast", spell, {}, { resolveClose: true }], ["roll"]]);
       assert.equal(outcome.ok, true);
       assert.equal(outcome.rollResult, undefined);
     }
   });
 
-  test(`${use5e ? "5e" : "4e"} Magic follows native grouping, labels, CN, and Wind visibility`, t => {
+  test(`5e Magic follows native grouping, labels, CN, and Wind visibility`, t => {
     const { view } = setup(t, use5e);
     const magic = view().panels.find(tab => tab.id === "magic");
     assert.equal(magic.label, "Magic");
@@ -57,7 +53,7 @@ for (const use5e of [false, true]) {
     if (use5e) assert.equal(magic.sections[0].rows[0].action.id, "wind:aqshy");
   });
 
-  test(`${use5e ? "5e" : "4e"} hidden, unowned, malformed, foreign, and missing spells cannot expose names or actions`, async t => {
+  test(`5e hidden, unowned, malformed, foreign, and missing spells cannot expose names or actions`, async t => {
     const { actor, gateway, view } = setup(t, use5e);
     const spell = actor.items.find(item => item.id === "lore");
     for (const [id, overrides] of [["hidden", { visible: false }], ["unowned", { isOwner: false }], ["foreign", { parent: {} }], ["malformed", { system: {} }]]) {
@@ -71,7 +67,7 @@ for (const use5e of [false, true]) {
   });
 
   for (const change of ["permission", "edition", "removed", "replaced", "hidden", "unowned", "lore", "actor", "lifecycle", "world", "connection", "method"]) {
-    test(`${use5e ? "5e" : "4e"} pending casting rejects ${change} changes`, async t => {
+    test(`5e pending casting rejects ${change} changes`, async t => {
       const { actor, game } = setup(t, use5e);
       let finish, rolls = 0, generation = 0, active = true;
       actor.setupCast = () => new Promise(resolve => { finish = resolve; });
@@ -96,7 +92,7 @@ for (const use5e of [false, true]) {
     });
   }
 
-  test(`${use5e ? "5e" : "4e"} cancellation, duplicate requests, bad options, and exact token sources`, async t => {
+  test(`5e cancellation, duplicate requests, bad options, and exact token sources`, async t => {
     const { actor, gateway, calls } = setup(t, use5e);
     for (const extra of [{ skipDialog: true }, { options: {} }, { path: "system.status.channelling.value" }]) {
       await assert.rejects(gateway.execute(command, { ...request(use5e), ...extra }), { code: "INVALID_INPUT" });
@@ -116,20 +112,8 @@ for (const use5e of [false, true]) {
   });
 }
 
-test("4e native Cast/Channel choice owns spell channelling and cancellation", async t => {
-  const { actor, gateway, calls, choose } = setup(t, false);
-  choose("channel");
-  await gateway.execute(command, request(false));
-  assert.deepEqual(calls.map(call => call[0]), ["prompt", "channel-spell", "roll"]);
-  assert.equal(calls[1][1], actor.items.find(item => item.id === "lore"));
-  calls.length = 0;
-  choose("cancel");
-  assert.equal((await gateway.execute(command, request(false))).cancelled, true);
-  assert.deepEqual(calls.map(call => call[0]), ["prompt"]);
-});
-
-test("4e native 10.1.2 lore arrays project spells; legacy string assumptions cannot gate them", t => {
-  const { actor, gateway, view } = setup(t, false);
+test("5e native 10.1.2 lore arrays project spells; legacy string assumptions cannot gate them", t => {
+  const { actor, gateway, view } = setup(t, true);
   const spell = actor.items.find(item => item.id === "lore");
   assert.deepEqual(spell.system.lore.value, ["fire"]);
   assert.equal(gateway.capabilitiesForActor(actor).profileActions.some(action => action.id === "spell:lore"), true);
@@ -148,10 +132,11 @@ test("5e channels the Wind key with no spell argument or Mikelandia Controls res
 });
 
 test("magic capabilities require the edition's native entry points and valid prepared Wind data", async t => {
-  const { actor, gateway } = setup(t, false);
-  delete actor.sheet.castOrChannelPrompt;
+  const { actor, gateway } = setup(t, true);
+  delete actor.setupCast;
+  delete actor.setupChannelling;
   assert.deepEqual(gateway.capabilitiesForActor(actor), {});
-  await assert.rejects(gateway.execute(command, request(false)), { code: "CAPABILITY_UNAVAILABLE" });
+  await assert.rejects(gateway.execute(command, request(true)), { code: "CAPABILITY_UNAVAILABLE" });
 });
 
 test("5e hidden spells cannot leak Winds through the native prepared list", t => {
@@ -164,8 +149,8 @@ test("5e hidden spells cannot leak Winds through the native prepared list", t =>
   assert.equal(gateway.capabilitiesForActor(actor).profileActions.some(action => action.id.startsWith("wind:")), false);
 });
 
-for (const use5e of [false, true]) {
-  test(`${use5e ? "5e" : "4e"} malformed native spell returns cannot roll and release locks`, async t => {
+for (const use5e of [true]) {
+  test(`5e malformed native spell returns cannot roll and release locks`, async t => {
     const { actor, gateway } = setup(t, use5e);
     let rolls = 0;
     for (const item of [{ id: "other", type: "spell", parent: actor }, { id: "lore", type: "skill", parent: actor }, { id: "lore", type: "spell", parent: {} }]) {
@@ -209,8 +194,8 @@ function ingredients(actor) {
   return { spell, item };
 }
 
-for (const use5e of [false, true]) {
-  test(`${use5e ? "5e" : "4e"} ingredient choices save native spell links and allow None`, async t => {
+for (const use5e of [true]) {
+  test(`5e ingredient choices save native spell links and allow None`, async t => {
     const { actor, gateway, view } = setup(t, use5e);
     const { spell, item } = ingredients(actor);
     actor.items.push({ ...item, id: "hidden-ingredient", visible: false,
@@ -271,11 +256,3 @@ for (const outcome of ["success", "failure", "cancel", "error", "reroll", "edite
     assert.equal(item.system.quantity.value, ["success", "failure", "native-spent"].includes(outcome) ? 1 : ["zero", "last"].includes(outcome) ? 0 : 2);
   });
 }
-
-test("4e ingredient consumption stays native", async t => {
-  const { actor, gateway } = setup(t, false);
-  const { item } = ingredients(actor);
-  item.update = () => { throw new Error("Companion must not consume native 4e ingredients"); };
-  await gateway.execute(command, request(false));
-  assert.equal(item.system.quantity.value, 2);
-});

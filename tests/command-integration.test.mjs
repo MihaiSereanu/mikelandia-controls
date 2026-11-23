@@ -90,7 +90,7 @@ test("gateway created before setup uses the eventual D&D integration", async t =
 test("shared profile resource command stays unavailable without a mapped resource capability", async t => {
   const { gateway, actor } = setup(t, { systemId: "wfrp4e" });
   await assert.rejects(gateway.execute(ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, { actorSourceUuid: actor.uuid,
-    resourceId: "wounds", resourceRevision: "4e", expectedValue: 7, value: 5 }), { code: "CAPABILITY_UNAVAILABLE" });
+    resourceId: "wounds", resourceRevision: "5e", expectedValue: 7, value: 5 }), { code: "CAPABILITY_UNAVAILABLE" });
 });
 
 test("permission is checked again after capabilities were displayed", async t => {

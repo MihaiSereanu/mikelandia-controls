@@ -20,8 +20,8 @@ function setup(t, use5e) {
   return { actor, game, pack, writes, gateway, execute };
 }
 
-for (const use5e of [false, true]) {
-  test(`${use5e ? "5e" : "4e"} money editing preserves zero, rejects stale values and keeps other denominations`, async t => {
+for (const use5e of [true]) {
+  test(`5e money editing preserves zero, rejects stale values and keeps other denominations`, async t => {
     const { actor, gateway, execute, game } = setup(t, use5e);
     const coin = { id: "coin", name: "GC", type: "money", parent: actor, system: { quantity: { value: 4 } },
       update: async data => { assert.deepEqual(data, { "system.quantity.value": 0 }); return coin; } };
@@ -36,7 +36,7 @@ for (const use5e of [false, true]) {
     coin.system.quantity.value = 5;
     await assert.rejects(execute(ACTOR_COMMANDS.EDIT_PROFILE_RESOURCE, payload), { code: "STALE_STATE" });
   });
-  test(`${use5e ? "5e" : "4e"} catalogue is scoped, copies without source ID, and rechecks access after loading`, async t => {
+  test(`5e catalogue is scoped, copies without source ID, and rechecks access after loading`, async t => {
     const { execute, pack, writes } = setup(t, use5e);
     const result = await execute(ACTOR_COMMANDS.LIST_PROFILE_ITEMS);
     assert.equal(result.items.length, 1);
@@ -47,7 +47,7 @@ for (const use5e of [false, true]) {
     await assert.rejects(execute(ACTOR_COMMANDS.LIST_PROFILE_ITEMS), { code: "FORBIDDEN" });
     assert.equal(writes.length, 1);
   });
-  test(`${use5e ? "5e" : "4e"} custom trapping saves native fields and rejects invalid input`, async t => {
+  test(`5e custom trapping saves native fields and rejects invalid input`, async t => {
     const { actor, execute, writes } = setup(t, use5e);
     const data = { name: " Lantern ", quantity: 2, encumbrance: 0.5, price: { gc: 0, ss: 3, bp: 6 }, description: "<p>A lantern.</p>" };
     await execute(ACTOR_COMMANDS.ADD_PROFILE_ITEM, data);
@@ -61,7 +61,7 @@ for (const use5e of [false, true]) {
     await assert.rejects(execute(ACTOR_COMMANDS.ADD_PROFILE_ITEM, data));
     assert.equal(writes.length, 1);
   });
-  test(`${use5e ? "5e" : "4e"} missing catalogue and access revoked during document loading never create items`, async t => {
+  test(`5e missing catalogue and access revoked during document loading never create items`, async t => {
     const { execute, pack, game, writes } = setup(t, use5e);
     game.packs.clear();
     await assert.rejects(execute(ACTOR_COMMANDS.LIST_PROFILE_ITEMS), { code: "CAPABILITY_UNAVAILABLE" });
@@ -71,7 +71,7 @@ for (const use5e of [false, true]) {
     await assert.rejects(execute(ACTOR_COMMANDS.ADD_PROFILE_ITEM, { itemUuid: `Compendium.${WARHAMMER_CATALOGUE}.rope` }), { code: "FORBIDDEN" });
     assert.deepEqual(writes, []);
   });
-  test(`${use5e ? "5e" : "4e"} spells project native prepared details`, t => {
+  test(`5e spells project native prepared details`, t => {
     const { actor, game, gateway } = setup(t, use5e);
     addWarhammerMagic(actor, use5e);
     const spell = actor.items.find(item => item.id === "petty");

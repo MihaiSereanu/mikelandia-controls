@@ -14,7 +14,7 @@ export function nativeActorNotes({ actorType, read, update, fields = () => [] })
       }
       const availableFields = fields(actor, game);
       if (payload.biographyField !== "notes" && typeof payload.notesContextRevision === "string"
-        && availableFields.length && payload.notesContextRevision !== availableFields[0].revision) {
+        && payload.notesContextRevision !== availableFields[0]?.revision) {
         throw new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Panels.EditionChanged", "The game edition changed. Reopen the action."));
       }
       const field = payload.biographyField === "notes" ? null : availableFields.find(field => field.id === payload.biographyField);
@@ -41,15 +41,15 @@ export function nativeActorNotes({ actorType, read, update, fields = () => [] })
 function warhammerAmbitions(actor, game) {
   const context = readWarhammerContext(game);
   if (actor?.type !== "character" || !context) return [];
-  return ["personal", "party"].flatMap(group => (context.use5e ? ["long"] : ["short", "long"]).map(term => {
-    const key = `${group}-ambitions`, leaf = `${term}-term`;
+  return ["personal", "party"].map(group => {
+    const key = `${group}-ambitions`, leaf = "long-term";
     return {
-      id: `${group}-${term}`, group, groupLabelKey: group === "personal" ? "Personal Ambitions" : "Party Ambitions",
-      labelKey: context.use5e ? (group === "personal" ? "Personal Ambitions" : "Party Ambitions") : term === "short" ? "Short Term" : "Long Term",
+      id: `${group}-long`, group, groupLabelKey: group === "personal" ? "Personal Ambitions" : "Party Ambitions",
+      labelKey: group === "personal" ? "Personal Ambitions" : "Party Ambitions",
       value: String(actor.system?.details?.[key]?.[leaf] ?? ""), revision: context.revision,
       update: (actor, value) => actor.update({ [`system.details.${key}.${leaf}`]: value })
     };
-  }));
+  });
 }
 
 export const warhammerNotes = nativeActorNotes({ actorType: "character",

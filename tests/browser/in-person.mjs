@@ -35,7 +35,7 @@ try {
   const warhammer = params.get("system") === "wfrp4e";
   const actor = warhammer ? createWarhammerActor() : legacy ? createActor() : null;
   if (warhammer) addWarhammerMagic(actor, true);
-  const f = legacy || warhammer ? { actor, game: warhammer ? createWarhammerGame([actor], { use5e: params.get("edition") !== "4e" }) : createGame([actor]), hooks: createHooks() } : createShadowdarkFixture();
+  const f = legacy || warhammer ? { actor, game: warhammer ? createWarhammerGame([actor]) : createGame([actor]), hooks: createHooks() } : createShadowdarkFixture();
   f.game.user.character = f.actor;
   globalThis.game = f.game; globalThis.Hooks = f.hooks;
   globalThis.TextEditor = { implementation: { enrichHTML: async value => value } };

@@ -8,7 +8,7 @@ const safeId = id => typeof id === "string" && /^[a-zA-Z0-9_-]{1,64}$/u.test(id)
 
 /** Native edition configuration owns condition availability and stacking. */
 export function readWarhammerConditions(actor, game = globalThis.game, { includeMarkers = false } = {}) {
-  const use5e = readWarhammerContext(game)?.use5e;
+  if (!readWarhammerContext(game)) return [];
   return values(game?.wfrp4e?.config?.statusEffects).flatMap(definition => {
     const id = conditionId(definition);
     if (!safeId(id) || (!includeMarkers && ["dead", "engaged"].includes(id))) return [];
@@ -19,7 +19,7 @@ export function readWarhammerConditions(actor, game = globalThis.game, { include
     const revision = JSON.stringify([id, effect?.uuid ?? effect?.id ?? "", count,
       Boolean(effect?.disabled), scripts.map(script => script.label)]);
     return [{ id, label: localize(definition.name, definition.name), numbered,
-      ...(use5e && warhammer5eConditionDescriptions[id]
+      ...(warhammer5eConditionDescriptions[id]
         ? { description: warhammer5eConditionDescriptions[id] } : {}),
       active: Boolean(effect), value: Number.isFinite(count) ? count : 0, revision,
       scripts: scripts.map((script, index) => ({ index, label: String(script.label ?? effect.name) })) }];

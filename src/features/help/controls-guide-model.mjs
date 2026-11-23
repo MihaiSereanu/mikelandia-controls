@@ -1,6 +1,6 @@
 /** Static, audited copy keys. Context is a narrow presentation record, never diagnostics. */
 export function controlsGuideSections({ presentation = "phone", systemId = "dnd5e", actorType = "character",
-  characterPresentation = "legacy", profileTabs, notesAvailable = true, notesTabLabel, edition } = {}) {
+  characterPresentation = "legacy", profileTabs, notesAvailable = true, notesTabLabel } = {}) {
   const dnd = systemId === "dnd5e" && characterPresentation === "legacy";
   const profile = characterPresentation === "profile";
   const warhammer = systemId === "wfrp4e" && profile;
@@ -8,7 +8,7 @@ export function controlsGuideSections({ presentation = "phone", systemId = "dnd5
   const swade = systemId === "swade" && profile;
   const intrigue = systemId === "honor-and-intrigue" && profile;
   const mappedTabs = warhammer ? [
-    ["main", "WarhammerMain"], ["combat", edition === "5e" ? "WarhammerCombat5e" : edition === "4e" ? "WarhammerCombat4e" : "WarhammerCombat"],
+    ["main", "WarhammerMain"], ["combat", "WarhammerCombat5e"],
     ["skills", "WarhammerSkills"], ["trappings", "WarhammerTrappings"], ["talents", "WarhammerTalents"],
     ["magic", "WarhammerMagic"], ["effects", "WarhammerEffects"]
   ] : shadowdark ? [
@@ -33,7 +33,7 @@ export function controlsGuideSections({ presentation = "phone", systemId = "dnd5
       ...(dnd ? ["Rows", ...(actorType === "group" ? ["Members"] : [])] : []),
       ...(warhammer || shadowdark || swade || intrigue ? ["Counters", "Descriptions", "NativeSheet"] : []),
       ...(warhammer ? ["ItemNotes"] : []),
-      ...(warhammer && edition === "5e" ? ["ConditionReferences"] : []),
+      ...(warhammer ? ["ConditionReferences"] : []),
       "Back", presentation === "tablet" ? "Tablet" : "Phone"] }
   ];
   return Object.freeze(sections.map(section => Object.freeze({ ...section, entries: Object.freeze(section.entries) })));

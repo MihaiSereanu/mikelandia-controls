@@ -112,7 +112,7 @@ export async function checkParty({ f, store, uiCommands, root, check, tick, para
     check("WFRP shows Conditions with values, Injuries and Critical Wounds", [...root.querySelectorAll("[data-party-actor]")].every(card =>
       card.textContent.includes("Bleeding 2") && card.textContent.includes("Prone") && card.textContent.includes("Torn muscle") && card.textContent.includes("Broken arm")));
     check("WFRP Party has no mutation controls or Supplies region", root.querySelectorAll(".mc-party-screen [data-profile-action], .mc-party-screen .mc-profile-condition-controls, .mc-party-screen input").length === 0 && getComputedStyle(root.querySelector(".mc-party-supplies")).display === "none");
-    if (params.get("edition") !== "4e") {
+    {
       const trigger = root.querySelector('[data-party-actor="observer"] [data-party-condition="bleeding"]');
       const effectsBefore = JSON.stringify(observer.effects.map(effect => [effect.conditionId, effect.conditionValue]));
       trigger.click(); await tick();
@@ -121,8 +121,6 @@ export async function checkParty({ f, store, uiCommands, root, check, tick, para
       check("Condition tooltips use the existing 5e rules", tooltip.textContent.includes("Challenging"));
       trigger.click(); await tick();
       check("Retapping the condition dismisses its tooltip without mutation", !tooltip.matches(":popover-open") && JSON.stringify(observer.effects.map(effect => [effect.conditionId, effect.conditionValue])) === effectsBefore);
-    } else {
-      check("4e conditions retain plain labels", !root.querySelector("[data-party-condition]"));
     }
     await observer.removeCondition("bleeding", 2); await tick();
     check("WFRP conditions refresh for observer PCs", !root.querySelector('[data-party-actor="observer"]').textContent.includes("Bleeding"));

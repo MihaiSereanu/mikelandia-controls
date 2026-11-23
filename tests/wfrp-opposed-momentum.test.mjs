@@ -130,7 +130,7 @@ test("unrelated and multi-field unowned updates still fail permission checks", a
   assert.equal(f.requests.length, 0);
 });
 
-test("4e retains native behavior and does not route Momentum updates", async () => {
+test("unsupported editions retain native behavior and do not route Momentum updates", async () => {
   const f = fixture({ edition: false });
   await f.handler.computeOpposeResult();
   assert.equal(f.requests.length, 0);

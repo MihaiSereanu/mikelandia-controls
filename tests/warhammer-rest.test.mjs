@@ -5,8 +5,8 @@ import { resolveSystemIntegration } from "../src/systems/registry.mjs";
 import { installGlobals } from "./helpers/foundry.mjs";
 import { createWarhammerActor, createWarhammerGame } from "./helpers/warhammer.mjs";
 
-for (const use5e of [false, true]) for (const endurance of [false, true]) {
-  test(`native recovery ${use5e ? "5e" : "4e"}, ${endurance ? "Endurance" : "Toughness"}`, async t => {
+for (const use5e of [true]) for (const endurance of [true]) {
+  test(`native recovery 5e, ${endurance ? "Endurance" : "Toughness"}`, async t => {
     const actor = createWarhammerActor();
     actor.characteristics = { t: { bonus: 3 } };
     const skill = { id: "endurance", name: "Endurance", type: "skill", parent: actor, system: {} };

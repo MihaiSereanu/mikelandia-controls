@@ -974,7 +974,6 @@
         "SettingsTab": "Settings: Change the layout, colors, and other preferences for this browser. You can reopen this guide here.",
         "WarhammerMain": "Main: Roll characteristics, track Wounds and other resources, and check your XP. The bed beside Wounds starts a recovery test; apply healing from the result in Chat.",
         "WarhammerCombat": "Combat: Select Targets, roll weapon attacks, and check movement and encumbrance.",
-        "WarhammerCombat4e": "Combat: Select Targets, roll weapon attacks, and track Advantage. Movement and encumbrance are also shown here.",
         "WarhammerCombat5e": "Combat: Select Targets, roll weapon attacks, and check Momentum, movement, and encumbrance.",
         "WarhammerSkills": "Skills: Find basic and advanced skills. Tap a skill with a dice icon to make a test.",
         "WarhammerTrappings": "Trappings: Check your equipment, money, encumbrance, and Social Status.",
@@ -1129,6 +1128,9 @@
         "MCMobileEvent": "Mikelandia Controls event"
       },
       "MobilePresentation": {
+        "MoreOptions": "More options",
+        "ActiveModifier": "active modifier",
+        "ActiveModifiers": "active modifiers",
         "AdvantageShort": "ADV",
         "DisadvantageShort": "DISADV",
         "DisconnectedApplicationRoot": "disconnected application root",

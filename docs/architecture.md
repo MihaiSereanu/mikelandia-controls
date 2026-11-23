@@ -55,7 +55,7 @@ Upgrade cleanup follows settings registration. Clients with historical receipts 
 
 Optional integration `party` mappings own PC eligibility and system details. The shared roster reads world Actors with Observer-or-higher permission, sorted by name, independently of the owned Character directory and selected Actor. Exclude Shadowdark's Group tracker, NPCs and synthetic token Actors. Show portrait/name, exact native remaining/max HP or Wounds and the shared Healthy (>50%), Bloodied (<=50%), Critical (<=10%, including zero) qualifier; health is read-only. Refresh on Actor, Item, Effect and user-permission hooks, including changes to unselected Observer PCs.
 
-WFRP 4e/5e lists active Conditions/counts (including native Dead/Engaged markers), Injuries and Critical Wounds read-only. 5e condition-name tooltips reuse the profile popover and existing curated explanations; 4e retains plain condition labels. Retap, outside touch and Escape dismiss; opening a tooltip never mutates a Condition. Missing descriptions leave plain labels. Shadowdark Supplies shows native `getSlotUsage().total` / `system.slots` and each identified, visible, carried Basic item stack named Ration, Rations or Waterskin (case-insensitive). Supplies keeps portrait/name and Gear Slots on one non-wrapping header row; ellipsize long names and retain their full text/title. Omit stashed items; show zero when a supply is absent. Waterskins count containers; no water-contents field is invented.
+WFRP5 lists active Conditions/counts (including native Dead/Engaged markers), Injuries and Critical Wounds read-only. Condition-name tooltips reuse the profile popover and existing curated explanations. Retap, outside touch and Escape dismiss; opening a tooltip never mutates a Condition. Missing descriptions leave plain labels. Shadowdark Supplies shows native `getSlotUsage().total` / `system.slots` and each identified, visible, carried Basic item stack named Ration, Rations or Waterskin (case-insensitive). Supplies keeps portrait/name and Gear Slots on one non-wrapping header row; ellipsize long names and retain their full text/title. Omit stashed items; show zero when a supply is absent. Waterskins count containers; no water-contents field is invented.
 
 Only Owner PCs, including native GM access, expose existing quantity controls. `EDIT_PARTY_SUPPLY` validates the current PC and carried supply before delegating to native inventory editing, including stale-value/revision checks and zero-quantity removal confirmation. Recheck supply identity, ownership, connection and Party navigation lifetime inside confirmation callbacks. Party edits never change Character selection. Health-only updates retain open supply drafts, focus and reading position. Other systems keep the five base routes until their integration supplies a Party mapping.
 
@@ -129,15 +129,17 @@ Render store subscribers synchronously, independent of hidden-tab animation fram
 
 ## Native applications and rolls
 
-Admitted Shadowdark `#sd-roll-dialog`, WFRP `.warhammer.roll-dialog-v2`, SWADE `.swade.roll-dialog` and H+I `.honor-intrigue.roll-dialog` forms follow the mobile palette, typography and touch styling, preserving native controls/handlers/hidden effects. Headers stay transparent/borderless with 44px targets; `.icon` buttons keep native fonts.
+Admitted Shadowdark `#sd-roll-dialog`, WFRP5 `.warhammer.roll-dialog-v2`, D&D5e `.roll-configuration`, SWADE `.swade.roll-dialog` and H+I `.honor-intrigue.roll-dialog` forms use compact Phone/Tablet layouts. Keep primary controls and native Roll buttons visible without scrolling at ordinary text sizes, including 320?568. Preserve readable inputs, 44px touch targets, icon fonts, native controls/handlers and hidden effects. Expanded options, oversized protection lists and keyboard-reduced viewports may scroll.
 
-`native-roll-presentation.mjs` restores labels on release. Keep 5e test ADV/DISADV distinct from 4e combat Advantage; desktop/D&D styling remains native. Run `node scripts/check_browser.mjs --filter "^roll-dialogs-" --native-assets --screenshots` for installed icon-font fixtures (`FOUNDRY_APP_PATH` overrides location); never copy/ship the font.
+`native-roll-presentation.mjs` sets each admitted dialog's native visibility controls/state to public without changing the saved core default. Hide visibility rows/buttons, retain their form values, and enforce public state before native interaction/submission. WFRP uses `fields`/`userEntry`, Shadowdark `config`, D&D `message`, SWADE the native `messageMode` select, and H+I its nested options context. Explicit secret inline links and scripted rolls outside these dialogs remain native; native desktop windows are untouched.
 
-WFRP 4e `slBonus` / 5e `SL` gain one-point buttons crossing zero. Retain native inputs and `change` events for recalculation; decorate idempotently across partial renders and unwrap on release.
+More options contains WFRP hit-location overrides and effect/script modifiers; Shadowdark situational bonuses and formula explanations; D&D alternative Ability and dice illustrations; SWADE modifier toggles, custom modifiers and presets. Keep all H+I primary fields visible. Its damage/protection variants need no disclosure. Show an active-modifier count, preserving native selections while collapsed. Move original nodes within their existing native form, retain expansion across renders, restore current native replacements on release, and never resurrect removed parts.
+
+WFRP5 `SL` has one-point buttons crossing zero. Retain native inputs and `change` events for recalculation; decorate idempotently across partial renders and unwrap on release. Run `node scripts/check_browser.mjs --filter "^roll-dialogs-" --native-assets --screenshots` for installed icon-font fixtures (`FOUNDRY_APP_PATH` overrides location); never ship the font. Native layout snapshots cover installed SWADE/H+I and the isolated D&D5e 6.0.6 copy; fixture checks do not prove native-world chat visibility.
 
 Inspect ancestry: Shadowdark 4.0.6 `PlayerSheetSD` is V1; `RollDialogSD` is V2; Warhammer sheets use V2. CSS suppresses maximum-height transitions, so admitted V2 windows close with `{animate: false}`; keep V1 lifecycle native.
 
-Warhammer uses the edition manager and native setup, then returned test `.roll()`. Pass `{resolveClose: true}` as setup's third argument to release locks on cancellation. The 4e Cast/Channel chooser omits options: temporarily observe renders, attach one-time close listeners to that Actor's `WarhammerRollDialogV2` instances, resolve unsubmitted closes, and remove listeners in `finally`. Never mutate frozen application options.
+Warhammer uses native setup, then the returned test's `.roll()`. Pass `{resolveClose: true}` as setup's third argument to release locks on cancellation. Never mutate frozen top-level application options.
 
 Shadowdark `rollStatCheck`, `rollAttack`, and `castSpell` roll internally: do not roll twice. Preserve native chat and scoped hooks distinguishing cancellation from failure.
 
@@ -172,7 +174,7 @@ Initiative preserves native `combat.turns` and actions. SWADE's optional `initia
 ## Warhammer resources
 
 
-WFRP 4e/5e share `wfrp4e`. At `i18nInit`, every client overrides Primary/Secondary Arm with fixed English Right/Left Arm labels. This localization override does not change native handedness or hit-location calculations.
+WFRP5 retains the native `wfrp4e` system ID and API namespace. Only an explicit `editionSettings.use5e === true` enables its companion profile/actions; other or unreadable editions retain the native-sheet fallback. At `i18nInit`, every client overrides Primary/Secondary Arm with fixed English Right/Left Arm labels. This localization override does not change native handedness or hit-location calculations.
 
 ### Hit-location compatibility
 
@@ -184,7 +186,7 @@ Native 5e opposed evaluation may write an unowned melee participant's Momentum f
 
 ### Equipment and mounts
 
-Both editions equip Weapons, Armour, clothing/accessories (`trappingType.value === "clothingAccessories"`) and wearable Containers (`wearable.value === true`). Full-width phone/tablet rows align checkboxes beneath one muted, regular-size Equipped heading per eligible section. Mixed ineligible rows reserve the column; Money/Ammunition omit it. Keep item-specific accessible labels.
+WFRP5 equips Weapons, Armour, clothing/accessories (`trappingType.value === "clothingAccessories"`) and wearable Containers (`wearable.value === true`). Full-width phone/tablet rows align checkboxes beneath one muted, regular-size Equipped heading per eligible section. Mixed ineligible rows reserve the column; Money/Ammunition omit it. Keep item-specific accessible labels.
 
 Money, Weapons, Armour, Ammunition, Trappings and Containers use initially closed native disclosures. The whole heading toggles once; retain each list through same-character refresh/tab changes and reset on character change. Encumbrance/Social Status remain outside; equipment headings stay visible when closed.
 
@@ -192,11 +194,11 @@ Money amounts open the shared quantity editor and save owned `money` Item `syste
 
 Trappings has an independent, full-width Add text button even when its item lists are empty. Its shared chooser offers Search Catalogue or Add Trapping. `systems/wfrp4e/inventory.mjs` defines `WARHAMMER_CATALOGUE`, default `world.wfrp5-consumers-guide`; search lists physical equipment from that accessible Item pack. Selection copies the native document without its source ID. Recheck ownership, session and pack/document access after asynchronous loads. Custom creation defaults to native `trapping`/`misc`, quantity 1 and zero encumbrance/GC/SS/BP; name, quantity, encumbrance, price and plain-text description are editable before saving. Numeric fields select their entire value on focus/click, retaining numeric/decimal keyboards and nonnegative integer/decimal validation. Description input preserves line breaks as escaped HTML. Cancellation never writes.
 
-Expanded spells display text badges above their descriptions: native prepared Range, Target, Duration and applicable Magic Missile/Damage, following the native spell expansion. Badges wrap within the viewport and add no template actions or casting calculations. Both editions share these controls.
+Expanded spells display text badges above their descriptions: native prepared Range, Target, Duration and applicable Magic Missile/Damage, following the native spell expansion. Badges wrap within the viewport and add no template actions or casting calculations.
 
 Lore spells also expose a compact ingredient icon and selected stack quantity beside CN and Roll on the spell row (a dash means None). Tapping opens a viewport-bounded native popover with full ingredient names and None; retap, outside tap and Escape dismiss it. Long spell names ellipsize while retaining their full title. Reuse the shared choice editor inside the picker; save the native spell's `system.currentIng.value`, with None as the empty string. List only visible, owned ingredient Trappings linked by `system.spellIngredient.value`, including exhausted stacks with their quantities. Revalidate the spell, edition, selection and available choices before saving. Petty spells omit the control.
 
-Native 4e owns ingredient effects/consumption. Companion-started 5e casts spend one selected ingredient after a completed original cast, successful or failed; cancellation, errors, rerolls, edits, None and exhausted stacks spend nothing. Capture the stack immediately before rolling and revalidate authority, edition, document identity/link, selection and quantity afterward. An existing quantity reduction suppresses the extra decrement to avoid duplicate native/script consumption; this conservatively also skips unrelated concurrent reductions. Stale state or failed spending reports that the cast already completed and asks the user to check quantity; it never repeats the cast. Native desktop/chat casting gains no companion consumption hook.
+Companion-started WFRP5 casts spend one selected ingredient after a completed original cast, successful or failed; cancellation, errors, rerolls, edits, None and exhausted stacks spend nothing. Capture the stack immediately before rolling and revalidate authority, edition, document identity/link, selection and quantity afterward. An existing quantity reduction suppresses the extra decrement to avoid duplicate native/script consumption; this conservatively also skips unrelated concurrent reductions. Stale state or failed spending reports that the cast already completed and asks the user to check quantity; it never repeats the cast. Native desktop/chat casting gains no companion consumption hook.
 
 Write owned embedded Item `system.equipped.value` through native `Item.update`, preserving effects, offhand rules and weapon limits. Check eligibility, expected state and edition; rejection restores the checkbox. Combat reads prepared native equipment.
 
@@ -220,21 +222,21 @@ Populated secondary sections are read-only: combat Aspects, Injuries, Criticals,
 
 Rows show native values/player Notes (`system.description.value`) with equal typography and consistent minimum height. Names/values stay single-line; only Notes ellipsizes, with 44px tap width. Scroll oversized rows within cards. Plain-text Notes opens a viewport-bounded formatted popover through the shared safe renderer. No effect creation/editing controls.
 
-5e condition names toggle heading-free, scrollable popovers. Exclude Engaged from picker/rows/actions. Edition-gated `systems/wfrp4e/condition-descriptions.mjs` supplies code-owned text/bold spans without HTML injection or replacing 4e/native rules.
+5e condition names toggle heading-free, scrollable popovers. Exclude Engaged from picker/rows/actions. Edition-gated `systems/wfrp4e/condition-descriptions.mjs` supplies code-owned text/bold spans without HTML injection or replacing native rules.
 
 Notes/condition triggers declare `popovertarget`, prevent default toggle and position immediately. Outside taps dismiss while activating the tapped control; inside taps/scroll retain content. Retap closes, another trigger switches, Escape dismisses. Use trusted CDP `tooltip-touch-*` cases; synthetic clicks cannot verify light dismissal.
 
 ### Resources, recovery and Notes
 
-Trappings displays nonblank prepared `system.details.status.value` as read-only Social Status in both editions; native preparation owns rank and modifiers.
+Trappings displays nonblank prepared `system.details.status.value` as read-only Social Status; native preparation owns rank and modifiers.
 
-Wounds, Fortune, Fate and Corruption use separate shared counter cards with per-Actor/resource session padlocks, immediate one-point changes and numeric entry. Native validation and writes remain authoritative: Wounds uses `setWounds` and its native maximum; Corruption's displayed maximum is a threshold and does not cap increments. Resolve/Resilience retain their existing 4e editors.
+Wounds, Fortune, Fate and Corruption use separate shared counter cards with per-Actor/resource session padlocks, immediate one-point changes and numeric entry. Native validation and writes remain authoritative: Wounds uses `setWounds` and its native maximum; Corruption's displayed maximum is a threshold and does not cap increments.
 
 The Wounds bed starts native recovery regardless of padlock: find localized Endurance via `itemTags.skill`, fall back to Toughness, pass `{rest:true, tb:actor.characteristics.t.bonus, skipTargets:true}`. Native setup/roll and Chat Apply Healing own healing; cancellation releases without rolling.
 
 Combat displays prepared `system.details.move.{value,walk,run}` as read-only Move/Walk/Run. Preserve manual text and mounted results; append native localized yards only to auto-calculated Walk/Run. Main displays read-only `system.details.experience.{current,spent,total}` in Current/Spent/Total order; the native system owns Current and no XP is recalculated or edited here.
 
-Notes edits the selected Actor's plain-text Personal/Party Ambitions, `system.details.{personal-ambitions,party-ambitions}`: 5e `long-term`; 4e `short-term`/`long-term`. Empty fields stay editable. Allowlist named fields, checking original value/edition; preserve siblings and Party documents. Ambition/edition changes invalidate Notes snapshots without losing drafts.
+Notes edits the selected Actor's plain-text Personal/Party Ambitions, `system.details.{personal-ambitions,party-ambitions}`: `long-term`. Empty fields stay editable. Allowlist named fields, checking original value/edition; preserve siblings and Party documents. Ambition/edition changes invalidate Notes snapshots without losing drafts.
 
 Momentum uses `editControl: "checkbox"` and validated saves. Disable during saves and restore on failure/cancellation; other booleans retain their editors.
 

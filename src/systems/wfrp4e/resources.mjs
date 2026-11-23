@@ -10,41 +10,22 @@ import { warhammerMount, mountRevision } from "./mount.mjs";
 // Paths and operations come from the installed native sheet/model, never requests.
 const resources = Object.freeze([
   { id: "wounds", label: "Wounds", path: "system.status.wounds.value", maxPath: "system.status.wounds.max", method: "setWounds" },
-  ...["fortune", "fate", "resolve", "resilience", "corruption"].map(id => ({ id, label: id[0].toUpperCase() + id.slice(1), path: `system.status.${id}.value` })),
-  { id: "advantage", label: "Advantage", path: "system.status.advantage.value", method: "setAdvantage" },
+  ...["fortune", "fate", "corruption"].map(id => ({ id, label: id[0].toUpperCase() + id.slice(1), path: `system.status.${id}.value` })),
   { id: "momentum", label: "Momentum", path: "system.status.momentum", kind: "boolean" }
 ]);
 const unavailable = () => new CommandError("CAPABILITY_UNAVAILABLE", localizeFoundry("MIKELANDIA_CONTROLS.Panels.ActionUnavailable", "This game action is no longer available."));
 const stale = () => new CommandError("STALE_STATE", localizeFoundry("MIKELANDIA_CONTROLS.Panels.ResourceChanged", "This resource changed. Reopen the editor and try again."));
 const integer = value => Number.isSafeInteger(value) && value >= 0;
 
-function resourceState(actor, game, resource, context) {
-  if ((["resolve", "resilience", "advantage"].includes(resource.id) && context.use5e)
-    || (resource.id === "momentum" && !context.use5e)
-    || typeof actor[resource.method ?? "update"] !== "function") return null;
+function resourceState(actor, resource, context) {
+  if (typeof actor[resource.method ?? "update"] !== "function") return null;
   const value = readProfilePath(actor, resource.path);
   const kind = resource.kind ?? "integer";
   if (kind === "boolean" ? typeof value !== "boolean" : !integer(value)) return null;
-  let max = resource.maxPath ? readProfilePath(actor, resource.maxPath) : undefined;
-  let group = null;
-  let advantageSettings = null;
-  if (resource.id === "advantage") {
-    if (context.groupAdvantage) {
-      const combatant = game.combat?.getCombatantByActor?.(actor);
-      if (!combatant || combatant.actor !== actor || !["players", "enemies"].includes(actor.advantageGroup)) return null;
-      const sharedValue = game.settings.get("wfrp4e", "groupAdvantageValues")?.[actor.advantageGroup];
-      if (!integer(sharedValue) || sharedValue !== value) return null;
-      group = [game.combat.id, combatant.id, actor.advantageGroup, sharedValue];
-    } else {
-      max = readProfilePath(actor, "system.status.advantage.max");
-      advantageSettings = [game.settings.get("wfrp4e", "capAdvantageIB"), game.settings.get("wfrp4e", "advantagemax")];
-    }
-  }
-  if ((resource.maxPath || (resource.id === "advantage" && !context.groupAdvantage)) && !integer(max)) return null;
-  const labelKey = resource.id === "advantage" && context.groupAdvantage ? "SHEET.GroupAdvantage" : resource.label;
-  const label = resource.id === "advantage" && context.groupAdvantage ? "Group Advantage" : resource.label;
-  return Object.freeze({ id: resource.id, label: localizeFoundry(labelKey, label), kind,
-    revision: JSON.stringify([context.revision, context.groupAdvantage, max ?? null, group, advantageSettings]),
+  const max = resource.maxPath ? readProfilePath(actor, resource.maxPath) : undefined;
+  if (resource.maxPath && !integer(max)) return null;
+  return Object.freeze({ id: resource.id, label: localizeFoundry(resource.label, resource.label), kind,
+    revision: JSON.stringify([context.revision, max ?? null]),
     ...(kind === "integer" ? { min: 0, ...(max !== undefined ? { max } : {}) } : {}), value });
 }
 
@@ -52,7 +33,7 @@ export function warhammerResourceEdits(actor, game, user = game?.user) {
   const context = readWarhammerContext(game);
   if (!context || actor?.type !== "character" || !fallbackIntegration.isActorEligible(actor, user)) return [];
   return Object.freeze(resources.flatMap(resource => {
-    try { const state = resourceState(actor, game, resource, context); return state ? [state] : []; }
+    try { const state = resourceState(actor, resource, context); return state ? [state] : []; }
     catch { return []; }
   }).concat(equipmentEdits(actor, context), moneyEdits(actor, context), ingredientEdits(actor, context), mountedEdit(actor, context)));
 }
@@ -123,9 +104,8 @@ export async function editWarhammerResource(payload, { actor, assertCurrent, sou
     return Object.freeze({ ok: true, actorId: String(actor.id), actorSourceUuid: sourceUuid, ...(!updated ? { cancelled: true } : {}) });
   }
   const resource = resources.find(resource => resource.id === edit.id);
-  // Native update hooks retain group routing, corruption tests, and token effects.
+  // Native update hooks retain corruption tests and token effects.
   const updated = resource.method ? await actor[resource.method](payload.value) : await actor.update({ [resource.path]: payload.value });
   if (!updated) return Object.freeze({ ok: true, actorId: String(actor.id), actorSourceUuid: sourceUuid, cancelled: true });
-  return Object.freeze({ ok: true, actorId: String(actor.id), actorSourceUuid: sourceUuid,
-    submitted: edit.id === "advantage" && readWarhammerContext(game)?.groupAdvantage === true });
+  return Object.freeze({ ok: true, actorId: String(actor.id), actorSourceUuid: sourceUuid });
 }

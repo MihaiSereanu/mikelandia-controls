@@ -20,7 +20,7 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 30));
 const scope = createTaskScope("browser-warhammer");
 try {
   const params = new URLSearchParams(location.search);
-  const initial5e = params.get("edition") === "5e";
+  const initial5e = true;
   if (params.has("native-assets")) {
     // Exercise the installed core button defaults without importing unrelated
     // page typography into this focused system fixture.
@@ -68,19 +68,14 @@ try {
   actor.system.autoCalc = { walk: true, run: true };
   actor.characteristics = { t: { bonus: 3 } };
   actor.itemTags = { skill: [] };
-  actor.system.status.advantage.max = 10;
-  actor.advantageGroup = "players";
   const nativeWrites = [],
     nativeResourceEffects = [];
-  let nativeWoundCalls = 0,
-    nativeAdvantageCalls = 0,
-    groupAdvantage = false;
-  const groupAdvantageValues = { players: 4, enemies: 2 };
+  let nativeWoundCalls = 0;
   actor.update = async (...args) => {
     nativeWrites.push(args);
     for (const [path, value] of Object.entries(args[0])) {
       if (
-        !/^system\.status\.(?:(?:wounds|fortune|fate|resolve|resilience|corruption|advantage)\.value|momentum|mount\.mounted)$/u.test(
+        !/^system\.status\.(?:(?:wounds|fortune|fate|corruption)\.value|momentum|mount\.mounted)$/u.test(
           path,
         )
       )
@@ -93,11 +88,7 @@ try {
         nativeResourceEffects.push("corruption");
       if (path === "system.status.momentum")
         nativeResourceEffects.push("momentum");
-      if (path === "system.status.advantage.value" && groupAdvantage) {
-        groupAdvantageValues.players = value;
-        nativeResourceEffects.push("group-advantage");
-        Hooks.emit("updateSetting", { key: "wfrp4e.groupAdvantageValues" }, {});
-      }
+
     }
     Hooks.emit("updateActor", actor, args[0]);
     return actor;
@@ -105,10 +96,6 @@ try {
   actor.setWounds = (value) => {
     nativeWoundCalls++;
     return actor.update({ "system.status.wounds.value": value });
-  };
-  actor.setAdvantage = (value) => {
-    nativeAdvantageCalls++;
-    return actor.update({ "system.status.advantage.value": value });
   };
   addWarhammerMagic(actor, use5e);
   const npc = createWarhammerActor({
@@ -141,13 +128,7 @@ try {
     namespace === "wfrp4e"
       ? key === "editionSettings"
         ? { use5e }
-        : key === "useGroupAdvantage"
-          ? groupAdvantage
-          : key === "groupAdvantageValues"
-            ? groupAdvantageValues
-            : key === "advantagemax"
-              ? 10
-              : false
+        : false
       : undefined;
   game.combat = {
     id: "combat",
@@ -235,52 +216,8 @@ try {
     setupTest("weapon", weapon, options);
   actor.setupCast = (spell, context, options) =>
     setupTest("cast", spell, options);
-  actor.setupChannell = (spell, context, options) =>
-    setupTest("channel-spell", spell, options);
   actor.setupChannelling = (wind, context, options) =>
     setupTest("channel-wind", wind, options);
-  actor.sheet = {
-    actor,
-    castOrChannelPrompt(spell) {
-      if (spell.system.lore.value == "petty") return actor.setupCast(spell);
-      return new Promise((resolve) => {
-        let settled = false;
-        const dialog = {
-          fixtureNativeRoll: true,
-          options: { modal: true },
-          element: document.createElement("section"),
-          close() {
-            this.element.remove();
-            Hooks.emit("closeApplicationV2", this);
-            if (!settled) {
-              settled = true;
-              resolve(undefined);
-            }
-          },
-        };
-        dialog.element.className = "application dialog";
-        dialog.element.innerHTML =
-          '<header class="window-header">Cast or Channel</header><div class="window-content"><button data-choice="cast">Cast</button><button data-choice="channel">Channel</button><button data-choice="cancel">Cancel</button></div>';
-        for (const button of dialog.element.querySelectorAll("button"))
-          button.onclick = () => {
-            if (button.dataset.choice === "cancel") {
-              dialog.close();
-              return;
-            }
-            settled = true;
-            dialog.close();
-            resolve(
-              button.dataset.choice === "cast"
-                ? actor.setupCast(spell)
-                : actor.setupChannell(spell),
-            );
-          };
-        document.body.append(dialog.element);
-        Hooks.emit("renderApplicationV2", dialog, dialog.element);
-        nativeDialog = dialog;
-      });
-    },
-  };
   const commandGateway = createFoundryCommandGateway({
     getHooks: () => {
       throw new Error("D&D orchestration used by a Warhammer action");
@@ -672,9 +609,7 @@ try {
     await clickTab("combat");
     check(
       "combat resource follows the edition",
-      use5e
-        ? field("momentum")?.textContent === "MomentumActive"
-        : field("advantage")?.textContent === "Advantage4",
+      field("momentum")?.textContent === "MomentumActive",
     );
     check(
       "Combat starts with native Encumbrance current/max",
@@ -1010,7 +945,7 @@ try {
     await actor.removeCondition("fatigued", 1);
     await tick();
     screen.querySelector('[data-condition-dismiss="fatigued"]').click();
-    if (use5e) {
+    {
       const conditionName = conditionEditor().querySelector(
         ".mc-profile-condition-name",
       );
@@ -1094,7 +1029,7 @@ try {
     await tick();
     const noteTrigger = () =>
       injuries().querySelector(".mc-profile-note-trigger");
-    if (use5e) {
+    {
       const beforeReferences = conditionCalls.length;
       for (const definition of game.wfrp4e.config.statusEffects.filter(
         (entry) => !["dead", "engaged"].includes(entry.id),
@@ -1294,21 +1229,6 @@ try {
     await tick();
     check("missing Social Status is omitted", !field("social-status"));
     await clickTab("combat");
-    use5e = !use5e;
-    Hooks.emit(
-      "updateSetting",
-      { key: "wfrp4e.editionSettings" },
-      {},
-      {},
-      "player",
-    );
-    await tick();
-    check(
-      "edition switch refreshes the retained panel",
-      use5e
-        ? !!field("momentum") && !field("advantage")
-        : !!field("advantage") && !field("momentum"),
-    );
     await clickTab("skills");
     check(
       "skill totals are read from native prepared data",
@@ -1426,7 +1346,7 @@ try {
     check("Mount wounds are read-only", !mounts().querySelector("dl input, dl button"));
     const mountRulesTrigger = screen.querySelector('[data-profile-section="movement"] .mc-profile-section-tooltip-trigger');
     check("Mount rules match the active edition", Boolean(mountRulesTrigger) === use5e);
-    if (use5e) {
+    {
       const writesBefore = nativeWrites.length;
       mountRulesTrigger.scrollIntoView({ block: "center" });
       mountRulesTrigger.click();
@@ -1666,20 +1586,12 @@ try {
     check("Spell name collapses without rolling", !spellDisclosure.open && nativeRolls.length === magicRolls);
     screen.querySelector('[data-profile-action="spell:lore"]').click();
     await tick();
-    if (!use5e) {
-      check(
-        "4e opens an admitted native Cast/Channel choice",
-        !!nativeDialog.element.querySelector('[data-choice="channel"]') &&
-          nativeDialog.element.classList.contains("mc-mobile-admitted-app"),
-      );
-      nativeDialog.element.querySelector('[data-choice="channel"]').click();
-      await tick();
-    }
+
     check(
       "magic setup receives the exact spell and correct workflow",
       nativeSetups.at(-1).target ===
         actor.items.find((item) => item.id === "lore") &&
-        nativeSetups.at(-1).kind === (use5e ? "cast" : "channel-spell"),
+        nativeSetups.at(-1).kind === "cast",
     );
     nativeDialog.element.querySelector("[data-native-roll]").click();
     await tick();
@@ -1687,11 +1599,6 @@ try {
       "magic confirmation rolls once and retains native chat",
       nativeRolls.length === magicRolls + 1 &&
         game.messages.length === nativeRolls.length,
-    );
-    check(
-      "4e channelled SL belongs to the native callback",
-      use5e ||
-        actor.items.find((item) => item.id === "lore").system.cn.SL === 2,
     );
     screen.querySelector('[data-profile-action="spell:petty"]').click();
     await tick();
@@ -1708,7 +1615,7 @@ try {
         actor.system.status.channelling.value === 3 &&
         applications.admissions.size === 0,
     );
-    if (use5e) {
+    {
       screen.querySelector('[data-profile-action="wind:aqshy"]').click();
       await tick();
       check(
@@ -1726,24 +1633,11 @@ try {
         "5e channelled power belongs to the native callback",
         actor.system.status.channelling.value === 5,
       );
-    } else {
-      screen.querySelector('[data-profile-action="spell:lore"]').click();
-      await tick();
-      nativeDialog.element.querySelector('[data-choice="cancel"]').click();
-      await tick();
-      check(
-        "4e choice cancellation creates no setup or roll",
-        nativeRolls.length === magicRolls + 1 &&
-          applications.admissions.size === 0,
-      );
     }
     const beforeStaleMagic = nativeRolls.length;
     screen.querySelector('[data-profile-action="spell:lore"]').click();
     await tick();
-    if (!use5e) {
-      nativeDialog.element.querySelector('[data-choice="cast"]').click();
-      await tick();
-    }
+
     const loreSpell = actor.items.find((item) => item.id === "lore");
     loreSpell.visible = false;
     Hooks.emit("updateItem", loreSpell, {});
@@ -1869,8 +1763,8 @@ try {
     check(
       "a changed edition invalidates an editor with a toast",
       nativeWrites.length === beforeStaleSave &&
-        notices.at(-1).includes("This resource changed") &&
-        !screen.textContent.includes("This resource changed"),
+        notices.at(-1).includes("no longer available") &&
+        !screen.textContent.includes("no longer available"),
     );
     use5e = initial5e;
     Hooks.emit("updateSetting", { key: "wfrp4e.editionSettings" }, {});
@@ -1890,7 +1784,7 @@ try {
     commands.selectActor(actor.uuid);
     await tick();
     await clickTab("combat");
-    if (use5e) {
+    {
       resourceInput = screen.querySelector(
         '[data-profile-resource-input="momentum"]',
       );
@@ -1974,43 +1868,6 @@ try {
         screen.querySelector('[data-profile-resource-input="momentum"]')
           .checked && field("momentum").textContent === "MomentumActive",
       );
-    } else {
-      resourceInput = await edit("advantage");
-      resourceInput.value = "7";
-      await saveResource(resourceInput);
-      check(
-        "Advantage uses its native setter and cap",
-        nativeAdvantageCalls === 1 &&
-          field("advantage").textContent === "Advantage7",
-      );
-      groupAdvantage = true;
-      actor.system.status.advantage.value = groupAdvantageValues.players;
-      Hooks.emit("updateSetting", { key: "wfrp4e.useGroupAdvantage" }, {});
-      await tick();
-      resourceInput = await edit("advantage");
-      check(
-        "Group Advantage has its native label and no personal cap",
-        resourceInput.getAttribute("aria-label") === "Group Advantage" &&
-          !resourceInput.hasAttribute("max"),
-      );
-      resourceInput.value = "12";
-      await saveResource(resourceInput);
-      check(
-        "Group Advantage synchronization belongs to the native update",
-        nativeAdvantageCalls === 2 &&
-          groupAdvantageValues.players === 12 &&
-          nativeResourceEffects.includes("group-advantage"),
-      );
-      game.combat = null;
-      Hooks.emit("deleteCombat", { id: "combat" });
-      await tick();
-      check(
-        "leaving combat removes the Group Advantage editor",
-        !screen.querySelector('[data-profile-edit="advantage"]'),
-      );
-      groupAdvantage = false;
-      Hooks.emit("updateSetting", { key: "wfrp4e.useGroupAdvantage" }, {});
-      await tick();
     }
     check(
       "resource editors fit the emulated viewport",
@@ -2374,11 +2231,11 @@ try {
     check("Selected ingredient quantity appears on button and picker closes", ingredientButton().textContent === "2" && !picker().matches(":popover-open"));
     screen.querySelector('[data-profile-action="spell:lore"]').click();
     await tick();
-    if (!use5e) { nativeDialog.element.querySelector('[data-choice="cast"]').click(); await tick(); }
+
     nativeDialog.element.querySelector("[data-native-cancel]").click();
     await tick();
     check("Cancel preserves selected ingredient quantity", ingredient.system.quantity.value === 2);
-    if (use5e) {
+    {
       screen.querySelector('[data-profile-action="spell:lore"]').click();
       await tick();
       nativeDialog.element.querySelector("[data-native-roll]").click();
@@ -2389,7 +2246,7 @@ try {
     ingredientSelect().value = "";
     ingredientSelect().dispatchEvent(new Event("change", { bubbles: true }));
     await tick();
-    check("None saves without spending ingredients", spell.system.currentIng.value === "" && ingredient.system.quantity.value === (use5e ? 1 : 2));
+    check("None saves without spending ingredients", spell.system.currentIng.value === "" && ingredient.system.quantity.value === 1);
     ingredientButton().click();
     ingredientSelect().value = "ash";
     ingredientSelect().dispatchEvent(new Event("change", { bubbles: true }));

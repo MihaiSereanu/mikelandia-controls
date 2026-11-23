@@ -12,7 +12,7 @@ export function warhammerSpellDetails(item) {
     .map(([label, value]) => `${localizeFoundry(label, label)}: ${value}`);
 }
 
-/** Native 10.1.2 lore is an array in both editions; templates coerce single entries. */
+/** Native 10.1.2 lore is an array; templates coerce single entries. */
 export function spellForActor(actor, id, context) {
   const item = ownedWarhammerItem(actor, id, "spell");
   try {
@@ -22,16 +22,9 @@ export function spellForActor(actor, id, context) {
   } catch { return null; }
 }
 
-export function castChannelSheet(actor) {
-  try {
-    const sheet = actor.sheet;
-    return sheet?.actor === actor && typeof sheet.castOrChannelPrompt === "function" ? sheet : null;
-  } catch { return null; }
-}
-
 /** Ask the native model for Winds using only spells this profile may expose. */
 export function magicWinds(actor, context) {
-  if (!context.use5e) return [];
+  if (!context) return [];
   try {
     const channelling = actor.system.status.channelling;
     if (typeof channelling.getWinds !== "function" || !Number.isFinite(channelling.value)) return [];
@@ -41,25 +34,6 @@ export function magicWinds(actor, context) {
       && Object.hasOwn(channelling.winds ?? {}, key) && typeof wind?.label === "string" && wind.label.trim())
       .map(([key, wind]) => ({ key, label: wind.label }));
   } catch { return []; }
-}
-
-/** The native 4e chooser forwards context, but not application options. */
-export async function cancellableCastOrChannel(actor, spell) {
-  const hooks = globalThis.Hooks;
-  const Dialog = globalThis.warhammer?.apps?.WarhammerRollDialogV2;
-  const listeners = new Map();
-  const listener = hooks && typeof Dialog === "function" ? hooks.on("renderApplicationV2", app => {
-    if (!(app instanceof Dialog) || app.actor !== actor || listeners.has(app)) return;
-    // ApplicationV2 freezes options. Observe its native close event instead.
-    const close = () => { if (!app.submitted) app.resolve?.(); };
-    app.addEventListener("close", close, { once: true });
-    listeners.set(app, close);
-  }) : null;
-  try { return await castChannelSheet(actor).castOrChannelPrompt(spell); }
-  finally {
-    if (listener !== null) hooks.off("renderApplicationV2", listener);
-    for (const [app, close] of listeners) app.removeEventListener("close", close);
-  }
 }
 
 /** Native ingredient links belong to the spell; filter documents before reading labels. */
@@ -91,7 +65,7 @@ export function selectedIngredient(actor, spell) {
   return spellIngredients(actor, spell).find(item => item.id === spell.system.currentIng?.value && item.system.quantity.value > 0) ?? null;
 }
 
-/** Companion 5e casts spend once; native 4e and native/script reductions stay authoritative. */
+/** Companion casts spend once; native/script reductions stay authoritative. */
 export async function consumeCastIngredient(actor, spell, captured, test, assertCurrent) {
   if (!captured || test.context?.reroll || test.context?.edited) return;
   const { item, quantity } = captured;

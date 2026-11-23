@@ -6,7 +6,7 @@ import { createProfilePanels } from "../profile-view.mjs";
 import { fallbackIntegration } from "../fallback/integration.mjs";
 import { readWarhammerContext } from "./context.mjs";
 import { createWarhammerCharacterProfile } from "./profile.mjs";
-import { spellForActor, castChannelSheet, cancellableCastOrChannel, magicWinds, selectedIngredient, consumeCastIngredient } from "./magic.mjs";
+import { spellForActor, magicWinds, selectedIngredient, consumeCastIngredient } from "./magic.mjs";
 import { ownedWarhammerItem, weaponForActor, warhammerWeaponMode } from "./items.mjs";
 import { warhammerResourceEdits, editWarhammerResource } from "./resources.mjs";
 import { warhammerRestState } from "./rest.mjs";
@@ -37,8 +37,7 @@ function availableActions(actor, game, user = game?.user) {
     if (["melee-weapons", "ranged-weapons"].includes(section.id) && typeof actor.setupWeapon === "function") {
       for (const row of section.rows) if (/^[a-zA-Z0-9_-]{1,128}$/u.test(row.id) && weaponForActor(actor, row.id)) actions.push(Object.freeze({ id: `weapon:${row.id}`, revision: context.revision, label: row.label }));
     }
-    if (["petty-spells", "lore-spells"].includes(section.id) && typeof actor.setupCast === "function"
-      && (context.use5e || (castChannelSheet(actor) && (section.id === "petty-spells" || typeof actor.setupChannell === "function")))) {
+    if (["petty-spells", "lore-spells"].includes(section.id) && typeof actor.setupCast === "function") {
       for (const row of section.rows) if (/^[a-zA-Z0-9_-]{1,128}$/u.test(row.id) && spellForActor(actor, row.id, context)) {
         actions.push(Object.freeze({ id: `spell:${row.id}`, revision: context.revision, label: row.label }));
       }
@@ -112,7 +111,7 @@ export function createWarhammerCommands({ getGame = () => globalThis.game } = {}
         : kind === "skill" ? await actor.setupSkill(skill, {}, { resolveClose: true })
           : kind === "weapon" ? await actor.setupWeapon(weapon, {}, { resolveClose: true })
             : kind === "wind" ? await actor.setupChannelling(id, {}, { resolveClose: true })
-              : magicContext.use5e ? await actor.setupCast(spell, {}, { resolveClose: true }) : await cancellableCastOrChannel(actor, spell);
+              : await actor.setupCast(spell, {}, { resolveClose: true });
       if (test === null || test === undefined || test === false) return Object.freeze({ ok: true, command: name,
         actorId: String(actor.id), actorSourceUuid: sourceUuid, cancelled: true });
       assertCurrent();
@@ -137,7 +136,7 @@ export function createWarhammerCommands({ getGame = () => globalThis.game } = {}
       }
       if (kind === "wind" && test.context?.wind !== undefined && test.context.wind !== id) throw unavailable();
       if (typeof test.roll !== "function") throw unavailable();
-      const ingredient = spell && magicContext.use5e ? selectedIngredient(actor, spell) : null;
+      const ingredient = spell ? selectedIngredient(actor, spell) : null;
       const captured = ingredient ? { item: ingredient, quantity: ingredient.system.quantity.value } : null;
       await test.roll();
       if (captured) await consumeCastIngredient(actor, spell, captured, test, () => {

@@ -6,8 +6,8 @@ import { installGlobals, collection } from "./helpers/foundry.mjs";
 import { createWarhammerActor, createWarhammerGame, createWarhammerWeapon } from "./helpers/warhammer.mjs";
 
 const command = ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION;
-const request = (id = "sword", revision = "4e") => ({ actorSourceUuid: "Actor.hero", actionId: `weapon:${id}`, actionRevision: revision });
-function setup(t, { use5e = false } = {}) {
+const request = (id = "sword", revision = "5e") => ({ actorSourceUuid: "Actor.hero", actionId: `weapon:${id}`, actionRevision: revision });
+function setup(t, { use5e = true } = {}) {
   const calls = [];
   const actor = createWarhammerActor({ setupWeapon: async (...args) => {
     calls.push(["setup", ...args]);
@@ -20,13 +20,13 @@ function setup(t, { use5e = false } = {}) {
   return { actor, game, gateway, calls, view };
 }
 
-for (const use5e of [false, true]) {
+for (const use5e of [true]) {
   for (const id of ["sword", "handgun"]) {
-    test(`${use5e ? "5e" : "4e"} ${id} attacks use native setupWeapon and roll exactly once`, async t => {
+    test(`5e ${id} attacks use native setupWeapon and roll exactly once`, async t => {
       const { actor, game, gateway, calls } = setup(t, { use5e });
       Object.defineProperty(game, "messages", { get() { throw new Error("Mikelandia Controls must not parse native attack messages"); } });
       const weapon = actor.items.find(item => item.id === id);
-      const outcome = await gateway.execute(command, request(id, use5e ? "5e" : "4e"));
+      const outcome = await gateway.execute(command, request(id, "5e"));
       assert.equal(calls[0][0], "setup");
       assert.equal(calls[0].length, 4);
       assert.deepEqual(calls[0].slice(2), [{}, { resolveClose: true }], "enable cancellation without bypassing native roll setup");
@@ -47,7 +47,7 @@ test("Combat groups and Damage displays use native labels and computed values", 
   assert.equal(melee.label, "Melee Weapon(s)");
   assert.equal(ranged.label, "Ranged Weapon(s)");
   assert.deepEqual(melee.rows[0], { id: "sword", label: "Sword", value: 7, format: "display", valueLabel: "Damage", valuePrefix: "+",
-    action: { id: "weapon:sword", revision: "4e" } });
+    action: { id: "weapon:sword", revision: "5e" } });
   assert.equal(ranged.rows[0].value, "8+ 1d10");
 });
 
@@ -130,7 +130,7 @@ for (const change of ["unequipped", "removed", "replaced", "item-owner", "visibi
     if (change === "visibility") weapon.visible = false;
     if (change === "mode") { weapon.system.isMelee = false; weapon.system.isRanged = true; }
     if (change === "permission") actor.testUserPermission = () => false;
-    if (change === "edition") game.settings.get = (_module, key) => key === "editionSettings" ? { use5e: true } : false;
+    if (change === "edition") game.settings.get = (_module, key) => key === "editionSettings" ? { use5e: false } : false;
     if (change === "lifecycle") active = false;
     if (change === "connection") generation++;
     finish({ actor, item: weapon, roll: async () => { rolls++; } });

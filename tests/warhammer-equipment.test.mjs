@@ -7,7 +7,7 @@ import { resolveSystemIntegration } from "../src/systems/registry.mjs";
 import { installGlobals, createHooks } from "./helpers/foundry.mjs";
 import { createWarhammerActor, createWarhammerGame } from "./helpers/warhammer.mjs";
 
-function setup(t, use5e = false) {
+function setup(t, use5e = true) {
   const actor = createWarhammerActor();
   const calls = [];
   const hooks = createHooks();
@@ -37,7 +37,7 @@ function setup(t, use5e = false) {
   return { actor, mount, sword, armour, game, calls, hooks, gateway, payload, view, execute };
 }
 
-for (const use5e of [false, true]) test(`${use5e ? "5e" : "4e"} equipment and mounting use native updates and read-only mount wounds`, async t => {
+for (const use5e of [true]) test(`5e equipment and mounting use native updates and read-only mount wounds`, async t => {
   const { actor, mount, sword, armour, payload, execute, view, calls } = setup(t, use5e);
   const tabs = view().panels;
   const combat = tabs.find(tab => tab.id === "combat");
@@ -47,7 +47,7 @@ for (const use5e of [false, true]) test(`${use5e ? "5e" : "4e"} equipment and mo
   assert.deepEqual(mounts.rows.map(row => [row.value, row.max]), [[mount.name, undefined], [12, 18]]);
   assert.ok(mounts.rows.every(row => !row.edit));
   const mountedControl = combat.sections.find(section => section.id === "movement").controls[0];
-  assert.equal(Boolean(mountedControl.tooltip), use5e, "5e rules must not appear in 4e");
+  assert.equal(Boolean(mountedControl.tooltip), use5e, "5e mount rules remain available");
   if (use5e) assert.deepEqual(mountedControl.tooltip.map(group => group.label), ["Mount Rules", "Automated", "Not Automated"]);
   assert.equal(mounts.tooltip, undefined);
   const inventory = tabs.find(tab => tab.id === "trappings");
@@ -78,7 +78,7 @@ test("equipment edits reject stale values, permissions, extra fields, and native
   assert.deepEqual(calls, []);
 });
 
-for (const use5e of [false, true]) test(`${use5e ? "5e" : "4e"} clothing and wearable containers use native equipment controls`, async t => {
+for (const use5e of [true]) test(`5e clothing and wearable containers use native equipment controls`, async t => {
   const { actor, gateway, execute, payload, view, calls } = setup(t, use5e);
   const makeItem = (id, type, extra) => {
     const item = { id, name: id, type, parent: actor, system: { equipped: { value: false }, quantity: { value: 1 }, ...extra },
@@ -127,7 +127,7 @@ test("mount reassignment invalidates edits and unresolved mounts disappear safel
   assert.ok(combat.sections.some(section => section.id === "mounts"));
 });
 
-for (const use5e of [false, true]) test(`${use5e ? "5e" : "4e"} owned rider exposes its assigned horse without separate horse permission`, async t => {
+for (const use5e of [true]) test(`5e owned rider exposes its assigned horse without separate horse permission`, async t => {
   const { actor, mount, payload, execute, view, calls } = setup(t, use5e);
   mount.visible = false;
   mount.isOwner = false;

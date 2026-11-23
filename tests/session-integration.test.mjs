@@ -9,7 +9,7 @@ import { createWarhammerActor, createWarhammerGame } from "./helpers/warhammer.m
 
 const dnd5e = resolveSystemIntegration("dnd5e");
 
-for (const use5e of [false, true]) test(`WFRP ${use5e ? "5e" : "4e"} remote updates retain an unchanged selected character`, async t => {
+for (const use5e of [true]) test(`WFRP 5e remote updates retain an unchanged selected character`, async t => {
   const actor = createWarhammerActor();
   const other = createWarhammerActor({ id: "other", uuid: "Actor.other" });
   const game = createWarhammerGame([actor, other], { use5e });

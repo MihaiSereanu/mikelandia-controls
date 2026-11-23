@@ -34,8 +34,8 @@ test("native item properties preserve ratings, unavailable qualities and custom 
   ]);
 });
 
-for (const use5e of [false, true]) {
-  test(`Warhammer ${use5e ? "5e" : "4e"} Armour keeps native location totals and equipped item coverage`, t => {
+for (const use5e of [true]) {
+  test(`Warhammer 5e Armour keeps native location totals and equipped item coverage`, t => {
     const actor = createWarhammerActor();
     const game = createWarhammerGame([actor], { use5e });
     installGlobals(t, { game });
@@ -66,8 +66,8 @@ for (const use5e of [false, true]) {
   });
 }
 
-for (const use5e of [false, true]) {
-  test(`Warhammer ${use5e ? "5e" : "4e"} Combat mirrors native encumbrance tiers and read-only injuries`, t => {
+for (const use5e of [true]) {
+  test(`Warhammer 5e Combat mirrors native encumbrance tiers and read-only injuries`, t => {
     const actor = createWarhammerActor();
     installGlobals(t, { game: createWarhammerGame([actor], { use5e }) });
     game.i18n = { localize: key => ({
@@ -107,8 +107,8 @@ for (const use5e of [false, true]) {
   });
 }
 
-for (const use5e of [false, true]) {
-  test(`Warhammer ${use5e ? "5e" : "4e"} shows prepared Social Status only when available`, t => {
+for (const use5e of [true]) {
+  test(`Warhammer 5e shows prepared Social Status only when available`, t => {
     const actor = createWarhammerActor();
     installGlobals(t, { game: createWarhammerGame([actor], { use5e }) });
     const status = () => integration.createActorViewRecord(actor, game.user).panels
@@ -124,12 +124,12 @@ for (const use5e of [false, true]) {
     }
   });
 
-  test(`Warhammer ${use5e ? "5e" : "4e"} reads prepared characteristics and native edition resources`, t => {
+  test(`Warhammer 5e reads prepared characteristics and native edition resources`, t => {
     const actor = createWarhammerActor();
     installGlobals(t, { game: createWarhammerGame([actor], { use5e }) });
     const record = integration.createActorViewRecord(actor, game.user);
     assert.equal(record.presentation, "profile");
-    assert.equal(record.edition, use5e ? "5e" : "4e");
+    assert.equal(record.edition, "5e");
     assert.deepEqual(record.panels.map(tab => tab.label), ["Main", "Combat", "Skills", "Trappings", "Effects"]);
     assert.equal(fields(record).find(field => field.id === "ws").value, 41, "use prepared value; do not recompute from initial/advances");
     assert.deepEqual(fields(record).find(field => field.id === "wounds"), { id: "wounds", label: "Wounds", value: 9, max: 13, format: "number", editControl: "counter" });
@@ -165,15 +165,6 @@ test("skill groups mirror native Basic/Advanced and specialization filters", t =
   assert.equal(JSON.stringify(record).includes("Hidden Skill"), false);
 });
 
-test("4e Group Advantage uses the native label and actor value", t => {
-  const actor = createWarhammerActor();
-  installGlobals(t, { game: createWarhammerGame([actor], { groupAdvantage: true }) });
-  const record = integration.createActorViewRecord(actor, game.user);
-  const combat = record.panels.find(tab => tab.id === "combat");
-  assert.equal(combat.sections.find(section => section.id === "group-advantage").label, "Group Advantage");
-  assert.equal(combat.sections.find(section => section.id === "group-advantage").rows[0].value, 4);
-});
-
 test("unmapped types and unreadable editions retain native access without data projection", t => {
   const actor = createWarhammerActor();
   Object.defineProperty(actor, "system", { get() { throw new Error("system must not be read"); } });
@@ -184,7 +175,7 @@ test("unmapped types and unreadable editions retain native access without data p
     assert.equal(integration.createActorViewRecord(actor, game.user).presentation, "native");
   }
   actor.type = "character";
-  for (const edition of [undefined, {}, { use5e: "true" }]) {
+  for (const edition of [undefined, {}, { use5e: "true" }, { use5e: false }]) {
     game.settings.get = () => edition;
     assert.equal(integration.createActorViewRecord(actor, game.user).presentation, "native");
   }
@@ -200,7 +191,7 @@ test("directory projection is cheap and does not read items or characteristics",
 test("permission checks precede profile projection", t => {
   const actor = createWarhammerActor({ testUserPermission: () => false });
   Object.defineProperty(actor, "system", { get() { throw new Error("private data must not be read"); } });
-  const game = createWarhammerGame([actor]);
+  const game = createWarhammerGame([actor], { use5e: false });
   game.user.character = actor;
   installGlobals(t, { game });
   const snapshot = createFoundrySessionGateway().read();
@@ -220,7 +211,7 @@ test("missing fields disappear without inferred zeroes and the native path remai
 
 test("integration setting invalidations do not cross system boundaries", () => {
   const dnd5e = resolveSystemIntegration("dnd5e");
-  for (const setting of ["editionSettings", "useGroupAdvantage", "groupAdvantageValues"]) {
+  for (const setting of ["editionSettings"]) {
     assert.equal(sessionInvalidationForHook("updateSetting", { namespace: "wfrp4e", key: setting }, {}, integration).refreshSelectedActor, true);
   }
   assert.deepEqual(sessionInvalidationForHook("updateSetting", { key: "wfrp4e.editionSettings" }, {}, dnd5e).domains, []);
@@ -230,7 +221,7 @@ test("integration setting invalidations do not cross system boundaries", () => {
 
 test("edition changes refresh the selected profile through the real session watcher", async t => {
   const actor = createWarhammerActor();
-  const game = createWarhammerGame([actor]);
+  const game = createWarhammerGame([actor], { use5e: false });
   game.user.character = actor;
   const scope = createTaskScope("warhammer-session");
   t.after(() => scope.dispose());
@@ -262,8 +253,8 @@ test("nonempty Trappings and Talents tabs retain exact owned item data", t => {
   assert.deepEqual(view().panels.find(p => p.id === "trappings").sections.map(s => s.id), ["encumbrance"]);
 });
 
-for (const use5e of [false, true]) {
-  test(`Warhammer ${use5e ? "5e" : "4e"} shows native encumbrance first in Combat and Trappings without edit controls`, t => {
+for (const use5e of [true]) {
+  test(`Warhammer 5e shows native encumbrance first in Combat and Trappings without edit controls`, t => {
     const actor = createWarhammerActor();
     installGlobals(t, { game: createWarhammerGame([actor], { use5e }) });
     for (const current of ["4.50", 3.25, "0.00", "12.75"]) {

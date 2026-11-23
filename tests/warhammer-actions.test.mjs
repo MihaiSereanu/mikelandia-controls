@@ -6,8 +6,8 @@ import { collection, createActor, createGame, installGlobals, createHooks } from
 import { createWarhammerActor, createWarhammerGame, addWarhammerMagic } from "./helpers/warhammer.mjs";
 
 const command = ACTOR_COMMANDS.EXECUTE_PROFILE_ACTION;
-const payload = (id = "characteristic:ws", revision = "4e") => ({ actorSourceUuid: "Actor.hero", actionId: id, actionRevision: revision });
-function setup(t, { use5e = false } = {}) {
+const payload = (id = "characteristic:ws", revision = "5e") => ({ actorSourceUuid: "Actor.hero", actionId: id, actionRevision: revision });
+function setup(t, { use5e = true } = {}) {
   const calls = [];
   const actor = createWarhammerActor({
     setupCharacteristic: async key => { calls.push(["characteristic", key]); return { actor, roll: async () => { calls.push(["roll"]); } }; },
@@ -19,13 +19,13 @@ function setup(t, { use5e = false } = {}) {
   return { actor, game, gateway, calls };
 }
 
-for (const use5e of [false, true]) {
-  test(`${use5e ? "5e" : "4e"} Characteristic tests run native setup and roll once`, async t => {
+for (const use5e of [true]) {
+  test(`5e Characteristic tests run native setup and roll once`, async t => {
     const { actor, game, gateway, calls } = setup(t, { use5e });
     Object.defineProperty(game, "messages", { get() { throw new Error("native results must not be parsed by Mikelandia Controls"); } });
     const actions = gateway.capabilitiesForActor(actor).profileActions;
     assert.equal(actions.find(action => action.id === "characteristic:ws").label, "Weapon Skill");
-    const outcome = await gateway.execute(command, payload("characteristic:ws", use5e ? "5e" : "4e"));
+    const outcome = await gateway.execute(command, payload("characteristic:ws", "5e"));
     assert.deepEqual(calls, [["characteristic", "ws"], ["roll"]]);
     assert.equal(outcome.ok, true);
     assert.equal(outcome.rolled, true);
@@ -48,7 +48,7 @@ test("profile buttons are attached only for explicitly available native actions"
   const integration = resolveSystemIntegration("wfrp4e");
   const record = integration.createActorViewRecord(actor, game.user, gateway.capabilitiesForActor);
   const rows = record.panels.flatMap(tab => tab.sections.flatMap(section => section.rows));
-  assert.deepEqual(rows.find(row => row.id === "ws").action, { id: "characteristic:ws", revision: "4e" });
+  assert.deepEqual(rows.find(row => row.id === "ws").action, { id: "characteristic:ws", revision: "5e" });
   assert.equal(rows.find(row => row.id === "wounds").action, undefined);
   assert.equal(rows.find(row => row.id === "athletics").action.id, "skill:athletics");
   delete actor.setupCharacteristic;
@@ -93,7 +93,7 @@ test("duplicate taps cannot create a second native dialog", async t => {
 
 test("expired edition descriptors and unexpected payload options are rejected", async t => {
   const { gateway, calls } = setup(t);
-  await assert.rejects(gateway.execute(command, payload("characteristic:ws", "5e")), { code: "STALE_STATE" });
+  await assert.rejects(gateway.execute(command, payload("characteristic:ws", "retired")), { code: "STALE_STATE" });
   for (const extra of [{ method: "update" }, { path: "system.status.wounds.value" }, { skipDialog: true }, { options: {} }]) {
     await assert.rejects(gateway.execute(command, { ...payload(), ...extra }), { code: "INVALID_INPUT" });
   }
@@ -115,7 +115,7 @@ for (const change of ["permission", "edition", "skill", "item-owner", "visibilit
     const pending = gateway.execute(command, payload("skill:athletics"), { isCurrent: () => active });
     const skill = actor.items.find(item => item.id === "athletics");
     if (change === "permission") actor.testUserPermission = () => false;
-    if (change === "edition") game.settings.get = (_module, key) => key === "editionSettings" ? { use5e: true } : false;
+    if (change === "edition") game.settings.get = (_module, key) => key === "editionSettings" ? { use5e: false } : false;
     if (change === "skill") actor.items.splice(actor.items.indexOf(skill), 1);
     if (change === "item-owner") skill.isOwner = false;
     if (change === "visibility") skill.visible = false;
@@ -161,11 +161,11 @@ test("D&D native item use remains routed through the preserved engine", async t 
 });
 
 // Model the library contract: an unsubmitted close settles only with resolveClose.
-for (const use5e of [false, true]) for (const [id, method] of [
+for (const use5e of [true]) for (const [id, method] of [
   ["characteristic:ws", "setupCharacteristic"], ["skill:athletics", "setupSkill"],
   ["weapon:sword", "setupWeapon"], ["spell:petty", "setupCast"],
-  ["spell:lore", "setupCast"], ...(!use5e ? [["spell:lore", "setupChannell"]] : [["wind:aqshy", "setupChannelling"]])
-]) test(`${use5e ? "5e" : "4e"} ${method} ${id} closes and immediately retries`, { timeout: 2000 }, async t => {
+  ["spell:lore", "setupCast"], ["wind:aqshy", "setupChannelling"]
+]) test(`5e ${method} ${id} closes and immediately retries`, { timeout: 2000 }, async t => {
   const { actor, gateway } = setup(t, { use5e });
   addWarhammerMagic(actor, use5e);
   const hooks = createHooks();
@@ -185,14 +185,11 @@ for (const use5e of [false, true]) for (const [id, method] of [
     hooks.emit("renderApplicationV2", dialog);
   });
   actor.setupCast = native;
-  actor.setupChannell = native;
   actor[method] = native;
-  actor.sheet = { actor, castOrChannelPrompt: spell => actor[method](spell) };
-  const request = payload(id, use5e ? "5e" : "4e");
+  const request = payload(id, "5e");
   const pending = gateway.execute(command, request);
   await assert.rejects(gateway.execute(command, request), { code: "COMMAND_BUSY" });
-  if (use5e || !id.startsWith("spell:")) assert.equal(dialog.options.resolveClose, true);
-  else assert.equal(dialog.options.resolveClose, undefined, "native chooser options remain frozen and unchanged");
+  assert.equal(dialog.options.resolveClose, true);
   dialog.close();
   assert.equal((await pending).cancelled, true);
   assert.equal(rolls, 0);
@@ -201,17 +198,5 @@ for (const use5e of [false, true]) for (const [id, method] of [
   dialog.submit();
   assert.equal((await retry).ok, true);
   assert.equal(rolls, 1);
-  assert.equal(hooks.count("renderApplicationV2"), 0);
-});
-
-test("4e chooser failure removes its cancellation listener", async t => {
-  const { actor, gateway } = setup(t);
-  addWarhammerMagic(actor, false);
-  actor.setupCast = async () => {};
-  actor.setupChannell = async () => {};
-  actor.sheet = { actor, castOrChannelPrompt() { throw new Error("choice failed"); } };
-  const hooks = createHooks();
-  installGlobals(t, { Hooks: hooks, warhammer: { apps: { WarhammerRollDialogV2: class {} } } });
-  await assert.rejects(gateway.execute(command, payload("spell:lore")), { code: "COMMAND_FAILED" });
   assert.equal(hooks.count("renderApplicationV2"), 0);
 });

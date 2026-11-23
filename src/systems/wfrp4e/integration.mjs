@@ -29,7 +29,7 @@ export const warhammerIntegration = Object.freeze({
     return ["createCombat", "updateCombat", "deleteCombat", "createCombatant", "updateCombatant", "deleteCombatant"].includes(hook);
   },
   settingInvalidation(key) {
-    return ["wfrp4e.editionSettings", "wfrp4e.useGroupAdvantage", "wfrp4e.groupAdvantageValues", "wfrp4e.capAdvantageIB", "wfrp4e.advantagemax"].includes(key)
+    return key === "wfrp4e.editionSettings"
       ? { domains: ["actors"], refreshSelectedActor: true } : null;
   },
   createActorViewRecord(actor, user, capabilitiesForActor = () => ({})) {

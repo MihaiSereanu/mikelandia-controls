@@ -73,10 +73,6 @@ export const warhammerCharacterProfile = {
       { id: "fortune", kind: "counters", labelKey: "Fortune", label: "Fortune", fields: [
         field("fortune", "Fortune", "system.status.fortune.value")
       ] },
-      { id: "resolve-resilience", kind: "counters", label: "Resolve / Resilience", when: context => !context.use5e, fields: [
-        field("resolve", "Resolve", "system.status.resolve.value"),
-        field("resilience", "Resilience", "system.status.resilience.value")
-      ] },
       { id: "experience", kind: "values", layout: "table", labelKey: "Experience", label: "Experience", fields: [
         ...["current", "spent", "total"].map(id => ({ id: `xp-${id}`, labelKey: id[0].toUpperCase() + id.slice(1), label: id[0].toUpperCase() + id.slice(1), path: `system.details.experience.${id}` }))
       ] }
@@ -85,7 +81,7 @@ export const warhammerCharacterProfile = {
       combatEncumbrance,
       { id: "movement", kind: "values", layout: "table", labelKey: "Move", label: "Movement", controls: [
         field("mounted", "Mounted", "system.status.mount.mounted", { format: "boolean", editControl: "checkbox",
-          readTooltip: (_actor, context) => context.use5e ? warhammer5eMountRules : undefined,
+          readTooltip: () => warhammer5eMountRules,
           when: (_context, actor) => Boolean(warhammerMount(actor)) })
       ], fields: [
         { id: "move", labelKey: "Move", label: "Move", path: "system.details.move.value" },
@@ -96,14 +92,8 @@ export const warhammerCharacterProfile = {
             return actor.system?.autoCalc?.[id] ? `${value} ${localizeFoundry("yds", "yds")}` : value;
           } }))
       ] },
-      { id: "momentum", kind: "values", labelKey: "Momentum", label: "Momentum", when: context => context.use5e, fields: [
+      { id: "momentum", kind: "values", labelKey: "Momentum", label: "Momentum", fields: [
         field("momentum", "Momentum", "system.status.momentum", { format: "boolean", editControl: "checkbox" })
-      ] },
-      { id: "advantage", kind: "counters", labelKey: "Advantage", label: "Advantage", when: context => !context.use5e && !context.groupAdvantage, fields: [
-        field("advantage", "Advantage", "system.status.advantage.value")
-      ] },
-      { id: "group-advantage", kind: "counters", labelKey: "SHEET.GroupAdvantage", label: "Group Advantage", when: context => !context.use5e && context.groupAdvantage, fields: [
-        field("advantage", "SHEET.GroupAdvantage", "system.status.advantage.value", { label: "Group Advantage" })
       ] },
       { id: "melee-weapons", kind: "items", labelKey: "SHEET.MeleeWeaponHeader", label: "Melee Weapon(s)",
         collectionPath: "items", itemTypes: ["weapon"], actionIdPrefix: "weapon", valuePath: "system.DamageString", format: "display",

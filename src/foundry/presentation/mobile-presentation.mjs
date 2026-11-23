@@ -385,7 +385,7 @@ export function createMobileApplicationAdmissions(body) {
       element.classList.remove("mc-mobile-dialog", "mc-mobile-transient-app");
       element.classList.add(modal ? "mc-mobile-dialog" : "mc-mobile-transient-app");
       const topLayer = previous?.element === element ? previous.topLayer : promoteNativeWindow(element);
-      const restoreRollPresentation = decorateNativeRollDialog(element);
+      const restoreRollPresentation = decorateNativeRollDialog(element, application);
       records.set(key, Object.freeze({ element, application, modal: Boolean(modal), lineage, priorLayer, priorLayerPriority, topLayer, restoreRollPresentation }));
       reconcileBackdrop(true);
       return true;
