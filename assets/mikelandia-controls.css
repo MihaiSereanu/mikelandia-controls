@@ -1363,6 +1363,45 @@ body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .modifie
   box-shadow: none !important;
 }
 
+/* More options is content, not the native dialog's remaining-height flex column. */
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-compact-roll .mc-roll-more .dialog-modifiers {
+  display: block;
+  flex: none;
+  height: auto;
+}
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-compact-roll .mc-roll-more .modifier-list {
+  flex: none !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-compact-roll .dialog-modifiers:not(:has(.modifier:not(.hidden))) .modifier-list,
+body.mc-mobile-running .warhammer.roll-dialog-v2.mc-compact-roll .dialog-modifiers:has(.modifier:not(.hidden)) .mc-roll-modifiers-empty {
+  display: none !important;
+}
+body.mc-mobile-running .mc-compact-roll .mc-roll-modifiers-empty {
+  margin: 0;
+  padding: 8px 0;
+  color: var(--mc-subtle);
+}
+body.mc-mobile-running .mc-compact-roll .window-resize-handle {
+  display: none !important;
+}
+body.mc-mobile-running .mc-compact-roll .mc-roll-more > .mc-roll-option + .mc-roll-option {
+  padding-block-start: 12px;
+}
+body.mc-mobile-running #sd-roll-dialog.mc-compact-roll .situational-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+body.mc-mobile-running .swade.roll-dialog.mc-compact-roll .mc-roll-more :is(.modifier-entry.footer, .presets) {
+  margin-block-start: 12px;
+}
+body.mc-mobile-running .honor-intrigue.roll-dialog.mc-compact-roll .modifiers-table-item + .modifiers-table-item {
+  margin-block-start: 4px;
+}
+
 body.mc-mobile-running .warhammer.roll-dialog-v2.mc-mobile-admitted-app .modifier-list .modifier {
   box-sizing: border-box;
   min-height: 44px;

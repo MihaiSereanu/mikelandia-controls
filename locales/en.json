@@ -1128,6 +1128,8 @@
         "MCMobileEvent": "Mikelandia Controls event"
       },
       "MobilePresentation": {
+        "RelevantModifiers": "Relevant Modifiers",
+        "NoOptionalModifiers": "No optional modifiers for this roll.",
         "MoreOptions": "More options",
         "ActiveModifier": "active modifier",
         "ActiveModifiers": "active modifiers",

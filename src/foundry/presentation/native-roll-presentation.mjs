@@ -108,6 +108,22 @@ function moreOptions(element, restorers) {
 }
 
 function decorateWarhammer(element, restorers) {
+  for (const modifiers of element.querySelectorAll(".dialog-modifiers")) {
+    const label = modifiers.querySelector(":scope > label");
+    if (label) {
+      const original = label.dataset.mcNativeModifiersLabel ?? label.textContent;
+      label.dataset.mcNativeModifiersLabel = original;
+      label.textContent = localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobilePresentation.RelevantModifiers", "Relevant Modifiers");
+      restorers.push(() => { label.textContent = original; delete label.dataset.mcNativeModifiersLabel; });
+    }
+    // Native partial renders can retain a clone of our previous empty-state label.
+    modifiers.querySelector(".mc-roll-modifiers-empty")?.remove();
+    const empty = element.ownerDocument.createElement("p");
+    empty.className = "mc-roll-modifiers-empty";
+    empty.textContent = localizeFoundry("MIKELANDIA_CONTROLS.Interface.MobilePresentation.NoOptionalModifiers", "No optional modifiers for this roll.");
+    modifiers.append(empty);
+    restorers.push(() => empty.remove());
+  }
   for (const input of element.querySelectorAll('input[name="SL"]')) {
     if (input.closest(".mc-roll-counter")) continue;
     const wrapper = input.ownerDocument.createElement("div");
