@@ -51,6 +51,7 @@ try {
     document.querySelector("#saved-characters").click();
     const section = [...document.querySelectorAll("#offline-library > section")].find(node => node.textContent.includes(profile.meta.world.title));
     section.querySelector("button").click(); await tick();
+    await document.fonts.ready; await tick();
     check(profile.meta.world.systemId + " uses the existing app frame without Foundry", Boolean(root()) && !root().textContent.includes("This screen could not open"));
   };
   for (const profile of profiles) {
@@ -93,22 +94,46 @@ try {
   check("forgetting a game preserves other systems", Boolean(await storage.get(profiles[1].meta.id)));
   globalThis.Hooks = createHooks();
   let name = "Elsa Becker", allowed = true;
+  let readerFailure = false;
+  const fetchedPortraits = [], progress = [];
   const game = { user: meta.user, world: meta.world, system: { id: "wfrp4e", version: "10" } };
-  const session = { read: () => ({ actors: allowed ? [{ sourceUuid: "Actor.hero", name }] : [], journals: [], party: null }),
-    readOfflineActor: () => ({ ...data.actors[0].view, name, img: "https://example.test/avatar.svg", sourceUuid: "Actor.hero", notesAvailable: false }) };
+  const session = { read: () => ({ actors: allowed ? [{ sourceUuid: "Actor.hero", name }] : [],
+    journals: [{ id: "illustrated", name: "Illustrated Journal", pages: [{ id: "text" }, { id: "image" }] }],
+    party: { supplies: false, members: allowed ? [{ id: "friend", name: "Friend", img: "https://example.test/party.svg" },
+      { id: "self", name, img: "https://example.test/avatar.svg" }, { id: "missing", name: "Missing portrait", img: "https://example.test/missing.svg" }] : [] } }),
+    readOfflineActor: () => ({ ...data.actors[0].view, name, img: "https://example.test/avatar.svg", sourceUuid: "Actor.hero", notesAvailable: false,
+      inventory: [{ id: "icon", img: "https://example.test/item.svg" }], description: '<img src="https://example.test/description.svg">' }),
+    readOfflineJournalStamp: async () => "current",
+    readJournal: async () => ({ id: "illustrated", name: "Illustrated Journal", pages: [
+      { id: "text", name: "Text", type: "text", html: '<p>Journal text stays saved.</p><img src="https://example.test/journal.svg"><a class="content-link" data-uuid="Item.reference">Reference</a>' },
+      { id: "image", name: "Illustration", type: "image", src: "https://example.test/page.svg" }] }) };
   const scope = createTaskScope("offline-test");
-  const controller = createOfflineController({ session, storage, base: location.origin + "/", getGame: () => game, isConnected: () => true, prepareReader: async () => {},
-    fetch: async () => new Response('<svg xmlns="http://www.w3.org/2000/svg" onload="evil()" xml:base="https://evil.test/"><script>evil()</script><foreignObject>bad</foreignObject><image href="https://evil.test/a"/><defs><linearGradient id="paint"/></defs><path d="M0 0h10v10z" fill="url(#paint)"/></svg>', { headers: { "content-type": "image/svg+xml" } }) });
+  const controller = createOfflineController({ session, storage, base: location.origin + "/", getGame: () => game, isConnected: () => true,
+    prepareReader: async () => { if (readerFailure) throw new Error("Offline page needs updating: /mobile/sw.js returned HTTP 404."); },
+    descriptions: { enrich: async ({ uuid, content }) => ({ uuid, html: content ?? "" }),
+      preview: async ({ uuid }) => ({ uuid, name: "Rules", html: '<img src="https://example.test/reference.svg">' }) },
+    fetch: async url => {
+      fetchedPortraits.push(url); if (url.endsWith("/missing.svg")) throw new Error("Missing portrait");
+      return new Response('<svg xmlns="http://www.w3.org/2000/svg" onload="evil()" xml:base="https://evil.test/"><script>evil()</script><foreignObject>bad</foreignObject><image href="https://evil.test/a"/><defs><linearGradient id="paint"/></defs><path d="M0 0h10v10z" fill="url(#paint)"/></svg>', { headers: { "content-type": "image/svg+xml" } });
+    } });
+  controller.watch(scope, state => progress.push(state.message));
   controller.start(scope); await controller.setEnabled(true);
   await wait(async () => (await storage.get(meta.id))?.data?.actors?.[0]?.name === name);
   check("opt-in automatically saves full unopened character models", Boolean((await storage.get(meta.id)).data.actors[0].view.panels));
+  check("only PC and Party portrait URLs are downloaded, once each", fetchedPortraits.length === 3 && ["avatar.svg", "party.svg", "missing.svg"].every(name => fetchedPortraits.includes(`https://example.test/${name}`)));
+  const portraitSave = (await storage.get(meta.id)).data;
+  check("only successful portraits are persisted while Journal text is retained", portraitSave.media.length === 2 && portraitSave.journals[0].pages[0].html.includes("Journal text stays saved."));
+  check("portrait progress reaches the final attempt even when a portrait fails", progress.some(message => message.startsWith("Saving portraits 3 / 3")));
   const svg = await (await storage.get(meta.id)).data.media[0].blob.text();
   check("saved SVGs retain artwork while removing executable and external content", svg.includes("<path") && svg.includes("url(#paint)") && !/evil|script|foreignObject|xml:base/.test(svg));
-  name = "Elsa Updated"; Hooks.emit("updateActor");
+  readerFailure = true; name = "Elsa Updated"; Hooks.emit("updateActor");
   await wait(async () => (await storage.get(meta.id)).data.actors[0]?.name === name);
   check("updates save automatically", true);
+  check("reader installation failure reports the missing static worker instead of prescribing relogin", controller.snapshot().message.includes("/mobile/sw.js returned HTTP 404") && !controller.snapshot().message.includes("Rejoin"));
+  readerFailure = false;
   allowed = false; Hooks.emit("updateUser"); await wait(async () => (await storage.get(meta.id)).data.actors.length === 0);
   check("revoked characters are removed", true);
+  check("revoked PC and Party portraits are removed", (await storage.get(meta.id)).data.media.length === 0);
   await controller.setEnabled(false); check("opting out deletes copies", !await storage.get(meta.id)); scope.dispose();
   const preview = await storage.enable(meta); await storage.save(meta.id, preview.token, data); await reader.refresh(); await open(profiles.find(profile => profile.meta.world.systemId === params.get("system")) ?? profiles[0]);
   check("same phone/tablet sheet stays within viewport", root().scrollWidth <= innerWidth && document.documentElement.scrollWidth <= innerWidth);

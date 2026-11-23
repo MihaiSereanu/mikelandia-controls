@@ -65,29 +65,21 @@ export async function actorDocument(actor, { html, enrich, image = source => sou
   return { id: actor.sourceUuid, name: actor.name, img: actor.img, view: await copy(actor, actor.sourceUuid) };
 }
 
-export function offlineResourceUrls(value) {
-  const urls = new Set();
-  const collect = value => {
-    if (!value || typeof value !== "object") return;
-    for (const [key, child] of Object.entries(value)) {
-      if (["img", "src"].includes(key) && typeof child === "string") urls.add(child);
-      else if (["html", "description", "descriptionHtml", "text", "notesHtml"].includes(key) && typeof child === "string") for (const match of child.matchAll(/\bsrc="([^"]*)"/gu)) urls.add(match[1].replaceAll("&amp;", "&"));
-      else if (typeof child === "object") collect(child);
-    }
-  };
-  collect(value); return urls;
+export function portraitUrls({ actors = [], party = null }, base = globalThis.document?.baseURI) {
+  return new Set([...actors.map(actor => actor.img || actor.view?.img), ...(party?.members ?? []).map(member => member.img)]
+    .map(source => safeUrl(source, base)).filter(Boolean));
 }
 
-export function pruneLibrary(data, manifest, actorStamps = null, journalStamps = null) {
+export function pruneLibrary(data, manifest, actorStamps = null, journalStamps = null, base) {
   if (!data) return null;
   const actors = new Set(manifest.actors.map(actor => actor.sourceUuid));
   const journals = new Map(manifest.journals.map(journal => [journal.id, new Set(journal.pages.map(page => page.id))]));
   const permittedActors = data.actors.filter(actor => actors.has(actor.id) && (!actorStamps || actor.access === actorStamps.get(actor.id)));
   const permittedJournals = data.journals.filter(journal => journals.has(journal.id) && (!journalStamps || journal.access === journalStamps.get(journal.id)))
     .map(journal => ({ ...journal, pages: journal.pages.filter(page => journals.get(journal.id).has(page.id)) }));
-  const urls = offlineResourceUrls([permittedActors, permittedJournals]);
-  // References are rechecked separately. Preserve only media still named by current,
-  // unchanged, permitted content, so a failed refresh keeps a usable prior copy.
+  const urls = portraitUrls({ actors: permittedActors, party: manifest.party }, base);
+  // Only current permitted portraits survive, including when an older cache also
+  // contains Journal/Item images. References are rechecked separately.
   return { ...data, actors: permittedActors, journals: permittedJournals,
     party: null, combat: null, targeting: null, references: [], media: (data.media ?? []).filter(entry => urls.has(entry.url)), incomplete: true };
 }

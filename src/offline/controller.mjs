@@ -1,5 +1,5 @@
 import { createOfflineStorage, libraryIdentity, OFFLINE_VERSION } from "./storage.mjs";
-import { actorDocument, offlineHtml, offlineResourceUrls, pruneLibrary, safeUrl } from "./content.mjs";
+import { actorDocument, offlineHtml, portraitUrls, pruneLibrary, safeUrl } from "./content.mjs";
 import { createFoundryDescriptionGateway } from "../foundry/actors/description-gateway.mjs";
 import { SESSION_INVALIDATION_MAP } from "../foundry/session/session-gateway.mjs";
 import { prepareOfflineReader } from "./assets.mjs";
@@ -54,13 +54,13 @@ export function createOfflineController({ session, biographyGateway, getGame = (
       }
       // Reconcile before enrichment/network work, so failed refreshes cannot keep
       // characters or Journal pages whose access has already been revoked.
-      const pruned = record.version === OFFLINE_VERSION ? pruneLibrary(record.data, manifest, actorStamps, journalStamps) : null;
+      const pruned = record.version === OFFLINE_VERSION ? pruneLibrary(record.data, manifest, actorStamps, journalStamps, base) : null;
       if (pruned) { assertCurrent(); if (!await storage.save(meta.id, record.token, { ...pruned, startedAt }, meta)) return; }
       const data = { startedAt, savedAt: null, actors: [], journals: [], party: null, references: [], media: [], incomplete: false, warnings: [],
         world: manifest.world ?? meta.world, user: manifest.user ?? meta.user, preferences: getPreferences(), locale: getGame().i18n?.lang ?? "en",
         translations: getGame().i18n?.translations ?? {}, fallbackTranslations: getGame().i18n?._fallback ?? {}, combat: manifest.combat ?? null,
         targeting: getTargeting(), selectedActorSourceUuid: manifest.selectedActorSourceUuid ?? "" };
-      const references = new Map(), images = new Set();
+      const references = new Map();
       const html = (source, relativeUuid, collect = true, keepSecrets = false) => {
         const result = offlineHtml(source, { base, keepSecrets });
         const template = document.createElement("template"); template.innerHTML = result;
@@ -68,7 +68,6 @@ export function createOfflineController({ session, biographyGateway, getGame = (
           const uuid = link.dataset.uuid, key = JSON.stringify([uuid, relativeUuid]);
           if (collect) references.set(key, { uuid, relativeUuid });
         }
-        for (const image of template.content.querySelectorAll("img[src]")) images.add(image.getAttribute("src"));
         return template.innerHTML;
       };
       const enrich = async (uuid, content, { fragment = false } = {}) => {
@@ -83,13 +82,13 @@ export function createOfflineController({ session, biographyGateway, getGame = (
           const actor = actorRecords.get(entry.sourceUuid);
           if (!actor || !actorStamps.has(entry.sourceUuid)) throw new Error("Character access could not be checked.");
           const saved = await actorDocument(actor, { html: (source, relativeUuid) => html(source, relativeUuid), enrich,
-            image: source => { const url = safeUrl(source, base); if (url) images.add(url); return url; } });
+            image: source => safeUrl(source, base) });
           saved.access = actorStamps.get(entry.sourceUuid);
           if (actor.notesAvailable || (actor.biography && biographyGateway)) {
             const notes = await biographyGateway.read({ actorSourceUuid: actor.sourceUuid, readOnly: true }, { worldId: meta.world.id, userId: meta.user.id });
             saved.notesHtml = html(notes.html, actor.sourceUuid, true, notes.owner === true);
           }
-          assertCurrent(); saved.img = safeUrl(saved.img, base); saved.view.img = saved.img; if (saved.img) images.add(saved.img);
+          assertCurrent(); saved.img = safeUrl(saved.img, base); saved.view.img = saved.img;
           data.actors.push(saved);
         } catch (error) {
           assertCurrent(); data.incomplete = true; data.warnings.push(`Could not save ${entry.name}.`);
@@ -107,7 +106,6 @@ export function createOfflineController({ session, biographyGateway, getGame = (
           data.journals.push({ ...entry, id: journal.id, name: journal.name, canEdit: false, access: journalStamps.get(entry.id), pages: journal.pages.map(page => {
             const uuid = `JournalEntry.${journal.id}.JournalEntryPage.${page.id}`;
             const src = page.type === "image" ? safeUrl(page.src, base) : "";
-            if (src) images.add(src);
             return { id: page.id, sourceUuid: uuid, name: page.name, type: page.type, caption: page.caption, src, canEdit: false, toc: page.toc ?? [], level: page.level, sort: page.sort,
               html: page.type === "text" ? html(page.html, uuid, true, page.canEdit === true) : "" };
           }) });
@@ -118,7 +116,8 @@ export function createOfflineController({ session, biographyGateway, getGame = (
         }
       }
       if (manifest.party) {
-        data.party = (await actorDocument({ ...manifest.party, sourceUuid: "" }, { html: source => html(source, ""), enrich: null })).view;
+        data.party = (await actorDocument({ ...manifest.party, sourceUuid: "" }, { html: source => html(source, ""), enrich: null,
+          image: source => safeUrl(source, base) })).view;
       }
       for (const [key, target] of references) {
         assertCurrent();
@@ -129,11 +128,11 @@ export function createOfflineController({ session, biographyGateway, getGame = (
       }
       // Bounded sequential image downloads avoid exhausting mobile memory. A failed
       // or oversized image is a placeholder, never an implicit network dependency.
-      let bytes = 0;
-      for (const url of offlineResourceUrls([data.actors, data.journals, data.party])) if (url) images.add(url);
+      let bytes = 0, attempted = 0;
+      const images = portraitUrls(data, base);
       const previousMedia = new Map((pruned?.media ?? []).map(entry => [entry.url, entry.blob]));
       for (const url of images) {
-        assertCurrent(); publish({ message: `Saving images ${data.media.length + 1} / ${images.size}…` });
+        assertCurrent(); publish({ message: `Saving portraits ${++attempted} / ${images.size}…` });
         try {
           const previous = previousMedia.get(url);
           if (previous && bytes + previous.size <= 128 * 1024 * 1024) { bytes += previous.size; data.media.push({ url, blob: previous }); continue; }
@@ -162,12 +161,13 @@ export function createOfflineController({ session, biographyGateway, getGame = (
           bytes += blob.size; data.media.push({ url, blob });
         } catch { assertCurrent(); data.incomplete = true; }
       }
-      let readerInstalled = true;
+      let readerError = "";
+      publish({ message: "Preparing offline access…" });
       try { await prepareReader({ base, actors: data.actors.map(actor => actor.view), preferences: data.preferences }); }
-      catch { readerInstalled = false; data.incomplete = true; data.warnings.push("The offline reader could not be installed. Rejoin this game while online to prepare offline access."); }
+      catch (error) { readerError = error?.message || "Offline reader installation failed."; data.incomplete = true; data.warnings.push(readerError); }
       assertCurrent(); data.savedAt = new Date().toISOString();
       if (await storage.save(meta.id, record.token, data, meta)) publish({ enabled: true, savedAt: data.savedAt,
-        message: !readerInstalled ? "Content saved, but offline access is not ready. Rejoin this game while online to finish preparing it."
+        message: readerError ? `Content saved, but offline access is not ready: ${readerError}`
           : data.incomplete ? "Saved with some content unavailable offline." : "Saved. Updates automatically while connected." });
       else publish({ enabled: false, message: "Saving was turned off in another tab." });
     } catch (error) {

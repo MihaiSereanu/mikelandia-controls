@@ -301,7 +301,7 @@ Validation workflow: [AGENTS.md](../AGENTS.md). Build with `py -3 scripts/build_
 
 ## Offline companion
 
-`offline/controller.mjs` belongs to the authenticated companion runtime scope. It saves only explicitly opted-in, non-GM game/player pairs and pauses across disconnect/resync or scope disposal. The session gateway projects unopened Actors without changing character selection, and supplies Journal access digests. Fresh permission/source receipts prune changed/revoked content before enrichment. Native description, biography and Journal gateways retain their online permission/secret checks; only sanitized prepared display records and permitted media are persisted.
+`offline/controller.mjs` belongs to the authenticated companion runtime scope. It saves only explicitly opted-in, non-GM game/player pairs and pauses across disconnect/resync or scope disposal. The session gateway projects unopened Actors without changing character selection, and supplies Journal access digests. Fresh permission/source receipts prune changed/revoked content before enrichment. Native description, biography and Journal gateways retain their online permission/secret checks; only sanitized prepared display records and permitted Character/Party portraits are persisted. Portrait collection is explicit and deduplicated; it never traverses Item icons, rich HTML, Journal images or reference previews. The next access reconciliation also removes old nonportrait blobs.
 
 Capture passes `readOnly: true` to the description/biography gateways to suppress inline-roll evaluation and embeds while preparing unopened content. Live readers retain their existing defaults.
 

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { libraryIdentity, createOfflineStorage } from "../src/offline/storage.mjs";
-import { actorDocument, pruneLibrary, safeUrl } from "../src/offline/content.mjs";
+import { actorDocument, portraitUrls, pruneLibrary, safeUrl } from "../src/offline/content.mjs";
 import { createFoundrySessionGateway } from "../src/foundry/session/session-gateway.mjs";
 import { createActor, createGame, installGlobals } from "./helpers/foundry.mjs";
 import { createNativeSystemFixture } from "./helpers/native-systems.mjs";
@@ -66,13 +66,29 @@ test("offline resources reject executable, credential-bearing and empty URLs", (
 });
 
 test("an access change within a still-visible document removes its old contents and media", () => {
-  const data = { actors: [{ id: "Actor.a", access: "old", img: "private.png" }, { id: "Actor.b", access: "same", img: "public.png" }],
-    journals: [{ id: "j", access: "old-owner", pages: [{ id: "p", html: "old secret" }] }], media: [{ url: "private.png" }, { url: "public.png" }] };
+  const data = { actors: [{ id: "Actor.a", access: "old", img: "https://example.test/private.png" }, { id: "Actor.b", access: "same", img: "https://example.test/public.png" }],
+    journals: [{ id: "j", access: "old-owner", pages: [{ id: "p", html: "old secret" }] }], media: [{ url: "https://example.test/private.png" }, { url: "https://example.test/public.png" }] };
   const result = pruneLibrary(data, { actors: [{ sourceUuid: "Actor.a" }, { sourceUuid: "Actor.b" }], journals: [{ id: "j", pages: [{ id: "p" }] }] },
     new Map([["Actor.a", "new-unidentified"], ["Actor.b", "same"]]), new Map([["j", "observer"]]));
   assert.deepEqual(result.actors.map(actor => actor.id), ["Actor.b"]);
   assert.deepEqual(result.journals, []);
-  assert.deepEqual(result.media, [{ url: "public.png" }]);
+  assert.deepEqual(result.media, [{ url: "https://example.test/public.png" }]);
+});
+
+test("portrait allowlist normalizes and deduplicates characters and Party without following content images", () => {
+  const urls = portraitUrls({ actors: [{ img: "pc.webp", view: { inventory: [{ img: "item.webp" }], description: '<img src="inline.webp">' } }, { view: { img: "pc.webp" } }],
+    party: { members: [{ img: "party.webp" }, { img: "pc.webp" }, { img: "javascript:bad" }] },
+    journals: [{ img: "journal.webp", pages: [{ src: "page.webp" }] }], references: [{ html: '<img src="rule.webp">' }] }, "https://example.test/foundry/");
+  assert.deepEqual([...urls], ["https://example.test/foundry/pc.webp", "https://example.test/foundry/party.webp"]);
+});
+
+test("refresh drops legacy content-image blobs and revoked portraits while retaining current Party portraits", () => {
+  const pc = "https://example.test/pc.webp", party = "https://example.test/party.webp", item = "https://example.test/item.webp", page = "https://example.test/page.webp";
+  const data = { actors: [{ id: "Actor.pc", img: pc, view: { inventory: [{ img: item }] } }], journals: [{ id: "j", pages: [{ id: "p", src: page }] }],
+    media: [pc, party, item, page].map(url => ({ url })) };
+  const manifest = { actors: [{ sourceUuid: "Actor.pc" }], journals: [{ id: "j", pages: [{ id: "p" }] }], party: { members: [{ img: party }] } };
+  assert.deepEqual(pruneLibrary(data, manifest).media.map(entry => entry.url), [pc, party]);
+  assert.deepEqual(pruneLibrary(data, { actors: [], journals: [], party: { members: [] } }).media, []);
 });
 
 test("unavailable browser storage rejects cleanly", async () => {

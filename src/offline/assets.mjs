@@ -12,6 +12,9 @@ export async function prepareOfflineReader({ base, actors = [], preferences = {}
 
 async function cacheExistingApp(base) {
   if (!navigator.serviceWorker || !globalThis.caches) throw new Error("Offline installation is unavailable.");
+  const workerUrl = new URL("mobile/sw.js", base);
+  const workerResponse = await fetch(workerUrl, { cache: "no-store", credentials: "same-origin" });
+  if (!workerResponse.ok) throw new Error(`Offline page needs updating: ${workerUrl.pathname} returned HTTP ${workerResponse.status}.`);
   const root = new URL("../../", import.meta.url);
   const cacheName = READER_RUNTIME_CACHE + crypto.randomUUID();
   const cache = await caches.open(cacheName);
