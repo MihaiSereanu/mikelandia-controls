@@ -1,5 +1,6 @@
 import { createOfflineStorage, OFFLINE_VERSION } from "./storage.mjs";
 import { mountCachedApp } from "./cached-app.mjs";
+import { offlineSystemLabel } from "./content.mjs";
 
 /** Pre-login catalogue only. Saved games mount the existing companion app. */
 export function mountOfflineLibrary({ document = globalThis.document, storage = null, window = globalThis.window } = {}) {
@@ -18,9 +19,15 @@ export function mountOfflineLibrary({ document = globalThis.document, storage = 
     host.replaceChildren(button("Back to login", close), node("h1", "Saved Characters"), node("p", "Read-only games saved in this browser. Anyone using this browser profile can read them."), status);
     if (!libraries.length) host.append(node("p", "No games saved yet. Join a game and enable Remember on this device in Settings."));
     for (const library of libraries) {
-      const section = node("section"); section.append(node("h2", library.world.title), node("p", `${library.world.systemId} ? ${library.user.name}`),
+      const section = node("section");
+      const characters = node("ul"); characters.className = "offline-pc-list";
+      for (const actor of library.data?.actors ?? []) characters.append(node("li", actor.name));
+      const actions = node("div"); actions.className = "offline-game-actions";
+      actions.append(button("Open", () => openGame(library.id)), button("Forget", () => forget(library)));
+      section.append(node("h2", library.world.title), node("p", `Player: ${library.user.name}`), node("p", offlineSystemLabel(library)),
+        node("h3", "Available PCs"), characters.childElementCount ? characters : node("p", "No characters saved yet."),
         node("p", library.data?.savedAt ? `Saved ${new Date(library.data.savedAt).toLocaleString()}` : "First save has not finished."),
-        button("Open saved game", () => openGame(library.id)), button("Forget game / player", () => forget(library))); host.append(section);
+        actions); host.append(section);
     }
     window.scrollTo(0, 0);
   };
@@ -40,7 +47,7 @@ export function mountOfflineLibrary({ document = globalThis.document, storage = 
     }
   };
   const forget = async library => {
-    if (!window.confirm(`Delete saved copies for ${library.world.title} / ${library.user.name} and turn off automatic saving?`)) return;
+    if (!window.confirm(`Forget ${library.world.title} for ${library.user.name}, including all saved PCs and Journals, and turn off automatic saving?`)) return;
     try { await storage.forget(library.id); channel?.postMessage({ id: library.id }); await refresh(); showIndex(); status.textContent = "Saved copies deleted. Automatic saving is off."; }
     catch { status.textContent = "Could not delete saved copies. Try again."; }
   };
@@ -49,7 +56,7 @@ export function mountOfflineLibrary({ document = globalThis.document, storage = 
     try {
       const next = await storage.list(); if (disposed) return;
       libraries = next.filter(entry => entry.enabled).sort((a, b) => a.world.title.localeCompare(b.world.title) || a.user.name.localeCompare(b.user.name));
-      trigger.textContent = `Saved Characters${libraries.length ? ` (${libraries.length} games / players)` : ""}`;
+      trigger.textContent = `Saved Characters${libraries.length ? ` (${libraries.length} ${libraries.length === 1 ? "game" : "games"})` : ""}`;
       if (selectedId && !libraries.some(entry => entry.id === selectedId)) showIndex();
     } catch { status.textContent = "This browser cannot access offline storage."; }
   };

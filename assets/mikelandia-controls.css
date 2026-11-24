@@ -8433,8 +8433,9 @@ details.mc-action-session-compact-result {
 .mc-settings-primary-heading > i {
   width: 40px;
   height: 40px;
-  display: grid;
-  place-items: center;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 40px;
   border-radius: 50%;
   color: white;
@@ -11673,7 +11674,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
 @media (display-mode: standalone) {
   .mc-mobile-app {
     box-sizing: border-box;
-    padding-top: calc(var(--mc-safe-top, 0px) + 8px);
+    --mc-standalone-top-inset: calc(var(--mc-safe-top, 0px) + 8px);
+    padding-top: calc(var(--mc-safe-top, 0px) + 8px + var(--mc-offline-toolbar-height, 0px));
   }
 }
 /* Player combat targeting */

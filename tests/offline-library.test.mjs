@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { libraryIdentity, createOfflineStorage } from "../src/offline/storage.mjs";
-import { actorDocument, portraitUrls, pruneLibrary, safeUrl } from "../src/offline/content.mjs";
+import { actorDocument, offlineSystemLabel, portraitUrls, pruneLibrary, safeUrl } from "../src/offline/content.mjs";
 import { createFoundrySessionGateway } from "../src/foundry/session/session-gateway.mjs";
 import { createActor, createGame, installGlobals } from "./helpers/foundry.mjs";
 import { createNativeSystemFixture } from "./helpers/native-systems.mjs";
@@ -93,4 +93,11 @@ test("refresh drops legacy content-image blobs and revoked portraits while retai
 
 test("unavailable browser storage rejects cleanly", async () => {
   await assert.rejects(createOfflineStorage({ indexedDB: null }).list(), /unavailable/);
+});
+
+test("saved system labels use the captured WFRP edition and readable supported names", () => {
+  assert.equal(offlineSystemLabel({ world: { systemId: "wfrp4e" }, data: { actors: [{ view: { edition: "5e" } }] } }), "WFRP 5e");
+  assert.equal(offlineSystemLabel({ world: { systemId: "wfrp4e" } }), "WFRP");
+  assert.equal(offlineSystemLabel({ world: { systemId: "dnd5e" } }), "D&D5e");
+  assert.equal(offlineSystemLabel({ world: { systemId: "custom-system" } }), "custom-system");
 });

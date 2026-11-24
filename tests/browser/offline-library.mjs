@@ -17,6 +17,7 @@ const root = () => document.querySelector(".mc-mobile-app");
 try {
   const params = new URLSearchParams(location.search);
   if (params.has("large")) document.documentElement.style.fontSize = "137.5%";
+  if (params.has("standalone")) document.documentElement.style.setProperty("--mc-safe-top", "24px");
   const storage = createOfflineStorage();
   for (const entry of await storage.list()) await storage.forget(entry.id);
   const profiles = [];
@@ -39,14 +40,30 @@ try {
     if (system === "wfrp4e") saved.view.panels.push({ id: "references", label: "References", sections: [{ id: "reference", label: "Rules", kind: "items", rows: [{ id: "rule", label: "Sword", descriptionUuid: "Actor.hero.Item.sword", description: offlineHtml('<p>Public rules. <a class="content-link" data-uuid="Compendium.rules.Item.example">Rules reference</a><a class="inline-roll" data-formula="1d100">Roll</a></p>') }] }] });
     const meta = libraryIdentity(location.origin + "/", { id: system, title: system === "wfrp4e" ? "The Enemy Within" : system, systemId: system }, { id: "player", name: "Matei" });
     const data = { startedAt: 1, savedAt: new Date().toISOString(), actors: [saved], world: meta.world, user: meta.user,
-      preferences: { frame: { protectMcStyling: true }, character: { headerArtwork: "off", characterFavouritesEnabled: false } },
+      preferences: { frame: { protectMcStyling: !params.has("unprotected") }, character: { headerArtwork: "off", characterFavouritesEnabled: false } },
       journals: [{ id: "j", name: "Travel Notes", canEdit: false, pages: [{ id: "p", type: "text", name: "The road", sourceUuid: "JournalEntry.j.JournalEntryPage.p", html: "<p>Follow the river.</p>", canEdit: false }, { id: "pdf", name: "Map PDF", type: "pdf" }] }],
       party: null, media, references: [{ key: "direct", id: "Compendium.rules.Item.example", name: "Sword rules", html: '<p>Saved explanation.</p><a class="content-link" data-uuid="unsaved">Further link</a>' }], combat: null };
+    if (system === "wfrp4e") {
+      const second = JSON.parse(JSON.stringify(saved).replaceAll("Actor.hero", "Actor.second"));
+      second.id = second.view.sourceUuid = "Actor.second"; second.view.id = "second";
+      second.name = second.view.name = "Lanzo Bergmann"; data.actors.push(second);
+      data.incomplete = true; data.warnings = ["Some content unavailable"];
+    }
     const record = await storage.enable(meta); await storage.save(meta.id, record.token, data);
     profiles.push({ meta, data, record });
   }
   globalThis.game = undefined;
   const reader = mountOfflineLibrary({ storage }); await reader.refresh();
+  document.querySelector("#saved-characters").click();
+  const gameCards = [...document.querySelectorAll("#offline-library > section")];
+  const warhammer = gameCards.find(card => card.textContent.includes("The Enemy Within"));
+  check("one game card lists both available PCs and the player", gameCards.length === profiles.length && warhammer.textContent.includes("Elsa Becker") && warhammer.textContent.includes("Lanzo Bergmann") && warhammer.textContent.includes("Matei"));
+  check("game card shows WFRP 5e with Open and Forget and no corrupt separator", warhammer.textContent.includes("WFRP 5e") && !warhammer.textContent.includes("wfrp4e ?") && [...warhammer.querySelectorAll("button")].map(button => button.textContent).join(",") === "Open,Forget");
+  const checkToolbar = label => {
+    const bar = root().querySelector(".mc-offline-status"), bounds = bar.getBoundingClientRect(), viewport = root().querySelector(".mc-viewport").getBoundingClientRect();
+    check(label + " reserves the measured banner height above content", viewport.top >= bounds.bottom - 1 && bounds.height >= 44);
+    check(label + " banner text stays contained without the incomplete-content warning", !bar.textContent.includes("Some content unavailable") && [...bar.querySelectorAll("button,strong,time")].every(node => { const rect = node.getBoundingClientRect(); return rect.top >= bounds.top - 1 && rect.bottom <= bounds.bottom + 1 && rect.right <= bounds.right + 1; }));
+  };
   const open = async profile => {
     document.querySelector("#saved-characters").click();
     const section = [...document.querySelectorAll("#offline-library > section")].find(node => node.textContent.includes(profile.meta.world.title));
@@ -59,6 +76,7 @@ try {
     const expected = profile.data.actors[0].view.panels;
     check(profile.meta.world.systemId + " retains original character tabs", expected ? [...root().querySelectorAll("[data-profile-tab]")].length === expected.length + Number(profile.data.actors[0].view.notesAvailable) : root().querySelectorAll("[data-character-tab]").length >= 5);
     check(profile.meta.world.systemId + " disables Chat", root().querySelector('[data-route="chat"]').disabled);
+    checkToolbar(profile.meta.world.systemId + " Character");
     const name = root().querySelector(".mc-native-sheet-identity h2"), chooser = root().querySelector(".mc-native-sheet-identity .mc-character-select-trigger");
     if (name && chooser) check(profile.meta.world.systemId + " long names do not overlap the chooser", name.getBoundingClientRect().right <= chooser.getBoundingClientRect().left + 1);
     let controlsReadOnly = true;
@@ -69,6 +87,11 @@ try {
     check(profile.meta.world.systemId + " keeps mutation controls disabled across every tab", controlsReadOnly);
     check(profile.meta.world.systemId + " tab navigation stays readable", !root().textContent.includes("This screen could not open") && !root().textContent.includes("Saved copies are read-only"));
     if (profile.meta.world.systemId === "wfrp4e") {
+      root().querySelector(".mc-character-select-trigger").click(); await tick();
+      root().querySelector('[data-actor-source="Actor.second"]').click(); await tick();
+      check("existing chooser opens the second PC from the same saved game", root().querySelector(".mc-native-sheet-identity h2").textContent === "Lanzo Bergmann");
+      root().querySelector(".mc-character-select-trigger").click(); await tick();
+      root().querySelector('[data-actor-source="Actor.hero"]').click(); await tick();
       root().querySelector('[data-profile-tab="references"]').click(); await tick();
       const link = [...root().querySelectorAll("a.content-link")].find(node => node.textContent.includes("Rules reference")); link.click(); await tick();
       check("direct saved rules use the existing reference popover", root().textContent.includes("Saved explanation."));
@@ -76,6 +99,11 @@ try {
       check("deeper unsaved reference is explicit", root().textContent.includes("Unavailable offline"));
       check("inline dice links cannot roll", !root().querySelector("a.inline-roll"));
     }
+    root().querySelector('[data-route="settings"]').click(); await tick();
+    checkToolbar(profile.meta.world.systemId + " Settings");
+    const icons = [...root().querySelectorAll(".mc-settings-primary-heading > i")];
+    check(profile.meta.world.systemId + " Settings icons stay centered with native Font Awesome", icons.length >= 3 && icons.every(icon => { const style = getComputedStyle(icon); return ["flex", "inline-flex"].includes(style.display) && style.alignItems === "center" && style.justifyContent === "center"; }));
+    if (innerWidth >= 720) { root().querySelector(".mc-tablet-nav-side-toggle").click(); await tick(); checkToolbar(profile.meta.world.systemId + " left tablet navigation"); }
     root().querySelector('[data-route="journals"]').click(); await tick();
     const journal = root().querySelector('[data-journal-id="j"]') ?? [...root().querySelectorAll("button")].find(node => node.textContent.includes("Travel Notes"));
     journal.click(); await tick();
@@ -137,5 +165,6 @@ try {
   await controller.setEnabled(false); check("opting out deletes copies", !await storage.get(meta.id)); scope.dispose();
   const preview = await storage.enable(meta); await storage.save(meta.id, preview.token, data); await reader.refresh(); await open(profiles.find(profile => profile.meta.world.systemId === params.get("system")) ?? profiles[0]);
   check("same phone/tablet sheet stays within viewport", root().scrollWidth <= innerWidth && document.documentElement.scrollWidth <= innerWidth);
+  if (params.has("index")) root().querySelector(".mc-offline-status button").click();
   document.querySelector("#results").textContent = JSON.stringify({ status: "passed", checks, width: innerWidth, height: innerHeight });
 } catch (error) { document.querySelector("#results").textContent = JSON.stringify({ status: "failed", error: error.stack, checks, width: innerWidth, height: innerHeight }); }

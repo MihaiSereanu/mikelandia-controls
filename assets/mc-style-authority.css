@@ -540,7 +540,7 @@
 @layer mc-mobile-style-authority {
   @media (display-mode: standalone) {
     .mc-mobile-app[data-mc-style-authority] {
-      padding-top: calc(var(--mc-safe-top, 0px) + 8px) !important;
+      padding-top: calc(var(--mc-safe-top, 0px) + 8px + var(--mc-offline-toolbar-height, 0px)) !important;
     }
   }
 }

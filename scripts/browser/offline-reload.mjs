@@ -15,14 +15,14 @@ export async function checkOfflineReload(send, origin, checks) {
   };
   await evaluate(`import('/modules/mikelandia-controls/src/offline/assets.mjs').then(module => module.prepareOfflineReader({base: location.origin + '/'}))`);
   await send("Page.navigate", { url: origin + "/mobile/index.html" });
-  await until("Boolean(document.getElementById('saved-characters')?.textContent.includes('games / players'))");
+  await until("Boolean(document.getElementById('saved-characters')?.textContent.includes('Saved Characters ('))");
   await until("Boolean(navigator.serviceWorker.controller)");
   checks.push("standalone reader installs a controlling service worker independently of Foundry");
   await send("Network.enable", {});
   try {
     await send("Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
     await send("Page.reload", { ignoreCache: true });
-    await until("Boolean(document.getElementById('saved-characters')?.textContent.includes('games / players'))");
+    await until("Boolean(document.getElementById('saved-characters')?.textContent.includes('Saved Characters ('))");
     await evaluate(`(() => {
       document.getElementById('saved-characters').click();
       const section = [...document.querySelectorAll('#offline-library > section')].find(node => node.textContent.includes('The Enemy Within'));

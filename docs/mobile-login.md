@@ -22,7 +22,7 @@ Manifest: standalone display, start `./`, scope `../` relative to `/mobile/manif
 
 In companion **Settings > Session > Offline library**, enable **Remember on this device** for the current game/player. Saving remains enabled across visits until turned off. Turning it off, or forgetting that game/player from `/mobile/`, deletes its saved documents and media. GM sessions cannot populate the player library. Anyone using the same browser profile can read saved content before login; Foundry passwords and sessions are not saved.
 
-**Saved Characters** opens a game/player catalogue on `/mobile/`, including when another world is running, Foundry is stopped, or the browser has no network. Saved games use the existing companion frame, character chooser, system sheets, tabs, descriptions, Notes, Journal reader, Party and last Initiative state. Chat is disabled. Sheet edits, rolls, target changes and other server actions are rejected; reading and navigation remain local. The saved-time banner distinguishes these copies from live play. Opening the host again does not automatically leave the reader.
+**Saved Characters** opens a catalogue with one card per saved game/account, listing the world, player, system and available PCs. **Open** uses the existing character chooser; **Forget** removes all saved PCs and Journals for that game/account and turns off automatic saving. WFRP5 snapshots display **WFRP 5e**. The catalogue is available on `/mobile/`, including when another world is running, Foundry is stopped, or the browser has no network. Saved games use the existing companion frame, character chooser, system sheets, tabs, descriptions, Notes, Journal reader, Party and last Initiative state. Chat is disabled. Sheet edits, rolls, target changes and other server actions are rejected; reading and navigation remain local. The saved-time banner distinguishes these copies from live play. Opening the host again does not automatically leave the reader.
 
 The first authenticated save prepares every eligible character and readable Journal, including unopened content. Later document changes refresh automatically. Access receipts are digests of current permitted projections/page state; changed or revoked content is removed before asynchronous refresh work. Unchanged permitted copies survive a failed refresh. Access changes in a stopped world cannot be learned until the same player reconnects to that world. Browser storage can be cleared or evicted; this is a convenience copy, not a backup.
 
@@ -57,11 +57,9 @@ Caddy can serve the page while Foundry is stopped; connection failures offer ret
 
 ## Rollback
 
-Verify backup availability before restoring. The latest recorded static update uses `/var/backups/mikelandia-mobile/20261029-121703-gold-icon`; its affected files and hashes are in `dist/pwa-gold-live-deployment.json`. Restore only those files to `/srv/mikelandia-mobile/`, verify public hashes, and reload clients. No service restart is needed.
+The 2026-11-24 static deployment includes the revised offline toolbar/card styling and shell cache v2. The previous static package is available at Git revision `732cce4`. No server backup was created, at the user's explicit request. Deployment hashes and health checks are recorded in `dist/offline-static-deployment.json`.
 
-The earlier standalone-spacing backup at `/var/backups/mikelandia-mobile/20261028-095230-pwa-fixes/` contains `static/` originals and `module/assets/` originals for `/home/ubuntu/foundrydata/Data/modules/ve-mobile/`. Restore those groups only when rolling back that spacing change.
-
-To remove the hosted login route, restore `/var/backups/mikelandia-mobile/20261027-210837/Caddyfile` to `/etc/caddy/Caddyfile`, validate, and reload Caddy.
+Rollback requires rebuilding and deploying the selected Git revision's static package. If removing offline support, handle the `/mobile/` service worker and its caches explicitly so cached assets do not keep serving the removed reader. Do not delete saved player data as part of an asset rollback without authorization. Static file deployment needs no Foundry or Caddy restart.
 
 ## Native compatibility
 

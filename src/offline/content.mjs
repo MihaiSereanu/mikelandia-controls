@@ -35,6 +35,12 @@ export function safeUrl(value, base) {
 
 const PRIVATE_KEYS = new Set(["revision", "notesRevision", "capabilities", "originalSource", "editorText", "originalValue"]);
 
+export function offlineSystemLabel(library) {
+  const id = library.world.systemId;
+  if (id === "wfrp4e") return library.data?.actors?.some(actor => actor.view?.edition === "5e") ? "WFRP 5e" : "WFRP";
+  return { dnd5e: "D&D5e", shadowdark: "Shadowdark", swade: "SWADE", "honor-and-intrigue": "Honor + Intrigue" }[id] ?? id;
+}
+
 /** Keep the existing prepared renderer model, removing commands and enriching content online. */
 export async function actorDocument(actor, { html, enrich, image = source => source }) {
   const copy = async (value, relativeUuid) => {

@@ -95,9 +95,15 @@ export function mountCachedApp(library, { onClose = () => {} } = {}) {
   const root = document.querySelector(".mc-mobile-app"); root.dataset.offline = "true";
   const banner = document.createElement("div"); banner.className = "mc-offline-status";
   const back = document.createElement("button"); back.type = "button"; back.textContent = "Saved games"; back.addEventListener("click", onClose);
-  const saved = document.createElement("span"); saved.textContent = `Read only · Saved ${new Date(data.savedAt).toLocaleString()}${data.incomplete ? " · Some content unavailable" : ""}`;
-  saved.title = (data.warnings ?? []).join("\n");
+  const saved = document.createElement("div"); saved.className = "mc-offline-copy";
+  const label = document.createElement("strong"); label.textContent = "Read only";
+  const timestamp = document.createElement("time"); timestamp.dateTime = data.savedAt;
+  timestamp.textContent = `Saved ${new Intl.DateTimeFormat(undefined, { dateStyle: "short", timeStyle: "short" }).format(new Date(data.savedAt))}`;
+  saved.append(label, timestamp);
   banner.append(back, saved); root.prepend(banner);
+  const reserveToolbar = () => root.style.setProperty("--mc-offline-toolbar-height", `${Math.ceil(banner.getBoundingClientRect().height)}px`);
+  const toolbarObserver = new ResizeObserver(reserveToolbar); toolbarObserver.observe(banner); reserveToolbar();
+  scope.own(() => toolbarObserver.disconnect());
   const freeze = () => {
     for (const img of root.querySelectorAll('img:not([src]),img[src=""]')) {
       const placeholder = document.createElement("span"); placeholder.className = "mc-offline-image-placeholder";

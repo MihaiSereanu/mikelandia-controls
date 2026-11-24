@@ -18,6 +18,11 @@ const cases = [
   ["offline-library-tablet", 1024, 768, "offline-library", ""],
   ["offline-library-network-offline", 390, 844, "offline-library", ""],
   ["offline-library-large-text", 320, 568, "offline-library", "large=true"],
+  ["offline-library-standalone-phone", 390, 844, "offline-library", "standalone=true"],
+  ["offline-library-standalone-large-text", 320, 568, "offline-library", "standalone=true&large=true"],
+  ["offline-library-standalone-unprotected", 320, 568, "offline-library", "standalone=true&large=true&unprotected=true"],
+  ["offline-library-standalone-tablet", 1024, 768, "offline-library", "standalone=true"],
+  ["offline-library-index", 390, 844, "offline-library", "index=true"],
   ...["shadowdark", "swade", "honor-and-intrigue", "dnd5e"].map(system => [`offline-library-${system}-phone`, 390, 844, "offline-library", `system=${system}`]),
   ...["shadowdark", "5e", "dnd5e", "swade", "hi", "hi-protection"].flatMap(system =>
     [["phone", 320, 568], ["tablet", 1024, 768], ["keyboard", 390, 844]].map(([layout, width, height]) =>
