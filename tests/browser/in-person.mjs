@@ -1,3 +1,4 @@
+import { createOfflineController } from "/src/offline/controller.mjs";
 import { checkJournalExport } from "/tests/browser/journal-export.mjs";
 import { checkJournalSearch, journalSearchLayoutPreview, checkJournalSearchLayout } from "/tests/browser/journal-search.mjs";
 import { installRichEditorFixture, editorInput, prepareEditorGame } from "/tests/browser/rich-editor-fixture.mjs";
@@ -71,9 +72,11 @@ try {
   publicPage.update = async changes => {
     if (journalWriteMode === "deferred") await new Promise(resolve => { releaseJournalWrite = resolve; });
     if (journalWriteMode === "rejected") throw new Error("Journal write rejected");
+    if (journalWriteMode === "cancelled") return undefined;
     journalWrites++;
     for (const field of ["content", "markdown"]) if (`text.${field}` in changes) publicPage.text[field] = changes[`text.${field}`];
     Hooks.emit("updateJournalEntryPage", { ...publicPage, parent: handout }, changes);
+    return publicPage;
   };
   const storage = (id, extra) => ({ ...handout, id, name: id, ...extra });
   game.modules.set("sequencer", { active: true }); game.modules.set("calendaria", { active: true });
@@ -93,11 +96,21 @@ try {
     getEndCombatDialog: () => ({ confirm: async options => options.yes.callback() })
   });
   const session = createFoundrySessionGateway({ capabilitiesForActor: commands.capabilitiesForActor, combatForSnapshot: combat.snapshot, combatControlsForSnapshot: combat.controlsSnapshot });
+  let cacheRecord = { enabled: true, token: "test", version: 1, data: null }, cacheWrites = 0;
+  const offlineLibrary = params.has("cache") ? createOfflineController({
+    session, base: location.origin + "/", isConnected: () => true,
+    getGame: () => ({ ...game, user: { ...game.user, isGM: false } }),
+    storage: { get: async () => cacheRecord, save: async (_id, _token, data) => {
+      cacheRecord = { ...cacheRecord, data }; cacheWrites++; return true;
+    } },
+    descriptions: { enrich: async ({ content }) => ({ html: content ?? "" }), preview: async () => ({ html: "" }) },
+    prepareReader: async () => {},
+  }) : null;
   let recovery = async () => ({ applied: true });
   let reloads = 0, uiCommands;
   kernel = createAppKernel({
     createFrame: options => { uiCommands = options.commands; return createAppFrame(options); },
-    store, session, commandGateway: commands, combatGateway: combat, targetingGateway: createFoundryTargetingGateway(),
+    store, session, offlineLibrary, commandGateway: commands, combatGateway: combat, targetingGateway: createFoundryTargetingGateway(),
     authoritativeGateway: { resync: context => recovery(context) },
     reloadApplication: () => { reloads++; },
     connectionGeneration: createConnectionGeneration(),
@@ -180,8 +193,21 @@ try {
   journalWriteMode = "deferred";
   root.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
   const journalDraft = editorInput(root);
+  root.querySelector("form.mc-biography-editor").requestSubmit();
+  root.querySelector(".mc-modal-button.is-secondary").click();
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  check("pending Journal save ignores duplicate Save, Cancel and Escape", editorInput(root) === journalDraft && journalWrites === 0);
   Hooks.emit("updateJournalEntry", handout, { name: handout.name }); await tick();
   check("journal pending save survives refresh and blocks duplicate submit", editorInput(root) === journalDraft && journalDraft.disabled);
+  if (offlineLibrary) {
+    game.user.isGM = false;
+    offlineLibrary.refresh();
+    await new Promise(resolve => setTimeout(resolve, 650));
+    check("offline capture completes while Journal editor save is pending", cacheWrites > 0
+      && cacheRecord.data.journals.some(journal => journal.id === handout.id)
+      && editorInput(root) === journalDraft && journalDraft.disabled);
+    game.user.isGM = true;
+  }
   releaseJournalWrite(); await tick(); await tick();
   check("journal Save refreshes multiline content", journalWrites === 1 && !editorInput(root)
     && root.querySelector(".mc-journal-rich-text").textContent === "First lineSecond lineFourth line"
@@ -204,6 +230,14 @@ try {
     && !editorInput(root).disabled && root.querySelector(".mc-biography-editor-status").textContent === "Journal write rejected");
   journalWriteMode = "immediate"; root.querySelector("form.mc-biography-editor").requestSubmit(); await tick(); await tick();
   check("journal retry saves once", journalWrites === 2 && !editorInput(root) && publicPage.text.content === "<p>Retry journal</p>");
+  root.querySelector(".mc-journal-native-edit").click(); await tick();
+  editorInput(root).value = "Cancelled by native hook"; journalWriteMode = "cancelled";
+  root.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
+  check("native cancelled save retains the draft and restores controls", editorInput(root)?.value === "Cancelled by native hook"
+    && !editorInput(root).disabled && !root.querySelector("form.mc-biography-editor").hasAttribute("aria-busy")
+    && root.querySelector(".mc-biography-editor-status").textContent.includes("cancelled"));
+  journalWriteMode = "immediate"; root.querySelector("form.mc-biography-editor").requestSubmit(); await tick(); await tick();
+  check("retry after native cancellation saves and closes", publicPage.text.content === "<p>Cancelled by native hook</p>" && !editorInput(root));
   publicPage.text.format = 2;
   publicPage.text.markdown = Array.from({ length: 60 }, (_, index) => `Journal line ${index + 1}`).join("\n");
   const htmlBeforeMarkdown = publicPage.text.content;
@@ -332,6 +366,31 @@ try {
   if (params.get("preview") === "journal-editor") {
     root.querySelector('[data-route="journals"]').click(); await tick();
     if (!root.querySelector(".mc-journal-reader")) { root.querySelector(".mc-journal-entry").click(); await tick(); }
+    // Exercise every Save entry point through the real rich editor and gateway.
+    for (const method of ["button", "toolbar", ...(params.has("native-assets") ? ["keyboard"] : []), "unchanged", "empty", "source"]) {
+      root.querySelector(".mc-journal-native-edit").click(); await tick();
+      const input = editorInput(root), before = journalWrites;
+      let expected = method === "unchanged" ? publicPage.text.content : method === "empty" ? "" : `<p>Saved via ${method}</p>`;
+      if (method === "source") {
+        const source = document.createElement("textarea"); source.className = "source-editor"; source.value = expected;
+        root.querySelector(".mc-rich-text-editor").append(source);
+      } else if (method !== "unchanged") { input.html = expected; expected = input.html; }
+      if (method === "toolbar") (root.querySelector('.mc-rich-text-editor button[data-action="save"]') ?? root.querySelector('.mc-rich-text-editor menu button')).click();
+      else if (method === "keyboard" && input.element) input.element.dispatchEvent(new KeyboardEvent("keydown", { key: "s", code: "KeyS", ctrlKey: true, bubbles: true, cancelable: true }));
+      else root.querySelector(".mc-modal-button.is-primary").click();
+      await tick(); await tick();
+      check(`Journal ${method} Save completes without a pending editor`, !root.querySelector(".mc-biography-editor-layer")
+        && journalWrites === before + Number(method !== "unchanged") && publicPage.text.content === expected);
+    }
+    root.querySelector(".mc-journal-native-edit").click(); await tick();
+    editorInput(root).value = "Save across connection recovery";
+    journalWriteMode = "deferred"; root.querySelector("form.mc-biography-editor").requestSubmit(); await tick();
+    kernel.beginReconnect(25); releaseJournalWrite(); await tick(); await tick();
+    await kernel.resync(25); await tick();
+    check("connection changes during Save release the editor controls and retain its draft", editorInput(root)?.value === "Save across connection recovery"
+      && !editorInput(root).disabled && !root.querySelector("form.mc-biography-editor").hasAttribute("aria-busy"));
+    root.querySelector(".mc-modal-button.is-secondary").click(); await tick();
+    journalWriteMode = "immediate";
     root.querySelector(".mc-journal-native-edit").click(); await tick();
     const composer = editorInput(root);
     composer.value = "First line\nSecond line\n\nA new paragraph";

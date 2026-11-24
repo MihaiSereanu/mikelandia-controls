@@ -10,6 +10,7 @@ function fixture(t, format = 1) {
     async update(data) {
       writes.push(data);
       for (const [path, value] of Object.entries(data)) this.text[path.split(".")[1]] = value;
+      return this;
     } };
   const journal = { id: "journal", documentName: "JournalEntry", name: "Journal", pages: collection([page]),
     testUserPermission: () => true, sheet: { isPageVisible: () => true } };
@@ -122,4 +123,35 @@ test("Journal reads and writes reject session, source or document changes during
   await assert.rejects(gateway.saveJournalText(edit), /cannot edit/i);
   page.testUserPermission = () => true;
   await assert.rejects(gateway.saveJournalText(edit, { worldId: "another-world" }), /world has changed/);
+});
+
+for (const format of [1, 2]) test(`native cancelled Journal format ${format} saves report failure and release the guard`, async t => {
+  const { gateway, page, payload, writes } = fixture(t, format);
+  const edit = await payload();
+  const update = page.update;
+  page.update = async () => undefined;
+  await assert.rejects(gateway.saveJournalText(edit), /save was cancelled.*draft has been kept/i);
+  assert.equal(writes.length, 0);
+  page.update = update;
+  assert.deepEqual(await gateway.saveJournalText(edit), { changed: true });
+  assert.equal(writes.length, 1);
+});
+
+for (const change of ["user", "world", "ownership"]) test(`Journal ${change} changes during Save release the pending lock`, async t => {
+  const { gateway, page, game, payload } = fixture(t);
+  const edit = await payload();
+  const expected = { worldId: game.world.id, userId: game.user.id };
+  const update = page.update, permission = page.testUserPermission;
+  let finish;
+  page.update = () => new Promise(resolve => { finish = () => resolve(page); });
+  const saving = gateway.saveJournalText(edit, expected);
+  if (change === "user") game.user = { ...game.user, id: "another-user" };
+  else if (change === "world") game.world = { ...game.world, id: "another-world" };
+  else page.testUserPermission = () => false;
+  finish();
+  await assert.rejects(saving, change === "ownership" ? /cannot edit/i : /has changed/i);
+  game.user = { ...game.user, id: expected.userId };
+  game.world = { ...game.world, id: expected.worldId };
+  page.testUserPermission = permission; page.update = update;
+  assert.deepEqual(await gateway.saveJournalText(edit, expected), { changed: true });
 });

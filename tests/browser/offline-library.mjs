@@ -41,7 +41,7 @@ try {
     const meta = libraryIdentity(location.origin + "/", { id: system, title: system === "wfrp4e" ? "The Enemy Within" : system, systemId: system }, { id: "player", name: "Matei" });
     const data = { startedAt: 1, savedAt: new Date().toISOString(), actors: [saved], world: meta.world, user: meta.user,
       preferences: { frame: { protectMcStyling: !params.has("unprotected") }, character: { headerArtwork: "off", characterFavouritesEnabled: false } },
-      journals: [{ id: "j", name: "Travel Notes", canEdit: false, pages: [{ id: "p", type: "text", name: "The road", sourceUuid: "JournalEntry.j.JournalEntryPage.p", html: "<p>Follow the river.</p>", canEdit: false }, { id: "pdf", name: "Map PDF", type: "pdf" }] }],
+      journals: [{ id: "j", name: "Travel Notes", canEdit: true, pages: [{ id: "p", type: "text", name: "The road", sourceUuid: "JournalEntry.j.JournalEntryPage.p", html: "<p>Follow the river.</p>", canEdit: true }, { id: "pdf", name: "Map PDF", type: "pdf" }] }],
       party: null, media, references: [{ key: "direct", id: "Compendium.rules.Item.example", name: "Sword rules", html: '<p>Saved explanation.</p><a class="content-link" data-uuid="unsaved">Further link</a>' }], combat: null };
     if (system === "wfrp4e") {
       const second = JSON.parse(JSON.stringify(saved).replaceAll("Actor.hero", "Actor.second"));
@@ -108,6 +108,7 @@ try {
     const journal = root().querySelector('[data-journal-id="j"]') ?? [...root().querySelectorAll("button")].find(node => node.textContent.includes("Travel Notes"));
     journal.click(); await tick();
     check(profile.meta.world.systemId + " reuses the Journal reader", root().textContent.includes("Follow the river."));
+    check(profile.meta.world.systemId + " omits Journal Edit even with cached owner permissions", !root().querySelector(".mc-journal-native-edit"));
     check(profile.meta.world.systemId + " has no active mutation controls", [...root().querySelectorAll('[data-profile-action],[data-profile-edit],.mc-biography-edit,.mc-journal-native-edit')].every(node => node.disabled || node.hidden));
     root().querySelector(".mc-offline-status button").click();
   }

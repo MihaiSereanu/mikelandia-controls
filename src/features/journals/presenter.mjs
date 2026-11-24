@@ -149,7 +149,7 @@ function journalReader(state, commands, scope) {
           if (!scope.disposed) { editStatus.textContent = error?.message ?? String(error); editStatus.hidden = false; }
         } finally { if (!scope.disposed) button.disabled = false; }
       } } }, scope),
-      journal.canEdit && (!page || page.canEdit) ? node("button", { className: "mc-journal-native-edit", attrs: { type: "button" }, on: { click: event => void editCurrentPage(event.currentTarget) }, text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Journals.Edit", "Edit") }, scope) : null
+      !commands.readOnly && journal.canEdit && (!page || page.canEdit) ? node("button", { className: "mc-journal-native-edit", attrs: { type: "button" }, on: { click: event => void editCurrentPage(event.currentTarget) }, text: localizedText(commands.localize, "MIKELANDIA_CONTROLS.Journals.Edit", "Edit") }, scope) : null
     ].filter(Boolean) }),
     editStatus,
     pages.length ? node("nav", { className: "mc-journal-page-nav", attrs: { "aria-label": localizedText(commands.localize, "MIKELANDIA_CONTROLS.Journals.PagesAndHeadings", "Journal pages and headings") }, children: [

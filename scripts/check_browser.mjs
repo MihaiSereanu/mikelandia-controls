@@ -161,6 +161,8 @@ const cases = [
   ["presentation-tablet", 1024, 768, "presentation", "layout=tablet"],
   ["journal-editor-phone", 390, 844, "in-person", "layout=phone&preview=journal-editor"],
   ["journal-editor-tablet", 1024, 768, "in-person", "layout=tablet&preview=journal-editor"],
+  ["journal-editor-cache-phone", 390, 844, "in-person", "layout=phone&preview=journal-editor&cache=true"],
+  ["journal-editor-cache-tablet", 1024, 768, "in-person", "layout=tablet&preview=journal-editor&cache=true"],
   ["actor-notes-phone", 390, 844, "actor-notes", ""],
   ["actor-notes-tablet", 1024, 768, "actor-notes", ""],
   ["actor-notes-narrow", 320, 844, "actor-notes", ""],

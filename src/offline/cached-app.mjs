@@ -267,7 +267,7 @@ export function mountCachedApp(library, { onClose = () => {} } = {}) {
   banner.className = "mc-offline-status";
   const back = document.createElement("button");
   back.type = "button";
-  back.textContent = "Saved games";
+  back.textContent = "Library";
   back.addEventListener("click", onClose);
   const saved = document.createElement("div");
   saved.className = "mc-offline-copy";

@@ -495,10 +495,11 @@ export function createFoundrySessionGateway({
       const changed = payload.value !== payload.originalValue;
       pendingJournalWrites.add(page);
       try {
-        if (changed) await page.update({ [payload.format === 2 ? "text.markdown" : "text.content"]: payload.value });
+        const updated = changed ? await page.update({ [payload.format === 2 ? "text.markdown" : "text.content"]: payload.value }) : page;
         assertSession(expectedSession);
         const current = requireEditableJournalText(payload.journalId, payload.pageId);
         if (current.journal !== journal || current.page !== page) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Journals.DocumentChanged", "This Journal page is no longer available."));
+        if (!updated) throw new Error(localizeFoundry("MIKELANDIA_CONTROLS.Journals.SaveCancelled", "The Journal save was cancelled. Your draft has been kept."));
         return Object.freeze({ changed });
       } finally {
         pendingJournalWrites.delete(page);
