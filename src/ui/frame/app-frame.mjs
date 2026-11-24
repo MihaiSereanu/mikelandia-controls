@@ -199,7 +199,7 @@ export function createAppFrame({ store, commands, policy, scope, mobileBackGatew
 
     if (sameScreen && state.status === "ready" && state.route === "party"
       && viewport.firstElementChild?.updateParty) {
-      viewport.firstElementChild.updateParty(state.snapshot?.party);
+      viewport.firstElementChild.updateParty(state.snapshot?.party, state.portraitImage);
       renderedState = screenState(state, layoutKey);
       return;
     }

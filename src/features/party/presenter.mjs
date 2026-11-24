@@ -1,6 +1,7 @@
 import { node, icon } from "../../ui/primitives/dom.mjs";
 import { localizedText } from "../../ui/primitives/localized-text.mjs";
 import { renderProfileResourceEditor } from "../characters/profile/profile-resource-editor.mjs";
+import { renderImageViewer } from "../../ui/media/image-viewer.mjs";
 import { renderProfileTooltip } from "../characters/profile/profile-tooltip.mjs";
 
 export function renderParty({ state, commands, scope }) {
@@ -11,7 +12,19 @@ export function renderParty({ state, commands, scope }) {
     node("h1", { text: text("Title", "Party") }), roster, supplies
   ] });
   let rosterKey = "", suppliesKey = "", suppliesScope, rosterScope;
-  screen.updateParty = party => {
+  let portraitImage, portraitViewer, portraitScope;
+  screen.updateParty = (party, image = null) => {
+    if (image !== portraitImage) {
+      portraitImage = image;
+      portraitScope?.dispose();
+      portraitViewer?.remove();
+      portraitViewer = null;
+      if (image) {
+        portraitScope = scope.child("party-portrait");
+        portraitViewer = renderImageViewer(image, commands.closeCharacterPortrait, portraitScope, { localize: commands.localize });
+        screen.append(portraitViewer);
+      }
+    }
     const members = party?.members ?? [];
     const nextRosterKey = JSON.stringify(members.map(({ id, name, img, health, conditions, injuries }) => ({ id, name, img, health, conditions, injuries })));
     if (nextRosterKey !== rosterKey) {
@@ -79,7 +92,12 @@ export function renderParty({ state, commands, scope }) {
   }
   function portrait(member, owner) {
     const fallback = icon("fa-user");
-    const holder = node("span", { className: "mc-party-portrait", attrs: { "aria-hidden": "true" }, children: [fallback] });
+    const holder = node(member.img ? "button" : "span", {
+      className: "mc-party-portrait",
+      attrs: member.img ? { type: "button", "aria-label": `${localizedText(commands.localize, "MIKELANDIA_CONTROLS.NativeSheet.ViewPortrait", "View portrait")}: ${member.name}` } : { "aria-hidden": "true" },
+      on: member.img ? { click: () => commands.openCharacterPortrait({ src: member.img, name: member.name }) } : undefined,
+      children: [fallback]
+    }, owner);
     if (member.img) {
       const img = node("img", { attrs: { src: member.img, alt: "", loading: "lazy", decoding: "async" },
         on: { error: () => holder.replaceChildren(fallback) } }, owner);
@@ -97,6 +115,6 @@ export function renderParty({ state, commands, scope }) {
     trigger.dataset.partyCondition = condition.id;
     return node("span", { className: "mc-party-condition-reference", children: [trigger, tooltip] });
   }
-  screen.updateParty(state.snapshot?.party);
+  screen.updateParty(state.snapshot?.party, state.portraitImage);
   return screen;
 }

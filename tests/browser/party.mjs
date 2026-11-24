@@ -63,6 +63,20 @@ export async function checkParty({ f, store, uiCommands, root, check, tick, para
     && !!root.querySelector('[data-party-actor="second"] .mc-party-portrait .fa-user'));
   observer.img = avatar("#596171"); f.hooks.emit("updateActor", observer, { img: observer.img }); await tick();
   check("Party portraits refresh with actor updates", root.querySelector('[data-party-actor="observer"] img').getAttribute("src") === observer.img);
+  const portraitButton = root.querySelector('[data-party-actor="observer"] button.mc-party-portrait');
+  check("Party portraits are accessible buttons and missing portraits stay decorative", portraitButton.getAttribute("aria-label").includes(observer.name)
+    && !root.querySelector('[data-party-actor="second"] button.mc-party-portrait'));
+  portraitButton.click(); await tick();
+  const viewer = root.querySelector(".mc-image-viewer");
+  check("Party portrait opens the correct full-screen image", viewer?.querySelector("img").getAttribute("src") === observer.img
+    && viewer.getAttribute("aria-label") === observer.name && store.state.route === "party");
+  viewer.querySelector('button[aria-label="Zoom in"]').click();
+  const stage = viewer.querySelector(".mc-image-viewer-stage");
+  check("Party portrait supports zoom", Number(stage.dataset.scale) > 1);
+  f.hooks.emit("updateActor", f.actor, {}); await tick();
+  check("Party refresh retains the open viewer and zoom", root.querySelector(".mc-image-viewer") === viewer && Number(stage.dataset.scale) > 1);
+  viewer.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await tick();
+  check("Escape closes the Party portrait without leaving Party", !root.querySelector(".mc-image-viewer") && !store.state.portraitImage && store.state.route === "party");
   check("Party retains Character selection", store.state.selectedActorSourceUuid === originalSelection);
   const health = shadowdark ? observer.system.attributes.hp : observer.system.status.wounds;
   health.max = 20; health.value = 10;
@@ -72,8 +86,12 @@ export async function checkParty({ f, store, uiCommands, root, check, tick, para
   if (shadowdark) {
     const observerCard = () => root.querySelector('[data-party-supplies-actor="observer"]');
     const ownedCard = () => root.querySelector('[data-party-supplies-actor="second"]');
-    check("Observer supplies are readable with no edit controls", observerCard().textContent.includes("Waterskin") && observerCard().querySelectorAll("button").length === 0);
+    check("Observer supplies are readable with no edit controls", observerCard().textContent.includes("Waterskin") && observerCard().querySelectorAll("button:not(.mc-party-portrait)").length === 0);
     check("Supplies also shows portraits next to PC names", !!observerCard().querySelector(".mc-party-identity img"));
+    observerCard().querySelector("button.mc-party-portrait").click(); await tick();
+    check("Supplies portrait opens the same full-screen viewer", root.querySelector(".mc-image-viewer img")?.getAttribute("src") === observer.img);
+    root.querySelector(".mc-image-viewer header button").click(); await tick();
+    check("Close returns to Supplies with Character selection unchanged", !root.querySelector(".mc-image-viewer") && store.state.route === "party" && store.state.selectedActorSourceUuid === originalSelection);
     const savedName = observer.name;
     observer.name = `${savedName} ${"with an exceptionally long name ".repeat(8)}`;
     f.hooks.emit("updateActor", observer, { name: observer.name }); await tick();
@@ -107,7 +125,7 @@ export async function checkParty({ f, store, uiCommands, root, check, tick, para
     staleInput.closest("form").requestSubmit(); await tick();
     check("Ownership revocation rejects an open supply edit", owned.items.get("rations").system.quantity === previous);
     f.hooks.emit("updateActor", owned, { ownership: {} }); await tick();
-    check("Revoked owner controls become read-only", ownedCard().querySelectorAll("button").length === 0);
+    check("Revoked owner controls become read-only", ownedCard().querySelectorAll("button:not(.mc-party-portrait)").length === 0);
   } else {
     check("WFRP shows Conditions with values, Injuries and Critical Wounds", [...root.querySelectorAll("[data-party-actor]")].every(card =>
       card.textContent.includes("Bleeding 2") && card.textContent.includes("Prone") && card.textContent.includes("Torn muscle") && card.textContent.includes("Broken arm")));

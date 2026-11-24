@@ -11820,6 +11820,7 @@ body.mc-mobile-running .swade.roll-dialog.mc-mobile-admitted-app .window-header 
 .mc-party-identity { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .mc-party-identity :is(h2, h3) { min-width: 0; }
 .mc-party-portrait { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 8px; overflow: hidden; display: grid; place-items: center; background: var(--mc-surface-up); }
+button.mc-party-portrait { padding: 0; border: 0; cursor: pointer; }
 .mc-party-portrait img { width: 100%; height: 100%; object-fit: cover; }
 
 .mc-party-conditions { display: flex; flex-wrap: wrap; align-items: center; gap: 0 8px; font-size: .9rem; line-height: 1.5; }
