@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { libraryIdentity, createOfflineStorage } from "../src/offline/storage.mjs";
-import { actorDocument, offlineSystemLabel, portraitUrls, pruneLibrary, safeUrl } from "../src/offline/content.mjs";
+import { actorDocument, offlineSystemLabel, offlineImageUrls, portraitUrls, pruneLibrary, safeUrl } from "../src/offline/content.mjs";
 import { createFoundrySessionGateway } from "../src/foundry/session/session-gateway.mjs";
 import { createActor, createGame, installGlobals } from "./helpers/foundry.mjs";
 import { createNativeSystemFixture } from "./helpers/native-systems.mjs";
@@ -100,4 +100,23 @@ test("saved system labels use the captured WFRP edition and readable supported n
   assert.equal(offlineSystemLabel({ world: { systemId: "wfrp4e" } }), "WFRP");
   assert.equal(offlineSystemLabel({ world: { systemId: "dnd5e" } }), "D&D5e");
   assert.equal(offlineSystemLabel({ world: { systemId: "custom-system" } }), "custom-system");
+});
+
+test("handout images match Journal or page names case-insensitively and exclude other media", () => {
+  const data = { journals: [
+    { name: "Campaign HANDOUTS", pages: [{ type: "image", src: "map.webp" }, { type: "pdf", src: "rules.pdf" }] },
+    { name: "Notes", pages: [{ name: "Player handouts - letter", type: "image", src: "letter.webp" },
+      { name: "Other", type: "image", src: "private.webp" }, { name: "Handouts", type: "image", src: "javascript:bad" }] }
+  ] };
+  assert.deepEqual([...offlineImageUrls(data, "https://example.test/")], ["https://example.test/map.webp", "https://example.test/letter.webp"]);
+});
+
+test("handout media survives unchanged refresh but is removed with renamed or revoked pages", () => {
+  const url = "https://example.test/map.webp";
+  const data = { actors: [], journals: [{ id: "j", name: "Handouts", access: "current", pages: [{ id: "p", type: "image", src: url }] }], media: [{ url }] };
+  const manifest = { actors: [], journals: [{ id: "j", pages: [{ id: "p" }] }] };
+  assert.deepEqual(pruneLibrary(data, manifest, null, new Map([["j", "current"]])).media, [{ url }]);
+  assert.deepEqual(pruneLibrary(data, manifest, null, new Map([["j", "renamed"]])).media, []);
+  assert.deepEqual(pruneLibrary(data, { actors: [], journals: [{ id: "j", pages: [] }] }).media, []);
+  assert.deepEqual(pruneLibrary(data, { actors: [], journals: [] }).media, []);
 });

@@ -1,5 +1,8 @@
 import { icon, node } from "../../ui/primitives/dom.mjs";
-import { localizedNumber, localizedText } from "../../ui/primitives/localized-text.mjs";
+import {
+  localizedNumber,
+  localizedText,
+} from "../../ui/primitives/localized-text.mjs";
 
 const uiText = (commands, key, fallback, data) =>
   localizedText(
@@ -369,7 +372,11 @@ export function groupSettings(fields) {
     {
       id: "actions",
       title: "Action Results",
-      keys: ["showActionSummaries", "compactActionSummaries", "moveToChatAfterRoll"],
+      keys: [
+        "showActionSummaries",
+        "compactActionSummaries",
+        "moveToChatAfterRoll",
+      ],
     },
     {
       id: "appearance",
@@ -964,26 +971,47 @@ function rangeLabel(value, suffix, step = 1, locale = "en") {
 function offlineLibraryPanel(commands, scope) {
   const library = commands.offlineLibrary;
   if (!library) return null;
-  const status = node("p", { attrs: { role: "status", "aria-live": "polite" } });
-  const input = node("input", { attrs: { type: "checkbox", id: "mc-remember-device" } });
-  const label = node("label", { attrs: { for: "mc-remember-device" }, children: [input, " Remember on this device"] });
+  const status = node("p", {
+    attrs: { role: "status", "aria-live": "polite" },
+  });
+  const input = node("input", {
+    attrs: { type: "checkbox", id: "mc-remember-device" },
+  });
+  const label = node("label", {
+    attrs: { for: "mc-remember-device" },
+    children: [input, " Remember on this device"],
+  });
   let busy = false;
   scope.listen(input, "change", async () => {
-    busy = true; input.disabled = true;
-    try { await library.setEnabled(input.checked); }
-    catch (error) { status.textContent = error.message; input.checked = library.snapshot().enabled; }
-    finally { busy = false; input.disabled = !library.snapshot().available; }
+    busy = true;
+    input.disabled = true;
+    try {
+      await library.setEnabled(input.checked);
+    } catch (error) {
+      status.textContent = error.message;
+      input.checked = library.snapshot().enabled;
+    } finally {
+      busy = false;
+      input.disabled = !library.snapshot().available;
+    }
   });
-  library.watch(scope, state => {
-    input.checked = state.enabled; input.disabled = busy || !state.available;
+  library.watch(scope, (state) => {
+    input.checked = state.enabled;
+    input.disabled = busy || !state.available;
     status.textContent = `${state.message}${state.savedAt ? ` Last saved ${new Date(state.savedAt).toLocaleString()}.` : ""}`;
     label.hidden = !state.available;
   });
-  return node("section", { className: "mc-offline-settings", children: [
-    node("h3", { text: "Offline library" }), label,
-    node("p", { text: "Automatically save this game/player’s characters, Journals and Party for reading at /mobile/. Anyone using this browser profile can read them. Turning this off deletes these saved copies." }),
-    status,
-  ] });
+  return node("section", {
+    className: "mc-offline-settings",
+    children: [
+      node("h3", { text: "Offline library" }),
+      label,
+      node("p", {
+        text: "Automatically save this PC, Journals and Party with view-only access while offline. Anyone using this browser profile can read them. Turning this off deletes these saved copies.",
+      }),
+      status,
+    ],
+  });
 }
 
 function safeId(value) {

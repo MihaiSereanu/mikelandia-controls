@@ -122,18 +122,18 @@ try {
   check("forgetting a game preserves other systems", Boolean(await storage.get(profiles[1].meta.id)));
   globalThis.Hooks = createHooks();
   let name = "Elsa Becker", allowed = true;
-  let readerFailure = false;
+  let readerFailure = false, journalName = "Illustrated Journal", pageName = "Text", journalsAllowed = true;
   const fetchedPortraits = [], progress = [];
   const game = { user: meta.user, world: meta.world, system: { id: "wfrp4e", version: "10" } };
   const session = { read: () => ({ actors: allowed ? [{ sourceUuid: "Actor.hero", name }] : [],
-    journals: [{ id: "illustrated", name: "Illustrated Journal", pages: [{ id: "text" }, { id: "image" }] }],
+    journals: journalsAllowed ? [{ id: "illustrated", name: journalName, pages: [{ id: "text" }, { id: "image" }] }] : [],
     party: { supplies: false, members: allowed ? [{ id: "friend", name: "Friend", img: "https://example.test/party.svg" },
       { id: "self", name, img: "https://example.test/avatar.svg" }, { id: "missing", name: "Missing portrait", img: "https://example.test/missing.svg" }] : [] } }),
     readOfflineActor: () => ({ ...data.actors[0].view, name, img: "https://example.test/avatar.svg", sourceUuid: "Actor.hero", notesAvailable: false,
       inventory: [{ id: "icon", img: "https://example.test/item.svg" }], description: '<img src="https://example.test/description.svg">' }),
-    readOfflineJournalStamp: async () => "current",
-    readJournal: async () => ({ id: "illustrated", name: "Illustrated Journal", pages: [
-      { id: "text", name: "Text", type: "text", html: '<p>Journal text stays saved.</p><img src="https://example.test/journal.svg"><a class="content-link" data-uuid="Item.reference">Reference</a>' },
+    readOfflineJournalStamp: async () => `${journalName}:${pageName}`,
+    readJournal: async () => ({ id: "illustrated", name: journalName, pages: [
+      { id: "text", name: pageName, type: "text", html: '<p>Journal text stays saved.</p><img src="https://example.test/journal.svg"><section class="secret"><img src="https://example.test/secret.svg"></section><a class="content-link" data-uuid="Item.reference">Reference</a>' },
       { id: "image", name: "Illustration", type: "image", src: "https://example.test/page.svg" }] }) };
   const scope = createTaskScope("offline-test");
   const controller = createOfflineController({ session, storage, base: location.origin + "/", getGame: () => game, isConnected: () => true,
@@ -151,9 +151,32 @@ try {
   check("only PC and Party portrait URLs are downloaded, once each", fetchedPortraits.length === 3 && ["avatar.svg", "party.svg", "missing.svg"].every(name => fetchedPortraits.includes(`https://example.test/${name}`)));
   const portraitSave = (await storage.get(meta.id)).data;
   check("only successful portraits are persisted while Journal text is retained", portraitSave.media.length === 2 && portraitSave.journals[0].pages[0].html.includes("Journal text stays saved."));
-  check("portrait progress reaches the final attempt even when a portrait fails", progress.some(message => message.startsWith("Saving portraits 3 / 3")));
+  check("portrait progress reaches the final attempt even when a portrait fails", progress.some(message => message.startsWith("Saving images 3 / 3")));
   const svg = await (await storage.get(meta.id)).data.media[0].blob.text();
   check("saved SVGs retain artwork while removing executable and external content", svg.includes("<path") && svg.includes("url(#paint)") && !/evil|script|foreignObject|xml:base/.test(svg));
+  pageName = "Letters HANDOUTS"; Hooks.emit("updateJournalEntryPage");
+  await wait(async () => (await storage.get(meta.id)).data.media.some(entry => entry.url.endsWith("/journal.svg")));
+  check("a matching page saves embedded images without downloading sibling image pages", !(await storage.get(meta.id)).data.media.some(entry => entry.url.endsWith("/page.svg")));
+  journalName = "Campaign Handouts"; pageName = "Text"; Hooks.emit("updateJournalEntry");
+  await wait(async () => (await storage.get(meta.id)).data.media.some(entry => entry.url.endsWith("/page.svg")));
+  const handoutData = (await storage.get(meta.id)).data;
+  check("a matching Journal saves both image pages and embedded text images", ["journal.svg", "page.svg"].every(name => handoutData.media.some(entry => entry.url.endsWith("/" + name))));
+  check("handout saving excludes secrets, item images and linked-document images", !fetchedPortraits.some(url => /\/(?:secret|item|description|reference)\.svg$/.test(url)));
+  const handoutApp = mountCachedApp(await storage.get(meta.id)); handoutApp.commands.navigate("journals");
+  await wait(() => root().querySelector('.mc-journal-entry'));
+  root().querySelector('.mc-journal-entry').click();
+  await wait(() => root().querySelector('.mc-journal-page img[src^="blob:"]'));
+  check("saved handout embedded images render from local blobs", Boolean(root().querySelector('.mc-journal-page img[src^="blob:"]'))); handoutApp.dispose();
+  const imagePageApp = mountCachedApp(await storage.get(meta.id)); imagePageApp.commands.navigate("journals"); await imagePageApp.commands.openJournal("illustrated", { pageId: "image" }); await tick();
+  check("saved image pages render from local blobs", Boolean(root().querySelector('.mc-journal-page img[src^="blob:"]'))); imagePageApp.dispose();
+  journalName = "Illustrated Journal"; Hooks.emit("updateJournalEntry");
+  await wait(async () => !(await storage.get(meta.id)).data.media.some(entry => entry.url.endsWith("/journal.svg")));
+  check("renaming out of Handouts removes images while retaining Journal text", (await storage.get(meta.id)).data.journals[0].pages[0].html.includes("Journal text stays saved."));
+  journalName = "Handouts"; Hooks.emit("updateJournalEntry");
+  await wait(async () => (await storage.get(meta.id)).data.media.some(entry => entry.url.endsWith("/page.svg")));
+  journalsAllowed = false; Hooks.emit("updateUser");
+  await wait(async () => (await storage.get(meta.id)).data.journals.length === 0);
+  check("revoking a handout Journal removes its images", !(await storage.get(meta.id)).data.media.some(entry => /\/(?:journal|page)\.svg$/.test(entry.url)));
   readerFailure = true; name = "Elsa Updated"; Hooks.emit("updateActor");
   await wait(async () => (await storage.get(meta.id)).data.actors[0]?.name === name);
   check("updates save automatically", true);

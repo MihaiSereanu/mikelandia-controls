@@ -310,7 +310,7 @@ try {
     // Missing registration consumes the production five-second cleanup timeout
     // before startup and fixture assertions can finish.
     // System fixtures also await equipment, description and dependent-actor refreshes.
-    const reportTimeoutMs = (name === "shared-entry-upgrade-missing-phone" || name.startsWith("journal-")) ? 15000 : name.startsWith("damage-") || ["warhammer", "shadowdark"].includes(fixture) ? 9000 : 5000;
+    const reportTimeoutMs = (name === "shared-entry-upgrade-missing-phone" || name.startsWith("journal-") || name.startsWith("offline-library-")) ? 15000 : name.startsWith("damage-") || ["warhammer", "shadowdark"].includes(fixture) ? 9000 : 5000;
     const reportDeadline = performance.now() + reportTimeoutMs;
     while (performance.now() < reportDeadline) {
       const { result } = await send("Runtime.evaluate", { expression: 'document.querySelector("#results")?.textContent', returnByValue: true }, sessionId);

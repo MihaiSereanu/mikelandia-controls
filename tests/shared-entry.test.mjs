@@ -8,6 +8,7 @@ for (const mode of ["auto", "native"]) {
     const f = fixture(t, mode);
     await import(`../src/entry.mjs?native=${mode}`);
     await f.start();
+    assert.ok(!f.game.socket.listeners("shutdown").includes(f.nativeShutdown), "native desktop players receive the shutdown redirect");
     assert.equal(f.mobileStyles.length, 0, "native desktop must not load mobile styles");
     await new Promise(resolve => setTimeout(resolve, 0));
     assert.equal(f.game.i18n.translations["Primary Arm"], "Right Arm");
@@ -23,6 +24,7 @@ for (const mode of ["auto", "native"]) {
     f.registered.get("mikelandia-controls.mode").onChange("tablet");
     assert.equal(reload.mock.calls.length, 1, "selecting Tablet reloads native desktop into the chosen mode");
     f.window.dispatchEvent(new Event("pagehide"));
+    assert.deepEqual(f.game.socket.listeners("shutdown"), [f.nativeShutdown]);
     assert.equal(f.config.queries[MOMENTUM_QUERY], undefined);
     assert.equal(f.Actor.prototype.update, f.originalUpdate);
     assert.equal(f.game.wfrp4e.rolls5e.TestWFRP5e.prototype.computeHitLocation, f.originalHitLocation);
@@ -49,6 +51,7 @@ for (const cachedMode of ["native", "off", "desktop"]) for (const storedMode of 
     const errors = t.mock.method(console, "error", () => {});
     await f.start();
     assert.equal(f.mobileStyles.length, 1, "authoritative active mobile mode must attempt the companion stylesheet");
+    assert.ok(!f.game.socket.listeners("shutdown").includes(f.nativeShutdown), "Phone/Tablet players receive the shared shutdown redirect");
     assert.ok(f.mobileStyles[0].href.endsWith("/assets/mobile.css"));
     assert.equal(f.game.i18n.translations["Primary Arm"], "Right Arm");
     assert.equal(typeof f.config.queries[MOMENTUM_QUERY], "function", "shared fixes survive even when this Node host stops at the UI boundary");
@@ -77,6 +80,17 @@ for (const storedMode of ["native", "off", "desktop"]) {
 
 function fixture(t, mode, navigator = { userAgent: "Windows NT 10.0", platform: "Win32" }, { mobileBoundary = false } = {}) {
   const game = createGame([], "wfrp4e"), hooks = createHooks(), registered = new Map(), menus = [];
+  const shutdownListeners = new Set();
+  const nativeShutdown = () => {
+    ui.notifications.info("GAME.WorldShuttingDown", { localize: true, permanent: true });
+    setTimeout(() => window.location.href = getRoute("/"), 1000);
+  };
+  shutdownListeners.add(nativeShutdown);
+  game.socket = {
+    listeners: name => name === "shutdown" ? [...shutdownListeners] : [],
+    on(name, listener) { if (name === "shutdown") shutdownListeners.add(listener); },
+    off(name, listener) { if (name === "shutdown") shutdownListeners.delete(listener); }
+  };
   hooks.once = (name, fn) => { const once = (...args) => { hooks.off(name, once); return fn(...args); }; hooks.on(name, once); };
   const window = new EventTarget(); window.location = { pathname: "/game", reload() { throw Error("unexpected reload"); } };
   window.innerWidth = 1200; window.innerHeight = 900; window.matchMedia = () => ({ matches: false });
@@ -137,5 +151,5 @@ function fixture(t, mode, navigator = { userAgent: "Windows NT 10.0", platform: 
     assert.equal(Object.hasOwn(created, "initialize"), false, "one-use instance boundary is removed before native startup");
     assert.equal(Game.create, nativeCreate, "one-use creation boundary restores native create");
   };
-  return { originalHitLocation, game, hooks, registered, menus, config, window, Actor, originalUpdate: Actor.prototype.update, initializeCanvas, values, mobileStyles, notifications, Game, nativeCreate, start };
+  return { nativeShutdown, originalHitLocation, game, hooks, registered, menus, config, window, Actor, originalUpdate: Actor.prototype.update, initializeCanvas, values, mobileStyles, notifications, Game, nativeCreate, start };
 }

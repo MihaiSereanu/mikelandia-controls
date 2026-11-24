@@ -76,6 +76,28 @@ export function portraitUrls({ actors = [], party = null }, base = globalThis.do
     .map(source => safeUrl(source, base)).filter(Boolean));
 }
 
+/** Collect only permitted portraits and images on explicitly named handout pages. */
+export function offlineImageUrls(data, base = globalThis.document?.baseURI, document = globalThis.document) {
+  const urls = portraitUrls(data, base);
+  for (const journal of data.journals ?? []) {
+    for (const page of journal.pages ?? []) {
+      if (!/handouts/i.test(journal.name ?? "") && !/handouts/i.test(page.name ?? "")) continue;
+      if (page.type === "image") {
+        const url = safeUrl(page.src, base);
+        if (url) urls.add(url);
+      } else if (page.type === "text" && page.html) {
+        const template = document.createElement("template");
+        template.innerHTML = page.html;
+        for (const image of template.content.querySelectorAll("img[src]")) {
+          const url = safeUrl(image.getAttribute("src"), base);
+          if (url) urls.add(url);
+        }
+      }
+    }
+  }
+  return urls;
+}
+
 export function pruneLibrary(data, manifest, actorStamps = null, journalStamps = null, base) {
   if (!data) return null;
   const actors = new Set(manifest.actors.map(actor => actor.sourceUuid));
@@ -83,9 +105,8 @@ export function pruneLibrary(data, manifest, actorStamps = null, journalStamps =
   const permittedActors = data.actors.filter(actor => actors.has(actor.id) && (!actorStamps || actor.access === actorStamps.get(actor.id)));
   const permittedJournals = data.journals.filter(journal => journals.has(journal.id) && (!journalStamps || journal.access === journalStamps.get(journal.id)))
     .map(journal => ({ ...journal, pages: journal.pages.filter(page => journals.get(journal.id).has(page.id)) }));
-  const urls = portraitUrls({ actors: permittedActors, party: manifest.party }, base);
-  // Only current permitted portraits survive, including when an older cache also
-  // contains Journal/Item images. References are rechecked separately.
+  const urls = offlineImageUrls({ actors: permittedActors, party: manifest.party, journals: permittedJournals }, base);
+  // Retain only current permitted portraits and handouts. References are rechecked separately.
   return { ...data, actors: permittedActors, journals: permittedJournals,
     party: null, combat: null, targeting: null, references: [], media: (data.media ?? []).filter(entry => urls.has(entry.url)), incomplete: true };
 }

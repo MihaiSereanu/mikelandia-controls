@@ -5,11 +5,13 @@ import { installClientUpgradeCleanup } from "./foundry/compatibility/client-upgr
 import { installJournalExportControls } from "./foundry/journals/journal-export.mjs";
 import { createTaskScope } from "./kernel/lifecycle/task-scope.mjs";
 import { createActivationPolicyResolver } from "./foundry/session/activation-policy.mjs";
+import { installPlayerShutdownRedirect } from "./foundry/session/player-shutdown-redirect.mjs";
 import { readPreferences, registerModePreference, registerPreferences } from "./foundry/settings/preferences.mjs";
 
 if (/\/game\/?$/.test(window.location.pathname)) {
   const scope = createTaskScope("shared-compatibility");
   installJournalExportControls(scope);
+  Hooks.once("ready", () => installPlayerShutdownRedirect(scope));
   scope.listen(window, "pagehide", () => scope.dispose(), { once: true });
   scope.hook("i18nInit", () => {
     if (game.system.id !== "wfrp4e") return;
