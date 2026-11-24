@@ -16,7 +16,7 @@ export function mountOfflineLibrary({ document = globalThis.document, storage = 
   const stopApp = () => { app?.dispose(); app = null; selectedId = null; for (const link of document.querySelectorAll('link[href*="login.css"]')) link.disabled = false; };
   const showIndex = () => {
     stopApp(); host.hidden = false; document.body.classList.add("mc-offline-open");
-    host.replaceChildren(button("Back to login", close), node("h1", "Saved Characters"), node("p", "Read-only games saved in this browser. Anyone using this browser profile can read them."), status);
+    host.replaceChildren(button("Back to login", close), node("h1", "Offline Library"), node("p", "Read-only games saved in this browser. Anyone using this browser profile can read them."), status);
     if (!libraries.length) host.append(node("p", "No games saved yet. Join a game and enable Remember on this device in Settings."));
     for (const library of libraries) {
       const section = node("section");
@@ -56,7 +56,7 @@ export function mountOfflineLibrary({ document = globalThis.document, storage = 
     try {
       const next = await storage.list(); if (disposed) return;
       libraries = next.filter(entry => entry.enabled).sort((a, b) => a.world.title.localeCompare(b.world.title) || a.user.name.localeCompare(b.user.name));
-      trigger.textContent = `Saved Characters${libraries.length ? ` (${libraries.length} ${libraries.length === 1 ? "game" : "games"})` : ""}`;
+      trigger.textContent = "Offline Library";
       if (selectedId && !libraries.some(entry => entry.id === selectedId)) showIndex();
     } catch { status.textContent = "This browser cannot access offline storage."; }
   };

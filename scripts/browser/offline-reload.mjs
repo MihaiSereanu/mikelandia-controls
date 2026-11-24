@@ -15,14 +15,14 @@ export async function checkOfflineReload(send, origin, checks) {
   };
   await evaluate(`import('/modules/mikelandia-controls/src/offline/assets.mjs').then(module => module.prepareOfflineReader({base: location.origin + '/'}))`);
   await send("Page.navigate", { url: origin + "/mobile/index.html" });
-  await until("Boolean(document.getElementById('saved-characters')?.textContent.includes('Saved Characters ('))");
+  await until("document.getElementById('saved-characters')?.textContent === 'Offline Library' && Boolean(document.querySelector('link[href*=\"/assets/mobile.css\"]'))");
   await until("Boolean(navigator.serviceWorker.controller)");
   checks.push("standalone reader installs a controlling service worker independently of Foundry");
   await send("Network.enable", {});
   try {
     await send("Network.emulateNetworkConditions", { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
     await send("Page.reload", { ignoreCache: true });
-    await until("Boolean(document.getElementById('saved-characters')?.textContent.includes('Saved Characters ('))");
+    await until("document.getElementById('saved-characters')?.textContent === 'Offline Library' && Boolean(document.querySelector('link[href*=\"/assets/mobile.css\"]'))");
     await evaluate(`(() => {
       document.getElementById('saved-characters').click();
       const section = [...document.querySelectorAll('#offline-library > section')].find(node => node.textContent.includes('The Enemy Within'));
@@ -33,6 +33,13 @@ export async function checkOfflineReload(send, origin, checks) {
     checks.push("cold page reload with browser network disabled opens saved characters and Journals");
     if (!await evaluate("document.querySelectorAll('.mc-native-sheet-identity img').length > 0 && [...document.querySelectorAll('.mc-native-sheet-identity img')].every(image => image.src.startsWith('blob:'))")) throw new Error("Reader attempted live media URLs.");
     checks.push("offline reader uses stored image blobs after reload");
+    await evaluate(`(() => {
+      document.querySelector('[data-route="journals"]').click();
+      document.querySelector('.mc-journal-entry').click();
+    })()`);
+    await until("Boolean(document.querySelector('.mc-journal-reader'))");
+    if (!await evaluate("!document.querySelector('.mc-journal-native-edit, .mc-journal-export')")) throw new Error("Offline Journal exposes an online action.");
+    checks.push("cold offline Journal reader omits Edit and Export");
   } finally {
     await send("Network.emulateNetworkConditions", { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   }

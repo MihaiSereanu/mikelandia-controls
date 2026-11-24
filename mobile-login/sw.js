@@ -1,6 +1,6 @@
 /* Only the standalone reader is cached. Native login, /game and document responses
  * always go to the network. Bump this revision whenever reader assets change. */
-const CACHE = "mikelandia-mobile-reader-v2";
+const CACHE = "mikelandia-mobile-reader-v3";
 const ASSETS = ["./", "./index.html", "./login.css", "./offline.css", "./main.mjs", "./login.mjs",
   "./foundry-client.mjs", "./library.mjs", "./pwa.mjs", "./manifest.webmanifest",
   "./icons/mc-180.png", "./icons/mc-192.png", "./icons/mc-512.png", "./icons/mc-maskable-512.png"]

@@ -54,7 +54,9 @@ try {
   }
   globalThis.game = undefined;
   const reader = mountOfflineLibrary({ storage }); await reader.refresh();
+  check("library entry uses Offline Library without a game-count suffix", document.querySelector("#saved-characters").textContent === "Offline Library");
   document.querySelector("#saved-characters").click();
+  check("saved-game catalogue heading uses Offline Library", document.querySelector("#offline-library h1").textContent === "Offline Library");
   const gameCards = [...document.querySelectorAll("#offline-library > section")];
   const warhammer = gameCards.find(card => card.textContent.includes("The Enemy Within"));
   check("one game card lists both available PCs and the player", gameCards.length === profiles.length && warhammer.textContent.includes("Elsa Becker") && warhammer.textContent.includes("Lanzo Bergmann") && warhammer.textContent.includes("Matei"));
@@ -109,6 +111,7 @@ try {
     journal.click(); await tick();
     check(profile.meta.world.systemId + " reuses the Journal reader", root().textContent.includes("Follow the river."));
     check(profile.meta.world.systemId + " omits Journal Edit even with cached owner permissions", !root().querySelector(".mc-journal-native-edit"));
+    check(profile.meta.world.systemId + " omits Journal Export offline", !root().querySelector(".mc-journal-export"));
     check(profile.meta.world.systemId + " has no active mutation controls", [...root().querySelectorAll('[data-profile-action],[data-profile-edit],.mc-biography-edit,.mc-journal-native-edit')].every(node => node.disabled || node.hidden));
     root().querySelector(".mc-offline-status button").click();
   }
