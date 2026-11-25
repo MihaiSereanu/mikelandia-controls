@@ -16,9 +16,9 @@ export function createWarhammerActor(overrides = {}) {
         advantage: { value: 4 }, momentum: true, encumbrance: { current: "4.50", max: 8, state: 0.5625 } }
     },
     items: [
-      { id: "athletics", name: "Athletics", type: "skill", system: { advanced: { value: "bsc" }, grouped: { value: "noSpec" }, total: { value: 54 } } },
-      { id: "language", name: "Language (Magick)", type: "skill", system: { advanced: { value: "adv" }, grouped: { value: "isSpec" }, total: { value: 62 } } },
-      { id: "melee", name: "Melee (Basic)", type: "skill", system: { advanced: { value: "bsc" }, grouped: { value: "isSpec" }, total: { value: 49 } } },
+      { id: "athletics", name: "Athletics", type: "skill", system: { advanced: { value: "bsc" }, grouped: { value: "noSpec" }, characteristic: { value: "ag" }, advances: { value: 6 }, modifier: { value: 2 }, total: { value: 54 } } },
+      { id: "language", name: "Language (Magick)", type: "skill", system: { advanced: { value: "adv" }, grouped: { value: "isSpec" }, characteristic: { value: "int" }, advances: { value: 14 }, total: { value: 62 } } },
+      { id: "melee", name: "Melee (Basic)", type: "skill", system: { advanced: { value: "bsc" }, grouped: { value: "isSpec" }, characteristic: { value: "ws" }, advances: { value: 0 }, total: { value: 49 } } },
       { id: "parent", name: "Language", type: "skill", system: { advanced: { value: "bsc" }, grouped: { value: "grouped" }, total: { value: 0 } } },
       { id: "hidden", name: "Hidden Skill", type: "skill", visible: false, system: { advanced: { value: "bsc" }, grouped: { value: "noSpec" }, total: { value: 99 } } },
       createWarhammerWeapon(),

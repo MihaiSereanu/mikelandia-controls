@@ -123,6 +123,14 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
         }, scope);
       }
     }
+    if (row.columns) return node("div", { className: "mc-profile-row mc-profile-column-row", dataset: { profileField: row.id }, children: [
+      node("dt", { children: [label], attrs: { title: row.label } }),
+      node("dd", { children: row.columns.map(column => node("span", {
+        text: column.value === undefined ? "\u2013" : valueText(column),
+        attrs: { "aria-label": `${column.label}: ${column.value === undefined ? "\u2013" : valueText(column)}` },
+        dataset: { profileColumn: column.id }
+      })) })
+    ] });
     const secondary = row.secondaryAction ? node("button", {
       className: "mc-profile-secondary-action", attrs: { type: "button", "data-profile-action": row.secondaryAction.id,
         "aria-label": row.secondaryAction.label, title: row.secondaryAction.label }, children: [icon(row.secondaryAction.icon)],
@@ -284,9 +292,28 @@ export function renderProfilePanels(actor, state, commands, scope, renderNotes =
         if (section.collapsibleTiers) bindSection(tier, heading, `${active.id}:${section.id}:tier:${value}`, true);
         return tier;
       }) : [node("dl", { children: section.rows.map(row => renderRow(section.layout === "actions" ? { ...row, value: undefined } : row, Boolean(equipmentLabel))) })];
+      let columnHeadings;
+      if (section.columns) {
+        columnHeadings = node("div", { className: "mc-profile-column-headings", attrs: { "aria-hidden": "true" } });
+        const list = rows[0];
+        let count = 0;
+        const syncHeadings = () => {
+          const tracks = getComputedStyle(list).gridTemplateColumns.split(" ").filter(track => parseFloat(track) > 0);
+          const next = tracks.length || 1;
+          columnHeadings.style.gridTemplateColumns = tracks.join(" ") || "1fr";
+          if (next === count) return;
+          count = next;
+          columnHeadings.replaceChildren(...Array.from({ length: count }, () => node("div", {
+            className: "mc-profile-column-heading", children: [node("span"), ...section.columns.map(column => node("span", { text: column.label }))]
+          })));
+        };
+        const observer = new ResizeObserver(syncHeadings);
+        observer.observe(list);
+        scope.own(() => observer.disconnect());
+      }
       const element = node(section.collapsible ? "details" : "section", {
-        className: `mc-profile-section mc-profile-${section.kind}${section.fullWidth ? " mc-profile-section-full-width" : ""}${section.collapsible ? " mc-profile-inventory-disclosure" : ""}${equipmentLabel ? " mc-profile-equipment-section" : ""}${section.layout === "inline" ? " mc-profile-section-inline" : section.layout === "table" ? " mc-profile-section-table" : section.layout === "rows" ? " mc-profile-section-rows" : section.layout === "actions" ? " mc-profile-section-actions" : ""}`, dataset: { profileSection: section.id },
-        children: [sectionHeading, inventorySection ? inventory.body : null, ...(section.kind === "text" ? [section.richText
+        className: `mc-profile-section mc-profile-${section.kind}${section.fullWidth ? " mc-profile-section-full-width" : ""}${section.collapsible ? " mc-profile-inventory-disclosure" : ""}${equipmentLabel ? " mc-profile-equipment-section" : ""}${section.columns ? " mc-profile-column-section" : ""}${section.layout === "inline" ? " mc-profile-section-inline" : section.layout === "table" ? " mc-profile-section-table" : section.layout === "rows" ? " mc-profile-section-rows" : section.layout === "actions" ? " mc-profile-section-actions" : ""}`, dataset: { profileSection: section.id },
+        children: [sectionHeading, columnHeadings, inventorySection ? inventory.body : null, ...(section.kind === "text" ? [section.richText
           ? renderEnrichedDescription(section.text, "", { gateway: commands.descriptions, uuid: actor.sourceUuid, scope, fragment: true }).content
           : node("p", { text: section.text })] : rows), disclosure]
       });

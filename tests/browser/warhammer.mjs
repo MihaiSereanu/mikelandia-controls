@@ -1232,8 +1232,8 @@ try {
     await clickTab("skills");
     check(
       "skill totals are read from native prepared data",
-      field("athletics")?.textContent === "Athletics54" &&
-        field("language")?.textContent === "Language (Magick)62",
+      field("athletics")?.textContent === "Athletics46654" &&
+        field("language")?.textContent === "Language (Magick)481462",
     );
     screen.querySelector('[data-profile-action="skill:athletics"]').click();
     await tick();
@@ -2451,6 +2451,66 @@ try {
     await clickTab("magic");
     screen.querySelectorAll(".mc-profile-spell-description").forEach(details => { details.open = true; });
     screen.querySelector('[data-profile-section="lore-spells"]').scrollIntoView({ block: "center" });
+  }
+  if (params.get("preview") === "skills") {
+    actor.items.find(item => item.id === "injection").name = "Unlinked Skill";
+    for (const [index, name] of ["Climb", "Cool", "Dodge", "Endurance", "Gossip", "Intuition", "Navigation", "Perception"].entries()) {
+      actor.items.push({ id: `extra-${index}`, name, type: "skill", parent: actor, system: {
+        advanced: { value: index < 6 ? "bsc" : "adv" }, grouped: { value: "noSpec" },
+        characteristic: { value: "ag" }, advances: { value: index * 5 }, total: { value: 46 + index * 5 }
+      } });
+    }
+    Hooks.emit("updateActor", actor, {});
+    await tick();
+    await clickTab("main");
+    for (const id of ["xp-current", "xp-spent", "xp-total"]) {
+      check(`${id} remains read-only`, Boolean(field(id)) && !field(id).querySelector("button, input, select"));
+    }
+    await clickTab("skills");
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    for (const section of screen.querySelectorAll(".mc-profile-column-section")) {
+      const rows = [...section.querySelectorAll(".mc-profile-row")];
+      const first = rows[0].getBoundingClientRect();
+      const columns = rows.filter(row => Math.abs(row.getBoundingClientRect().top - first.top) < 1).length;
+      const headers = [...section.querySelectorAll(".mc-profile-column-heading")];
+      check(`${section.dataset.profileSection} repeats headers per column`, headers.length === columns);
+      check(`${section.dataset.profileSection} uses muted regular headers`, getComputedStyle(headers[0]).fontWeight === "400");
+      check(`${section.dataset.profileSection} responsive column count`, params.get("layout") === "tablet" ? columns > 1 : columns === 1);
+      for (let i = 0; i < rows.length; i++) {
+        const values = [...rows[i].querySelectorAll("[data-profile-column]")];
+        const bounds = values.map(value => value.getBoundingClientRect());
+        const headerValues = [...headers[i % columns].children].slice(1);
+        check(`${rows[i].dataset.profileField} numbers align below headers`, bounds.every((rect, index) => Math.abs(rect.right - headerValues[index].getBoundingClientRect().right) < 1));
+        check(`${rows[i].dataset.profileField} stays on one line`, bounds.every(rect => Math.abs(rect.top - bounds[0].top) < 1) && rows[i].getBoundingClientRect().height <= 62);
+        check(`${rows[i].dataset.profileField} numbers stay within row`, bounds.at(-1).right <= rows[i].getBoundingClientRect().right);
+      }
+    }
+    check("prepared skill values and zero Advances stay visible", field("athletics").textContent === "Athletics46654" && field("melee").querySelector('[data-profile-column="advances"]').textContent === "0");
+    check("missing native fields show unavailable rather than invented values", field("injection").querySelector('[data-profile-column="base"]').textContent === "\u2013");
+    if (params.get("layout") === "tablet") {
+      const section = screen.querySelector('[data-profile-section="basic-skills"]');
+      section.style.maxWidth = "280px";
+      await new Promise(resolve => setTimeout(resolve, 60));
+      check("headers follow a narrower available width", section.querySelectorAll(".mc-profile-column-heading").length === 1);
+      section.style.removeProperty("max-width");
+      await new Promise(resolve => setTimeout(resolve, 60));
+      check("headers return after widening", section.querySelectorAll(".mc-profile-column-heading").length > 1);
+      const list = section.querySelector("dl");
+      const rest = [...list.children].slice(1);
+      rest.forEach(row => row.remove());
+      await new Promise(resolve => setTimeout(resolve, 60));
+      check("a single skill has no empty-column heading", section.querySelectorAll(".mc-profile-column-heading").length === 1);
+      list.append(...rest);
+      await new Promise(resolve => setTimeout(resolve, 60));
+    }
+    const athletics = actor.items.find(item => item.id === "athletics");
+    athletics.system.advances.value = 7;
+    athletics.system.total.value = 55;
+    Hooks.emit("updateItem", athletics, {});
+    await tick();
+    check("native skill refresh updates Advances and total", field("athletics").textContent === "Athletics46755");
+    check("Skills fits viewport", document.documentElement.scrollWidth <= innerWidth + 1);
+    screen.querySelector('[data-profile-section="basic-skills"]').scrollIntoView({ block: "start" });
   }
   document.querySelector("#results").textContent = JSON.stringify({
     status: "passed",

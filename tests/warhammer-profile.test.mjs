@@ -161,6 +161,10 @@ test("skill groups mirror native Basic/Advanced and specialization filters", t =
   const groups = record.panels.find(tab => tab.id === "skills").sections;
   assert.deepEqual(groups[0].rows.map(row => [row.label, row.value]), [["Athletics", 54]]);
   assert.deepEqual(groups[1].rows.map(row => [row.label, row.value]), [["Language (Magick)", 62], ["Melee (Basic)", 49]]);
+  assert.deepEqual(groups[0].columns.map(column => column.label), ["Base", "Adv", "Total"]);
+  assert.deepEqual(groups[0].rows[0].columns.map(column => column.value), [46, 6, 54], "base excludes skill modifiers; total stays native");
+  assert.deepEqual(groups[1].rows[1].columns.map(column => column.value), [41, 0, 49], "zero advances remain visible");
+  assert.equal(groups.flatMap(group => group.rows).some(row => row.edit), false);
   assert.equal(JSON.stringify(record).includes("Unidentified Weapon"), false);
   assert.equal(JSON.stringify(record).includes("Hidden Skill"), false);
 });

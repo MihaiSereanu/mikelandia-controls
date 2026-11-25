@@ -51,6 +51,12 @@ const injuries = { id: "injuries", kind: "items", labelKey: "Injuries", label: "
 };
 
 /** Mappings verified against wfrp4e 10.1.2 native models and sheet templates. */
+const skillColumns = [
+  { id: "base", label: "Base", read: (item, _context, actor) => actor.system?.characteristics?.[item.system?.characteristic?.value]?.value },
+  { id: "advances", label: "Adv", read: item => item.system?.advances?.value },
+  { id: "total", labelKey: "Total", label: "Total", read: item => item.system?.total?.value }
+];
+
 export const warhammerCharacterProfile = {
   tabs: [
     { id: "main", summaryLayout: "counter-pairs", labelKey: "Main", label: "Main", sections: [
@@ -111,10 +117,10 @@ export const warhammerCharacterProfile = {
     ] },
     { id: "skills", labelKey: "Skills", label: "Skills", sections: [
       { id: "basic-skills", kind: "items", labelKey: "Basic Skills", label: "Basic Skills", collectionPath: "items", itemTypes: ["skill"],
-        actionIdPrefix: "skill",
+        actionIdPrefix: "skill", columns: skillColumns,
         valuePath: "system.total.value", include: item => item.system?.advanced?.value === "bsc" && item.system?.grouped?.value === "noSpec" },
       { id: "advanced-skills", kind: "items", labelKey: "Advanced", label: "Advanced", collectionPath: "items", itemTypes: ["skill"],
-        actionIdPrefix: "skill",
+        actionIdPrefix: "skill", columns: skillColumns,
         valuePath: "system.total.value", include: item => item.system?.advanced?.value === "adv" || item.system?.grouped?.value === "isSpec" }
     ] }
   ]

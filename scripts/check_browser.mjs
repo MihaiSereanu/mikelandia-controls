@@ -124,6 +124,8 @@ const cases = [
   ["fallback-common-display-v2", 393, 851, "fallback", "layout=phone&application=v2&common-display=true"],
   ["fallback-tablet-v1", 1024, 768, "fallback", "layout=tablet&application=v1"],
   ["fallback-tablet-v2", 1024, 768, "fallback", "layout=tablet&application=v2"],
+  ...[["phone", 390, 844], ["tablet", 1024, 768], ["narrow-large-text", 320, 844]].map(([layout, width, height]) =>
+    [`warhammer-skills-${layout}`, width, height, "warhammer", `layout=${layout === "tablet" ? "tablet" : "phone"}&edition=5e&preview=skills&layout-only=true${layout === "narrow-large-text" ? "&large=true" : ""}`]),
   ["warhammer-5e-phone", 390, 844, "warhammer", "layout=phone&edition=5e"],
   ["warhammer-armour-phone", 390, 844, "warhammer", "layout=phone&edition=5e&preview=armour"],
   ["warhammer-armour-tablet", 1024, 768, "warhammer", "layout=tablet&edition=5e&preview=armour"],

@@ -112,6 +112,10 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
           seen.add(id);
           const properties = typeof entry.readProperties === "function" ? entry.readProperties(item, context, actor) : [];
           projected.push(Object.freeze({ id, label: name, value, format: entry.format ?? "number",
+            ...(entry.columns ? { columns: Object.freeze(entry.columns.map(column => {
+              const value = column.read(item, context, actor);
+              return Object.freeze({ id: column.id, label: label(column), ...(scalar(value) ? { value } : {}) });
+            })) } : {}),
             ...(entry.numericEditorLayout === "stacked" ? { numericEditorLayout: "stacked" } : {}),
             ...(typeof entry.readDetails === "function" ? { details: Object.freeze(entry.readDetails(item, context, actor).filter(value => typeof value === "string")) } : {}),
             ...(entry.editControl === "checkbox" && entry.format === "boolean" ? { editControl: "checkbox" } : {}),
@@ -146,6 +150,7 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
       }
       projected.sort(entry.compareRows ?? ((a, b) => a.label.localeCompare(b.label)));
       return projected.length || entry.keepEmpty === true ? Object.freeze({ id: entry.id, label: label(entry), kind: "items", rows: Object.freeze(projected), summary: rows(entry.summary),
+        ...(entry.columns ? { columns: Object.freeze(entry.columns.map(column => Object.freeze({ id: column.id, label: label(column) }))) } : {}),
         ...(entry.groupByValue === true ? { groupByValue: true } : {}),
         ...(entry.collapsibleTiers === true ? { collapsibleTiers: true } : {}),
         ...(entry.defaultOpen === true ? { defaultOpen: true } : {}),
