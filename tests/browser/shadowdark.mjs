@@ -38,6 +38,7 @@ try {
   f.actor.items.get("torch").system.description = '<p>Burns for an hour.</p>';
   f.actor.items.get("dagger").system.description = '<p>&nbsp;<br></p>';
   globalThis.game = f.game; globalThis.Hooks = f.hooks;
+  globalThis.CONFIG = { ...globalThis.CONFIG, ...f.config };
   let removal;
   const previousFoundry = globalThis.foundry;
   class RemovalDialog {
@@ -377,6 +378,9 @@ try {
   check("spell name expands formatted player description without rolling", spellDescription.open && spellDescription.querySelector('p strong')?.textContent === 'missile text'
     && spellDescription.querySelector('ul li') && !spellDescription.querySelector('script') && !spellDescription.textContent.includes('GM spell secret')
     && f.rolls.length === rollsBeforeDescription && f.calls.length === callsBeforeDescription);
+  check("expanded known spell shows Range and Duration above its description", spellDescription.querySelector('.mc-profile-spell-details')?.textContent === "Range: FarDuration: Instant"
+    && spellDescription.querySelector('.mc-profile-spell-details').nextElementSibling?.textContent.includes('missile text'));
+  check("missing spell metadata adds no badges", !lostDescription.querySelector('.mc-profile-spell-details'));
   spellDescription.querySelector('summary').click(); await tick();
   lostDescription.querySelector('summary').click(); await tick();
   check("spell names toggle closed and lost spell remains readable", !spellDescription.open && lostDescription.open && lostDescription.textContent.includes('Native sleep text'));
@@ -408,6 +412,14 @@ try {
   const itemCalls = f.calls.length;
   itemDescription.querySelector('summary').click(); await tick();
   check("item spell description opens independently of casting", itemDescription.open && itemDescription.querySelector('strong')?.textContent === "light" && f.calls.length === itemCalls);
+  check("expanded wand spell shows linked Range and numbered Duration", itemDescription.querySelector('.mc-profile-spell-details')?.textContent === "Range: NearDuration: 3 Turns");
+  const scrollDescription = spellSection("scrolls").querySelector('details');
+  scrollDescription.querySelector('summary').click(); await tick();
+  check("expanded scroll spell shows the same linked details", scrollDescription.open && scrollDescription.querySelector('.mc-profile-spell-details')?.textContent === "Range: NearDuration: 3 Turns");
+  for (const details of [itemDescription, scrollDescription]) for (const badge of details.querySelectorAll('.mc-profile-spell-details span')) {
+    const rect = badge.getBoundingClientRect();
+    check("spell detail badge fits the viewport", rect.left >= 0 && rect.right <= innerWidth + 1);
+  }
   const wandLost = () => screen.querySelector('[data-profile-spell-loss="wand-1"]');
   wandLost().click(); await tick();
   check("manual wand loss changes only its native reference", magic.wand.system.spells[1].lost && !magic.spells[0].system.lost

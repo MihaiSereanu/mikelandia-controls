@@ -174,7 +174,7 @@ test("an empty inventory retains the Gear section for adding new items", t => {
 
 function setup(t, options) {
   const f = createShadowdarkFixture(options);
-  installGlobals(t, { game: f.game, Hooks: f.hooks });
+  installGlobals(t, { game: f.game, Hooks: f.hooks, CONFIG: f.config });
   f.gateway = createFoundryCommandGateway();
   f.request = id => ({ actorSourceUuid: f.actor.uuid, actionId: id, actionRevision: f.gateway.capabilitiesForActor(f.actor).profileActions.find(a => a.id === id)?.revision });
   f.edit = (id, value) => {
@@ -225,6 +225,29 @@ function addSpell(f, id, name, tier = 1, lost = false) {
   return item;
 }
 const spellRows = f => f.view().panels.find(tab => tab.id === "spells").sections.flatMap(section => section.rows);
+
+test("spell details use native Range and Duration for known, lost and linked spells", t => {
+  const f = setup(t), magic = addItemSpells(f);
+  installGlobals(t, { fromUuidSync: magic.resolve });
+  const known = f.actor.items.get("spell"), lost = f.actor.items.get("lost");
+  const details = id => spellRows(f).find(row => row.id === id).details;
+  assert.deepEqual(details("spell"), ["Range: Far", "Duration: Instant"]);
+  assert.deepEqual(details("lost"), []);
+  for (const type of ["focus", "permanent"]) {
+    lost.system.duration = { type, value: 99 };
+    assert.deepEqual(details("lost"), [`Duration: ${f.config.SHADOWDARK.SPELL_DURATIONS[type]}`]);
+  }
+  known.system.duration = { type: "rounds", value: 0 };
+  assert.deepEqual(details("spell"), ["Range: Far", "Duration: 0 Rounds"]);
+  const groups = () => f.view().panels.find(tab => tab.id === "spells").sections.find(section => section.id === "item-spells").sections;
+  for (const group of groups()) assert.deepEqual(group.rows.find(row => row.label === "Light").details, ["Range: Near", "Duration: 3 Turns"]);
+  f.config.SHADOWDARK.SPELL_RANGES.near = "native.range";
+  f.game.i18n = { localize: key => key === "native.range" ? "Nearby" : key };
+  magic.spells[0].system.duration = { type: "realTime", value: 2 };
+  assert.deepEqual(groups()[0].rows.find(row => row.label === "Light").details, ["Range: Nearby", "Duration: 2 Real time"]);
+  known.system.range = ""; known.system.duration = {};
+  assert.deepEqual(details("spell"), []);
+});
 
 test("item spells match native eligibility and distinguish their sources", t => {
   const f = setup(t), magic = addItemSpells(f);

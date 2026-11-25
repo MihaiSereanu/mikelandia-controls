@@ -4,6 +4,20 @@ import { customResources, readCustomResource } from "./resources.mjs";
 import { localizeFoundry } from "../../foundry/settings/localization.mjs";
 import { itemSpells } from "./item-spells.mjs";
 
+function spellDetails(row) {
+  const model = (row.spell ?? row).system;
+  const config = globalThis.CONFIG?.SHADOWDARK;
+  const range = config?.SPELL_RANGES?.[model.range];
+  const duration = config?.SPELL_DURATIONS?.[model.duration?.type];
+  const details = [];
+  if (range) details.push(`${localizeFoundry("SHADOWDARK.item.spell_range", "Range")}: ${localizeFoundry(range)}`);
+  if (duration) {
+    const value = config.VARIABLE_DURATIONS?.includes(model.duration.type) ? model.duration.value : undefined;
+    details.push(`${localizeFoundry("SHADOWDARK.item.spell_duration", "Duration")}: ${[value, localizeFoundry(duration)].filter(value => value !== undefined && value !== null && value !== "").join(" ")}`);
+  }
+  return details;
+}
+
 const field = (id, key, label, path, extra = {}) => ({ id, labelKey: key, label, path,
   ...(["hp", "def", "xp", "grit", "luck"].includes(id) ? { editControl: "counter" } : {}), ...extra });
 export function shadowdarkPlayerProfile(context, actor) {
@@ -41,14 +55,14 @@ export function shadowdarkPlayerProfile(context, actor) {
       { id: "known-spells", kind: "items", labelKey: "SHADOWDARK.sheet.item.tab.spellsknown", label: "Spells Known", collectionPath: "items", itemTypes: ["Spell"],
         compareRows: (a, b) => a.value - b.value || a.label.localeCompare(b.label), groupByValue: true, collapsibleTiers: true,
         actionIdPrefix: "spell", valuePath: "system.tier", valueLabelKey: "SHADOWDARK.sheet.player.spells_tier", valueLabel: "Tier",
-        descriptionPath: "system.description", descriptionToggle: "name",
+        descriptionPath: "system.description", descriptionToggle: "name", readDetails: spellDetails,
         readLost: item => item.system.lost, showCastButton: true, lossActionIdPrefix: "spell-loss",
         include: (item, _context, actor) => knownSpell(item, actor) },
       { id: "item-spells", kind: "group", labelKey: "MIKELANDIA_CONTROLS.Panels.SpellsFromItems", label: "Spells from Items", sections: [
         ...[["wands", "Wands", "Wand"], ["scrolls", "Scrolls", "Scroll"]].map(([id, label, type]) => ({
           id, label, labelKey: `SHADOWDARK.inventory.section.${id}`, kind: "items", itemTypes: [type], readItems: itemSpells,
           collapsible: true, defaultOpen: true, actionIdPrefix: "item-spell",
-          descriptionPath: "system.description", descriptionToggle: "name", readLost: row => row.system.lost,
+          descriptionPath: "system.description", descriptionToggle: "name", readDetails: spellDetails, readLost: row => row.system.lost,
           readSourceLabel: row => row.item.name, showCastButton: true,
           ...(type === "Wand" ? { lossActionIdPrefix: "wand-loss" } : {}),
           include: row => row.type === type

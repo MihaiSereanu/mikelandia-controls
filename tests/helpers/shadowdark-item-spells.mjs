@@ -1,6 +1,6 @@
 export function addItemSpells(f) {
   const spells = [
-    { id: "lightItem", uuid: "Compendium.test.spells.Item.light", type: "Spell", name: "Light", system: { isSpell: true, tier: 1, lost: false, description: "<p>A bright <strong>light</strong>.</p>" } },
+    { id: "lightItem", uuid: "Compendium.test.spells.Item.light", type: "Spell", name: "Light", system: { isSpell: true, tier: 1, lost: false, range: "near", duration: { type: "turns", value: 3 }, description: "<p>A bright <strong>light</strong>.</p>" } },
     { id: "sleepItem", uuid: "Compendium.test.spells.Item.sleep", type: "Spell", name: "Sleep", system: { isSpell: true, tier: 1, lost: false, description: "<p>Creatures fall asleep.</p>" } }
   ];
   f.actor.system.canUseMagicItems = true;

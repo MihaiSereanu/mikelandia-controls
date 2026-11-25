@@ -12,7 +12,7 @@ export function createShadowdarkFixture({ pulp = false, specialAbilities = false
   actor.items = collection([
     { id: "sword", type: "Weapon", name: "Sword", system: { ...physical, equipped: true, isWeapon: true, type: "melee", isThrown: false, handedness: "1h", subtext: "Melee • Close • 1d8" } },
     { id: "dagger", type: "Weapon", name: "Dagger", system: { ...physical, equipped: true, isWeapon: true, type: "melee", isThrown: true, handedness: "1h", subtext: "Melee • Close • 1d4" } },
-    { id: "spell", type: "Spell", name: "Magic Missile", system: { isSpell: true, tier: 1, lost: false, class: ["Item.class"], duration: { type: "instant", value: 0 }, description: '<p>Native <strong>missile text</strong></p><ul><li>Spell effect</li></ul><script>bad()</script><div class="secret">GM spell secret</div>' } },
+    { id: "spell", type: "Spell", name: "Magic Missile", system: { isSpell: true, tier: 1, lost: false, class: ["Item.class"], range: "far", duration: { type: "instant", value: 0 }, description: '<p>Native <strong>missile text</strong></p><ul><li>Spell effect</li></ul><script>bad()</script><div class="secret">GM spell secret</div>' } },
     { id: "lost", type: "Spell", name: "Sleep", system: { isSpell: true, tier: 1, lost: true, description: '<p>Native sleep text</p>' } },
     { id: "torch", type: "Basic", name: "Torch", system: { ...physical, light: { isSource: true, active: false, remainingSecs: 3600 } } },
     { id: "secret", type: "Basic", name: "Secret Relic", system: { ...physical, isIdentified: false } }
@@ -28,7 +28,12 @@ export function createShadowdarkFixture({ pulp = false, specialAbilities = false
   game.settings.get = (_namespace, key) => settings[key] ?? false;
   game.user.character = actor;
   game.shadowdark = { lightSourceTracker: { toggleLightSource: (...args) => lights.push(args) } };
-  const fixture = { actor, game, hooks, calls, rolls, writes, lights, settings, prompt: async () => true, success: true, error: false };
+  const config = { SHADOWDARK: {
+    SPELL_RANGES: { self: "Self", close: "Close", near: "Near", far: "Far" },
+    SPELL_DURATIONS: { instant: "Instant", focus: "Focus", permanent: "Permanent", rounds: "Rounds", turns: "Turns", realTime: "Real time" },
+    VARIABLE_DURATIONS: ["days", "hours", "minutes", "realTime", "rounds", "seconds", "turns"]
+  } };
+  const fixture = { config, actor, game, hooks, calls, rolls, writes, lights, settings, prompt: async () => true, success: true, error: false };
   const native = kind => async (target, config) => {
     calls.push({ kind, target, config, receiver: actor.system });
     config.actorUuid = actor.uuid;
