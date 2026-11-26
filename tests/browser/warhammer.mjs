@@ -358,7 +358,7 @@ try {
   );
   check(
     "prepared characteristic totals are used",
-    field("ws")?.textContent === "Weapon Skill41",
+    field("ws")?.querySelector('[data-profile-column="total"]')?.textContent === "41",
   );
   check(
     "zero Fortune remains visible",
@@ -2452,7 +2452,14 @@ try {
     screen.querySelectorAll(".mc-profile-spell-description").forEach(details => { details.open = true; });
     screen.querySelector('[data-profile-section="lore-spells"]').scrollIntoView({ block: "center" });
   }
-  if (params.get("preview") === "skills") {
+  if (["skills", "characteristics"].includes(params.get("preview"))) {
+    const skills = params.get("preview") === "skills";
+    if (!skills) {
+      actor.system.characteristics.ws = { initial: 30, advances: 10, modifier: 5, value: 45 };
+      actor.system.characteristics.bs = { initial: 0, advances: 0, value: 0 };
+      actor.system.characteristics.s = { value: 30 };
+      actor.system.characteristics.t = { initial: 25, advances: 5 };
+    }
     actor.items.find(item => item.id === "injection").name = "Unlinked Skill";
     for (const [index, name] of ["Climb", "Cool", "Dodge", "Endurance", "Gossip", "Intuition", "Navigation", "Perception"].entries()) {
       actor.items.push({ id: `extra-${index}`, name, type: "skill", parent: actor, system: {
@@ -2466,7 +2473,7 @@ try {
     for (const id of ["xp-current", "xp-spent", "xp-total"]) {
       check(`${id} remains read-only`, Boolean(field(id)) && !field(id).querySelector("button, input, select"));
     }
-    await clickTab("skills");
+    await clickTab(skills ? "skills" : "main");
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     for (const section of screen.querySelectorAll(".mc-profile-column-section")) {
       const rows = [...section.querySelectorAll(".mc-profile-row")];
@@ -2485,10 +2492,18 @@ try {
         check(`${rows[i].dataset.profileField} numbers stay within row`, bounds.at(-1).right <= rows[i].getBoundingClientRect().right);
       }
     }
-    check("prepared skill values and zero Advances stay visible", field("athletics").textContent === "Athletics46654" && field("melee").querySelector('[data-profile-column="advances"]').textContent === "0");
-    check("missing native fields show unavailable rather than invented values", field("injection").querySelector('[data-profile-column="base"]').textContent === "\u2013");
+    if (skills) {
+      check("prepared skill values and zero Advances stay visible", field("athletics").textContent === "Athletics46654" && field("melee").querySelector('[data-profile-column="advances"]').textContent === "0");
+      check("missing native fields show unavailable rather than invented values", field("injection").querySelector('[data-profile-column="base"]').textContent === "\u2013");
+    } else {
+      const values = id => [...field(id).querySelectorAll('[data-profile-column]')].map(cell => cell.textContent).join("/");
+      check("characteristic totals include native modifiers", values("ws") === "30/10/45");
+      check("zero characteristic values stay visible", values("bs") === "0/0/0");
+      check("missing characteristic values use dashes", values("s") === "\u2013/\u2013/30" && values("t") === "25/5/\u2013");
+      check("characteristic columns are read-only and retain roll action", !screen.querySelector('[data-profile-section="characteristics"] input') && Boolean(field("ws").querySelector('[data-profile-action="characteristic:ws"]')));
+    }
     if (params.get("layout") === "tablet") {
-      const section = screen.querySelector('[data-profile-section="basic-skills"]');
+      const section = screen.querySelector(`[data-profile-section="${skills ? "basic-skills" : "characteristics"}"]`);
       section.style.maxWidth = "280px";
       await new Promise(resolve => setTimeout(resolve, 60));
       check("headers follow a narrower available width", section.querySelectorAll(".mc-profile-column-heading").length === 1);
@@ -2499,18 +2514,26 @@ try {
       const rest = [...list.children].slice(1);
       rest.forEach(row => row.remove());
       await new Promise(resolve => setTimeout(resolve, 60));
-      check("a single skill has no empty-column heading", section.querySelectorAll(".mc-profile-column-heading").length === 1);
+      check("a single row has no empty-column heading", section.querySelectorAll(".mc-profile-column-heading").length === 1);
       list.append(...rest);
       await new Promise(resolve => setTimeout(resolve, 60));
     }
-    const athletics = actor.items.find(item => item.id === "athletics");
-    athletics.system.advances.value = 7;
-    athletics.system.total.value = 55;
-    Hooks.emit("updateItem", athletics, {});
-    await tick();
-    check("native skill refresh updates Advances and total", field("athletics").textContent === "Athletics46755");
-    check("Skills fits viewport", document.documentElement.scrollWidth <= innerWidth + 1);
-    screen.querySelector('[data-profile-section="basic-skills"]').scrollIntoView({ block: "start" });
+    if (skills) {
+      const athletics = actor.items.find(item => item.id === "athletics");
+      athletics.system.advances.value = 7;
+      athletics.system.total.value = 55;
+      Hooks.emit("updateItem", athletics, {});
+      await tick();
+      check("native skill refresh updates Advances and total", field("athletics").textContent === "Athletics46755");
+    } else {
+      actor.system.characteristics.ws.advances = 11;
+      actor.system.characteristics.ws.value = 46;
+      Hooks.emit("updateActor", actor, {});
+      await tick();
+      check("native characteristic refresh updates Advances and total", [...field("ws").querySelectorAll('[data-profile-column]')].map(cell => cell.textContent).join("/") === "30/11/46");
+    }
+    check("numeric columns fit viewport", document.documentElement.scrollWidth <= innerWidth + 1);
+    screen.querySelector(`[data-profile-section="${skills ? "basic-skills" : "characteristics"}"]`).scrollIntoView({ block: "start" });
   }
   document.querySelector("#results").textContent = JSON.stringify({
     status: "passed",

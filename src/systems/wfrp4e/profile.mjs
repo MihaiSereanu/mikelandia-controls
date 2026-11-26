@@ -7,7 +7,13 @@ import { warhammer5eMountRules } from "./mount-rules.mjs";
 
 const field = (id, labelKey, path, extra = {}) => ({ id, labelKey, label: labelKey, path, editId: id,
   ...(["wounds", "fortune", "fate", "corruption"].includes(id) ? { editControl: "counter" } : {}), ...extra });
-const characteristic = (id, key, label) => ({ id, labelKey: key, label, path: `system.characteristics.${id}.value`, actionId: `characteristic:${id}` });
+const characteristicColumns = [
+  { id: "base", label: "Base", field: "initial" },
+  { id: "advances", label: "Adv", field: "advances" },
+  { id: "total", labelKey: "Total", label: "Total", field: "value" }
+];
+const characteristic = (id, key, label) => ({ id, labelKey: key, label, path: `system.characteristics.${id}.value`, actionId: `characteristic:${id}`,
+  columns: characteristicColumns.map(column => ({ ...column, path: `system.characteristics.${id}.${column.field}` })) });
 const armour = { id: "armour", kind: "group", labelKey: "Armour", label: "Armour", collapsible: true, sections:
   [["head", "head", "Head"], ["body", "body", "Body"], ["left-arm", "lArm", "Left Arm"], ["right-arm", "rArm", "Right Arm"],
     ["left-leg", "lLeg", "Left Leg"], ["right-leg", "rLeg", "Right Leg"]].map(([id, loc, label]) => ({
@@ -60,7 +66,7 @@ const skillColumns = [
 export const warhammerCharacterProfile = {
   tabs: [
     { id: "main", summaryLayout: "counter-pairs", labelKey: "Main", label: "Main", sections: [
-      { id: "characteristics", kind: "values", labelKey: "Characteristics", label: "Characteristics", fields: [
+      { id: "characteristics", kind: "values", labelKey: "Characteristics", label: "Characteristics", columns: characteristicColumns, fields: [
         characteristic("ws", "CHAR.WS", "Weapon Skill"), characteristic("bs", "CHAR.BS", "Ballistic Skill"),
         characteristic("s", "CHAR.S", "Strength"), characteristic("t", "CHAR.T", "Toughness"),
         characteristic("i", "CHAR.I", "Initiative"), characteristic("ag", "CHAR.Ag", "Agility"),

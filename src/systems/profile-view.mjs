@@ -56,10 +56,15 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
       let value;
       try { value = typeof entry.read === "function" ? entry.read(actor, context) : readProfilePath(actor, entry.path); }
       catch { return []; }
-      if (!scalar(value, entry.format)) return [];
+      const columns = entry.columns?.map(column => {
+        const value = readProfilePath(actor, column.path);
+        return Object.freeze({ id: column.id, label: label(column), ...(scalar(value) ? { value } : {}) });
+      });
+      if (!scalar(value, entry.format) && !columns?.some(column => column.value !== undefined)) return [];
       seen.add(entry.id);
       const max = entry.readMax ? entry.readMax(actor, context) : entry.maxPath ? readProfilePath(actor, entry.maxPath) : undefined;
       return [Object.freeze({ id: entry.id, label: label(entry), value, format: entry.format ?? "number",
+        ...(columns ? { columns: Object.freeze(columns) } : {}),
         ...tooltipFor(entry),
         ...(entry.editControl === "checkbox" && entry.format === "boolean" ? { editControl: "checkbox" } : {}),
         ...(entry.editControl === "counter" ? { editControl: "counter" } : {}),
@@ -85,6 +90,7 @@ export function createProfilePanels(actor, profile, { localize = localizeFoundry
         if (scalar(text, "text") && label(entry.disclosure)) disclosure = Object.freeze({ label: label(entry.disclosure), text });
       } catch { /* Missing native data leaves the disclosure unavailable. */ }
       return projected.length ? Object.freeze({ id: entry.id, label: label(entry), kind: entry.kind, rows: projected, summary: rows(entry.summary), controls: rows(entry.controls),
+        ...(entry.columns ? { columns: Object.freeze(entry.columns.map(column => Object.freeze({ id: column.id, label: label(column) }))) } : {}),
         ...(entry.fullWidth === true ? { fullWidth: true } : {}),
         ...(disclosure ? { disclosure } : {}),
         ...(["inline", "table", "actions"].includes(entry.layout) ? { layout: entry.layout } : {}) }) : null;

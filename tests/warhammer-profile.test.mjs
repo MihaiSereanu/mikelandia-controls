@@ -154,6 +154,24 @@ for (const use5e of [true]) {
   });
 }
 
+test("characteristics match skill columns with independent native values and read-only Advances", t => {
+  const actor = createWarhammerActor();
+  installGlobals(t, { game: createWarhammerGame([actor]) });
+  actor.system.characteristics.ws = { initial: 30, advances: 10, modifier: 5, value: 45 };
+  actor.system.characteristics.bs = { initial: 0, advances: 0, value: 0 };
+  actor.system.characteristics.s = { initial: 25, advances: NaN, value: 30 };
+  actor.system.characteristics.t = { advances: 5 };
+  const section = integration.createActorViewRecord(actor, game.user, () => ({
+    profileActions: [{ id: "characteristic:ws", revision: "5e" }]
+  })).panels[0].sections[0];
+  assert.deepEqual(section.columns.map(column => column.label), ["Base", "Adv", "Total"]);
+  assert.deepEqual(section.rows.map(row => row.id), ["ws", "bs", "s", "t", "i", "ag", "dex", "int", "wp", "fel"]);
+  assert.deepEqual(section.rows.slice(0, 4).map(row => row.columns.map(column => column.value)),
+    [[30, 10, 45], [0, 0, 0], [25, undefined, 30], [undefined, 5, undefined]]);
+  assert.ok(section.rows.every(row => !row.edit && row.columns.every(column => !column.edit)));
+  assert.equal(section.rows[0].action.id, "characteristic:ws");
+});
+
 test("skill groups mirror native Basic/Advanced and specialization filters", t => {
   const actor = createWarhammerActor();
   installGlobals(t, { game: createWarhammerGame([actor]) });

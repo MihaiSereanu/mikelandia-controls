@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-25. [Task map and contracts](architecture.md#task-map); [PWA operations](mobile-login.md); [migration](migration.md).
+Updated 2026-11-26. [Task map and contracts](architecture.md#task-map); [PWA operations](mobile-login.md); [migration](migration.md).
 
 ## Deployment
 
@@ -12,6 +12,8 @@ Deployments apply only to their recorded revisions. Installation and fixtures do
 - Static PWA: all 14 `/mobile/` files deployed 2026-11-24 with the revised offline toolbar, card styling and shell cache v2; remote disk and public HTTPS SHA-256 hashes matched. Worker/library now return 200; `/mobile` redirects correctly and native root/join/game/Socket.IO-script routes return 200. Foundry and Caddy remain active with no restart. No backup created, as explicitly requested. Hosted module manifest is 1.1.65; the banner, Settings icon and game-card fixes require the next module release. Receipt: `dist/offline-static-deployment.json`. [Rollback](mobile-login.md#rollback); installed-app review pending.
 
 ## Open issues and verification
+
+- WFRP Attributes on Main now use the same read-only Base/Adv/Total columns as Skills, preserving characteristic rolls and native modifier totals. Checkout-only; installed-world and physical-device checks remain pending.
 
 - WFRP skill Base/Adv/Total columns are present in the local installed runtime: the four relevant files match the checkout. A fresh phone-emulated browser in actual local `wfrp` / Foundry 14.369 / WFRP 10.1.2 shows Advances for all 25 Test PC skills, including Melee (Basic) 30/50/80. The user still reports a missing column in their existing browser session; stale code or a different sheet remains unconfirmed. Hosted-world and physical-device checks remain pending. Temporary browser/server helpers were stopped. Evidence: `dist/wfrp-skills-live-report.json`, `dist/wfrp-skills-live-phone.png`.
 
@@ -51,6 +53,7 @@ Results apply to recorded revisions. Unless named otherwise, environments are ch
 
 | Scope | Evidence and limits | Essential artifacts |
 |---|---|---|
+| WFRP Attribute columns | 620 Node tests passed. Six native-asset Attributes/Skills browser fixtures / 461 checks passed across 390px Phone, 1024px Tablet and 320px enlarged text: independent Base/Adv/Total, modifiers, zero/missing values, native refresh, responsive headers and single occupied columns. Six neighboring WFRP, Shadowdark, SWADE and H+I scenarios / 1,278 checks passed, including existing characteristic roll/cancel coverage. Fresh narrow/Tablet captures reviewed. Checkout-only; installed-world and physical-device validation remain pending. | `dist/wfrp-characteristic-columns-node.txt`, `dist/warhammer-characteristics-{phone,tablet,narrow-large-text}.png` |
 | WFRP skill columns | 619 Node tests passed. Three focused native-asset browser fixtures / 241 checks cover 390px phone, 1024px tablet and 320px enlarged text: prepared base/Advances/total, zero/missing values, read-only XP, repeated muted headers, one-line rows, native refresh, resize and a single occupied column. Seven neighboring browser scenarios / 1,332 checks passed for WFRP phone/tablet/money, Shadowdark abilities, SWADE and H+I. Existing native skill-roll checks pass on WFRP phone/tablet. Fresh tablet/narrow captures reviewed. Broader 320px WFRP check reaches the recorded long mount-name failure. No installation or publication by this task. Subsequent actual local-world verification confirms all 25 Advances cells visible; the four installed source/style files match the checkout. Existing user-session discrepancy and physical devices remain unresolved. | `dist/wfrp-skills-live-{report.json,phone.png}`, `dist/wfrp-skill-columns-{node,browser}.txt`, `dist/warhammer-skills-*.png` |
 | Party portrait viewer | Roster and Supplies portraits reuse the Character full-screen viewer; missing portraits retain a decorative fallback. Full Node suite passed; 15 Shadowdark/WFRP5 responsive browser scenarios / 530 checks passed, including correct-image opening, zoom, viewer/zoom retention during Actor refresh, Escape/Close and unchanged Character selection. Narrow enlarged-text and tablet captures reviewed. No installation or publication; installed-world/device checks remain pending. | `tests/browser/party.mjs`, `dist/party-*.png` |
 | Player shutdown redirect | Full Node suite passed; seven focused shutdown tests cover players, GM exemption/promotion, route prefixes, notification/delay, duplicate events, cleanup, unrelated listeners and unknown-core fallback. Shared-entry tests verify desktop and Phone/Tablet installation. Seventeen startup/reconnect browser scenarios / 322 checks passed. Installed Foundry 14.369 source confirms the dedicated shutdown event and core listener shape; fixtures do not establish actual world-stop/device behavior. No installation or publication. | `tests/player-shutdown-redirect.test.mjs`, `tests/shared-entry.test.mjs` |
