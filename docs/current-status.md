@@ -1,6 +1,6 @@
 # Current status
 
-Updated 2026-11-26. [Task map and contracts](architecture.md#task-map); [PWA operations](mobile-login.md); [migration](migration.md).
+Updated 2026-11-28. [Task map and contracts](architecture.md#task-map); [PWA operations](mobile-login.md); [migration](migration.md).
 
 ## Deployment
 
@@ -12,6 +12,8 @@ Deployments apply only to their recorded revisions. Installation and fixtures do
 - Static PWA: all 14 `/mobile/` files deployed 2026-11-24 with the revised offline toolbar, card styling and shell cache v2; remote disk and public HTTPS SHA-256 hashes matched. Worker/library now return 200; `/mobile` redirects correctly and native root/join/game/Socket.IO-script routes return 200. Foundry and Caddy remain active with no restart. No backup created, as explicitly requested. Hosted module manifest is 1.1.65; the banner, Settings icon and game-card fixes require the next module release. Receipt: `dist/offline-static-deployment.json`. [Rollback](mobile-login.md#rollback); installed-app review pending.
 
 ## Open issues and verification
+
+- WFRP 10.2 edition detection now reads `editionSettings.tests`, retaining the legacy `use5e` fallback only when `tests` is absent. This restores WFRP5 character panels/actions and the opposed-Momentum repair with the new settings format; explicit 4e overrides stale legacy flags. Full Node suite, two native-asset phone/tablet browser fixtures (613 checks), and package validation passed. Evidence: `tests/warhammer-context.test.mjs`, profile/action/Momentum regression tests, `dist/warhammer-10.2-{phone,tablet}.png`. Actual WFRP 10.2 installed-world and physical-device validation remain pending.
 
 - WFRP Attributes on Main now use the same read-only Base/Adv/Total columns as Skills, preserving characteristic rolls and native modifier totals. Checkout-only; installed-world and physical-device checks remain pending.
 

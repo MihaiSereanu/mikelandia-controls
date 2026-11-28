@@ -79,6 +79,18 @@ function fixture({ winner = "attacker", gmActive = true, linked = false, edition
     dispose: () => cleanups.forEach(fn => fn()) };
 }
 
+test("10.2 edition settings retain the opposed Momentum GM relay", async () => {
+  const f = fixture();
+  f.game.settings.get = () => ({ tests: "5e" });
+  try {
+    assert.equal(await f.handler.computeOpposeResult(), "native result");
+    assert.deepEqual(f.errors, []);
+    assert.equal(f.requests.length, 1);
+    assert.equal(f.npc.momentum, true);
+    assert.equal(f.pc.momentum, false);
+  } finally { f.dispose(); }
+});
+
 for (const winner of ["attacker", "defender"]) {
   test(`NPC defending: ${winner} wins`, async () => {
     const f = fixture({ winner, npcDefends: true });

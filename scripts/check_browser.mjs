@@ -13,6 +13,8 @@ import { checkOfflineReload } from "./browser/offline-reload.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cases = [
+  ...[["phone", 390, 844], ["tablet", 1024, 768]].map(([layout, width, height]) =>
+    [`warhammer-10.2-${layout}`, width, height, "warhammer", `layout=${layout}&edition102=true`]),
   ["offline-library-phone", 390, 844, "offline-library", ""],
   ["offline-library-narrow", 320, 568, "offline-library", ""],
   ["offline-library-tablet", 1024, 768, "offline-library", ""],

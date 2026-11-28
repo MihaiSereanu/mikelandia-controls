@@ -34,6 +34,15 @@ for (const use5e of [true]) {
   });
 }
 
+test("10.2 edition settings retain native characteristic actions", async t => {
+  const { actor, game, gateway, calls } = setup(t);
+  game.settings.get = () => ({ tests: "5e" });
+  assert.ok(gateway.capabilitiesForActor(actor).profileActions.some(action => action.id === "characteristic:ws"));
+  const outcome = await gateway.execute(command, payload());
+  assert.equal(outcome.rolled, true);
+  assert.deepEqual(calls, [["characteristic", "ws"], ["roll"]]);
+});
+
 test("Skill tests pass the exact owned embedded Item rather than its name", async t => {
   const { actor, gateway, calls } = setup(t);
   const item = actor.items.find(item => item.id === "athletics");

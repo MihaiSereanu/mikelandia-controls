@@ -154,6 +154,18 @@ for (const use5e of [true]) {
   });
 }
 
+test("10.2 edition settings preserve the WFRP5 character profile", t => {
+  const actor = createWarhammerActor();
+  const game = createWarhammerGame([actor]);
+  game.settings.get = () => ({ tests: "5e" });
+  installGlobals(t, { game });
+  const record = integration.createActorViewRecord(actor, game.user);
+  assert.equal(record.presentation, "profile");
+  assert.equal(record.edition, "5e");
+  assert.equal(fields(record).find(row => row.id === "ws").value, 41);
+  assert.equal(fields(record).find(row => row.id === "momentum").value, true);
+});
+
 test("characteristics match skill columns with independent native values and read-only Advances", t => {
   const actor = createWarhammerActor();
   installGlobals(t, { game: createWarhammerGame([actor]) });

@@ -127,7 +127,7 @@ try {
   game.settings.get = (namespace, key) =>
     namespace === "wfrp4e"
       ? key === "editionSettings"
-        ? { use5e }
+        ? params.has("edition102") ? { tests: use5e ? "5e" : "4e" } : { use5e }
         : false
       : undefined;
   game.combat = {
